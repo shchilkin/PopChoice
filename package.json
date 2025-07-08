@@ -2,6 +2,7 @@
   "name": "pop-choice",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -38,6 +39,7 @@
     "typescript": "^5",
     "vitest": "^3.2.4",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.2"
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2"
   }
 }
