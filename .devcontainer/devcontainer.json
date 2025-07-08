@@ -5,10 +5,14 @@
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [3000],
+  "forwardPorts": [3000, 6006],
   "portsAttributes": {
     "3000": {
       "label": "Next.js Dev Server",
+      "onAutoForward": "notify"
+    },
+    "6006": {
+      "label": "Storybook Workshop",
       "onAutoForward": "notify"
     }
   },
@@ -25,7 +29,9 @@
         "christian-kohler.path-intellisense",
         "ms-vscode.vscode-json",
         "ms-vscode.vscode-markdown",
-        "davidanson.vscode-markdownlint"
+        "davidanson.vscode-markdownlint",
+        "unifiedjs.vscode-mdx",
+        "gruntfuggly.todo-tree"
       ],
       "settings": {
         "typescript.preferences.includePackageJsonAutoImports": "on",
@@ -34,12 +40,7 @@
         "editor.codeActionsOnSave": {
           "source.fixAll.eslint": "explicit"
         },
-        "eslint.validate": [
-          "javascript",
-          "javascriptreact",
-          "typescript",
-          "typescriptreact"
-        ],
+        "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
         "files.exclude": {
           "**/.git": true,
           "**/.DS_Store": true,

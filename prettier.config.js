@@ -1,4 +1,4 @@
-export default {
+const prettierConfig = {
   semi: true, // End statements with semicolons
   singleQuote: true, // Use single quotes wherever possible
   printWidth: 100, // Line wrap at 100 characters (80 is also common)
@@ -10,3 +10,5 @@ export default {
   jsxSingleQuote: false, // Double quotes in JSX
   proseWrap: 'preserve', // Don't forcibly wrap markdown prose
 };
+
+export default prettierConfig;
