@@ -1,5 +1,6 @@
 import React from "react";
 import Image from "next/image";
+
 import { Rubik_Gemstones } from "next/font/google";
 
 const rubik_Gemstones = Rubik_Gemstones({

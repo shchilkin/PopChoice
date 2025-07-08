@@ -1,8 +1,8 @@
-import React from "react";
-import { QuestionCard } from "./QuestionCard";
+import React from 'react';
+import { QuestionCard } from './QuestionCard';
 
 export default {
-  title: "Components/QuestionCard",
+  title: 'Components/QuestionCard',
   component: QuestionCard,
 };
 

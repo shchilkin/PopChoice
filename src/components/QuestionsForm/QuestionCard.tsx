@@ -4,16 +4,23 @@ import React, { useRef } from "react";
 interface QuestionCardProps {
   label: string;
   placeholder?: string;
+  value?: string;
+  onChange?: (value: string) => void;
+  name?: string;
 }
 
-export const QuestionCard = ({ label, placeholder }: QuestionCardProps) => {
+export const QuestionCard = ({ label, placeholder, value, onChange, name }: QuestionCardProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleInput = (/*e: React.ChangeEvent<HTMLTextAreaElement>*/) => {
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto";
       textarea.style.height = textarea.scrollHeight + "px";
+    }
+    
+    if (onChange) {
+      onChange(e.target.value);
     }
   };
 
@@ -36,6 +43,8 @@ export const QuestionCard = ({ label, placeholder }: QuestionCardProps) => {
       </label>
       <textarea
         ref={textareaRef}
+        name={name}
+        value={value}
         className="w-full min-h-24 h-fit p-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white resize-none overflow-hidden"
         placeholder={placeholder}
         onInput={handleInput}
