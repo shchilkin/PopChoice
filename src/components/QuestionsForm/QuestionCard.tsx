@@ -17,14 +17,14 @@ export const QuestionCard = ({ label, placeholder }: QuestionCardProps) => {
     }
   };
 
-  if (!label || !placeholder) {
+  if (!label) {
     return (
       <div className="flex flex-col gap-2 p-4 border border-red-500 bg-red-50 dark:bg-red-900 dark:border-red-700 rounded-lg">
         <span className="text-red-700 dark:text-red-300 font-semibold">
           Error:
         </span>
         <span className="text-red-600 dark:text-red-200 text-sm">
-          {!label && "Label is required. "}
+          Label is required.
         </span>
       </div>
     );
