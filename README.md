@@ -1,3 +1,11 @@
+<div align="center">
+  <img src="/public/popcorn.png" alt="Popcorn Mascot" width="200" />
+</div>
+
+# PopChoice
+
+PopChoice is a Solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
