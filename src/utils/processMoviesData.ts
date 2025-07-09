@@ -1,8 +1,6 @@
 import { readFile } from 'fs/promises';
 import { z } from 'zod/v4';
 
-// TODO: Convert to function (input: filePath) => Processed Movie Entry[]
-
 const movieSchema = z.object({
   movieName: z.string(),
   ageRating: z.enum(['PG', 'PG-13', 'R']),
@@ -24,26 +22,39 @@ type RawMovieEntry = {
   description: string;
 };
 
-const data = await readFile('../../movies.txt', 'utf-8');
-const entries = data.split(/\r?\n/).filter(Boolean);
+type MovieEntry = z.infer<typeof movieSchema>;
 
-if (entries.length % 2 !== 0) {
-  console.warn('Warning: Odd number of lines, last entry may be incomplete.');
-}
+export async function processMoviesFile(filePath: string): Promise<MovieEntry[]> {
+  let data: string;
+  try {
+    data = await readFile(filePath, 'utf-8');
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    throw error;
+  }
+  const entries = data.split(/\r?\n/).filter(Boolean);
 
-const rawMovies: RawMovieEntry[] = [];
-for (let i = 0; i < entries.length; i += 2) {
-  const [movieName, ageRating, duration, scoreRating] = entries[i]
-    .split('|')
-    .map((part) => part.trim());
-  const description = entries[i + 1]?.trim() || '';
-  rawMovies.push({ movieName, ageRating, duration, scoreRating, description });
-}
+  if (entries.length % 2 !== 0) {
+    console.warn('Warning: Odd number of lines, last entry may be incomplete.');
+  }
 
-const parseResult = moviesArraySchema.safeParse(rawMovies);
+  const rawMovies: RawMovieEntry[] = [];
+  for (let i = 0; i < entries.length; i += 2) {
+    const [movieName, ageRating, duration, scoreRating] = entries[i]
+      .split('|')
+      .map((part) => part.trim());
+    const description = entries[i + 1]?.trim() || '';
+    rawMovies.push({ movieName, ageRating, duration, scoreRating, description });
+  }
 
-if (parseResult.success) {
-  console.log('Validated movies:', parseResult.data);
-} else {
-  console.error('Validation errors:', parseResult.error);
+  const parseResult = moviesArraySchema.safeParse(rawMovies);
+
+  if (parseResult.success) {
+    return parseResult.data;
+  } else {
+    console.error('Validation errors:', parseResult.error);
+    return [];
+  }
 }
