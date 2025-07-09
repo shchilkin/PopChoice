@@ -1,8 +1,8 @@
-import React from "react";
-import { QuestionsForm } from "./QuestionsForm";
+import React from 'react';
+import { QuestionsForm } from './QuestionsForm';
 
 export default {
-  title: "Components/QuestionsForm",
+  title: 'Components/QuestionsForm',
   component: QuestionsForm,
 };
 

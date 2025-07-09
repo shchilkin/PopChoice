@@ -1,8 +1,8 @@
-import React from "react";
-import { Branding } from "./Branding";
+import React from 'react';
+import { Branding } from './Branding';
 
 export default {
-  title: "Components/Branding",
+  title: 'Components/Branding',
   component: Branding,
 };
 
