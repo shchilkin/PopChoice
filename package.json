@@ -10,7 +10,8 @@
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:utils": "vitest --project=utils"
   },
   "dependencies": {
     "next": "15.3.5",
