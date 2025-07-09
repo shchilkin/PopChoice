@@ -1,6 +1,6 @@
-import React from "react";
-import { QuestionCard } from "./QuestionCard";
-import Button from "../Button/Button";
+import React from 'react';
+import { QuestionCard } from './QuestionCard';
+import { Button } from '../Button';
 
 export const QuestionsForm = () => {
   return (
@@ -19,7 +19,7 @@ export const QuestionsForm = () => {
           placeholder="Share your thoughts on the tone you're looking for in a movie."
         />
       </section>
-      <Button />
+      <Button>Find Me a Movie</Button>
     </section>
   );
 };
