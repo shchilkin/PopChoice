@@ -28,16 +28,17 @@ export const QuestionsForm = () => {
     formData.moodPreference.trim() !== '' &&
     formData.tonePreference.trim() !== '';
 
-  const handleSubmit = (e?: React.MouseEvent | React.FormEvent) => {
-    if (e) {
-      e.preventDefault();
-    }
+  const combineFormDataToString = (data: FormData): string => {
+    // TODO: Implement splitting for big string, this will be fed to the OpenAI API to create embedding
+    return `Favorite Movie: ${data.favoriteMovie}, Mood Preference: ${data.moodPreference}, Tone Preference: ${data.tonePreference}`;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     if (isFormValid) {
-      // Show alert with form data as requested in the issue
       alert(`Form submitted with data:
-Favorite Movie: ${formData.favoriteMovie}
-Mood Preference: ${formData.moodPreference}
-Tone Preference: ${formData.tonePreference}`);
+              ${combineFormDataToString(formData)}
+      `);
     }
   };
 
