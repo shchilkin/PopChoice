@@ -1,8 +1,8 @@
-import React from "react";
-import QuestionsPage from "./page";
+import React from 'react';
+import QuestionsPage from './page';
 
 export default {
-  title: "Pages/Questions Page",
+  title: 'Pages/Questions Page',
   component: QuestionsPage,
 };
 
