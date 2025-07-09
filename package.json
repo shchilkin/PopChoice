@@ -8,10 +8,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:check": "next lint",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:utils": "vitest --project=utils",
+    "test:storybook": "vitest --project=storybook run",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "prepare": "husky",
-    "test:utils": "vitest --project=utils"
+    "prepare": "husky"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.4",

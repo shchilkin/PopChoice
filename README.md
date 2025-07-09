@@ -37,6 +37,21 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## GitHub Actions Workflow
+
+This project includes a GitHub Actions workflow for pull request validation located at `.github/workflows/pr.yml`. The workflow runs on all pull requests and includes the following steps:
+
+### Main Steps:
+
+1. **Lint code** - Runs ESLint using `next lint`
+2. **Check Prettier formatting** - Validates code formatting with Prettier
+3. **Type check** - Runs TypeScript checking with `tsc --noEmit`
+4. **Run utils tests** - Executes utility function tests using Vitest
+5. **Run Storybook tests** - Runs browser-based Storybook tests with Playwright
+6. **Build project** - Builds the Next.js project to ensure no build errors
+
+The workflow is triggered on pull request events for all branches and helps maintain code quality and functionality.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
