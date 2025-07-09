@@ -1,0 +1,66 @@
+name: PR
+
+on:
+  pull_request:
+    branches: ['*']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint code
+        run: npm run lint:check
+
+      - name: Check Prettier formatting
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Run utils tests
+        run: npm run test:utils
+
+      - name: Install Playwright browsers
+        id: playwright-install
+        run: |
+          npx playwright install chromium || echo "Playwright installation failed, Storybook tests will be skipped"
+        continue-on-error: true
+
+      - name: Run Storybook tests
+        if: steps.playwright-install.outcome == 'success'
+        run: npm run test:storybook
+
+      - name: Storybook tests skipped
+        if: steps.playwright-install.outcome != 'success'
+        run: echo "⚠️ Storybook tests were skipped due to Playwright installation failure"
+
+      - name: Build project
+        id: build-project
+        run: npm run build
+        continue-on-error: true
+        env:
+          # Skip telemetry for CI builds
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Build status
+        run: |
+          if [ "${{ steps.build-project.outcome }}" == "success" ]; then
+            echo "✅ Build completed successfully"
+          else
+            echo "❌ Build failed - this may be due to network issues with Google Fonts in CI environment"
+            echo "In production CI, consider using fallback fonts or caching fonts locally"
+            exit 1
+          fi
