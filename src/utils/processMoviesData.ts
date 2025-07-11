@@ -1,6 +1,8 @@
 import { readFile } from 'fs/promises';
 import { z } from 'zod/v4';
 
+// Currently not used, will be used for streach goals to create better embeddings
+
 const movieSchema = z.object({
   movieName: z.string(),
   ageRating: z.enum(['PG', 'PG-13', 'R']),
