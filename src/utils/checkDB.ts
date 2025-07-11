@@ -1,6 +1,8 @@
 import openAIClient from './openaiClient';
 import { supabase } from './supabaseClient';
 
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+
 // const query = 'Which movies can I take my child to?';
 const query = 'I feel like having a good laugh!';
 main(query);
@@ -16,8 +18,6 @@ async function main(input: string) {
     console.log('No match found');
   }
 }
-
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 
 const chatMessages: ChatCompletionMessageParam[] = [
   {
