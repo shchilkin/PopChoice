@@ -28,6 +28,52 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+### OpenAI setup
+
+This application uses the OpenAI API to generate embeddings and chat completions.
+
+**Steps:**
+
+1. **Get your OpenAI API key**
+   - Sign up or log in at [OpenAI Platform](https://platform.openai.com/docs/overview)
+   - Go to your account settings and create an API key
+
+2. **Add your API key to the `.env` file**
+   - In your project root, open or create a file named `.env`
+   - Add the following line:
+     ```env
+     OPENAI_API_KEY=your-openai-api-key-here
+     ```
+
+3. **Use the API key in your code**
+   - Your application will automatically load the API key from `.env` using `process.env.OPENAI_API_KEY`
+   - See [`src/utils/openaiClient.ts`](./src/utils/openaiClient.ts) for usage example
+
+---
+
+### Database setup
+
+This application uses Supabase (PostgreSQL) to store movie embeddings.
+
+**Steps:**
+
+1. **Create the movies table**
+   - Run the SQL in [`src/utils/db/createDB.sql`](./src/utils/db/createDB.sql)
+
+2. **Add the matching function**
+   - Run the SQL in [`src/utils/db/match_movies.sql`](./src/utils/db/match_movies.sql)
+
+3. **Set up Supabase project**
+   - Create a Supabase account (if needed)
+   - Create a new project in Supabase
+   - Add your project URL and API key to your [`.env`](./.env) file
+
+4. **(Optional) Test your setup**
+   - Use the Supabase dashboard or client to insert and query movie embeddings.
+   - Use the provided scripts to generate and store embeddings.
+
+---
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
