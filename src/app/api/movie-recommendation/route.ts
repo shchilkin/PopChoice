@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import openAIClient from '@/utils/openaiClient';
 import { supabase } from '@/utils/supabaseClient';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import z from 'zod';
 
 const prompt = `
 You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
@@ -29,6 +31,11 @@ const combineFormDataToString = (data: FormData): string => {
     .map(([key, value]) => `${key}: ${value}`)
     .join('\n');
 };
+
+const recommendationSchema = z.object({
+  description: z.string(),
+  title: z.string(),
+});
 
 async function findNearestMatch(embedding: number[]): Promise<string | null> {
   const { error, data } = await supabase.rpc('match_movies', {
@@ -80,24 +87,32 @@ export async function POST(req: NextRequest) {
     // 3. Get recommendation from OpenAI
     let recommendation;
     try {
-      recommendation = await openAIClient.responses.create({
-        model: 'gpt-4',
-        instructions: prompt,
-        input: similarMovies,
+      recommendation = await openAIClient.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: similarMovies },
+        ],
+        response_format: zodResponseFormat(recommendationSchema, 'recomendationAPIRequestEvent'),
       });
     } catch (openAIError) {
       console.error('Error getting recommendation from OpenAI:', openAIError);
+      if (openAIError instanceof Error) {
+        console.error('OpenAI error stack:', openAIError.stack);
+      } else {
+        console.error('OpenAI error details:', JSON.stringify(openAIError));
+      }
       return NextResponse.json(
         { error: 'Failed to get recommendation from OpenAI.' },
         { status: 500 },
       );
     }
-    if (!recommendation?.output_text) {
-      console.error('No output text from OpenAI.');
+    if (!recommendation.choices[0].message.content) {
+      console.error('No output text from OpenAI. Full response:', JSON.stringify(recommendation));
       return NextResponse.json({ error: 'No output text from OpenAI.' }, { status: 500 });
     }
 
-    const responseMessage = recommendation.output_text;
+    const responseMessage = recommendation.choices[0].message.content;
 
     console.log('Response from OpenAI:', responseMessage);
 
@@ -106,6 +121,11 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error('Unexpected error in movie recommendation API:', error);
+    if (error instanceof Error) {
+      console.error('Unexpected error stack:', error.stack);
+    } else {
+      console.error('Unexpected error details:', JSON.stringify(error));
+    }
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 }

@@ -6,12 +6,25 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 export default function MovieSuggestionPage() {
-  const [recommendation, setRecommendation] = useState('');
+  const [title, setTitle] = useState('Movie Recommendation');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const rec = localStorage.getItem('popchoice_recommendation');
-      setRecommendation(rec || 'No recommendation found.');
+      if (rec) {
+        try {
+          const parsed = JSON.parse(rec);
+          setTitle(parsed.title || 'Movie Recommendation');
+          setDescription(parsed.description || 'No description found.');
+        } catch {
+          setTitle('Movie Recommendation');
+          setDescription(rec);
+        }
+      } else {
+        setTitle('Movie Recommendation');
+        setDescription('No recommendation found.');
+      }
     }
   }, []);
 
@@ -19,7 +32,7 @@ export default function MovieSuggestionPage() {
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col w-full items-center max-w-md mx-auto">
         <Branding />
-        <SuggestionCard title="Movie Recommendation" description={recommendation} />
+        <SuggestionCard title={title} description={description} />
         <Link href="/" passHref className="w-full">
           <Button
             className="w-full"
