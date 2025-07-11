@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.4",
+    "axios": "^1.10.0",
     "langchain": "^0.3.29",
     "next": "15.3.5",
     "openai": "^5.8.3",
