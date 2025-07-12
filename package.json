@@ -14,6 +14,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:utils": "vitest --project=utils",
+    "pretest:storybook": "npx playwright install & npx playwright install-deps",
     "test:storybook": "vitest --project=storybook run",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.4",
+    "axios": "^1.10.0",
     "langchain": "^0.3.29",
     "next": "15.3.5",
     "openai": "^5.8.3",

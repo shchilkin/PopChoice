@@ -1,7 +1,9 @@
 'use client';
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { QuestionCard } from './QuestionCard';
 import { Button } from '../Button/Button';
+import axios from 'axios';
 
 export interface FormData {
   favoriteMovie: string;
@@ -10,11 +12,14 @@ export interface FormData {
 }
 
 export const QuestionsForm = () => {
+  const router = useRouter();
+
   const [formData, setFormData] = useState<FormData>({
     favoriteMovie: '',
     moodPreference: '',
     tonePreference: '',
   });
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (name: string, value: string) => {
     setFormData((prev) => ({
@@ -28,17 +33,22 @@ export const QuestionsForm = () => {
     formData.moodPreference.trim() !== '' &&
     formData.tonePreference.trim() !== '';
 
-  const combineFormDataToString = (data: FormData): string => {
-    // TODO: Implement splitting for big string, this will be fed to the OpenAI API to create embedding
-    return `Favorite Movie: ${data.favoriteMovie}, Mood Preference: ${data.moodPreference}, Tone Preference: ${data.tonePreference}`;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isFormValid) {
-      alert(`Form submitted with data:
-              ${combineFormDataToString(formData)}
-      `);
+    if (isFormValid && !loading) {
+      setLoading(true);
+      try {
+        const response = await axios.post('/api/movie-recommendation', formData);
+        // Store recommendation in localStorage
+        localStorage.setItem('popchoice_recommendation', response.data.data);
+        // Redirect to movie-suggestion page
+        router.push('/movie-suggestion');
+      } catch (error) {
+        alert('Error fetching recommendation');
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -71,8 +81,8 @@ export const QuestionsForm = () => {
           />
         </div>
 
-        <Button disabled={!isFormValid} onClick={handleSubmit}>
-          Find Me a Movie
+        <Button disabled={!isFormValid || loading} onClick={handleSubmit}>
+          {loading ? 'Finding...' : 'Find Me a Movie'}
         </Button>
       </section>
     </form>
