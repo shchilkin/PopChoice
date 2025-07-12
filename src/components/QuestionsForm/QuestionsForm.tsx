@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { QuestionCard } from './QuestionCard';
 import { Button } from '../Button/Button';
 import axios from 'axios';
@@ -13,6 +14,11 @@ export interface FormData {
 
 export const QuestionsForm = () => {
   const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
+  const t = useTranslations('questions');
+  const tButtons = useTranslations('buttons');
+  const tErrors = useTranslations('errors');
 
   const [formData, setFormData] = useState<FormData>({
     favoriteMovie: '',
@@ -38,13 +44,13 @@ export const QuestionsForm = () => {
     if (isFormValid && !loading) {
       setLoading(true);
       try {
-        const response = await axios.post('/api/movie-recommendation', formData);
+        const response = await axios.post(`/${locale}/api/movie-recommendation`, formData);
         // Store recommendation in localStorage
         localStorage.setItem('popchoice_recommendation', response.data.data);
         // Redirect to movie-suggestion page
-        router.push('/movie-suggestion');
+        router.push(`/${locale}/movie-suggestion`);
       } catch (error) {
-        alert('Error fetching recommendation');
+        alert(tErrors('fetchError'));
         console.error(error);
       } finally {
         setLoading(false);
@@ -57,24 +63,24 @@ export const QuestionsForm = () => {
       <section className="flex flex-col items-center w-full gap-6">
         <div className="flex flex-col gap-6 w-full">
           <QuestionCard
-            label="What's your favorite movie and why?"
-            placeholder="Share your thoughts on your favorite movie, including its plot, characters, and what makes it special to you."
+            label={t('favoriteMovie.label')}
+            placeholder={t('favoriteMovie.placeholder')}
             value={formData.favoriteMovie}
             onChange={(value) => handleInputChange('favoriteMovie', value)}
             name="favoriteMovie"
           />
 
           <QuestionCard
-            label="Are you in the mood for something new or a classic?"
-            placeholder="Let us know if you prefer to watch a new release or revisit a classic film. Share your reasons!"
+            label={t('moodPreference.label')}
+            placeholder={t('moodPreference.placeholder')}
             value={formData.moodPreference}
             onChange={(value) => handleInputChange('moodPreference', value)}
             name="moodPreference"
           />
 
           <QuestionCard
-            label="Do you wanna have fun or do you want something serious?"
-            placeholder="Share your thoughts on the tone you're looking for in a movie."
+            label={t('tonePreference.label')}
+            placeholder={t('tonePreference.placeholder')}
             value={formData.tonePreference}
             onChange={(value) => handleInputChange('tonePreference', value)}
             name="tonePreference"
@@ -82,7 +88,7 @@ export const QuestionsForm = () => {
         </div>
 
         <Button disabled={!isFormValid || loading} onClick={handleSubmit}>
-          {loading ? 'Finding...' : 'Find Me a Movie'}
+          {loading ? tButtons('finding') : tButtons('findMovie')}
         </Button>
       </section>
     </form>

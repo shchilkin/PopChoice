@@ -1,0 +1,34 @@
+{
+  "app": {
+    "title": "PopChoice",
+    "description": "Löydä täydellinen elokuva itsellesi"
+  },
+  "questions": {
+    "favoriteMovie": {
+      "label": "Mikä on lempi elokuvasi ja miksi?",
+      "placeholder": "Jaa ajatuksesi lempi elokuvastasi, mukaan lukien sen juoni, hahmot ja se, mikä tekee siitä erityisen sinulle."
+    },
+    "moodPreference": {
+      "label": "Oletko tunnelmissa jotain uutta vai klassista?",
+      "placeholder": "Kerro meille, haluatko katsoa uuden elokuvan vai palata klassikkoon. Jaa syysi!"
+    },
+    "tonePreference": {
+      "label": "Haluatko pitää hauskaa vai etsitkö jotain vakavaa?",
+      "placeholder": "Jaa ajatuksesi siitä, millaista tunnelmaa etsit elokuvasta."
+    }
+  },
+  "buttons": {
+    "findMovie": "Löydä minulle elokuva",
+    "finding": "Etsitään...",
+    "tryAgain": "Yritä uudelleen"
+  },
+  "errors": {
+    "labelRequired": "Merkki vaaditaan.",
+    "fetchError": "Virhe suosituksen haussa",
+    "noRecommendation": "Suositusta ei löytynyt."
+  },
+  "recommendation": {
+    "title": "Elokuvasuositus",
+    "noDescription": "Kuvausta ei löytynyt."
+  }
+}

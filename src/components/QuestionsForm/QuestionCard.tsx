@@ -1,5 +1,6 @@
 'use client';
 import React, { useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface QuestionCardProps {
   label: string;
@@ -10,6 +11,7 @@ interface QuestionCardProps {
 }
 
 export const QuestionCard = ({ label, placeholder, value, onChange, name }: QuestionCardProps) => {
+  const t = useTranslations('errors');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -28,7 +30,7 @@ export const QuestionCard = ({ label, placeholder, value, onChange, name }: Ques
     return (
       <div className="flex flex-col gap-2 p-4 border border-red-500 bg-red-50 dark:bg-red-900 dark:border-red-700 rounded-lg">
         <span className="text-red-700 dark:text-red-300 font-semibold">Error:</span>
-        <span className="text-red-600 dark:text-red-200 text-sm">Label is required.</span>
+        <span className="text-red-600 dark:text-red-200 text-sm">{t('labelRequired')}</span>
       </div>
     );
   }
