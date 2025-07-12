@@ -36,24 +36,21 @@ jobs:
       - name: Install Playwright browsers
         id: playwright-install
         run: |
-          npx playwright install chromium || echo "Playwright installation failed, Storybook tests will be skipped"
-        continue-on-error: true
+          npm run pretest:storybook || echo "Playwright installation failed, Storybook tests will be skipped"
 
       - name: Run Storybook tests
         if: steps.playwright-install.outcome == 'success'
         run: npm run test:storybook
 
-      - name: Storybook tests skipped
-        if: steps.playwright-install.outcome != 'success'
-        run: echo "⚠️ Storybook tests were skipped due to Playwright installation failure"
-
       - name: Build project
         id: build-project
         run: npm run build
-        continue-on-error: true
         env:
           # Skip telemetry for CI builds
           NEXT_TELEMETRY_DISABLED: 1
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
 
       - name: Build status
         run: |
