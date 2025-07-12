@@ -60,7 +60,7 @@ export default class MovieService {
         });
         if (filteredResults.length === 0) {
           console.warn(`No movie found with title: ${movieTitle}`);
-          return [];
+          return undefined;
         }
         return filteredResults[0];
       })
