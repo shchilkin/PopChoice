@@ -4,6 +4,8 @@ import { supabase } from '@/utils/supabaseClient';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
+import { MovieService } from '@/services';
+
 const prompt = `
 You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
@@ -20,6 +22,8 @@ Your job is to recommend the single most suitable movie in a short, engaging, an
 Keep your tone upbeat, conversational, and helpful. Avoid making up facts or recommending movies not in the context.
 `;
 
+const movieService = new MovieService();
+
 export type MovieMatch = {
   id: number;
   content: string;
@@ -34,7 +38,7 @@ const combineFormDataToString = (data: FormData): string => {
 
 const recommendationSchema = z.object({
   description: z.string(),
-  title: z.string(),
+  title: z.string().describe('The title of the recommended movie'),
 });
 
 async function findNearestMatch(embedding: number[]): Promise<string | null> {
@@ -51,73 +55,99 @@ async function findNearestMatch(embedding: number[]): Promise<string | null> {
   return data.map((item: MovieMatch) => item.content).join('\n');
 }
 
+// Helper: Create embedding for user request
+async function createEmbedding(body: FormData) {
+  try {
+    const embeddingResponse = await openAIClient.embeddings.create({
+      model: 'text-embedding-3-large',
+      input: combineFormDataToString(body),
+    });
+    if (!embeddingResponse?.data?.[0]?.embedding) {
+      throw new Error('No embedding returned from OpenAI.');
+    }
+    return embeddingResponse.data[0].embedding;
+  } catch (error) {
+    throw new Error('Failed to create embedding. ' + error);
+  }
+}
+
+// Helper: Find similar movies in storage
+async function getSimilarMovies(embedding: number[]) {
+  try {
+    const similarMovies = await findNearestMatch(embedding);
+    if (!similarMovies) {
+      throw new Error('No similar movies found.');
+    }
+    return similarMovies;
+  } catch (error) {
+    throw new Error('Failed to search for similar movies. ' + error);
+  }
+}
+
+// Helper: Get recommendation from OpenAI
+async function getRecommendation(similarMovies: string) {
+  try {
+    const recommendation = await openAIClient.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: prompt },
+        { role: 'user', content: similarMovies },
+      ],
+      response_format: zodResponseFormat(recommendationSchema, 'recomendationAPIRequestEvent'),
+    });
+    if (!recommendation.choices[0].message.content) {
+      throw new Error('No output text from OpenAI.');
+    }
+    return JSON.parse(recommendation.choices[0].message.content);
+  } catch (error) {
+    throw new Error('Failed to get recommendation from OpenAI. ' + error);
+  }
+}
+
+// Helper: Get poster URL for recommended movie
+async function getPosterURL(movieTitle: string) {
+  try {
+    const movieDetails = await movieService.getMovieByTitle(movieTitle);
+    if (!movieDetails) {
+      console.warn(`No movie found with title: ${movieTitle}`);
+      return undefined;
+    }
+    return movieService.getPosterURL(movieDetails.poster_path, 'w500');
+  } catch (error) {
+    console.error('Error fetching movie by title:', error);
+    return undefined;
+  }
+}
+
+// Main POST handler
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // 1. Create embedding for user request
-    let embeddingResponse;
-    try {
-      embeddingResponse = await openAIClient.embeddings.create({
-        model: 'text-embedding-3-large',
-        input: combineFormDataToString(body),
-      });
-    } catch (embeddingError) {
-      console.error('Error creating embedding:', embeddingError);
-      return NextResponse.json({ error: 'Failed to create embedding.' }, { status: 500 });
-    }
-    if (!embeddingResponse?.data?.[0]?.embedding) {
-      console.error('No embedding returned from OpenAI.');
-      return NextResponse.json({ error: 'No embedding returned from OpenAI.' }, { status: 500 });
-    }
+    // Step 1: Create embedding
+    const embedding = await createEmbedding(body);
 
-    // 2. Find similar embedding in storage
-    let similarMovies;
-    try {
-      similarMovies = await findNearestMatch(embeddingResponse.data[0].embedding);
-    } catch (dbError) {
-      console.error('Error searching for similar movies:', dbError);
-      return NextResponse.json({ error: 'Failed to search for similar movies.' }, { status: 500 });
-    }
-    if (!similarMovies) {
-      console.error('No similar movies found.');
-      return NextResponse.json({ error: 'No similar movies found.' }, { status: 404 });
-    }
+    // Step 2: Find similar movies
+    const similarMovies = await getSimilarMovies(embedding);
 
-    // 3. Get recommendation from OpenAI
-    let recommendation;
-    try {
-      recommendation = await openAIClient.chat.completions.create({
-        model: 'gpt-4o',
-        messages: [
-          { role: 'system', content: prompt },
-          { role: 'user', content: similarMovies },
-        ],
-        response_format: zodResponseFormat(recommendationSchema, 'recomendationAPIRequestEvent'),
-      });
-    } catch (openAIError) {
-      console.error('Error getting recommendation from OpenAI:', openAIError);
-      if (openAIError instanceof Error) {
-        console.error('OpenAI error stack:', openAIError.stack);
-      } else {
-        console.error('OpenAI error details:', JSON.stringify(openAIError));
-      }
-      return NextResponse.json(
-        { error: 'Failed to get recommendation from OpenAI.' },
-        { status: 500 },
-      );
-    }
-    if (!recommendation.choices[0].message.content) {
-      console.error('No output text from OpenAI. Full response:', JSON.stringify(recommendation));
-      return NextResponse.json({ error: 'No output text from OpenAI.' }, { status: 500 });
-    }
+    // Step 3: Get recommendation from OpenAI
+    const responseMessage = await getRecommendation(similarMovies);
 
-    const responseMessage = recommendation.choices[0].message.content;
+    // Step 4: Get poster URL
+    const posterURL = await getPosterURL(responseMessage.title);
 
+    // Log for debugging
+    console.log('Movie title:', responseMessage.title);
+    if (posterURL) {
+      console.log('Poster URL:', posterURL);
+    }
     console.log('Response from OpenAI:', responseMessage);
 
+    // Return response
     return NextResponse.json({
-      data: responseMessage,
+      description: responseMessage.description,
+      title: responseMessage.title,
+      posterURL: posterURL,
     });
   } catch (error) {
     console.error('Unexpected error in movie recommendation API:', error);
