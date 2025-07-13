@@ -13,7 +13,7 @@
     "format:write": "prettier --write .",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:utils": "vitest --project=utils",
+    "test:server": "vitest --project=server",
     "pretest:storybook": "npx playwright install & npx playwright install-deps",
     "test:storybook": "vitest --project=storybook run",
     "storybook": "storybook dev -p 6006",
