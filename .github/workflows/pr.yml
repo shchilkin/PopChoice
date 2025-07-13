@@ -30,8 +30,8 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      - name: Run utils tests
-        run: npm run test:utils
+      - name: Run server tests
+        run: npm run test:server
 
       - name: Install Playwright browsers
         id: playwright-install

@@ -33,10 +33,9 @@ export default defineConfig({
       {
         extends: true,
         test: {
-          name: 'utils',
+          name: 'server',
           environment: 'node',
-          include: ['src/utils/**/*.test.ts', 'src/utils/**/*.test.tsx'],
-          exclude: ['**/*.stories.*', '**/*.story.*'],
+          include: ['src/**/*.test.ts'],
         },
       },
     ],
