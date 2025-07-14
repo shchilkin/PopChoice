@@ -67,7 +67,7 @@ async function createEmbedding(body: FormData) {
     }
     return embeddingResponse.data[0].embedding;
   } catch (error) {
-    throw new Error('Failed to create embedding. ' + error);
+    throw new Error(`Failed to create embedding: ${error.message || error}`);
   }
 }
 
