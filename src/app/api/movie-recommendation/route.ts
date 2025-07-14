@@ -67,7 +67,7 @@ async function createEmbedding(body: FormData) {
     }
     return embeddingResponse.data[0].embedding;
   } catch (error) {
-    throw new Error(`Failed to create embedding: ${error.message || error}`);
+    throw new Error(`Failed to create embedding: ${error}`);
   }
 }
 
@@ -80,7 +80,7 @@ async function getSimilarMovies(embedding: number[]) {
     }
     return similarMovies;
   } catch (error) {
-    throw new Error(`Failed to search for similar movies: ${error.message || error}`);
+    throw new Error(`Failed to search for similar movies: ${error}`);
   }
 }
 
@@ -100,7 +100,7 @@ async function getRecommendation(similarMovies: string) {
     }
     return JSON.parse(recommendation.choices[0].message.content);
   } catch (error) {
-    throw new Error(`Failed to get recommendation from OpenAI: ${error.message || error}`);
+    throw new Error(`Failed to get recommendation from OpenAI: ${error}`);
   }
 }
 
