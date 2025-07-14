@@ -80,7 +80,7 @@ async function getSimilarMovies(embedding: number[]) {
     }
     return similarMovies;
   } catch (error) {
-    throw new Error('Failed to search for similar movies. ' + error);
+    throw new Error(`Failed to search for similar movies: ${error.message || error}`);
   }
 }
 
