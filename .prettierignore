@@ -1,0 +1,13 @@
+public/
+node_modules/
+build/
+dist/
+coverage/
+.next/
+out/
+*.log
+*.snap
+.env
+.env.*
+.vscode/
+.storybook-static/
