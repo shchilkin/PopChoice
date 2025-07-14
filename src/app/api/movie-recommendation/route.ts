@@ -100,7 +100,7 @@ async function getRecommendation(similarMovies: string) {
     }
     return JSON.parse(recommendation.choices[0].message.content);
   } catch (error) {
-    throw new Error('Failed to get recommendation from OpenAI. ' + error);
+    throw new Error(`Failed to get recommendation from OpenAI: ${error.message || error}`);
   }
 }
 
