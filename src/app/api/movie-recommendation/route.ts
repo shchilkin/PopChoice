@@ -93,7 +93,7 @@ async function getRecommendation(similarMovies: string) {
         { role: 'system', content: prompt },
         { role: 'user', content: similarMovies },
       ],
-      response_format: zodResponseFormat(recommendationSchema, 'recomendationAPIRequestEvent'),
+      response_format: zodResponseFormat(recommendationSchema, 'recommendationAPIRequestEvent'),
     });
     if (!recommendation.choices[0].message.content) {
       throw new Error('No output text from OpenAI.');
