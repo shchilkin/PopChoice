@@ -39,8 +39,10 @@ export const QuestionsForm = () => {
       setLoading(true);
       try {
         const response = await axios.post('/api/movie-recommendation', formData);
+        console.log(response.data);
+        console.log('after JSON Stringify:', JSON.stringify(response.data));
         // Store recommendation in localStorage
-        localStorage.setItem('popchoice_recommendation', response.data.data);
+        localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
         // Redirect to movie-suggestion page
         router.push('/movie-suggestion');
       } catch (error) {
@@ -53,7 +55,12 @@ export const QuestionsForm = () => {
   };
 
   return (
-    <form className="max-w-md mx-auto w-full" onSubmit={handleSubmit}>
+    <form
+      id="movie-question-form"
+      data-testid="movie-question-form"
+      className="max-w-md mx-auto w-full"
+      onSubmit={handleSubmit}
+    >
       <section className="flex flex-col items-center w-full gap-6">
         <div className="flex flex-col gap-6 w-full">
           <QuestionCard
