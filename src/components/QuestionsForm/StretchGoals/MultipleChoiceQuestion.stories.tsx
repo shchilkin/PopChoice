@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
 
@@ -7,7 +7,6 @@ import type { Meta } from '@storybook/nextjs-vite';
 const meta: Meta = {
   title: 'Components/Stretch Goals/Multiple Choice Question',
   component: MultipleChoiceQuestion,
-  //   decorators: [darkBackgroundDecorator],
 };
 
 export default meta;

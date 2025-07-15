@@ -20,12 +20,12 @@ const MOCK_API_RESPONSE = {
 
 // Timing constants for realistic user interactions
 const INTERACTION_DELAYS = {
-  typing: 50,
-  typingLong: 60,
-  thinking: 800,
-  reading: 1000,
-  decision: 400,
-  apiResponse: 2000,
+  typing: 25, // Increased from 10ms to prevent character corruption
+  typingLong: 30, // Increased from 15ms
+  thinking: 50, // Reduced from 80ms
+  reading: 50, // Reduced from 100ms
+  decision: 30, // Reduced from 40ms
+  apiResponse: 200,
 } as const;
 
 // Helper functions for common interactions
