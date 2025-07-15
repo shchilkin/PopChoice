@@ -1,9 +1,10 @@
 'use client';
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { QuestionCard } from './QuestionCard';
-import { Button } from '../Button/Button';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+
+import { Button } from '../../Button/Button';
+import { QuestionCard } from '../QuestionCard';
 
 export interface FormData {
   favoriteMovie: string;

@@ -1,8 +1,9 @@
 import React from 'react';
+
 import { QuestionsForm } from './QuestionsForm';
 
 export default {
-  title: 'Components/QuestionsForm',
+  title: 'Components/Core Requirements/QuestionsForm',
   component: QuestionsForm,
   parameters: {
     nextjs: {

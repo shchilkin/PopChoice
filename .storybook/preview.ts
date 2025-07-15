@@ -1,10 +1,14 @@
-import type { Preview } from '@storybook/nextjs-vite';
 import { initialize, mswLoader } from 'msw-storybook-addon';
+
+import type { Preview } from '@storybook/nextjs-vite';
 
 import '../src/app/globals.css';
 
-// Initialize MSW
-initialize();
+// Initialize MSW with proper configuration
+initialize({
+  onUnhandledRequest: 'bypass', // Let unhandled requests pass through instead of warning
+  quiet: false, // Set to true to reduce MSW logging
+});
 
 const preview: Preview = {
   parameters: {
@@ -20,6 +24,17 @@ const preview: Preview = {
       // 'error' - fail CI on a11y violations
       // 'off' - skip a11y checks entirely
       test: 'todo',
+    },
+
+    // Global MSW configuration
+    msw: {
+      handlers: [], // No global handlers, only story-specific ones
+    },
+
+    // Docs configuration
+    docs: {
+      autodocs: 'tag', // Enable auto-generated docs for stories with 'autodocs' tag
+      defaultName: 'Documentation', // Default name for docs page
     },
   },
   // Provide the MSW addon loader globally

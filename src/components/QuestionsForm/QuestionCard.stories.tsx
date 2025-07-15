@@ -1,6 +1,8 @@
-import { QuestionCard } from './QuestionCard';
-import type { Meta, StoryObj, Decorator } from '@storybook/nextjs-vite';
 import { userEvent, within, expect, waitFor } from 'storybook/test';
+
+import { QuestionCard } from './QuestionCard';
+
+import type { Meta, StoryObj, Decorator } from '@storybook/nextjs-vite';
 
 const fixedWidthDecorator: Decorator = (Story) => (
   <div className="max-w-md mx-auto p-6 bg-white rounded-lg ">
@@ -50,7 +52,7 @@ export const ExpandedTextArea: Story = {
     const canvas = within(canvasElement);
     const input = canvas.getByPlaceholderText(/lasting impression/i);
     const longText = `I remember watching "The Lord of the Rings: The Return of the King" in theaters. The epic battles, emotional farewells, and stunning visuals made it unforgettable. I was so immersed that I barely noticed the passage of time. The experience was heightened by the reactions of the audience—cheers, tears, and applause. It felt like a shared journey, and the story’s themes of hope and friendship resonated deeply with me. This movie set a new standard for what I expect from cinema, and I still revisit it whenever I need inspiration or comfort. The sheer length of my answer should cause the textarea to expand as I type.`;
-    await userEvent.type(input, longText, { delay: 10 });
+    await userEvent.type(input, longText, { delay: 80 });
     // Wait for the textarea to expand
     await waitFor(() => {
       // Check that the textarea height increased (expansion)
