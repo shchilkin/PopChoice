@@ -1,5 +1,5 @@
-import z from 'zod';
 import axios, { AxiosInstance } from 'axios';
+import z from 'zod';
 
 const POSTER_SIZES = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original'] as const;
 

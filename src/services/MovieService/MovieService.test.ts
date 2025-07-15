@@ -1,8 +1,9 @@
-import { describe, beforeEach, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
 import { setupServer } from 'msw/node';
+import { describe, beforeEach, it, expect, beforeAll, afterEach, afterAll } from 'vitest';
+
+import { handlers } from '../../mocks/MovieService.mocks';
 
 import { MovieService } from './MovieService';
-import { handlers } from '../../mocks/MovieService.mocks';
 
 export const server = setupServer(...handlers);
 

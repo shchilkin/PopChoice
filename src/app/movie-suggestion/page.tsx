@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
 import { Button } from '@/components';
 import { SuggestionCard } from '@/components/SuggestionCard';
-import Link from 'next/link';
 
 export default function MovieSuggestionPage() {
   const [recommendation, setRecommendation] = useState({

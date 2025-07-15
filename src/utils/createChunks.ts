@@ -1,4 +1,5 @@
 import { readFile } from 'fs/promises';
+
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 
 const DEFAULT_CHUNK_SIZE = 500;

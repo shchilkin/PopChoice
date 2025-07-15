@@ -1,6 +1,6 @@
-import React, { FC } from 'react';
-import { z } from 'zod';
 import Image from 'next/image';
+import { FC } from 'react';
+import { z } from 'zod';
 
 // Create a zod schema for future OpenAI API integration
 export const SuggestionCardSchema = z.object({

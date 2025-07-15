@@ -1,9 +1,9 @@
-import React from 'react';
 import { http, HttpResponse } from 'msw';
-import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { userEvent, within, waitFor, expect } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import QuestionsPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof QuestionsPage> = {
   title: 'Pages/Questions Page',

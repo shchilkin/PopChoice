@@ -1,4 +1,5 @@
 import { http, HttpResponse } from 'msw';
+
 import { API_BASE_URL, TMDB_MovieDetailsSchema } from '../services';
 
 // TODO: mock https://api.themoviedb.org/3/search/movie

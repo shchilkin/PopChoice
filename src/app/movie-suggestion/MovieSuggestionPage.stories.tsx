@@ -1,5 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import MovieSuggestionPage from './page';
+
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof MovieSuggestionPage> = {
   title: 'Pages/Movie Suggestion Page',

@@ -1,6 +1,6 @@
+import { splitDocument } from './createChunks';
 import openAIClient from './openaiClient';
 import { supabase } from './supabaseClient';
-import { splitDocument } from './createChunks';
 
 const chunks = await splitDocument('../../movies.txt');
 const chunksContent = chunks.map((chunk) => chunk.pageContent);
