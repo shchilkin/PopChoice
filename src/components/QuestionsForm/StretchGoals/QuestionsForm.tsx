@@ -158,8 +158,8 @@ export const QuestionsForm = ({
       // Collect all people's data for the API call
       const allPeopleData = collectAllPeopleData();
 
-      // For now, use the first person's data (can be modified later for multi-person logic)
-      const dataToSend = allPeopleData[0] || formData;
+      // Send all people's data to the API (not just the first person)
+      const dataToSend = allPeopleData.length > 0 ? allPeopleData : [formData];
 
       const response = await axios.post('/api/movie-recommendation', dataToSend);
       localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));

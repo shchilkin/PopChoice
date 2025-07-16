@@ -10,14 +10,23 @@ const prompt = `
 You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
 1. Context about available movies (including their plots, ratings, and vibes).
-2. A user's question or preferences.
+2. User preferences (either from a single person or a group of people).
 
 Your job is to recommend the single most suitable movie in a short, engaging, and human-like way. 
+
+For single person:
 - Start with a warm greeting or a fun comment.
-- Clearly state your top recommendation and why it fits the user's preferences.
-- Mention a couple of relevant details about the movie (genre, mood, why it’s a good fit).
+- Clearly state your top recommendation and why it fits their preferences.
+
+For multiple people:
+- Start with a fun comment about finding a movie for the group.
+- Analyze the common themes and preferences across all group members.
+- Recommend a movie that best satisfies the group's combined preferences.
+- Mention how it appeals to different members' tastes.
+
+- Mention a couple of relevant details about the movie (genre, mood, why it's a good fit).
 - Do not suggest alternatives. Only provide one best match.
-- If you’re unsure, say “Sorry, I don’t know the answer,” and encourage the user to try again.
+- If you're unsure, say "Sorry, I don't know the answer," and encourage them to try again.
 
 Keep your tone upbeat, conversational, and helpful. Avoid making up facts or recommending movies not in the context.
 `;
@@ -30,10 +39,34 @@ export type MovieMatch = {
   similarity: number;
 };
 
-const combineFormDataToString = (data: FormData): string => {
-  return Object.entries(data)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('\n');
+interface PersonFormData {
+  favoriteMovie: string;
+  newVsClassic: string;
+  moodPreference: string[];
+  tonePreference: string;
+}
+
+const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string => {
+  if (allPeopleData.length === 1) {
+    // Single person - same as before
+    const data = allPeopleData[0];
+    return Object.entries(data)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+  }
+
+  // Multiple people - combine all preferences
+  let combinedString = `Group of ${allPeopleData.length} people preferences:\n\n`;
+
+  allPeopleData.forEach((personData, index) => {
+    combinedString += `Person ${index + 1}:\n`;
+    combinedString += Object.entries(personData)
+      .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+    combinedString += '\n\n';
+  });
+
+  return combinedString.trim();
 };
 
 const recommendationSchema = z.object({
@@ -56,11 +89,11 @@ async function findNearestMatch(embedding: number[]): Promise<string | null> {
 }
 
 // Helper: Create embedding for user request
-async function createEmbedding(body: FormData) {
+async function createEmbedding(allPeopleData: PersonFormData[]) {
   try {
     const embeddingResponse = await openAIClient.embeddings.create({
       model: 'text-embedding-3-large',
-      input: combineFormDataToString(body),
+      input: combineAllPeopleDataToString(allPeopleData),
     });
     if (!embeddingResponse?.data?.[0]?.embedding) {
       throw new Error('No embedding returned from OpenAI.');
@@ -124,8 +157,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Step 1: Create embedding
-    const embedding = await createEmbedding(body);
+    console.log(body);
+
+    // Body should now be an array of PersonFormData
+    const allPeopleData: PersonFormData[] = Array.isArray(body) ? body : [body];
+
+    // Step 1: Create embedding from all people's data
+    const embedding = await createEmbedding(allPeopleData);
 
     // Step 2: Find similar movies
     const similarMovies = await getSimilarMovies(embedding);

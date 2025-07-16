@@ -19,7 +19,7 @@ export const Branding = ({
   mascotSize = 180,
 }: BrandingProps) => {
   return (
-    <section id="branding" className="flex flex-col gap-4 mb-8 sm:mb-16 items-center">
+    <section id="branding" className="flex flex-col gap-4 mt-8 mb-4 sm:mb-8 items-center">
       <div className={`w-[${mascotSize}px] h-[${mascotSize}px] flex items-center justify-center`}>
         <Mascot
           firstStripeColor={firstStripeColor}
