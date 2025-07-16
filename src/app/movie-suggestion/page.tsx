@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components';
+import { Button, TopNavigation } from '@/components';
 import { SuggestionCard } from '@/components/SuggestionCard';
 
 export default function MovieSuggestionPage() {
@@ -32,8 +32,12 @@ export default function MovieSuggestionPage() {
   return (
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col w-full items-center max-w-md mx-auto">
-        {/* TODO: Make smaller branding for content pages */}
-        {/* <Branding /> */}
+        <TopNavigation
+          // firstStripeColor={currentPersonColors.first}
+          // secondStripeColor={currentPersonColors.second}
+          logoSize={60}
+        />
+
         <SuggestionCard
           title={recommendation.title}
           description={recommendation.description}

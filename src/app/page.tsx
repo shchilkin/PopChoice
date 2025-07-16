@@ -28,26 +28,74 @@ export default function QuestionsPage() {
       <main className="flex flex-col w-full items-center max-w-md mx-auto gap-8">
         <Branding />
 
-        <div className="flex flex-col w-full gap-4">
-          <div className="flex flex-col gap-2">
+        <div className="flex flex-col w-full gap-6">
+          {/* People Count Section */}
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              How many people?
+            </label>
+
+            {/* Main input */}
             <input
               type="number"
-              placeholder="How many people?"
+              placeholder="Enter number of people"
               value={peopleCount}
               onChange={(e) => setPeopleCount(e.target.value)}
               min="1"
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
+
+            {/* Choice chips */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {[1, 2, 3, 5, 10].map((count) => (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => setPeopleCount(count.toString())}
+                  className={`min-w-[4rem] flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    peopleCount === count.toString()
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm'
+                  }`}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          {/* Time Available Section */}
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              How much time do you have?
+            </label>
+
+            {/* Main input */}
             <input
               type="text"
-              placeholder="How much time do you have?"
+              placeholder="Describe your available time"
               value={timeAvailable}
               onChange={(e) => setTimeAvailable(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
+
+            {/* Choice chips */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {['30 min', '1 hour', '2 hours', 'All evening', 'Weekend'].map((time) => (
+                <button
+                  key={time}
+                  type="button"
+                  onClick={() => setTimeAvailable(time)}
+                  className={`min-w-[4rem] flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                    timeAvailable === time
+                      ? 'bg-blue-500 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm'
+                  }`}
+                >
+                  {time}
+                </button>
+              ))}
+            </div>
           </div>
 
           <Button

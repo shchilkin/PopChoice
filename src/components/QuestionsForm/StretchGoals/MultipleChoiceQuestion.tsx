@@ -4,10 +4,11 @@ interface MultipleChoiceQuestionProps {
   question: string;
   options: string[];
   // Controlled state props
-  selectedValue?: string; // Current selected value
-  onChange?: (value: string) => void; // Callback when selection changes
+  selectedValue?: string | string[]; // Support both single and multi-select
+  onChange?: (value: string | string[]) => void; // Callback when selection changes
   // Optional: for radio button grouping
   name?: string; // Radio button group name
+  multiSelect?: boolean; // Enable multi-select mode
 }
 
 export const MultipleChoiceQuestion: FC<MultipleChoiceQuestionProps> = ({
@@ -16,13 +17,29 @@ export const MultipleChoiceQuestion: FC<MultipleChoiceQuestionProps> = ({
   selectedValue,
   onChange,
   name = 'multiple-choice', // Default name
+  multiSelect = false,
 }: MultipleChoiceQuestionProps) => {
   const uniqueId = useId();
-  const [internalValue, setInternalValue] = useState<string>('');
+  const [internalValue, setInternalValue] = useState<string | string[]>(multiSelect ? [] : '');
   const isControlled = selectedValue !== undefined;
   const currentValue = isControlled ? selectedValue : internalValue;
 
-  const handleChange = (newValue: string) => {
+  const handleChange = (option: string) => {
+    let newValue: string | string[];
+
+    if (multiSelect) {
+      const currentArray = Array.isArray(currentValue) ? currentValue : [];
+      if (currentArray.includes(option)) {
+        // Remove option if already selected
+        newValue = currentArray.filter((item) => item !== option);
+      } else {
+        // Add option if not selected
+        newValue = [...currentArray, option];
+      }
+    } else {
+      newValue = option;
+    }
+
     if (!isControlled) {
       setInternalValue(newValue);
     }
@@ -32,16 +49,21 @@ export const MultipleChoiceQuestion: FC<MultipleChoiceQuestionProps> = ({
 
   return (
     <div>
-      <p className="text-md font-regular text-start w-full dark:text-gray-300 mb-2">{question}</p>
-      <div className="flex flex-row gap-2">
+      <p className="text-md font-regular text-start w-full dark:text-gray-300 mb-2">
+        {question}
+        {multiSelect && <span className="text-xs text-gray-500 ml-2">(multi-select)</span>}
+      </p>
+      <div className="flex flex-row gap-2 flex-wrap">
         {options.map((option) => {
           const id = `${uniqueId}-${option}`;
-          const isSelected = currentValue === option;
+          const isSelected = multiSelect
+            ? Array.isArray(currentValue) && currentValue.includes(option)
+            : currentValue === option;
 
           return (
             <div className="flex flex-row gap-1" key={id}>
               <input
-                type="radio"
+                type={multiSelect ? 'checkbox' : 'radio'}
                 id={id}
                 name={name}
                 value={option}

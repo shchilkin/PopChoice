@@ -55,63 +55,63 @@ export const Scheme1: Story = {
 
 export const Scheme2: Story = {
   args: {
-    firstStripeColor: '#ff595e',
-    secondStripeColor: '#ffca3a',
+    firstStripeColor: '#ff4500',
+    secondStripeColor: '#00bfff',
   },
 };
 
 export const Scheme3: Story = {
   args: {
-    firstStripeColor: '#d7263d',
-    secondStripeColor: '#f46036',
+    firstStripeColor: '#8a2be2',
+    secondStripeColor: '#ffff00',
   },
 };
 
 export const Scheme4: Story = {
   args: {
-    firstStripeColor: '#720026',
-    secondStripeColor: '#ce4257',
+    firstStripeColor: '#ff1493',
+    secondStripeColor: '#00fa9a',
   },
 };
 
 export const Scheme5: Story = {
   args: {
-    firstStripeColor: '#ffb4a2',
-    secondStripeColor: '#ffe5d9',
+    firstStripeColor: '#ff6347',
+    secondStripeColor: '#40e0d0',
   },
 };
 
 export const Scheme6: Story = {
   args: {
-    firstStripeColor: '#ff006e',
-    secondStripeColor: '#fbb13c',
+    firstStripeColor: '#9932cc',
+    secondStripeColor: '#ffd700',
   },
 };
 
 export const Scheme7: Story = {
   args: {
-    firstStripeColor: '#c9184a',
-    secondStripeColor: '#ffb700',
+    firstStripeColor: '#dc143c',
+    secondStripeColor: '#00ced1',
   },
 };
 
 export const Scheme8: Story = {
   args: {
-    firstStripeColor: '#6a4c93',
-    secondStripeColor: '#f6e27a',
+    firstStripeColor: '#ff4500',
+    secondStripeColor: '#32cd32',
   },
 };
 
 export const Scheme9: Story = {
   args: {
-    firstStripeColor: '#ff1654',
-    secondStripeColor: '#f9dc5c',
+    firstStripeColor: '#8b00ff',
+    secondStripeColor: '#ff8c00',
   },
 };
 
 export const Scheme10: Story = {
   args: {
-    firstStripeColor: '#ff6f61',
-    secondStripeColor: '#f7cac9',
+    firstStripeColor: '#e91e63',
+    secondStripeColor: '#00e676',
   },
 };
