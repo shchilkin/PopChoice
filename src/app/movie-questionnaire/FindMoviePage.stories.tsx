@@ -1,12 +1,12 @@
 import { http, HttpResponse } from 'msw';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
-import QuestionsPage from './page';
+import QuestionsPage from '../page';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof QuestionsPage> = {
-  title: 'Pages/Questions Page',
+  title: 'Pages/Movie Questionnaire Page',
   component: QuestionsPage,
   parameters: {
     nextjs: {

@@ -47,15 +47,22 @@ export const MultipleChoiceQuestion: FC<MultipleChoiceQuestionProps> = ({
                 value={option}
                 checked={isSelected}
                 onChange={() => handleChange(option)}
-                className="peer sr-only" // Hide input but keep accessible
+                className="peer opacity-0 absolute w-0 h-0" // Visually hidden but keyboard accessible
               />
               <label
                 htmlFor={id}
-                className={`cursor-pointer px-4 py-1 rounded-lg border transition-colors ${
+                className={`cursor-pointer px-4 py-1 rounded-lg border transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-2 ${
                   isSelected
                     ? 'bg-amber-300 text-black border-amber-300'
                     : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-gray-300'
                 }`}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleChange(option);
+                  }
+                }}
               >
                 {option}
               </label>
