@@ -40,7 +40,7 @@ jobs:
 
       - name: Run Storybook tests
         if: steps.playwright-install.outcome == 'success'
-        run: npm run test:storybook
+        run: npm run test:storybook --ignore-scripts
 
       - name: Build project
         id: build-project
