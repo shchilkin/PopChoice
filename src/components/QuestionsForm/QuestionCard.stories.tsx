@@ -76,7 +76,7 @@ export const FilledTextArea: Story = {
   args: {
     label: "What's your favorite movie and why?",
     placeholder: 'Share your thoughts...',
-    maxLength: 150,
+    maxLength: 200,
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
