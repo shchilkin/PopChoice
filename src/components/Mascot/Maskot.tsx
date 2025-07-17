@@ -98,5 +98,3 @@ export const Mascot: React.FC<MascotSVGProps> = (props) => {
     </>
   );
 };
-
-export default Mascot;

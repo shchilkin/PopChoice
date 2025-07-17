@@ -1,7 +1,7 @@
 import React from 'react';
 import { userEvent, within } from 'storybook/test';
 
-import Mascot from './Maskot';
+import { Mascot } from './Maskot';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
