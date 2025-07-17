@@ -22,7 +22,6 @@ export const QuestionCard = ({
 }: QuestionCardProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // TODO: Handle form data for N people and time available
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = textareaRef.current;
