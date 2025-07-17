@@ -4,13 +4,19 @@ import { useState } from 'react';
 
 import { Branding, Button } from '@/components';
 
-export default function QuestionsPage() {
+export default function IntroPage() {
   const [peopleCount, setPeopleCount] = useState<string>('');
   const [timeAvailable, setTimeAvailable] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const router = useRouter();
+
+  const isFormValid = peopleCount.trim() !== '' && timeAvailable.trim() !== '';
+  const isButtonDisabled = !isFormValid || isSubmitting;
 
   const handleStart = () => {
-    if (peopleCount && timeAvailable) {
-      // TODO: Navigate to next step or handle form submission
+    if (isFormValid && !isSubmitting) {
+      setIsSubmitting(true);
       localStorage.setItem(
         'popchoice_peopleAndTimeData',
         JSON.stringify({ peopleCount, timeAvailable }),
@@ -18,10 +24,6 @@ export default function QuestionsPage() {
       router.push('/movie-questionnaire');
     }
   };
-
-  const router = useRouter();
-
-  const isFormValid = peopleCount.trim() !== '' && timeAvailable.trim() !== '';
 
   return (
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
@@ -73,7 +75,7 @@ export default function QuestionsPage() {
             {/* Main input */}
             <input
               type="text"
-              placeholder="Describe your available time"
+              placeholder="How much time do you have?"
               value={timeAvailable}
               onChange={(e) => setTimeAvailable(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
@@ -100,7 +102,7 @@ export default function QuestionsPage() {
 
           <Button
             onClick={handleStart}
-            disabled={!isFormValid}
+            disabled={isButtonDisabled}
             className="w-full mt-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-400"
           >
             Start
