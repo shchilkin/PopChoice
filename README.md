@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="/public/popcorn.png" alt="Popcorn Mascot" width="200" />
+  <img src="/public/popcorn.svg" alt="Popcorn Mascot" width="200" />
 </div>
 
 # PopChoice
