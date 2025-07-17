@@ -60,6 +60,7 @@ const eslintConfig = [
 
       // Prevent duplicate imports
       'import/no-duplicates': 'error',
+      'no-console': process.env.CI ? 'error' : 'warn',
     },
   },
 ];

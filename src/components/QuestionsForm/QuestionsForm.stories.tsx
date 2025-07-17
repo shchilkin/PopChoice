@@ -2,7 +2,7 @@ import { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { http, HttpResponse } from 'msw';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
-import { QuestionsForm } from './QuestionsForm';
+import { QuestionsForm } from '@/components';
 
 // Test data constants
 const TEST_RESPONSES = {
@@ -18,6 +18,7 @@ const MOCK_API_RESPONSE = {
   posterURL: 'https://example.com/godfather-poster.jpg',
 } as const;
 
+// TODO: Different interaction delays for local and CI environments
 // Timing constants for realistic user interactions
 const INTERACTION_DELAYS = {
   typing: 25, // Increased from 10ms to prevent character corruption
@@ -40,13 +41,6 @@ const fillTextInput = async (
   await waitFor(() => expect(input).toHaveValue(text));
 };
 
-const selectRadioOption = async (canvas: ReturnType<typeof within>, labelText: string) => {
-  await waitFor(() => {
-    const option = canvas.getByLabelText(labelText);
-    userEvent.click(option);
-  });
-};
-
 const waitForDelay = (delay: number) => new Promise((resolve) => setTimeout(resolve, delay));
 
 const expectButtonState = async (
@@ -65,7 +59,7 @@ const expectButtonState = async (
 };
 
 const meta: Meta = {
-  title: 'Components/Stretch Goals/QuestionsForm',
+  title: 'Components/QuestionsForm',
   component: QuestionsForm,
   parameters: {
     msw: {
@@ -92,75 +86,38 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const EmptyForm: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story: 'Shows the initial empty state of the form with all validation disabled.',
-      },
-    },
-  },
-};
+export const EmptyForm: Story = {};
 
-export const FilledForm: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          'Demonstrates a complete user journey through the form with realistic timing and interactions.',
-      },
-    },
-  },
+export const FillingForm: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    // Step 1: Fill favorite movie question
+    // 1. Fill Favorite movie
+    await fillTextInput(canvas, /Share your thoughts/i, TEST_RESPONSES.favoriteMovie);
+    // 1.1. Check that form cannot be submitted
+    await expectButtonState(canvas, /Find me a movie/i, true);
+
+    // 2. Select new in new or classic radio group
+    const newMoodOption = canvas.getByLabelText(/New?/i);
+    await userEvent.click(newMoodOption);
+    // 2.1. Check that form cannot be submitted
+    await expectButtonState(canvas, /Find me a movie/i, true);
+
+    // 3. Select Fun and Inspiring options in mood / vibe
+    const funOption = canvas.getByLabelText(/Fun?/i);
+    await userEvent.click(funOption, { delay: INTERACTION_DELAYS.typing });
+    const inspiringOption = canvas.getByLabelText(/Inspiring/i);
+    await userEvent.click(inspiringOption, { delay: INTERACTION_DELAYS.typing });
+    // 3.1. Check that form cannot be submitted
+    await expectButtonState(canvas, /Find me a movie/i, true);
+
+    // 4. Fill famous film person text area
     await fillTextInput(
       canvas,
-      /favorite movie/i,
-      TEST_RESPONSES.favoriteMovie,
-      INTERACTION_DELAYS.typing,
-    );
-
-    // Step 2: User thinking time before next field
-    await waitForDelay(INTERACTION_DELAYS.thinking);
-
-    // Step 3: Select preference for new vs classic
-    await selectRadioOption(canvas, 'Classic');
-
-    // Step 4: Brief pause between selections
-    await waitForDelay(INTERACTION_DELAYS.reading);
-
-    // Step 5: Select mood preference
-    await selectRadioOption(canvas, 'Inspiring');
-
-    // Step 6: Reading time for longer question
-    await waitForDelay(INTERACTION_DELAYS.reading);
-
-    // Step 7: Fill famous film person question
-    await fillTextInput(
-      canvas,
-      /Tom Hanks because he is really funny and can do the voice of Woody/i,
+      /Tom Hanks because he is really funny/i,
       TEST_RESPONSES.famousFilmPerson,
-      INTERACTION_DELAYS.typingLong,
     );
-
-    // Step 8: User review time
-    await waitForDelay(INTERACTION_DELAYS.reading);
-
-    // Step 9: Verify form is valid and submit button is enabled
-    await expectButtonState(canvas, /Find Me a Movie/i, false);
-
-    // Step 10: Final decision time before submission
-    await waitForDelay(INTERACTION_DELAYS.decision);
-
-    // Step 11: Submit form
-    await userEvent.click(canvas.getByRole('button', { name: /Find Me a Movie/i }));
-
-    // Step 12: Verify loading state is shown
-    await expectButtonState(canvas, /Finding.../i, true);
-
-    // Note: In a real application, navigation to /movie-suggestion would occur here
-    // Check browser console for "Router.push called" message
+    //4.1 Check that after all fields were filled form can be submited
+    await expectButtonState(canvas, /Find me a movie/i, false);
   },
 };

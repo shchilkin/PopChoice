@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { TopNavigation } from '@/components';
-import { QuestionsForm } from '@/components/QuestionsForm/StretchGoals/QuestionsForm';
+import { QuestionsForm } from '@/components/QuestionsForm/QuestionsForm';
 import { getPersonColors } from '@/utils/personColors';
 
 interface PersonData {

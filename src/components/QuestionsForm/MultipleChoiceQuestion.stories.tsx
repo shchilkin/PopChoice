@@ -5,7 +5,7 @@ import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
 import type { Meta } from '@storybook/nextjs-vite';
 
 const meta: Meta = {
-  title: 'Components/Stretch Goals/Multiple Choice Question',
+  title: 'Components/Multiple Choice Question',
   component: MultipleChoiceQuestion,
 };
 

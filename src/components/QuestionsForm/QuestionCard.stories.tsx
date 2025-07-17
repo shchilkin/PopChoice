@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { QuestionCard } from './QuestionCard';
@@ -10,10 +11,25 @@ const fixedWidthDecorator: Decorator = (Story) => (
   </div>
 );
 
+// Decorator to make the component work with controlled state
+const withControlledState: Decorator = (Story, context) => {
+  const [value, setValue] = useState(context.args.value || '');
+
+  return (
+    <Story
+      args={{
+        ...context.args,
+        value,
+        onChange: setValue,
+      }}
+    />
+  );
+};
+
 const meta: Meta = {
   title: 'Components/QuestionCard',
   component: QuestionCard,
-  decorators: [fixedWidthDecorator],
+  decorators: [fixedWidthDecorator, withControlledState],
 };
 
 export default meta;
@@ -33,7 +49,7 @@ export const WithMaxLength: Story = {
     label: "What's your favorite movie and why?",
     placeholder:
       'Share your thoughts on your favorite movie, including its plot, characters, and what makes it special to you.',
-    maxLength: 150,
+    maxLength: 322,
   },
 };
 
@@ -64,12 +80,15 @@ export const FilledTextArea: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    // Simulate user typing in the input field
-    const input = canvas.getByPlaceholderText(/share your thoughts/i);
-    const userText = 'This is my answer to the question.';
-    await userEvent.type(input, userText, { delay: 80 });
-    // Assert that the input contains the user-typed value
-    expect(input).toHaveValue(userText);
+    const textarea = canvas.getByPlaceholderText(/share your thoughts/i);
+    const userText =
+      'The Shawshank Redemption is my favorite movie because it tells an incredible story of hope, friendship, and perseverance that really resonates with me.';
+
+    // Type the text
+    await userEvent.type(textarea, userText, { delay: 20 });
+
+    // Assert that the textarea contains the user-typed value
+    expect(textarea).toHaveValue(userText);
   },
 };
 
@@ -81,16 +100,18 @@ export const ExpandedTextArea: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const input = canvas.getByPlaceholderText(/lasting impression/i);
+    const textarea = canvas.getByPlaceholderText(/lasting impression/i);
     const longText =
       'I remember watching The Lord of the Rings: The Return of the King in theaters. The epic battles, emotional farewells, and stunning visuals made it unforgettable. I was so immersed that I barely noticed the passage of time.';
-    await userEvent.type(input, longText, { delay: 10 });
-    // Wait for the textarea to expand
+
+    // Type the text
+    await userEvent.type(textarea, longText, { delay: 10 });
+
+    // Wait for the textarea to expand and value to match
     await waitFor(() => {
-      // Check that the textarea height increased (expansion)
-      expect(input.scrollHeight).toBeGreaterThan(input.clientHeight);
-      // Optionally, check that the value matches
-      expect(input).toHaveValue(longText);
+      expect(textarea).toHaveValue(longText);
+      // Optionally, check that the textarea height increased (expansion)
+      expect(textarea.scrollHeight).toBeGreaterThan(textarea.clientHeight);
     });
   },
 };
@@ -103,11 +124,11 @@ export const CharacterLimitWarning: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const input = canvas.getByPlaceholderText(/share your thoughts/i);
+    const textarea = canvas.getByPlaceholderText(/share your thoughts/i);
     // Type text that approaches the character limit to show warning color
     const nearLimitText =
       'The Shawshank Redemption is my favorite movie because it tells an incredible story of hope and';
-    await userEvent.type(input, nearLimitText, { delay: 20 });
+    await userEvent.type(textarea, nearLimitText, { delay: 20 });
 
     // Wait for character counter to update and show warning color
     await waitFor(() => {

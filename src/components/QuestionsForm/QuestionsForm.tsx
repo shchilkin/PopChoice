@@ -3,10 +3,10 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { Button } from '../../Button/Button';
-import { QuestionCard } from '../QuestionCard';
+import { Button } from '../Button/Button';
 
 import { MultipleChoiceQuestion } from './MultipleChoiceQuestion';
+import { QuestionCard } from './QuestionCard';
 
 export interface FormData {
   favoriteMovie: string;
@@ -207,7 +207,7 @@ export const QuestionsForm = ({
               value={formData.favoriteMovie}
               onChange={(value: string) => handleInputChange('favoriteMovie', value)}
               name="favoriteMovie"
-              maxLength={150}
+              maxLength={300}
             />
             <MultipleChoiceQuestion
               question="Are you in the mood for something new or a classic?"
@@ -231,7 +231,7 @@ export const QuestionsForm = ({
               value={formData.tonePreference}
               onChange={(value: string) => handleInputChange('tonePreference', value)}
               name="tonePreference"
-              maxLength={150}
+              maxLength={300}
               helperText="(auto-suggest)"
             />
           </div>
