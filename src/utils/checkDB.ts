@@ -61,7 +61,7 @@ async function getChatCompletion(text: string, query: string) {
     content: `Context: ${text} Question: ${query}`,
   });
 
-  await openAIClient.chat.completions.create({
+  return await openAIClient.chat.completions.create({
     model: 'gpt-4',
     messages: chatMessages,
     temperature: 0.5,

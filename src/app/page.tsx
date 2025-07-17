@@ -33,12 +33,14 @@ export default function IntroPage() {
         <div className="flex flex-col w-full gap-6">
           {/* People Count Section */}
           <div className="flex flex-col gap-3">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label
+              htmlFor="peopleCount"
+              className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
               How many people?
             </label>
-
-            {/* Main input */}
             <input
+              id="peopleCount"
               type="number"
               placeholder="Enter number of people"
               value={peopleCount}
