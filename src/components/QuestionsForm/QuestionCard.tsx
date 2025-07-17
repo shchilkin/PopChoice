@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 
 interface QuestionCardProps {
   label: string;
@@ -21,15 +21,6 @@ export const QuestionCard = ({
   helperText,
 }: QuestionCardProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (typeof window !== undefined) {
-      const peopleCountAndTimeData = JSON.parse(
-        localStorage.getItem('popchoice_peopleAndTimeData') || '{}',
-      );
-      console.log('peopleCountAndTimeData:', peopleCountAndTimeData);
-    }
-  }, []);
 
   // TODO: Handle form data for N people and time available
 

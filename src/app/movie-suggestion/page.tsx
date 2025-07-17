@@ -24,6 +24,8 @@ export default function MovieSuggestionPage() {
           posterURL: parsed.posterURL || '',
         });
       } catch (e) {
+        // TODO: Implement better error handling
+        // eslint-disable-next-line no-console
         console.error('Failed to parse recommendation:', e);
       }
     }

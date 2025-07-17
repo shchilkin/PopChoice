@@ -82,6 +82,8 @@ async function findNearestMatch(embedding: number[]): Promise<string | null> {
   });
 
   if (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Error finding nearest match:', error);
     return null;
   }
@@ -142,11 +144,15 @@ async function getPosterURL(movieTitle: string) {
   try {
     const movieDetails = await movieService.getMovieByTitle(movieTitle);
     if (!movieDetails) {
+      // TODO: Find better way to handle use case when movie not found
+      // eslint-disable-next-line no-console
       console.warn(`No movie found with title: ${movieTitle}`);
       return undefined;
     }
     return movieService.getPosterURL(movieDetails.poster_path, 'w500');
   } catch (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Error fetching movie by title:', error);
     return undefined;
   }
@@ -156,8 +162,6 @@ async function getPosterURL(movieTitle: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-
-    console.log(body);
 
     // Body should now be an array of PersonFormData
     const allPeopleData: PersonFormData[] = Array.isArray(body) ? body : [body];
@@ -174,13 +178,6 @@ export async function POST(req: NextRequest) {
     // Step 4: Get poster URL
     const posterURL = await getPosterURL(responseMessage.title);
 
-    // Log for debugging
-    console.log('Movie title:', responseMessage.title);
-    if (posterURL) {
-      console.log('Poster URL:', posterURL);
-    }
-    console.log('Response from OpenAI:', responseMessage);
-
     // Return response
     return NextResponse.json({
       description: responseMessage.description,
@@ -188,10 +185,16 @@ export async function POST(req: NextRequest) {
       posterURL: posterURL,
     });
   } catch (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Unexpected error in movie recommendation API:', error);
     if (error instanceof Error) {
+      // TODO: Implement better error handling
+      // eslint-disable-next-line no-console
       console.error('Unexpected error stack:', error.stack);
     } else {
+      // TODO: Implement better error handling
+      // eslint-disable-next-line no-console
       console.error('Unexpected error details:', JSON.stringify(error));
     }
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });

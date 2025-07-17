@@ -10,12 +10,11 @@ main(query);
 async function main(input: string) {
   const embedding = await createEmbedding(input);
   const match = await findNearestMatch(embedding);
-  console.log('match ', match);
 
   if (match) {
     await getChatCompletion(match, input);
   } else {
-    console.log('No match found');
+    // TODO: handle no match case
   }
 }
 
@@ -48,6 +47,8 @@ async function findNearestMatch(embedding: number[]): Promise<string | null> {
   });
 
   if (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Error finding nearest match:', error);
     return null;
   }
@@ -60,11 +61,10 @@ async function getChatCompletion(text: string, query: string) {
     content: `Context: ${text} Question: ${query}`,
   });
 
-  const response = await openAIClient.chat.completions.create({
+  await openAIClient.chat.completions.create({
     model: 'gpt-4',
     messages: chatMessages,
     temperature: 0.5,
     frequency_penalty: 0.5,
   });
-  console.log(response.choices[0].message.content);
 }

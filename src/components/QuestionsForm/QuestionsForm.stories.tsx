@@ -75,9 +75,6 @@ const meta: Meta = {
     },
     nextjs: {
       appDirectory: true,
-      navigation: {
-        push: () => console.log('Router.push called - would navigate to /movie-suggestion'),
-      },
     },
   },
 };

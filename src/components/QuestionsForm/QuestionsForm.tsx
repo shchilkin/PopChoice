@@ -170,6 +170,8 @@ export const QuestionsForm = ({
       router.push('/movie-suggestion');
     } catch (error) {
       alert('Error fetching recommendation');
+      // TODO: Implement better error handling
+      // eslint-disable-next-line no-console
       console.error(error);
     } finally {
       setLoading(false);

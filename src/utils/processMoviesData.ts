@@ -40,6 +40,8 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
   const entries = data.split(/\r?\n/).filter(Boolean);
 
   if (entries.length % 2 !== 0) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.warn('Warning: Odd number of lines, last entry may be incomplete.');
   }
 
@@ -57,6 +59,8 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
   if (parseResult.success) {
     return parseResult.data;
   } else {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Validation errors:', parseResult.error);
     return [];
   }
