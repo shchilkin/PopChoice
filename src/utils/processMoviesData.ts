@@ -40,7 +40,9 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
   const entries = data.split(/\r?\n/).filter(Boolean);
 
   if (entries.length % 2 !== 0) {
-    throw new Error('Invalid file format: Odd number of lines detected. Each movie entry must have a description line.');
+    throw new Error(
+      'Invalid file format: Odd number of lines detected. Each movie entry must have a description line.',
+    );
   }
 
   const rawMovies: RawMovieEntry[] = [];

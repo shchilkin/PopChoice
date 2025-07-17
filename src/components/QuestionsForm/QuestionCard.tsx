@@ -22,7 +22,6 @@ export const QuestionCard = ({
 }: QuestionCardProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = textareaRef.current;
     if (textarea) {
