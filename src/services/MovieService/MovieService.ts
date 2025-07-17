@@ -1,5 +1,5 @@
-import z from 'zod';
 import axios, { AxiosInstance } from 'axios';
+import z from 'zod';
 
 const POSTER_SIZES = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original'] as const;
 
@@ -64,12 +64,16 @@ export class MovieService {
           return movie.title.toLowerCase() === movieTitle.toLowerCase();
         });
         if (filteredResults.length === 0) {
+          // TODO: Implement better way to log this
+          // eslint-disable-next-line no-console
           console.warn(`No movie found with title: ${movieTitle}`);
           return undefined;
         }
         return filteredResults[0];
       })
       .catch((error) => {
+        // TODO: Implement better error handling
+        // eslint-disable-next-line no-console
         console.error('Error fetching movie by title:', error);
         throw new Error(`Failed to fetch movie by title: ${movieTitle}`);
       });

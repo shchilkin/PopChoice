@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Branding } from './Branding';
 
 export default {

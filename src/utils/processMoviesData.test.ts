@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { processMoviesFile } from './processMoviesData';
-import path from 'path';
 import fs from 'fs/promises';
+import path from 'path';
+
+import { describe, it, expect } from 'vitest';
+
+import { processMoviesFile } from './processMoviesData';
 
 const testFilePath = path.resolve(__dirname, '../../movies.txt');
 const emptyFilePath = path.resolve(__dirname, '../../empty-movies.txt');

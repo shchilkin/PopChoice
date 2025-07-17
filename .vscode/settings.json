@@ -1,0 +1,26 @@
+{
+  // Auto-save files after a delay (optional)
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  
+  // Format on save with Prettier (works alongside ESLint)
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  
+  // Enable auto-fix on save and organize imports
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  
+  // Optional: Also enable auto-fix on type (while editing)
+  "editor.codeActionsOnType": true,
+  
+  // Enable ESLint for specific file types
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ]
+}

@@ -1,23 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import openAIClient from '@/utils/openaiClient';
-import { supabase } from '@/utils/supabaseClient';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
 import { MovieService } from '@/services';
+import openAIClient from '@/utils/openaiClient';
+import { supabase } from '@/utils/supabaseClient';
 
 const prompt = `
 You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
 1. Context about available movies (including their plots, ratings, and vibes).
-2. A user's question or preferences.
+2. User preferences (either from a single person or a group of people).
 
 Your job is to recommend the single most suitable movie in a short, engaging, and human-like way. 
+
+For single person:
 - Start with a warm greeting or a fun comment.
-- Clearly state your top recommendation and why it fits the user's preferences.
-- Mention a couple of relevant details about the movie (genre, mood, why it’s a good fit).
+- Clearly state your top recommendation and why it fits their preferences.
+
+For multiple people:
+- Start with a fun comment about finding a movie for the group.
+- Analyze the common themes and preferences across all group members.
+- Recommend a movie that best satisfies the group's combined preferences.
+- Mention how it appeals to different members' tastes.
+
+- Mention a couple of relevant details about the movie (genre, mood, why it's a good fit).
 - Do not suggest alternatives. Only provide one best match.
-- If you’re unsure, say “Sorry, I don’t know the answer,” and encourage the user to try again.
+- If you're unsure, say "Sorry, I don't know the answer," and encourage them to try again.
 
 Keep your tone upbeat, conversational, and helpful. Avoid making up facts or recommending movies not in the context.
 `;
@@ -30,10 +39,34 @@ export type MovieMatch = {
   similarity: number;
 };
 
-const combineFormDataToString = (data: FormData): string => {
-  return Object.entries(data)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('\n');
+interface PersonFormData {
+  favoriteMovie: string;
+  newVsClassic: string;
+  moodPreference: string[];
+  tonePreference: string;
+}
+
+const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string => {
+  if (allPeopleData.length === 1) {
+    // Single person - same as before
+    const data = allPeopleData[0];
+    return Object.entries(data)
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+  }
+
+  // Multiple people - combine all preferences
+  let combinedString = `Group of ${allPeopleData.length} people preferences:\n\n`;
+
+  allPeopleData.forEach((personData, index) => {
+    combinedString += `Person ${index + 1}:\n`;
+    combinedString += Object.entries(personData)
+      .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+    combinedString += '\n\n';
+  });
+
+  return combinedString.trim();
 };
 
 const recommendationSchema = z.object({
@@ -49,6 +82,8 @@ async function findNearestMatch(embedding: number[]): Promise<string | null> {
   });
 
   if (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Error finding nearest match:', error);
     return null;
   }
@@ -56,11 +91,11 @@ async function findNearestMatch(embedding: number[]): Promise<string | null> {
 }
 
 // Helper: Create embedding for user request
-async function createEmbedding(body: FormData) {
+async function createEmbedding(allPeopleData: PersonFormData[]) {
   try {
     const embeddingResponse = await openAIClient.embeddings.create({
       model: 'text-embedding-3-large',
-      input: combineFormDataToString(body),
+      input: combineAllPeopleDataToString(allPeopleData),
     });
     if (!embeddingResponse?.data?.[0]?.embedding) {
       throw new Error('No embedding returned from OpenAI.');
@@ -109,11 +144,15 @@ async function getPosterURL(movieTitle: string) {
   try {
     const movieDetails = await movieService.getMovieByTitle(movieTitle);
     if (!movieDetails) {
+      // TODO: Find better way to handle use case when movie not found
+      // eslint-disable-next-line no-console
       console.warn(`No movie found with title: ${movieTitle}`);
       return undefined;
     }
     return movieService.getPosterURL(movieDetails.poster_path, 'w500');
   } catch (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Error fetching movie by title:', error);
     return undefined;
   }
@@ -124,8 +163,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Step 1: Create embedding
-    const embedding = await createEmbedding(body);
+    // Body should now be an array of PersonFormData
+    const allPeopleData: PersonFormData[] = Array.isArray(body) ? body : [body];
+
+    // Step 1: Create embedding from all people's data
+    const embedding = await createEmbedding(allPeopleData);
 
     // Step 2: Find similar movies
     const similarMovies = await getSimilarMovies(embedding);
@@ -136,13 +178,6 @@ export async function POST(req: NextRequest) {
     // Step 4: Get poster URL
     const posterURL = await getPosterURL(responseMessage.title);
 
-    // Log for debugging
-    console.log('Movie title:', responseMessage.title);
-    if (posterURL) {
-      console.log('Poster URL:', posterURL);
-    }
-    console.log('Response from OpenAI:', responseMessage);
-
     // Return response
     return NextResponse.json({
       description: responseMessage.description,
@@ -150,10 +185,16 @@ export async function POST(req: NextRequest) {
       posterURL: posterURL,
     });
   } catch (error) {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Unexpected error in movie recommendation API:', error);
     if (error instanceof Error) {
+      // TODO: Implement better error handling
+      // eslint-disable-next-line no-console
       console.error('Unexpected error stack:', error.stack);
     } else {
+      // TODO: Implement better error handling
+      // eslint-disable-next-line no-console
       console.error('Unexpected error details:', JSON.stringify(error));
     }
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });

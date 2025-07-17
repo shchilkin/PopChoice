@@ -1,4 +1,5 @@
 import { readFile } from 'fs/promises';
+
 import { z } from 'zod/v4';
 
 // Currently not used, will be used for stretch goals to create better embeddings
@@ -39,7 +40,9 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
   const entries = data.split(/\r?\n/).filter(Boolean);
 
   if (entries.length % 2 !== 0) {
-    console.warn('Warning: Odd number of lines, last entry may be incomplete.');
+    throw new Error(
+      'Invalid file format: Odd number of lines detected. Each movie entry must have a description line.',
+    );
   }
 
   const rawMovies: RawMovieEntry[] = [];
@@ -56,6 +59,8 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
   if (parseResult.success) {
     return parseResult.data;
   } else {
+    // TODO: Implement better error handling
+    // eslint-disable-next-line no-console
     console.error('Validation errors:', parseResult.error);
     return [];
   }
