@@ -1,12 +1,14 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { processMoviesFile } from './processMoviesData';
+import { ageRatings, processMoviesFile } from './processMoviesData';
 
 const testFilePath = path.resolve(__dirname, '../../movies.txt');
 const emptyFilePath = path.resolve(__dirname, '../../empty-movies.txt');
+
+// TODO: Reveite tests
 
 describe('processMoviesFile', () => {
   it('should parse and validate movies correctly', async () => {
@@ -15,7 +17,7 @@ describe('processMoviesFile', () => {
     expect(movies.length).toBeGreaterThan(0);
     for (const movie of movies) {
       expect(typeof movie.movieName).toBe('string');
-      expect(['PG', 'PG-13', 'R']).toContain(movie.ageRating);
+      expect(ageRatings.options).toContain(movie.ageRating);
       expect(typeof movie.duration).toBe('string');
       expect(typeof movie.scoreRating).toBe('number');
       expect(typeof movie.description).toBe('string');
