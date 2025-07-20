@@ -1,5 +1,4 @@
-import openAIClient from './openaiClient';
-import { supabase } from './supabaseClient';
+import { openAIClient, supabase } from '@/clients';
 
 import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 

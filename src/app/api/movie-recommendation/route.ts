@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
+import { openAIClient, supabase } from '@/clients';
 import { MovieService } from '@/services';
-import openAIClient from '@/utils/openaiClient';
-import { supabase } from '@/utils/supabaseClient';
 
 const prompt = `
 You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
