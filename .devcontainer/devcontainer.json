@@ -16,7 +16,7 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "npm install",
+  "postCreateCommand": "npm install && npm install -g tsx",
   "postStartCommand": "npm run prepare",
   "customizations": {
     "vscode": {
