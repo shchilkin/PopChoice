@@ -1,5 +1,9 @@
 create table if not exists movies (
-  id bigserial primary key,
-  content text,
+  id bigserial primary key, 
+  name text not null,
+  age_rating text not null,
+  description text not null,  
+  duration integer not null,
+  score_rating float not null,
   embedding vector(3072)
 );

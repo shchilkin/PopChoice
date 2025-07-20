@@ -63,6 +63,14 @@ const eslintConfig = [
       'no-console': process.env.CI ? 'error' : 'warn',
     },
   },
+
+  // Allow console logs in utils/movies directory
+  {
+    files: ['src/utils/movies/**/*.{ts,js}'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;

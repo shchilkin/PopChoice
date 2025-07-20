@@ -9,7 +9,19 @@ export const ageRatings = z.enum(['G', 'PG', 'PG-13', 'R', 'NR', '12+', '15', '1
 export const movieSchema = z.object({
   movieName: z.string(),
   ageRating: ageRatings,
-  duration: z.string(),
+  duration: z
+    .string()
+    .transform((val) => {
+      // Parse duration like "1h 50m" or "2h 15m" to minutes
+      const match = val.match(/(?:(\d+)h\s*)?(?:(\d+)m)?/);
+      if (!match) return 0;
+
+      const hours = parseInt(match[1] || '0', 10);
+      const minutes = parseInt(match[2] || '0', 10);
+
+      return hours * 60 + minutes;
+    })
+    .refine((num) => num > 0, { message: 'Duration must be greater than 0 minutes' }),
   scoreRating: z
     .string()
     .transform((val) => Number(val.replace(/rating/i, '').trim()))
@@ -29,18 +41,12 @@ type RawMovieEntry = {
 
 type MovieEntry = z.infer<typeof movieSchema>;
 
-export async function processMoviesFile(filePath: string): Promise<MovieEntry[]> {
-  let data: string;
-  try {
-    data = await readFile(filePath, 'utf-8');
-  } catch (error) {
-    if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new Error(`File not found: ${filePath}`);
-    }
-    throw error;
-  }
-  const entries = data.split(/\r?\n/).filter(Boolean);
-
+/**
+ * Converts raw text entries to structured movie objects
+ * @param entries - Array of text lines from the movies file
+ * @returns Array of validated movie objects
+ */
+export function convertTextToMovieObjects(entries: string[]): MovieEntry[] {
   if (entries.length % 2 !== 0) {
     throw new Error(
       'Invalid file format: Odd number of lines detected. Each movie entry must have a description line.',
@@ -53,7 +59,13 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
       .split('|')
       .map((part) => part.trim());
     const description = entries[i + 1]?.trim() || '';
-    rawMovies.push({ movieName, ageRating, duration, scoreRating, description });
+    rawMovies.push({
+      movieName,
+      ageRating,
+      duration,
+      scoreRating,
+      description,
+    });
   }
 
   const parseResult = moviesArraySchema.safeParse(rawMovies);
@@ -66,4 +78,19 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
     console.error('Validation errors:', parseResult.error);
     return [];
   }
+}
+
+export async function processMoviesFile(filePath: string): Promise<MovieEntry[]> {
+  let data: string;
+  try {
+    data = await readFile(filePath, 'utf-8');
+  } catch (error) {
+    if (error instanceof Error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`File not found: ${filePath}`);
+    }
+    throw error;
+  }
+  const entries = data.split(/\r?\n/).filter(Boolean);
+
+  return convertTextToMovieObjects(entries);
 }
