@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { ageRatings, processMoviesFile } from './processMoviesData';
 
+/* TODO: I am not sure that testing on real data (300+ movies) is a good idea
+ Check out other ways */
 const testFilePath = path.resolve(__dirname, '../../movies.txt');
 const emptyFilePath = path.resolve(__dirname, '../../empty-movies.txt');
-
-// TODO: Reveite tests
 
 describe('processMoviesFile', () => {
   it('should parse and validate movies correctly', async () => {
