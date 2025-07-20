@@ -4,9 +4,11 @@ import { z } from 'zod/v4';
 
 // Currently not used, will be used for stretch goals to create better embeddings
 
-const movieSchema = z.object({
+export const ageRatings = z.enum(['G', 'PG', 'PG-13', 'R', 'NR', '12+', '15', '16+', '18+']);
+
+export const movieSchema = z.object({
   movieName: z.string(),
-  ageRating: z.enum(['PG', 'PG-13', 'R']),
+  ageRating: ageRatings,
   duration: z.string(),
   scoreRating: z
     .string()
