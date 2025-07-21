@@ -6,7 +6,7 @@ import { join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 // Import the schema directly from its specific file
-import { movieChunkSchema } from '../../schemas/movieChunkSchema';
+import { movieChunkSchema } from '@/utils/schemas';
 
 // Define the interface for our raw movie chunks
 interface RawMovieChunk {
