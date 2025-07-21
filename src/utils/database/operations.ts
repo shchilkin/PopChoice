@@ -1,5 +1,6 @@
 import { supabase } from '@/clients/supabaseClient';
-import { convertTextToMovieObjects, parseMovieNameAndYear } from '@/utils/data/movieParser';
+
+import { convertTextToMovieObjects, parseMovieNameAndYear } from '../data/movieParser';
 
 import { filterExistingMovies, getMovieCount } from './validation';
 
@@ -77,9 +78,12 @@ export async function insertMoviesIntoSupabase(
 
           successCount++;
         } catch (singleError) {
+          const errorMessage =
+            singleError instanceof Error ? singleError.message : JSON.stringify(singleError);
+          console.error(`❌ Insert error for record ${i}:`, errorMessage);
           errors.push({
             index: i,
-            error: singleError instanceof Error ? singleError.message : 'Database insertion error',
+            error: errorMessage,
           });
         }
       }

@@ -16,6 +16,7 @@
     "lint": "next lint",
     "lint:check": "next lint",
     "lint:fix": "next lint --fix",
+    "populate-db": "tsx scripts/populate-database.ts",
     "prepare": "husky",
     "start": "next start",
     "storybook": "storybook dev -p 6006",

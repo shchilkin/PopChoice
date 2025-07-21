@@ -1,18 +1,9 @@
 import { openAIClient } from '@/clients/openaiClient';
 
-/**
- * Interface for any chunk that has content to embed
- */
-export interface EmbeddableChunk {
-  pageContent: string;
-}
+import type { ChunkWithEmbedding, EmbeddableChunk } from '../types';
 
-/**
- * Result type for chunks with embeddings
- */
-export type ChunkWithEmbedding<T extends EmbeddableChunk> = T & {
-  embedding: number[];
-};
+// Re-export types for convenience
+export type { ChunkWithEmbedding, EmbeddableChunk };
 
 /**
  * Generic function to create embeddings for any type of chunks

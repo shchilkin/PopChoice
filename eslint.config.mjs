@@ -64,9 +64,9 @@ const eslintConfig = [
     },
   },
 
-  // Allow console logs in utils/movies directory
+  // Allow console logs in server-side utils
   {
-    files: ['src/utils/movies/**/*.{ts,js}'],
+    files: ['src/utils/**/*.{ts,js}', 'src/app/api/**/*.{ts,js}', 'scripts/**/*.{ts,js}'],
     rules: {
       'no-console': 'off',
     },
