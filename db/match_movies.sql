@@ -1,9 +1,5 @@
--- Single comprehensive match_movies function for PopChoice movie recommendations
--- This function provides structured movie data with formatted content for the API
-
 -- Drop existing function first to avoid return type conflicts
 DROP FUNCTION IF EXISTS match_movies(vector, float, int);
-DROP FUNCTION IF EXISTS match_movies(vector, double precision, integer);
 
 -- Create the new function with correct return type
 create or replace function match_movies (
