@@ -18,5 +18,5 @@ export { parseMovieNameAndYear } from './data/parseMovieNameAndYear';
 // UI utilities
 export { getPersonColors } from './ui/colors';
 
-// Movie utilities (client-safe)
-export * from './movies';
+// Movie enhancement utilities (client-safe with direct TMDB API calls)
+export * from './movieEnhancement';

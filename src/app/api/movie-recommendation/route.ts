@@ -76,6 +76,7 @@ const apiResponseSchema = z.object({
         age_rating: z.string(),
         duration: z.number(),
         score_rating: z.number(),
+        posterURL: z.string().url().optional(), // Added poster URL support
       }),
     )
     .optional(),
@@ -170,6 +171,8 @@ async function getSimilarMovies(embedding: number[]) {
     if (!similarMovies) {
       throw new Error('No similar movies found.');
     }
+
+    console.log('similar movies', similarMovies);
     return similarMovies;
   } catch (error) {
     throw new Error(`Failed to search for similar movies: ${error}`);
@@ -217,6 +220,39 @@ async function getPosterURL(movieTitle: string) {
   }
 }
 
+// Helper: Enhanced poster fetching for similar movies with batching
+async function enhanceSimilarMoviesWithPosters(
+  similarMovies: EnhancedMovieMatch[],
+  batchSize: number = 3,
+): Promise<(EnhancedMovieMatch & { posterURL?: string })[]> {
+  const enhancedMovies: (EnhancedMovieMatch & { posterURL?: string })[] = [];
+
+  // Process movies in batches to avoid overwhelming the TMDB API
+  for (let i = 0; i < similarMovies.length; i += batchSize) {
+    const batch = similarMovies.slice(i, i + batchSize);
+
+    const batchPromises = batch.map(async (movie) => {
+      try {
+        const posterURL = await getPosterURL(movie.name);
+        return { ...movie, posterURL };
+      } catch (error) {
+        console.warn(`Failed to fetch poster for movie: ${movie.name}`, error);
+        return { ...movie, posterURL: undefined };
+      }
+    });
+
+    const batchResults = await Promise.all(batchPromises);
+    enhancedMovies.push(...batchResults);
+
+    // Small delay between batches to be respectful to the API
+    if (i + batchSize < similarMovies.length) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+
+  return enhancedMovies;
+}
+
 // Main POST handler
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
@@ -243,11 +279,15 @@ export async function POST(req: NextRequest) {
     // Step 3: Get recommendation from OpenAI
     const responseMessage = await getRecommendation(similarMovies);
 
-    // Step 4: Get poster URL
+    // Step 4: Get poster URL for main recommendation
     const posterURL = await getPosterURL(responseMessage.title);
 
+    // Step 5: Enhance similar movies with poster URLs (in batches)
+    console.log('Enhancing similar movies with posters...');
+    const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies);
+
     // Find the recommended movie in our similar movies to get its details
-    const recommendedMovie = similarMovies.find(
+    const recommendedMovie = enhancedSimilarMovies.find(
       (movie) =>
         movie.name.toLowerCase().includes(responseMessage.title.toLowerCase()) ||
         responseMessage.title.toLowerCase().includes(movie.name.toLowerCase()),
@@ -267,7 +307,7 @@ export async function POST(req: NextRequest) {
             similarity: recommendedMovie.similarity,
           }
         : undefined,
-      similarMovies: similarMovies.map((movie) => ({
+      similarMovies: enhancedSimilarMovies.map((movie) => ({
         id: movie.id,
         name: movie.name,
         year: movie.year,
@@ -275,6 +315,7 @@ export async function POST(req: NextRequest) {
         age_rating: movie.age_rating,
         duration: movie.duration,
         score_rating: movie.score_rating,
+        posterURL: movie.posterURL, // Now includes poster URL!
       })),
     };
 

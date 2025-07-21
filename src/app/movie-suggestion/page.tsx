@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { Button, MovieGrid, TopNavigation } from '@/components';
 import { SuggestionCard } from '@/components/SuggestionCard';
-import { enhanceMoviesWithPosters, type EnhancedMovieRecommendation } from '@/utils/client';
+import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
 interface ApiResponse {
   title: string;
@@ -26,6 +26,7 @@ interface ApiResponse {
     age_rating?: string;
     duration?: number;
     score_rating?: number;
+    posterURL?: string; // Added poster URL support
   }[];
 }
 
@@ -35,7 +36,7 @@ export default function MovieSuggestionPage() {
     description: '',
     posterURL: '',
   });
-  const [similarMovies, setSimilarMovies] = useState<EnhancedMovieRecommendation[]>([]);
+  const [similarMovies, setSimilarMovies] = useState<MovieRecommendation[]>([]);
   const [isLoadingPosters, setIsLoadingPosters] = useState(false);
 
   useEffect(() => {
@@ -55,32 +56,49 @@ export default function MovieSuggestionPage() {
         if (parsed.similarMovies && parsed.similarMovies.length > 0) {
           setIsLoadingPosters(true);
 
-          // Convert similar movies to our format
-          const moviesWithoutPosters: EnhancedMovieRecommendation[] = parsed.similarMovies.map(
-            (movie) => ({
-              id: movie.id,
-              name: movie.name,
-              year: movie.year,
-              similarity: movie.similarity,
-              age_rating: movie.age_rating,
-              duration: movie.duration,
-              score_rating: movie.score_rating,
-            }),
-          );
+          // Convert similar movies to our format (now includes poster URLs from API)
+          const moviesWithPosters: MovieRecommendation[] = parsed.similarMovies.map((movie) => ({
+            id: movie.id,
+            name: movie.name,
+            year: movie.year,
+            similarity: movie.similarity,
+            age_rating: movie.age_rating,
+            duration: movie.duration,
+            score_rating: movie.score_rating,
+            posterURL: movie.posterURL, // Use poster from API response
+          }));
 
-          // Enhance with poster URLs
-          enhanceMoviesWithPosters(moviesWithoutPosters)
-            .then((enhancedMovies) => {
-              setSimilarMovies(enhancedMovies);
-            })
-            .catch((error) => {
-              // eslint-disable-next-line no-console
-              console.error('Failed to enhance movies with posters:', error);
-              setSimilarMovies(moviesWithoutPosters); // Show movies without posters
-            })
-            .finally(() => {
-              setIsLoadingPosters(false);
-            });
+          // Check if we need client-side enhancement for movies without posters
+          const moviesNeedingPosters = moviesWithPosters.filter((movie) => !movie.posterURL);
+
+          if (moviesNeedingPosters.length > 0) {
+            // eslint-disable-next-line no-console
+            console.log(`${moviesNeedingPosters.length} movies need poster enhancement`);
+
+            // Enhance missing posters with TMDB API key from environment
+            const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+            enhanceMoviesWithPosters(moviesNeedingPosters, tmdbApiKey)
+              .then((enhancedMissingMovies) => {
+                // Merge enhanced movies back with the original list
+                const finalMovies = moviesWithPosters.map((movie) => {
+                  const enhanced = enhancedMissingMovies.find((em) => em.id === movie.id);
+                  return enhanced || movie;
+                });
+                setSimilarMovies(finalMovies);
+              })
+              .catch((error) => {
+                // eslint-disable-next-line no-console
+                console.error('Failed to enhance movies with posters:', error);
+                setSimilarMovies(moviesWithPosters); // Use API response as-is
+              })
+              .finally(() => {
+                setIsLoadingPosters(false);
+              });
+          } else {
+            // All movies already have posters from the API
+            setSimilarMovies(moviesWithPosters);
+            setIsLoadingPosters(false);
+          }
         }
       } catch (e) {
         // TODO: Implement better error handling
