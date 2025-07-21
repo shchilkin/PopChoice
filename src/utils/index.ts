@@ -32,3 +32,6 @@ export { filterExistingMovies, getMovieCount, movieExists } from './database/val
 
 // UI utilities
 export { getPersonColors } from './ui/colors';
+
+// Movie utilities
+export * from './movies';
