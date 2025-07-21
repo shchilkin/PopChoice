@@ -1,0 +1,1 @@
+export { getMovieStats } from './getMovieStats';

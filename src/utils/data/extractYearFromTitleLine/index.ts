@@ -1,0 +1,1 @@
+export { extractYearFromTitleLine } from './extractYearFromTitleLine';

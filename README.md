@@ -4,75 +4,235 @@
 
 # PopChoice
 
-PopChoice is a Solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
+PopChoice is a **movie recommendation engine** that uses AI embeddings and vector databases to provide personalized movie suggestions based on user preferences.
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
 
-## Getting Started
+## ✨ Features
 
-First, run the development server:
+- 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
+- 📊 **Interactive Questionnaire** - Collects user preferences through engaging questions
+- 🔍 **Vector Search** - Lightning-fast similarity search with Supabase pgvector
+- 📱 **Responsive Design** - Works seamlessly on desktop and mobile
+- 🧪 **Component Library** - Built with Storybook for consistent UI components
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🛠 Tech Stack
+
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **AI/ML:** OpenAI GPT & Embeddings API
+- **Database:** Supabase (PostgreSQL with pgvector extension)
+- **Testing:** Vitest, Storybook, Playwright
+- **Development:** ESLint, Prettier, Husky, lint-staged
+
+## 🚀 Quick Start
+
+1. **Clone and install dependencies**
+
+   ```bash
+   git clone <repository-url>
+   cd pop-choice-22
+   npm install
+   ```
+
+2. **Set up environment variables**
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+3. **Start development server**
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Open the application**
+   - Navigate to [http://localhost:3000](http://localhost:3000)
+   - Start the Storybook workshop at [http://localhost:6006](http://localhost:6006) with `npm run storybook`
+
+## 📖 Documentation
+
+- **[Setup Guide](./docs/SETUP.md)** - Complete setup instructions for OpenAI, Supabase, and development environment
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflows, scripts, and project structure
+- **[CI/CD Documentation](./docs/CI-CD.md)** - GitHub Actions workflow and deployment information
+
+## 🗂 Project Structure
+
+```text
+src/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes (movie recommendations)
+│   └── pages/             # Application pages
+├── components/            # Reusable React components
+│   ├── QuestionsForm/     # Movie preference questionnaire
+│   ├── SuggestionCard/    # Movie recommendation cards
+│   └── ...               # Other UI components
+├── services/              # External API integrations
+│   └── MovieService/      # TMDB API integration
+└── utils/                 # Utility functions
+    ├── db/               # Database schemas and functions
+    └── movies/           # Movie data processing utilities
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🧪 Development Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Development
+npm run dev              # Start development server
+npm run build           # Build for production
+npm run start           # Start production server
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Code Quality
+npm run lint            # Check code quality
+npm run format:check    # Check formatting
+npm run type-check      # TypeScript validation
+npm run fix             # Fix all issues automatically
 
-### OpenAI setup
+# Testing
+npm run test            # Run all tests
+npm run test:storybook  # Component tests
+npm run storybook       # Start component workshop
 
-This application uses the OpenAI API to generate embeddings and chat completions.
+# Utilities
+npm run analyze-movies  # Analyze movie data for embeddings
+```
 
-**Steps:**
+## 🔗 Learn More
 
-1. **Get your OpenAI API key**
-   - Sign up or log in at [OpenAI Platform](https://platform.openai.com/docs/overview)
-   - Go to your account settings and create an API key
+- [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js features and API
+- [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings) - Understanding embeddings for recommendations
+- [Supabase Vector Documentation](https://supabase.com/docs/guides/ai/vector-columns) - Vector database setup
+- [The AI Engineer Path](https://scrimba.com/learn/aipath) - Complete AI engineering course
 
-2. **Add your API key to the `.env` file**
-   - In your project root, open or create a file named `.env`
-   - Add the following line:
-     ```env
-     OPENAI_API_KEY=your-openai-api-key-here
-     ```
+## 🚀 Deploy on Vercel
 
-3. **Use the API key in your code**
-   - Your application will automatically load the API key from `.env` using `process.env.OPENAI_API_KEY`
-   - See [`src/utils/openaiClient.ts`](./src/utils/openaiClient.ts) for usage example
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
 
----
-
-### Database setup
-
-This application uses Supabase (PostgreSQL) to store movie embeddings.
-
-**Steps:**
-
-1. **Create the movies table**
-   - Run the SQL in [`src/utils/db/createDB.sql`](./src/utils/db/createDB.sql)
-
-2. **Add the matching function**
-   - Run the SQL in [`src/utils/db/match_movies.sql`](./src/utils/db/match_movies.sql)
-
-3. **Set up Supabase project**
-   - Create a Supabase account (if needed)
-   - Create a new project in Supabase
-   - Add your project URL and API key to your [`.env`](./.env) file
-
-4. **(Optional) Test your setup**
-   - Use the Supabase dashboard or client to insert and query movie embeddings.
-   - Use the provided scripts to generate and store embeddings.
+Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
 ---
+
+<div align="center">
+  Built with ❤️ for learning AI engineering
+</div>
+
+# PopChoice
+
+PopChoice is a **movie recommendation engine** that uses AI embeddings and vector databases to provide personalized movie suggestions based on user preferences.
+
+This is a solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
+
+## ✨ Features
+
+- 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
+- 📊 **Interactive Questionnaire** - Collects user preferences through engaging questions
+- 🔍 **Vector Search** - Lightning-fast similarity search with Supabase pgvector
+- 📱 **Responsive Design** - Works seamlessly on desktop and mobile
+- 🧪 **Component Library** - Built with Storybook for consistent UI components
+
+## 🛠 Tech Stack
+
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **AI/ML:** OpenAI GPT & Embeddings API
+- **Database:** Supabase (PostgreSQL with pgvector extension)
+- **Testing:** Vitest, Storybook, Playwright
+- **Development:** ESLint, Prettier, Husky, lint-staged
+
+## 🚀 Quick Start
+
+1. **Clone and install dependencies**
+
+   ```bash
+   git clone <repository-url>
+   cd pop-choice-22
+   npm install
+   ```
+
+2. **Set up environment variables**
+
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys
+   ```
+
+3. **Start development server**
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Open the application**
+   - Navigate to [http://localhost:3000](http://localhost:3000)
+   - Start the Storybook workshop at [http://localhost:6006](http://localhost:6006) with `npm run storybook`
+
+## 📖 Documentation
+
+- **[Setup Guide](./docs/SETUP.md)** - Complete setup instructions for OpenAI, Supabase, and development environment
+- **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflows, scripts, and project structure
+- **[CI/CD Documentation](./docs/CI-CD.md)** - GitHub Actions workflow and deployment information
+
+## 🗂 Project Structure
+
+```text
+src/
+├── app/                    # Next.js app directory
+│   ├── api/               # API routes (movie recommendations)
+│   └── pages/             # Application pages
+├── components/            # Reusable React components
+│   ├── QuestionsForm/     # Movie preference questionnaire
+│   ├── SuggestionCard/    # Movie recommendation cards
+│   └── ...               # Other UI components
+├── services/              # External API integrations
+│   └── MovieService/      # TMDB API integration
+└── utils/                 # Utility functions
+    ├── db/               # Database schemas and functions
+    └── movies/           # Movie data processing utilities
+```
+
+## 🧪 Development Scripts
+
+```bash
+# Development
+npm run dev              # Start development server
+npm run build           # Build for production
+npm run start           # Start production server
+
+# Code Quality
+npm run lint            # Check code quality
+npm run format:check    # Check formatting
+npm run type-check      # TypeScript validation
+npm run fix             # Fix all issues automatically
+
+# Testing
+npm run test            # Run all tests
+npm run test:storybook  # Component tests
+npm run storybook       # Start component workshop
+
+# Utilities
+npm run analyze-movies  # Analyze movie data for embeddings
+```
+
+# PopChoice Movie Recommendations
+
+PopChoice is a **movie recommendation engine** that uses AI embeddings and vector databases to provide personalized movie suggestions based on user preferences.
+
+This is a solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
+
+## Features
+
+- Movie recommendation engine using AI embeddings
+- Vector database search with Supabase
+- Interactive questionnaire for user preferences
+- Real-time movie suggestions based on user input
+
+## Tech Stack
+
+- **Frontend:** Next.js, React, TypeScript, Tailwind CSS
+- **AI/ML:** OpenAI GPT & Embeddings API
+- **Database:** Supabase (PostgreSQL with pgvector)
+- **Testing:** Vitest, Storybook, Playwright
+- **Development:** ESLint, Prettier, Husky
 
 ## Learn More
 

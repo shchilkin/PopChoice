@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-import { TopNavigation } from '@/components';
-import { QuestionsForm } from '@/components/QuestionsForm/QuestionsForm';
-import { getPersonColors } from '@/utils/personColors';
+import { QuestionsForm, TopNavigation } from '@/components';
+import { getPersonColors } from '@/utils/ui';
 
 interface PersonData {
   peopleCount: string;

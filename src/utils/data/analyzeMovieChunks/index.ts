@@ -1,0 +1,1 @@
+export { analyzeMovieChunks } from './analyzeMovieChunks';

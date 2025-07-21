@@ -63,6 +63,14 @@ const eslintConfig = [
       'no-console': process.env.CI ? 'error' : 'warn',
     },
   },
+
+  // Allow console logs in server-side utils
+  {
+    files: ['src/utils/**/*.{ts,js}', 'src/app/api/**/*.{ts,js}', 'scripts/**/*.{ts,js}'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;
