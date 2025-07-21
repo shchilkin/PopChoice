@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY}}
 
     steps:
       - name: Checkout code
