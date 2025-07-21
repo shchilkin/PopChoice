@@ -77,6 +77,8 @@ const apiResponseSchema = z.object({
         duration: z.number(),
         score_rating: z.number(),
         posterURL: z.string().url().optional(), // Added poster URL support
+        aiDescription: z.string().optional(), // Added AI-generated description
+        isMainRecommendation: z.boolean().optional(), // Mark main recommendation
       }),
     )
     .optional(),
@@ -132,7 +134,7 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
   const { error, data } = await supabase.rpc('match_movies', {
     query_embedding: embedding,
     match_threshold: 0.1,
-    match_count: 5, // Get more movies for better recommendations
+    match_count: 6, // Get 6 movies: 1 main recommendation + 5 additional movies
   });
 
   if (error) {
@@ -203,6 +205,69 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
   } catch (error) {
     throw new Error(`Failed to get recommendation from OpenAI: ${error}`);
   }
+}
+
+// Helper: Generate AI descriptions for individual movies
+async function generateMovieDescriptions(
+  movies: (EnhancedMovieMatch & { posterURL?: string })[],
+  userPreferences: PersonFormData[],
+): Promise<(EnhancedMovieMatch & { posterURL?: string; aiDescription?: string })[]> {
+  console.log(`Generating AI descriptions for ${movies.length} movies...`);
+
+  // Create a prompt specifically for individual movie descriptions
+  const descriptionPrompt = `
+You are PopChoice, a movie expert creating personalized movie descriptions. For each movie provided, write a brief, engaging description (2-3 sentences) that:
+
+1. Explains why this movie would appeal to the user based on their preferences
+2. Highlights the most compelling aspects of the film
+3. Uses an enthusiastic, conversational tone
+4. Avoids spoilers but creates excitement
+
+User preferences context: ${combineAllPeopleDataToString(userPreferences)}
+
+For each movie, return a description that makes the user excited to watch it.
+`;
+
+  const enhancedMovies = await Promise.all(
+    movies.map(async (movie) => {
+      try {
+        const movieContext = `
+Movie: ${movie.name} (${movie.year})
+Rating: ${movie.age_rating} | Duration: ${movie.duration}min | Score: ${movie.score_rating}/10
+Plot: ${movie.description}
+Match Score: ${Math.round(movie.similarity * 100)}%
+`;
+
+        const descriptionResponse = await openAIClient.chat.completions.create({
+          model: 'gpt-4o-mini', // Use mini model for cost efficiency on individual descriptions
+          messages: [
+            { role: 'system', content: descriptionPrompt },
+            { role: 'user', content: movieContext },
+          ],
+          max_tokens: 150, // Keep descriptions concise
+          temperature: 0.7, // Add some creativity
+        });
+
+        const aiDescription =
+          descriptionResponse.choices[0]?.message?.content?.trim() ||
+          `${movie.name} is a ${movie.age_rating} ${movie.year} film with a ${movie.score_rating}/10 rating. This ${Math.round(movie.similarity * 100)}% match offers exactly what you're looking for!`;
+
+        return {
+          ...movie,
+          aiDescription,
+        };
+      } catch (error) {
+        console.warn(`Failed to generate description for ${movie.name}:`, error);
+        // Fallback to a basic description
+        return {
+          ...movie,
+          aiDescription: `${movie.name} (${movie.year}) is a ${movie.age_rating} film with a ${movie.score_rating}/10 rating. This ${Math.round(movie.similarity * 100)}% match aligns perfectly with your preferences!`,
+        };
+      }
+    }),
+  );
+
+  return enhancedMovies;
 }
 
 // Helper: Get poster URL for recommended movie
@@ -286,12 +351,23 @@ export async function POST(req: NextRequest) {
     console.log('Enhancing similar movies with posters...');
     const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies);
 
+    // Step 6: Generate AI descriptions for each movie
+    console.log('Generating personalized AI descriptions for each movie...');
+    const moviesWithDescriptions = await generateMovieDescriptions(
+      enhancedSimilarMovies,
+      allPeopleData,
+    );
+
     // Find the recommended movie in our similar movies to get its details
-    const recommendedMovie = enhancedSimilarMovies.find(
+    const recommendedMovie = moviesWithDescriptions.find(
       (movie) =>
         movie.name.toLowerCase().includes(responseMessage.title.toLowerCase()) ||
         responseMessage.title.toLowerCase().includes(movie.name.toLowerCase()),
     );
+
+    // Don't filter out any movies - include all movies in the response
+    // The main recommendation info is still provided for context, but UI will show all movies together
+    console.log(`Returning all ${moviesWithDescriptions.length} movies in unified list`);
 
     // Validate and return response with enhanced data
     const response: ApiResponse = {
@@ -307,7 +383,7 @@ export async function POST(req: NextRequest) {
             similarity: recommendedMovie.similarity,
           }
         : undefined,
-      similarMovies: enhancedSimilarMovies.map((movie) => ({
+      similarMovies: moviesWithDescriptions.map((movie) => ({
         id: movie.id,
         name: movie.name,
         year: movie.year,
@@ -315,7 +391,10 @@ export async function POST(req: NextRequest) {
         age_rating: movie.age_rating,
         duration: movie.duration,
         score_rating: movie.score_rating,
-        posterURL: movie.posterURL, // Now includes poster URL!
+        posterURL: movie.posterURL,
+        aiDescription: movie.aiDescription,
+        // Mark the main recommendation for potential UI highlighting (optional)
+        isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
       })),
     };
 

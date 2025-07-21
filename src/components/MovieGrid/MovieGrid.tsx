@@ -12,6 +12,7 @@ export interface MovieRecommendation {
   score_rating?: number;
   posterURL?: string;
   description?: string;
+  isMainRecommendation?: boolean;
 }
 
 interface MovieGridProps {
