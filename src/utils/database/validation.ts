@@ -1,4 +1,4 @@
-import { supabase } from '@/clients/supabaseClient';
+import { supabase } from '@/clients';
 
 import type { MovieRecord } from '../types';
 

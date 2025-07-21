@@ -1,6 +1,5 @@
 import { supabase } from '@/clients/supabaseClient';
-
-import { convertTextToMovieObjects, parseMovieNameAndYear } from '../data/movieParser';
+import { convertTextToMovieObjects, parseMovieNameAndYear } from '@/utils/data';
 
 import { filterExistingMovies, getMovieCount } from './validation';
 

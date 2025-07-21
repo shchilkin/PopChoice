@@ -15,21 +15,19 @@
  *   # or directly:
  *   tsx scripts/populate-database.ts
  *   # or with options:
- *   tsx scripts/populate-database.ts --force-all
  */
 
 import path from 'path';
 
+import { getMovieFileStats, splitMovieDocument } from '@/utils';
+
 import { createEmbeddingsWithProgress } from '../src/utils/ai/embeddings';
-import { getMovieStats } from '../src/utils/data/movieAnalyzer';
-import { getMovieFileStats, splitMovieDocument } from '../src/utils/data/movieSplitter';
-import { batchInsertMoviesWithDuplicateCheck } from '../src/utils/database/insertMovies';
+import { getMovieStats } from '../src/utils/data/getMovieStats';
 
 import type { ChunkWithEmbedding, MovieDocument } from '../src/utils/types';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
-const forceAll = args.includes('--force-all');
 const help = args.includes('--help') || args.includes('-h');
 
 if (help) {
@@ -41,7 +39,6 @@ Usage:
   tsx scripts/populate-database.ts [options]
 
 Options:
-  --force-all     Skip duplicate checking and process all movies (expensive!)
   --help, -h      Show this help message
 
 Environment Variables:
@@ -52,7 +49,7 @@ Environment Variables:
 Examples:
   npm run populate-db                    # Normal operation (skip duplicates)
   tsx scripts/populate-database.ts      # Same as above
-  tsx scripts/populate-database.ts --force-all  # Process all movies (expensive)
+
 `);
   process.exit(0);
 }
@@ -73,11 +70,6 @@ if (missingVars.length > 0) {
 async function main() {
   console.log('🎬 PopChoice Database Population Script');
   console.log('=====================================\n');
-
-  if (forceAll) {
-    console.log('⚠️  FORCE MODE: Processing all movies (will ignore duplicates check)');
-    console.log('💰 This may result in high OpenAI API costs!\n');
-  }
 
   // Resolve path to movies.txt from project root
   const moviesPath = path.resolve(process.cwd(), 'movies.txt');
@@ -122,11 +114,108 @@ async function main() {
     }
 
     // Create embeddings for all movies
-    // Note: Duplicate checking happens during insertion to avoid expensive embeddings for existing movies
-    console.log(`\n🧠 Creating embeddings for ${chunks.length} movies...`);
+    // Note: We should check for duplicates BEFORE creating expensive embeddings
+    console.log(`\n🔍 Checking for duplicates before creating embeddings...`);
 
-    // Estimate ~400 tokens per movie chunk (conservative estimate)
-    const estimatedTokens = chunks.length * 400;
+    // Parse all movies first to check which ones are new
+    const movieRecords: Array<{
+      name: string;
+      year: number;
+      chunkIndex: number;
+      chunk: (typeof chunks)[0];
+    }> = [];
+    const parseErrors: Array<{ index: number; error: string }> = [];
+
+    // Import the parsing functions
+    const { convertTextToMovieObjects, parseMovieNameAndYear } = await import('../src/utils/data');
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+
+      try {
+        const lines = chunk.pageContent.split('\n').filter(Boolean);
+        const movieEntries = convertTextToMovieObjects(lines);
+
+        if (movieEntries.length !== 1) {
+          throw new Error(`Expected 1 movie per chunk, got ${movieEntries.length}`);
+        }
+
+        const movie = movieEntries[0];
+        const parsedMovie = parseMovieNameAndYear(movie.movieName);
+
+        movieRecords.push({
+          name: parsedMovie.name,
+          year: parsedMovie.year,
+          chunkIndex: i,
+          chunk: chunk,
+        });
+      } catch (error) {
+        parseErrors.push({
+          index: i,
+          error: error instanceof Error ? error.message : 'Unknown parsing error',
+        });
+      }
+    }
+
+    console.log(`✅ Parsed ${movieRecords.length} movies successfully`);
+    if (parseErrors.length > 0) {
+      console.log(`⚠️ Failed to parse ${parseErrors.length} movies`);
+    }
+
+    // Check which movies already exist in database
+    const { movieExists } = await import('../src/utils/database/validation');
+    const newMovies: typeof movieRecords = [];
+    const existingMovies: Array<{ name: string; year: number; index: number }> = [];
+
+    console.log('🔍 Checking database for existing movies...');
+    for (const record of movieRecords) {
+      try {
+        const exists = await movieExists(record.name, record.year);
+
+        if (exists) {
+          existingMovies.push({
+            name: record.name,
+            year: record.year,
+            index: record.chunkIndex,
+          });
+        } else {
+          newMovies.push(record);
+        }
+      } catch {
+        // If we can't check, assume it's new (will be caught by unique constraint)
+        newMovies.push(record);
+      }
+    }
+
+    console.log(`🆕 New movies to process: ${newMovies.length}`);
+    console.log(`🔄 Duplicate movies (will skip): ${existingMovies.length}`);
+
+    if (existingMovies.length > 0) {
+      console.log(`\n📋 Sample duplicates found:`);
+      existingMovies.slice(0, 5).forEach((duplicate) => {
+        console.log(`  - "${duplicate.name}" (${duplicate.year})`);
+      });
+      if (existingMovies.length > 5) {
+        console.log(`  ... and ${existingMovies.length - 5} more duplicates`);
+      }
+    }
+
+    // Only process chunks for NEW movies
+    const newMovieIndices = new Set(newMovies.map((movie) => movie.chunkIndex));
+    const chunksToProcess = chunks.filter((_, index) => newMovieIndices.has(index));
+
+    console.log(`\n🧠 Creating embeddings for ${chunksToProcess.length} NEW movies only...`);
+
+    if (chunksToProcess.length === 0) {
+      console.log(`\n🎉 No new movies to process - all movies already exist in database!`);
+      console.log(`✅ Successfully inserted: 0 movies`);
+      console.log(`🔄 Skipped duplicates: ${existingMovies.length} movies`);
+      console.log(`❌ Failed insertions: ${parseErrors.length} movies`);
+      process.exit(parseErrors.length > 0 ? 1 : 0);
+    }
+
+    // Estimate cost for NEW movies only
+    const estimatedTokens = chunksToProcess.length * 400;
     const estimatedCost = (estimatedTokens / 1000000) * 0.13; // $0.13 per 1M tokens
 
     console.log(
@@ -134,7 +223,7 @@ async function main() {
     );
 
     const chunksWithEmbeddings: ChunkWithEmbedding<MovieDocument>[] =
-      await createEmbeddingsWithProgress(chunks, {
+      await createEmbeddingsWithProgress(chunksToProcess, {
         model: 'text-embedding-3-large',
         batchSize: 50,
         logProgress: true,
@@ -142,28 +231,26 @@ async function main() {
 
     console.log(`✅ Created ${chunksWithEmbeddings.length} embeddings`);
 
-    // Insert into database
+    // Insert into database (skip duplicate check since we already filtered)
     console.log(`\n💾 Inserting movies into database...`);
-    const insertResult = await batchInsertMoviesWithDuplicateCheck(
-      chunksWithEmbeddings,
-      100, // batch size
-      forceAll, // skip duplicate check if force mode
-    );
+    const { batchInsertMovies } = await import('../src/utils/database/insertMovies');
+    const insertResult = await batchInsertMovies(chunksWithEmbeddings, 100);
 
     // Final summary
     console.log(`\n🎉 Database Population Complete!`);
     console.log(`=====================================`);
     console.log(`✅ Successfully inserted: ${insertResult.totalSuccess} movies`);
-    console.log(`🔄 Skipped duplicates: ${insertResult.totalSkipped} movies`);
-    console.log(`❌ Failed insertions: ${insertResult.totalErrors} movies`);
+    console.log(`🔄 Skipped duplicates: ${existingMovies.length} movies`);
+    console.log(`❌ Failed insertions: ${insertResult.totalErrors + parseErrors.length} movies`);
 
-    if (insertResult.totalErrors > 0) {
+    if (insertResult.totalErrors > 0 || parseErrors.length > 0) {
       console.log(`\n❌ Error Summary:`);
-      insertResult.errorDetails.slice(0, 3).forEach((error) => {
+      [...insertResult.errorDetails, ...parseErrors].slice(0, 3).forEach((error) => {
         console.log(`  - Index ${error.index}: ${error.error}`);
       });
-      if (insertResult.errorDetails.length > 3) {
-        console.log(`  ... and ${insertResult.errorDetails.length - 3} more errors`);
+      const totalErrors = insertResult.totalErrors + parseErrors.length;
+      if (totalErrors > 3) {
+        console.log(`  ... and ${totalErrors - 3} more errors`);
       }
     }
 
@@ -171,7 +258,7 @@ async function main() {
     console.log(`- Total movies processed: ${movieCount}`);
     console.log(`- Embeddings created: ${chunksWithEmbeddings.length}`);
     console.log(`- Database insertions: ${insertResult.totalSuccess}`);
-    console.log(`- Skipped (duplicates): ${insertResult.totalSkipped}`);
+    console.log(`- Skipped (duplicates): ${existingMovies.length}`);
 
     if (insertResult.totalSuccess > 0) {
       // Calculate actual cost based on estimated tokens per chunk
@@ -183,7 +270,7 @@ async function main() {
       );
     }
 
-    process.exit(insertResult.totalErrors > 0 ? 1 : 0);
+    process.exit(insertResult.totalErrors + parseErrors.length > 0 ? 1 : 0);
   } catch (error) {
     console.error(`\n❌ Fatal error during database population:`);
 

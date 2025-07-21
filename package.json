@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "analyze-movies": "tsx src/utils/movies/analyzeMovies.ts",
+    "analyze-movies": "tsx scripts/analyze-movies.ts",
     "build": "next build",
     "build-storybook": "storybook build",
     "create-embeddings": "tsx src/utils/createEmbedding.ts",

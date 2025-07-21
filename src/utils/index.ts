@@ -8,18 +8,15 @@ export * from './schemas';
 
 // Data processing and parsing (re-export specific functions to avoid type conflicts)
 export {
-  ageRatings,
   cleanMovieName,
   convertTextToMovieObjects,
   extractYearFromTitleLine,
-  movieSchema,
+  getMovieFileStats,
+  getMovieStats,
   parseMovieNameAndYear,
   processMoviesFile,
-} from './data/movieParser';
-
-export { getMovieFileStats, splitMovieDocument } from './data/movieSplitter';
-
-export { getMovieStats } from './data/movieAnalyzer';
+  splitMovieDocument,
+} from './data';
 
 // AI and machine learning (re-export specific functions)
 export { createEmbeddingsForChunks, createEmbeddingsWithProgress } from './ai/embeddings';
