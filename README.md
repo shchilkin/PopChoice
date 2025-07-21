@@ -30,7 +30,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
    ```bash
    git clone <repository-url>
-   cd pop-choice-22
+   cd PopChoice
    npm install
    ```
 
