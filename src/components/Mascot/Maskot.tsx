@@ -1,3 +1,4 @@
+'use client';
 import confetti from 'canvas-confetti';
 import React, { useCallback, useMemo, useRef } from 'react';
 import ReactCanvasConfetti from 'react-canvas-confetti';

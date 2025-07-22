@@ -3,7 +3,7 @@ import Image from 'next/image';
 export function TMDBAttribution() {
   return (
     <div className="flex flex-col items-center gap-2 py-4 text-center">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col items-center gap-2">
         <Image
           src="/tmdb-logo.svg"
           alt="The Movie Database logo"
@@ -11,10 +11,9 @@ export function TMDBAttribution() {
           height={43}
           className="inline-block"
         />
-        <span className="text-sm text-gray-600">
-          PopChoice uses the TMDB API for getting poster images but is not endorsed or certified by
-          TMDB.
-        </span>
+        <p className="text-sm text-gray-600">
+          PopChoice uses the TMDB API s but is not endorsed or certified by TMDB.
+        </p>
       </div>
       <a
         href="https://www.themoviedb.org/"

@@ -1,3 +1,4 @@
+'use client';
 import { FC, useId, useState } from 'react';
 
 interface MultipleChoiceQuestionProps {
