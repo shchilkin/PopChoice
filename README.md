@@ -21,6 +21,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 - **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
 - **AI/ML:** OpenAI GPT & Embeddings API
 - **Database:** Supabase (PostgreSQL with pgvector extension)
+- **Movie Data:** TMDB (The Movie Database) API
 - **Testing:** Vitest, Storybook, Playwright
 - **Development:** ESLint, Prettier, Husky, lint-staged
 
@@ -40,6 +41,8 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
    cp .env.example .env
    # Edit .env with your API keys
    ```
+
+   For detailed setup instructions, see the **[Setup Guide](./docs/SETUP.md)**.
 
 3. **Start development server**
 
@@ -83,27 +86,33 @@ npm run dev              # Start development server
 npm run build           # Build for production
 npm run start           # Start production server
 
+# Testing
+npm run test            # Run all tests
+npm run test:server     # Run utility function tests
+npm run test:storybook  # Component tests (browser environment)
+npm run storybook       # Start component workshop
+
 # Code Quality
-npm run lint            # Check code quality
+npm run lint:check      # Check code quality
 npm run format:check    # Check formatting
 npm run type-check      # TypeScript validation
 npm run fix             # Fix all issues automatically
 
-# Testing
-npm run test            # Run all tests
-npm run test:storybook  # Component tests
-npm run storybook       # Start component workshop
-
-# Utilities
+# Database & Data
+npm run populate-db     # Populate database with movie data
+npm run create-embeddings # Create embeddings for movies
 npm run analyze-movies  # Analyze movie data for embeddings
 ```
+
+For detailed development workflows and project structure, see the **[Development Guide](./docs/DEVELOPMENT.md)**.
 
 ## 🔗 Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js features and API
 - [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings) - Understanding embeddings for recommendations
 - [Supabase Vector Documentation](https://supabase.com/docs/guides/ai/vector-columns) - Vector database setup
-- [The AI Engineer Path](https://scrimba.com/learn/aipath) - Complete AI engineering course
+- [TMDB API Documentation](https://developer.themoviedb.org/docs/getting-started) - The Movie Database API integration
+- [The AI Engineer Path](https://scrimba.com/the-ai-engineer-path-c02v) - Complete AI engineering course
 
 ## 🚀 Deploy on Vercel
 
