@@ -35,18 +35,16 @@
 ### Database & Data Management
 
 - `npm run populate-db` - Populate database with movie data from movies.txt file
-- `npm run create-embeddings` - Create embeddings for movies without them in the database
 - `npm run analyze-movies` - Analyze movie data chunks for embedding optimization
 
 ## Database Setup Workflow
 
-The project includes several scripts to help you set up and manage your movie recommendation database:
+The project includes scripts to help you set up and manage your movie recommendation database:
 
 1. **Analysis Phase** - Use `npm run analyze-movies` to understand your movie data structure
 2. **Population Phase** - Use `npm run populate-db` to import movies from `movies.txt` into your Supabase database
-3. **Embedding Phase** - Use `npm run create-embeddings` to generate AI embeddings for semantic search
 
-These scripts are designed to work together, with the populate script automatically creating embeddings for new movies. The separate create-embeddings script is useful when you need to add embeddings to existing movies that don't have them.
+The populate script automatically creates embeddings for new movies during the import process.
 
 ## Code Style and Conventions
 

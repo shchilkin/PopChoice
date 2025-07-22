@@ -100,7 +100,6 @@ npm run fix             # Fix all issues automatically
 
 # Database & Data
 npm run populate-db     # Populate database with movie data
-npm run create-embeddings # Create embeddings for movies
 npm run analyze-movies  # Analyze movie data for embeddings
 ```
 
