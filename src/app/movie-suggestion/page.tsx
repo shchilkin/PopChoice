@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
-import { Button, MovieGrid, TMDBAttribution, TopNavigation } from '@/components';
+import { Button, MovieGrid, TopNavigation } from '@/components';
 import { SuggestionCard } from '@/components/SuggestionCard';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
@@ -287,9 +287,6 @@ export default function MovieSuggestionPage() {
             Try again
           </Button>
         </Link>
-
-        {/* TMDB Attribution - Required for API usage */}
-        <TMDBAttribution />
       </main>
     </div>
   );
