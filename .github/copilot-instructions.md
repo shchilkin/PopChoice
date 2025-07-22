@@ -9,7 +9,9 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 - `src/app/` – Next.js app directory, including API routes (`api/`) and pages.
 - `src/components/` – Reusable React components (e.g., `QuestionsForm`, `Button`, `SuggestionCard`).
 - `src/services/` – Service classes for external APIs (e.g., `MovieService` for TMDB integration).
-- `src/utils/` – Utility functions and database scripts (`db/` contains SQL for Supabase setup).
+- `src/utils/` – Utility functions for data processing and AI operations.
+- `src/clients/` – Client configurations for external services (OpenAI, Supabase).
+- `db/` – SQL scripts for Supabase database setup.
 - `public/` – Static assets and images.
 - `.github/workflows/pr.yml` – GitHub Actions workflow for CI.
 - `README.md` – Project setup, environment, and workflow documentation.
@@ -19,19 +21,22 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 - **Start Dev Server:** `npm run dev` (Next.js)
 - **Run Tests:**
   - All: `npm run test` (Vitest)
-  - Utils only: `npm run test:utils`
+  - Server only: `npm run test:server`
   - Storybook: `npm run test:storybook`
 - **Lint & Format:**
   - Lint: `npm run lint:check`
   - Format: `npm run format:check` / `npm run format:write`
   - Type-check: `npm run type-check`
+  - Fix all: `npm run fix` (runs lint:fix + format:write + format:package)
 - **Build:** `npm run build`
 - **Storybook:** `npm run storybook` (dev), `npm run build-storybook` (prod)
+- **Database:** `npm run populate-db` (populate database with movie data)
+- **Analysis:** `npm run analyze-movies` (analyze movie data)
 
 ## Environment Variables
 
 - Managed via `.env` and/or devcontainer (`.devcontainer/devcontainer.json`).
-- Key variables: `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_API_KEY`, `TMDB_API_KEY`.
+- Key variables: `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_API_KEY`, `TMDB_API_KEY`, `NEXT_PUBLIC_TMDB_API_KEY`.
 - For dev containers, variables are forwarded from local shell if set before VS Code launch.
 
 ## Patterns & Conventions
@@ -40,18 +45,18 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 - **Component Design:** Components are functional, use hooks, and are organized by feature. Storybook stories are provided for most components.
 - **API Routes:** Next.js API routes (e.g., `src/app/api/movie-recommendation/route.ts`) handle business logic and external service calls.
 - **Testing:** Vitest is used for both unit and browser-based tests. Utility tests are in `src/utils/`, component tests use Storybook integration.
-- **Database:** Supabase setup SQL is in `src/utils/db/`. Use provided scripts for table creation and matching logic.
+- **Database:** Supabase setup SQL is in `db/`. Use provided scripts for table creation and matching logic.
 
 ## Integration Points
 
-- **OpenAI:** Used for embeddings and chat completions. See `src/utils/openaiClient.ts`.
-- **Supabase:** Used for vector database storage. See `src/utils/supabaseClient.ts`.
+- **OpenAI:** Used for embeddings and chat completions. See `src/clients/openaiClient.ts`.
+- **Supabase:** Used for vector database storage. See `src/clients/supabaseClient.ts`.
 - **TMDB:** Movie data fetched via `src/services/MovieService/MovieService.ts`.
 
 ## CI/CD
 
-- PR workflow runs lint, format, type-check, tests, and build on every pull request. See `.github/workflows/pr.yml`.
-- Storybook tests are conditional on Playwright browser install.
+- PR workflow runs lint, format, type-check, server tests, Storybook tests (conditional on Playwright), and build on every pull request. See `.github/workflows/pr.yml`.
+- Build may fail in CI due to network issues with external fonts but works locally and in production.
 
 ## Example: Adding a New Movie API Integration
 
@@ -60,6 +65,7 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 3. Add API route in `src/app/api/` if needed.
 4. Update components to use new service.
 5. Add tests in `src/services/` and/or Storybook stories.
+6. Update client configurations in `src/clients/` if needed.
 
 ---
 
