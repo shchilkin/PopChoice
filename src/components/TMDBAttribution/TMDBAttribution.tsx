@@ -12,7 +12,8 @@ export function TMDBAttribution() {
           className="inline-block"
         />
         <span className="text-sm text-gray-600">
-          This product uses the TMDB API but is not endorsed or certified by TMDB.
+          PopChoice uses the TMDB API for getting poster images but is not endorsed or certified by
+          TMDB.
         </span>
       </div>
       <a
