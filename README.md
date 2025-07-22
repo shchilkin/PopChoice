@@ -22,6 +22,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 - **AI/ML:** OpenAI GPT & Embeddings API
 - **Database:** Supabase (PostgreSQL with pgvector extension)
 - **Movie Data:** TMDB (The Movie Database) API
+- **Analytics:** Vercel Web Analytics
 - **Testing:** Vitest, Storybook, Playwright
 - **Development:** ESLint, Prettier, Husky, lint-staged
 
