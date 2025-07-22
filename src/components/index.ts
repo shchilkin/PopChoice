@@ -1,5 +1,6 @@
 export * from './Branding';
 export * from './Button';
+export * from './CreatorCredit';
 export * from './Mascot';
 export * from './MovieGrid';
 export * from './QuestionsForm';
