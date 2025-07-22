@@ -1,0 +1,1 @@
+export { TMDBAttribution } from './TMDBAttribution';
