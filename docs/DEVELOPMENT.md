@@ -32,9 +32,19 @@
 - `npm run storybook` - Start Storybook development server
 - `npm run build-storybook` - Build Storybook for production
 
-### Utilities
+### Database & Data Management
 
+- `npm run populate-db` - Populate database with movie data from movies.txt file
 - `npm run analyze-movies` - Analyze movie data chunks for embedding optimization
+
+## Database Setup Workflow
+
+The project includes scripts to help you set up and manage your movie recommendation database:
+
+1. **Analysis Phase** - Use `npm run analyze-movies` to understand your movie data structure
+2. **Population Phase** - Use `npm run populate-db` to import movies from `movies.txt` into your Supabase database
+
+The populate script automatically creates embeddings for new movies during the import process.
 
 ## Code Style and Conventions
 

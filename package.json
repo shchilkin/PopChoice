@@ -7,7 +7,6 @@
     "analyze-movies": "tsx scripts/analyze-movies.ts",
     "build": "next build",
     "build-storybook": "storybook build",
-    "create-embeddings": "tsx src/utils/createEmbedding.ts",
     "dev": "next dev",
     "fix": "npm run lint:fix && npm run format:write && npm run format:package",
     "format:check": "prettier --check .",
