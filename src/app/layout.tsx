@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-Image.png',
         width: 1200,
         height: 630,
         alt: 'PopChoice - AI Movie Recommendations',
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'PopChoice - AI Movie Recommendations',
     description: 'Discover your next favorite movie with AI-powered recommendations.',
-    images: ['/og-image.png'],
+    images: ['/og-Image.png'],
     creator: '@PopChoice',
   },
   robots: {
