@@ -19,12 +19,8 @@ updates:
       - 'automated'
       - 'npm'
     # Allow only patch and minor updates for production dependencies
-    # Major updates require manual review
-    ignore:
-      - dependency-type: 'direct:production'
-        update-types: ['version-update:semver-major']
+    # Major updates require manual review (handled by groups configuration below)
     # Enable automatic security updates (this is enabled by default but made explicit)
-    # Security updates will bypass the ignore rules above when necessary
     allow:
       - dependency-type: 'all'
     # Group related updates together to reduce PR noise
