@@ -42,7 +42,7 @@ export default function AboutPage() {
                   🤖 AI Technology
                 </h2>
                 <p className="text-base">
-                  Powered by cutting-edge machine learning, including OpenAI&apos;s embedding models
+                  Powered by cutting-edge machine learning, including OpenAI's embedding models
                   and Supabase vector databases, to provide accurate and relevant movie suggestions.
                 </p>
               </div>
