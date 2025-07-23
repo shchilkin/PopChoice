@@ -1,4 +1,5 @@
 import { Rubik_Gemstones } from 'next/font/google';
+import Link from 'next/link';
 
 import { Mascot } from '../Mascot/Maskot';
 
@@ -30,7 +31,13 @@ export const TopNavigation = ({
           height={logoSize}
         />
       </div>
-      <h1 className={`${rubik_Gemstones.className} font-bold text-4xl`}>PopChoice</h1>
+      <Link href="/" className="block">
+        <h1
+          className={`${rubik_Gemstones.className} font-bold text-4xl hover:opacity-80 transition-opacity`}
+        >
+          PopChoice
+        </h1>
+      </Link>
     </nav>
   );
 };
