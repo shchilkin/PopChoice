@@ -39,7 +39,7 @@ export default function AboutPage() {
 
               <div className="text-left">
                 <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
-                  🤖 Advanced AI Technology
+                  🤖 AI Technology
                 </h2>
                 <p className="text-base">
                   Powered by cutting-edge machine learning, including OpenAI&apos;s embedding models
@@ -52,8 +52,9 @@ export default function AboutPage() {
                   🎬 Comprehensive Movie Database
                 </h2>
                 <p className="text-base">
-                  Access detailed information from The Movie Database (TMDB) including ratings,
-                  genres, cast, and plot summaries to make informed viewing decisions.
+                  Access detailed information from our curated movie database including ratings,
+                  genres, cast, and plot summaries to make informed viewing decisions. TMDB is used
+                  only for movie posters.
                 </p>
               </div>
             </div>
@@ -75,7 +76,7 @@ export default function AboutPage() {
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     2
                   </span>
-                  <p>Our AI analyzes your responses using advanced embedding technology</p>
+                  <p>Our AI analyzes your responses using embedding technology</p>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
