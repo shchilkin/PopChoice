@@ -33,7 +33,7 @@ export const TopNavigation = ({
       </div>
       <Link href="/" className="block">
         <h1
-          className={`${rubik_Gemstones.className} font-bold text-4xl hover:opacity-80 transition-opacity cursor-pointer`}
+          className={`${rubik_Gemstones.className} font-bold text-4xl hover:opacity-80 transition-opacity`}
         >
           PopChoice
         </h1>
