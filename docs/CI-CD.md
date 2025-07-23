@@ -6,7 +6,7 @@ This project includes a comprehensive GitHub Actions workflow for pull request v
 
 ## Workflow Overview
 
-The workflow runs automatically on all pull requests and includes the following validation steps:
+The workflow runs automatically on pull requests targeting the `development` branch and includes the following validation steps:
 
 ### 1. Code Quality Checks
 
@@ -49,8 +49,8 @@ The workflow runs automatically on all pull requests and includes the following 
 
 The workflow is triggered on:
 
-- Pull request events for all branches (`branches: ['*']`)
-- Both opening PRs and pushing new commits to existing PRs
+- Pull request events targeting the `development` branch (`branches: ['development']`)
+- Both opening PRs and pushing new commits to existing PRs targeting development
 
 ## Known Limitations
 

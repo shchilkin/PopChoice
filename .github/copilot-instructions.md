@@ -46,6 +46,7 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 - **API Routes:** Next.js API routes (e.g., `src/app/api/movie-recommendation/route.ts`) handle business logic and external service calls.
 - **Testing:** Vitest is used for both unit and browser-based tests. Utility tests are in `src/utils/`, component tests use Storybook integration.
 - **Database:** Supabase setup SQL is in `db/`. Use provided scripts for table creation and matching logic.
+- **React/ESLint:** Always escape special characters in JSX text content to prevent `react/no-unescaped-entities` errors. Use `&apos;` for apostrophes, `&quot;` for quotes, `&amp;` for ampersands, `&lt;` for less than, and `&gt;` for greater than symbols.
 
 ## Integration Points
 
@@ -55,7 +56,7 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 
 ## CI/CD
 
-- PR workflow runs lint, format, type-check, server tests, Storybook tests (conditional on Playwright), and build on every pull request. See `.github/workflows/pr.yml`.
+- PR workflow runs lint, format, type-check, server tests, Storybook tests (conditional on Playwright), and build on pull requests targeting the `development` branch. See `.github/workflows/pr.yml`.
 - Build may fail in CI due to network issues with external fonts but works locally and in production.
 
 ## Example: Adding a New Movie API Integration
