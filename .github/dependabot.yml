@@ -22,7 +22,10 @@ updates:
     # Major updates require manual review (handled by groups configuration below)
     # Enable automatic security updates (this is enabled by default but made explicit)
     allow:
-      - dependency-type: 'all'
+      - dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
     # Group related updates together to reduce PR noise
     groups:
       production-dependencies:
