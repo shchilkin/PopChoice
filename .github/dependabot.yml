@@ -1,0 +1,84 @@
+# Dependabot configuration for PopChoice
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Monitor npm dependencies in package.json
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'shchilkin'
+    labels:
+      - 'dependencies'
+      - 'automated'
+      - 'npm'
+    # Allow only patch and minor updates for production dependencies
+    # Major updates require manual review
+    ignore:
+      - dependency-type: 'direct:production'
+        update-types: ['version-update:semver-major']
+    # Enable automatic security updates (this is enabled by default but made explicit)
+    # Security updates will bypass the ignore rules above when necessary
+    allow:
+      - dependency-type: 'all'
+    # Group related updates together to reduce PR noise
+    groups:
+      production-dependencies:
+        patterns:
+          - 'react*'
+          - 'next*'
+          - '@supabase/*'
+          - 'openai'
+          - 'langchain'
+          - 'axios'
+          - 'zod'
+        update-types:
+          - 'minor'
+          - 'patch'
+      development-dependencies:
+        patterns:
+          - '@types/*'
+          - 'eslint*'
+          - 'prettier'
+          - '@storybook/*'
+          - 'vitest*'
+          - 'playwright'
+          - 'typescript'
+          - 'husky'
+          - 'lint-staged'
+        update-types:
+          - 'minor'
+          - 'patch'
+    # Custom commit message format
+    commit-message:
+      prefix: 'deps'
+      prefix-development: 'deps-dev'
+      include: 'scope'
+    # Review PR automatically after creation for faster feedback
+    reviewers:
+      - 'shchilkin'
+
+  # Monitor GitHub Actions in workflows
+  - package-ecosystem: 'github-actions'
+    directory: '/.github/workflows'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 2
+    assignees:
+      - 'shchilkin'
+    labels:
+      - 'dependencies'
+      - 'automated'
+      - 'github-actions'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
