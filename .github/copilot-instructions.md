@@ -55,7 +55,7 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 
 ## CI/CD
 
-- PR workflow runs lint, format, type-check, server tests, Storybook tests (conditional on Playwright), and build on every pull request. See `.github/workflows/pr.yml`.
+- PR workflow runs lint, format, type-check, server tests, Storybook tests (conditional on Playwright), and build on pull requests targeting the `development` branch. See `.github/workflows/pr.yml`.
 - Build may fail in CI due to network issues with external fonts but works locally and in production.
 
 ## Example: Adding a New Movie API Integration
