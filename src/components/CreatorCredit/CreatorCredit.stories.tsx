@@ -1,6 +1,6 @@
 import { CreatorCredit } from './CreatorCredit';
 
-import type { Meta, StoryObj } from '@storybook/nextjs';
+import type { Decorator, Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof CreatorCredit> = {
   title: 'Components/CreatorCredit',
@@ -45,7 +45,7 @@ export const WithBackground: Story = {
 
 export const InContext: Story = {
   decorators: [
-    (Story) => (
+    ((Story) => (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8">
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Sample Page</h1>
@@ -61,7 +61,7 @@ export const InContext: Story = {
         </div>
         <Story />
       </div>
-    ),
+    )) as Decorator,
   ],
   parameters: {
     docs: {
