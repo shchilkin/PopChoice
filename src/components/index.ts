@@ -3,6 +3,7 @@ export * from './Button';
 export * from './CreatorCredit';
 export * from './Mascot';
 export * from './MovieGrid';
+export * from './MoviesTable';
 export * from './QuestionsForm';
 export * from './SuggestionCard';
 export * from './TMDBAttribution';
