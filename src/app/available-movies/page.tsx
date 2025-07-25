@@ -6,6 +6,74 @@ import { TopNavigation } from '@/components';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
+// Utility function to get age rating colors
+function getAgeRatingColors(rating: string): {
+  bg: string;
+  text: string;
+  darkBg: string;
+  darkText: string;
+} {
+  const normalizedRating = rating.toUpperCase().trim();
+
+  switch (normalizedRating) {
+    // Mature/Adult content - Red
+    case 'R':
+    case '15':
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-800',
+        darkBg: 'dark:bg-red-900',
+        darkText: 'dark:text-red-200',
+      };
+
+    // No Rating - Gray
+    case 'NR':
+    case 'NOT RATED':
+      return {
+        bg: 'bg-gray-100',
+        text: 'text-gray-800',
+        darkBg: 'dark:bg-gray-700',
+        darkText: 'dark:text-gray-300',
+      };
+
+    // General Audiences - Green
+    case 'G':
+      return {
+        bg: 'bg-green-100',
+        text: 'text-green-800',
+        darkBg: 'dark:bg-green-900',
+        darkText: 'dark:text-green-200',
+      };
+
+    // Parental Guidance - Blue
+    case 'PG':
+      return {
+        bg: 'bg-blue-100',
+        text: 'text-blue-800',
+        darkBg: 'dark:bg-blue-900',
+        darkText: 'dark:text-blue-200',
+      };
+
+    // Teen content - Orange/Yellow
+    case 'PG-13':
+      return {
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
+        darkBg: 'dark:bg-orange-900',
+        darkText: 'dark:text-orange-200',
+      };
+
+    // Default fallback - Gray
+    default:
+      return {
+        bg: 'bg-gray-100',
+        text: 'text-gray-800',
+        darkBg: 'dark:bg-gray-700',
+        darkText: 'dark:text-gray-300',
+      };
+  }
+}
+
 export default function AvailableMoviesPage() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,9 +232,16 @@ export default function AvailableMoviesPage() {
                     <div className="text-sm text-gray-500 dark:text-gray-400">({movie.year})</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-                      {movie.age_rating}
-                    </span>
+                    {(() => {
+                      const colors = getAgeRatingColors(movie.age_rating);
+                      return (
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${colors.bg} ${colors.text} ${colors.darkBg} ${colors.darkText}`}
+                        >
+                          {movie.age_rating}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {movie.duration} min

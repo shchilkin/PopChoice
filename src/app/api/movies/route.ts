@@ -111,7 +111,7 @@ function generateMockMovies(): Movie[] {
     },
     {
       name: 'Seven Samurai',
-      age_rating: 'PG',
+      age_rating: 'NR',
       description:
         'When bandits threaten to raid a poor farming village, the desperate villagers seek help from wandering samurai.',
       duration: 207,
@@ -129,7 +129,7 @@ function generateMockMovies(): Movie[] {
     },
     {
       name: 'One Flew Over the Cuckoo&apos;s Nest',
-      age_rating: 'R',
+      age_rating: '15',
       description:
         'Charming rogue Randle P. McMurphy feigns mental illness to serve his sentence in a psychiatric hospital instead of prison.',
       duration: 133,
@@ -138,12 +138,21 @@ function generateMockMovies(): Movie[] {
     },
     {
       name: 'Star Wars: Episode IV - A New Hope',
-      age_rating: 'PG',
+      age_rating: 'G',
       description:
         'Farm boy Luke Skywalker joins a rebellion against the evil Galactic Empire in this epic space opera.',
       duration: 121,
       score_rating: 8.6,
       year: 1977,
+    },
+    {
+      name: 'The Avengers',
+      age_rating: 'PG-13',
+      description:
+        'Earth&apos;s mightiest heroes must come together and learn to fight as a team to stop the mischievous Loki and his alien army.',
+      duration: 143,
+      score_rating: 8.0,
+      year: 2012,
     },
   ];
 
