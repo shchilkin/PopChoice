@@ -91,6 +91,7 @@ export default function QuestionsPage() {
             firstStripeColor={currentPersonColors.first}
             secondStripeColor={currentPersonColors.second}
             logoSize={60}
+            minimizeMode={true}
           />
 
           {/* Step Progress Indicator - only show for multiple people */}
