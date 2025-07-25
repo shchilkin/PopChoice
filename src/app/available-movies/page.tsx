@@ -6,6 +6,20 @@ import { TopNavigation } from '@/components';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
+// Utility function to convert minutes to hours and minutes format
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) {
+    return `${minutes} minutes`;
+  } else if (remainingMinutes === 0) {
+    return `${hours} hour${hours > 1 ? 's' : ''}`;
+  } else {
+    return `${hours} hour${hours > 1 ? 's' : ''} ${remainingMinutes} minutes`;
+  }
+}
+
 // Utility function to get age rating colors
 function getAgeRatingColors(rating: string): {
   bg: string;
@@ -220,9 +234,6 @@ export default function AvailableMoviesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Score Rating
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Description
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -247,7 +258,7 @@ export default function AvailableMoviesPage() {
                     })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {movie.duration} min
+                    {formatDuration(movie.duration)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -255,11 +266,6 @@ export default function AvailableMoviesPage() {
                         {movie.score_rating.toFixed(1)}
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">/10</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-md">
-                    <div className="truncate" title={movie.description}>
-                      {movie.description}
                     </div>
                   </td>
                 </tr>
