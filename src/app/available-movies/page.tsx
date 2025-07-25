@@ -19,6 +19,8 @@ function getAgeRatingColors(rating: string): {
     // Mature/Adult content - Red
     case 'R':
     case '15':
+    case '16+':
+    case '18+':
       return {
         bg: 'bg-red-100',
         text: 'text-red-800',
@@ -47,6 +49,7 @@ function getAgeRatingColors(rating: string): {
 
     // Parental Guidance - Blue
     case 'PG':
+    case '12+':
       return {
         bg: 'bg-blue-100',
         text: 'text-blue-800',
@@ -54,7 +57,7 @@ function getAgeRatingColors(rating: string): {
         darkText: 'dark:text-blue-200',
       };
 
-    // Teen content - Orange/Yellow
+    // Teen content - Orange
     case 'PG-13':
       return {
         bg: 'bg-orange-100',

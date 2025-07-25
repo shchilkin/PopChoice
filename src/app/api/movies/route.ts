@@ -154,6 +154,33 @@ function generateMockMovies(): Movie[] {
       score_rating: 8.0,
       year: 2012,
     },
+    {
+      name: 'Harry Potter and the Philosopher&apos;s Stone',
+      age_rating: '12+',
+      description:
+        'An orphaned boy enrolls in a school of wizardry, where he learns the truth about himself and his parents.',
+      duration: 152,
+      score_rating: 7.6,
+      year: 2001,
+    },
+    {
+      name: 'Deadpool',
+      age_rating: '16+',
+      description:
+        'A former Special Forces operative turned mercenary is subjected to a rogue experiment.',
+      duration: 108,
+      score_rating: 8.0,
+      year: 2016,
+    },
+    {
+      name: 'John Wick',
+      age_rating: '18+',
+      description:
+        'An ex-hit-man comes out of retirement to track down the gangsters that took everything from him.',
+      duration: 101,
+      score_rating: 7.4,
+      year: 2014,
+    },
   ];
 
   // Create multiple pages of data by repeating and varying the sample movies
