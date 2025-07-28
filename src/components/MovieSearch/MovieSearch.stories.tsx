@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/react';
-
 import { MovieSearch } from './MovieSearch';
+
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof MovieSearch> = {
   title: 'Components/MovieSearch',
@@ -62,7 +62,7 @@ export const WithInitialFilters: Story = {
   args: {
     loading: false,
   },
-  play: async ({ canvasElement }) => {
+  play: async () => {
     // Note: In a real implementation, you might want to programmatically
     // set initial values, but for this story we'll show the empty state
     // and let users interact with the controls
