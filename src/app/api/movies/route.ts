@@ -20,6 +20,10 @@ export interface MoviesResponse {
   page: number;
   pageSize: number;
   totalPages: number;
+  searchCapabilities: {
+    supportsBasicSearch: boolean; // title, year range
+    supportsAdvancedSearch: boolean; // cast, director, genres
+  };
 }
 
 export interface SearchParams {
@@ -83,6 +87,10 @@ export async function GET(request: NextRequest) {
         page,
         pageSize,
         totalPages,
+        searchCapabilities: {
+          supportsBasicSearch: true,
+          supportsAdvancedSearch: true, // Mock data supports all search features
+        },
       };
 
       return NextResponse.json(response);
@@ -109,8 +117,23 @@ export async function GET(request: NextRequest) {
       query = query.lte('year', yearTo);
     }
 
-    // Get total count first
-    const { count, error: countError } = await query.select('*', { count: 'exact', head: true });
+    // Get total count first (use a separate query for count)
+    let countQuery = supabase
+      .from('movies')
+      .select('*', { count: 'exact', head: true });
+
+    // Apply same filters to count query
+    if (searchTitle) {
+      countQuery = countQuery.ilike('name', `%${searchTitle}%`);
+    }
+    if (yearFrom) {
+      countQuery = countQuery.gte('year', yearFrom);
+    }
+    if (yearTo) {
+      countQuery = countQuery.lte('year', yearTo);
+    }
+
+    const { count, error: countError } = await countQuery;
 
     if (countError) {
       console.error('Error getting movie count:', countError);
@@ -137,6 +160,10 @@ export async function GET(request: NextRequest) {
       page,
       pageSize,
       totalPages,
+      searchCapabilities: {
+        supportsBasicSearch: true,
+        supportsAdvancedSearch: false, // Real database doesn't have cast/director/genre data
+      },
     };
 
     return NextResponse.json(response);

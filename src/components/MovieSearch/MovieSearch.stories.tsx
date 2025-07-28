@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
 
 import { MovieSearch } from './MovieSearch';
 
@@ -15,10 +14,14 @@ const meta: Meta<typeof MovieSearch> = {
       control: 'boolean',
       description: 'Whether the search is in a loading state',
     },
+    searchCapabilities: {
+      control: 'object',
+      description: 'Search capabilities configuration',
+    },
   },
   args: {
-    onSearch: fn(),
-    onClear: fn(),
+    onSearch: () => {},
+    onClear: () => {},
   },
 };
 
@@ -28,12 +31,30 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     loading: false,
+    searchCapabilities: {
+      supportsBasicSearch: true,
+      supportsAdvancedSearch: true,
+    },
   },
 };
 
 export const Loading: Story = {
   args: {
     loading: true,
+    searchCapabilities: {
+      supportsBasicSearch: true,
+      supportsAdvancedSearch: true,
+    },
+  },
+};
+
+export const BasicSearchOnly: Story = {
+  args: {
+    loading: false,
+    searchCapabilities: {
+      supportsBasicSearch: true,
+      supportsAdvancedSearch: false,
+    },
   },
 };
 

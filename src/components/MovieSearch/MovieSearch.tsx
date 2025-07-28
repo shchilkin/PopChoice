@@ -15,6 +15,10 @@ export interface MovieSearchProps {
   onSearch: (filters: SearchFilters) => void;
   onClear: () => void;
   loading?: boolean;
+  searchCapabilities?: {
+    supportsBasicSearch: boolean;
+    supportsAdvancedSearch: boolean;
+  };
 }
 
 const AVAILABLE_GENRES = [
@@ -31,7 +35,12 @@ const AVAILABLE_GENRES = [
   'War',
 ];
 
-export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchProps) {
+export function MovieSearch({ 
+  onSearch, 
+  onClear, 
+  loading = false, 
+  searchCapabilities = { supportsBasicSearch: true, supportsAdvancedSearch: true } 
+}: MovieSearchProps) {
   const [filters, setFilters] = useState<SearchFilters>({
     title: '',
     cast: '',
@@ -69,22 +78,23 @@ export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchP
   };
 
   const handleClear = () => {
-    setFilters({
+    const clearedFilters = {
       title: '',
-      cast: '',
-      director: '',
-      genres: [],
+      cast: searchCapabilities.supportsAdvancedSearch ? '' : filters.cast,
+      director: searchCapabilities.supportsAdvancedSearch ? '' : filters.director,
+      genres: searchCapabilities.supportsAdvancedSearch ? [] : filters.genres,
       yearFrom: '',
       yearTo: '',
-    });
+    };
+    setFilters(clearedFilters);
     onClear();
   };
 
   const hasActiveFilters =
     filters.title ||
-    filters.cast ||
-    filters.director ||
-    filters.genres.length > 0 ||
+    (searchCapabilities.supportsAdvancedSearch && filters.cast) ||
+    (searchCapabilities.supportsAdvancedSearch && filters.director) ||
+    (searchCapabilities.supportsAdvancedSearch && filters.genres.length > 0) ||
     filters.yearFrom ||
     filters.yearTo;
 
@@ -102,12 +112,14 @@ export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchP
               Clear All
             </button>
           )}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          >
-            {isExpanded ? 'Simple Search' : 'Advanced Search'}
-          </button>
+          {searchCapabilities.supportsAdvancedSearch && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              {isExpanded ? 'Simple Search' : 'Advanced Search'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -172,8 +184,31 @@ export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchP
         </div>
       </div>
 
+      {/* Advanced Search Not Available Message */}
+      {!searchCapabilities.supportsAdvancedSearch && (
+        <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Limited Search Available
+              </h3>
+              <div className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                <p>
+                  Advanced search features (cast, director, genres) are not available because the database doesn&apos;t contain this information. Only title and year range search are supported.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Advanced Search */}
-      {isExpanded && (
+      {isExpanded && searchCapabilities.supportsAdvancedSearch && (
         <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -258,17 +293,17 @@ export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchP
               Title: {filters.title}
             </span>
           )}
-          {filters.cast && (
+          {searchCapabilities.supportsAdvancedSearch && filters.cast && (
             <span className="ml-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded">
               Cast: {filters.cast}
             </span>
           )}
-          {filters.director && (
+          {searchCapabilities.supportsAdvancedSearch && filters.director && (
             <span className="ml-1 bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded">
               Director: {filters.director}
             </span>
           )}
-          {filters.genres.length > 0 && (
+          {searchCapabilities.supportsAdvancedSearch && filters.genres.length > 0 && (
             <span className="ml-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 px-2 py-1 rounded">
               Genres: {filters.genres.length}
             </span>

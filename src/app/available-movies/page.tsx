@@ -13,6 +13,10 @@ export default function AvailableMoviesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [searchCapabilities, setSearchCapabilities] = useState({
+    supportsBasicSearch: true,
+    supportsAdvancedSearch: true,
+  });
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({
     title: '',
     cast: '',
@@ -53,6 +57,7 @@ export default function AvailableMoviesPage() {
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
         setCurrentPage(data.page);
+        setSearchCapabilities(data.searchCapabilities);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -167,7 +172,12 @@ export default function AvailableMoviesPage() {
         </div>
 
         {/* Search Component */}
-        <MovieSearch onSearch={handleSearch} onClear={handleClearSearch} loading={loading} />
+        <MovieSearch 
+          onSearch={handleSearch} 
+          onClear={handleClearSearch} 
+          loading={loading}
+          searchCapabilities={searchCapabilities}
+        />
 
         {/* Results Summary */}
         <div className="w-full mb-4">
