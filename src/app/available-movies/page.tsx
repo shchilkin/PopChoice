@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { TopNavigation, MoviesTable } from '@/components';
+import { TopNavigation, MoviesTable, MovieSearch, type SearchFilters } from '@/components';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
@@ -13,15 +13,36 @@ export default function AvailableMoviesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({
+    title: '',
+    cast: '',
+    director: '',
+    genres: [],
+    yearFrom: '',
+    yearTo: '',
+  });
   const pageSize = 50;
 
   const fetchMovies = useCallback(
-    async (page: number) => {
+    async (page: number, filters: SearchFilters) => {
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`);
+        const searchParams = new URLSearchParams({
+          page: page.toString(),
+          pageSize: pageSize.toString(),
+        });
+
+        // Add search parameters if they exist
+        if (filters.title) searchParams.append('title', filters.title);
+        if (filters.cast) searchParams.append('cast', filters.cast);
+        if (filters.director) searchParams.append('director', filters.director);
+        if (filters.genres.length > 0) searchParams.append('genres', filters.genres.join(','));
+        if (filters.yearFrom) searchParams.append('yearFrom', filters.yearFrom);
+        if (filters.yearTo) searchParams.append('yearTo', filters.yearTo);
+
+        const response = await fetch(`/api/movies?${searchParams.toString()}`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch movies: ${response.statusText}`);
@@ -42,14 +63,31 @@ export default function AvailableMoviesPage() {
   );
 
   useEffect(() => {
-    fetchMovies(currentPage);
-  }, [fetchMovies, currentPage]);
+    fetchMovies(currentPage, searchFilters);
+  }, [fetchMovies, currentPage, searchFilters]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
+
+  const handleSearch = useCallback((filters: SearchFilters) => {
+    setSearchFilters(filters);
+    setCurrentPage(1); // Reset to first page when searching
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchFilters({
+      title: '',
+      cast: '',
+      director: '',
+      genres: [],
+      yearFrom: '',
+      yearTo: '',
+    });
+    setCurrentPage(1);
+  }, []);
 
   const generatePageNumbers = () => {
     const delta = 2; // Number of pages to show on each side of current page
@@ -107,7 +145,7 @@ export default function AvailableMoviesPage() {
           <div className="text-center py-8">
             <p className="text-lg text-red-600 mb-4">Error: {error}</p>
             <button
-              onClick={() => fetchMovies(currentPage)}
+              onClick={() => fetchMovies(currentPage, searchFilters)}
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               Try Again
@@ -124,8 +162,15 @@ export default function AvailableMoviesPage() {
         <TopNavigation logoSize={60} />
 
         {/* Header */}
-        <div className="w-full mb-8">
+        <div className="w-full mb-6">
           <h1 className="text-3xl font-bold text-center mb-4">Available Movies</h1>
+        </div>
+
+        {/* Search Component */}
+        <MovieSearch onSearch={handleSearch} onClear={handleClearSearch} loading={loading} />
+
+        {/* Results Summary */}
+        <div className="w-full mb-4">
           <p className="text-center text-gray-600">
             Showing {(currentPage - 1) * pageSize + 1} to{' '}
             {Math.min(currentPage * pageSize, totalCount)} of {totalCount} movies
