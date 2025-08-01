@@ -2,6 +2,7 @@ import { Rubik_Gemstones } from 'next/font/google';
 import Link from 'next/link';
 
 import { Mascot } from '../Mascot/Maskot';
+import { ThemeToggle } from '../ThemeToggle';
 
 const rubik_Gemstones = Rubik_Gemstones({
   subsets: ['latin', 'cyrillic'],
@@ -20,24 +21,27 @@ export const TopNavigation = ({
   logoSize = 60,
 }: TopNavigationProps) => {
   return (
-    <nav className="w-full flex items-center justify-start gap-1 mb-8 sm:mb-12">
-      <div
-        className={`w-[${logoSize}px] h-[${logoSize}px] flex items-center justify-center flex-shrink-0`}
-      >
-        <Mascot
-          firstStripeColor={firstStripeColor}
-          secondStripeColor={secondStripeColor}
-          width={logoSize}
-          height={logoSize}
-        />
-      </div>
-      <Link href="/" className="block">
-        <h1
-          className={`${rubik_Gemstones.className} font-bold text-4xl hover:opacity-80 transition-opacity`}
+    <nav className="w-full flex items-center justify-between gap-4 mb-8 sm:mb-12">
+      <div className="flex items-center gap-1">
+        <div
+          className={`w-[${logoSize}px] h-[${logoSize}px] flex items-center justify-center flex-shrink-0`}
         >
-          PopChoice
-        </h1>
-      </Link>
+          <Mascot
+            firstStripeColor={firstStripeColor}
+            secondStripeColor={secondStripeColor}
+            width={logoSize}
+            height={logoSize}
+          />
+        </div>
+        <Link href="/" className="block">
+          <h1
+            className={`${rubik_Gemstones.className} font-bold text-4xl hover:opacity-80 transition-opacity`}
+          >
+            PopChoice
+          </h1>
+        </Link>
+      </div>
+      <ThemeToggle />
     </nav>
   );
 };

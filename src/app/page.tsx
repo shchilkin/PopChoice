@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Branding, Button } from '@/components';
+import { Branding, Button, ThemeToggle } from '@/components';
 
 export default function IntroPage() {
   const [peopleCount, setPeopleCount] = useState<string>('');
@@ -27,6 +27,11 @@ export default function IntroPage() {
 
   return (
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      {/* Theme toggle positioned in top right */}
+      <div className="fixed top-4 right-4 z-10">
+        <ThemeToggle />
+      </div>
+
       <main className="flex flex-col w-full items-center max-w-md mx-auto gap-8">
         <Branding />
 

@@ -5,5 +5,7 @@ export * from './MovieGrid';
 export * from './MoviesTable';
 export * from './QuestionsForm';
 export * from './SuggestionCard';
+export * from './ThemeProvider';
+export * from './ThemeToggle';
 export * from './TMDBAttribution';
 export * from './TopNavigation';
