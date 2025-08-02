@@ -1,6 +1,11 @@
+import { withThemeByClassName } from '@storybook/addon-themes';
 import { initialize, mswLoader } from 'msw-storybook-addon';
+import React from 'react';
+
+import { ThemeProvider } from '../src/components/ThemeProvider';
 
 import type { Preview } from '@storybook/nextjs-vite';
+import type { ReactRenderer } from '@storybook/react';
 
 import '../src/app/globals.css';
 
@@ -36,9 +41,39 @@ const preview: Preview = {
       autodocs: 'tag', // Enable auto-generated docs for stories with 'autodocs' tag
       defaultName: 'Documentation', // Default name for docs page
     },
+
+    // Theme backgrounds
+    backgrounds: {
+      disable: true, // Disable backgrounds since we use CSS variables
+    },
   },
   // Provide the MSW addon loader globally
   loaders: [mswLoader],
+  decorators: [
+    // Theme decorator with ThemeProvider wrapper
+    withThemeByClassName<ReactRenderer>({
+      themes: {
+        light: 'light',
+        dark: 'dark',
+      },
+      defaultTheme: 'light',
+    }),
+    // ThemeProvider decorator
+    (Story, context) => {
+      return (
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          disableTransitionOnChange={false}
+        >
+          <div style={{ minHeight: '100vh' }}>
+            <Story />
+          </div>
+        </ThemeProvider>
+      );
+    },
+  ],
 };
 
 export default preview;
