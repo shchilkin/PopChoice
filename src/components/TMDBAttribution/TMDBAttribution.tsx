@@ -12,7 +12,7 @@ export function TMDBAttribution() {
           className="inline-block"
         />
         <p className="text-sm text-[var(--muted-foreground)]">
-          PopChoice uses the TMDB API s but is not endorsed or certified by TMDB.
+          PopChoice uses the TMDB API but is not endorsed or certified by TMDB.
         </p>
       </div>
       <a
