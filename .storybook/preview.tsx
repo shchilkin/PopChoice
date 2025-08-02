@@ -59,7 +59,7 @@ const preview: Preview = {
       defaultTheme: 'light',
     }),
     // ThemeProvider decorator
-    (Story, context) => {
+    (Story) => {
       return (
         <ThemeProvider
           attribute="class"
