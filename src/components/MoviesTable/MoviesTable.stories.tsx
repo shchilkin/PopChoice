@@ -134,7 +134,7 @@ export const VariousRatings: Story = {
     docs: {
       description: {
         story:
-          'Shows movies with different age ratings: PG (blue), NR (gray), R (red), 15 (red), G (green).',
+          'Shows movies with different age ratings using the AgeRatingChip component: PG (caution), NR (unknown), R (mature), 15 (mature), G (safe). Each rating uses semantic color tokens.',
       },
     },
   },

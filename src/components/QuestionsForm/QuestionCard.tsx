@@ -36,30 +36,32 @@ export const QuestionCard = ({
 
   if (!label) {
     return (
-      <div className="flex flex-col gap-2 p-4 border border-red-500 bg-red-50 dark:bg-red-900 dark:border-red-700 rounded-lg">
-        <span className="text-red-700 dark:text-red-300 font-semibold">Error:</span>
-        <span className="text-red-600 dark:text-red-200 text-sm">Label is required.</span>
+      <div className="flex flex-col gap-2 p-4 border border-[var(--rating-mature-bg)] bg-[var(--rating-mature-bg)]/10 rounded-lg">
+        <span className="text-[var(--rating-mature-text)] font-semibold">Error:</span>
+        <span className="text-[var(--rating-mature-text)] text-sm">Label is required.</span>
       </div>
     );
   }
   return (
     <div className="flex flex-col gap-1 w-full">
-      <label className="text-md font-regular text-start w-full dark:text-gray-300">{label}</label>
+      <label className="text-md font-regular text-start w-full text-[var(--foreground)]">
+        {label}
+      </label>
       <textarea
         ref={textareaRef}
         name={name}
         value={value}
         maxLength={maxLength}
-        className="w-full min-h-24 h-fit p-2 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white resize-none overflow-hidden"
+        className="w-full min-h-24 h-fit p-2 border border-[var(--border)] rounded-lg bg-[var(--input)] text-[var(--foreground)] resize-none overflow-hidden"
         placeholder={placeholder}
         onInput={handleInput}
       />
 
       {/* Helper text and character counter */}
-      <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between items-center text-xs text-[var(--muted-foreground)]">
         {helperText && <span className="italic">{helperText}</span>}
         <span
-          className={`${value.length > maxLength * 0.9 ? 'text-amber-600 dark:text-amber-400' : ''}`}
+          className={`${value.length > maxLength * 0.9 ? 'text-[var(--rating-teen-text)]' : ''}`}
         >
           {value.length}/{maxLength}
         </span>
