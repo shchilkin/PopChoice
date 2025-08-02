@@ -1,35 +1,141 @@
-import { Meta, ColorPalette, ColorItem } from '@storybook/addon-docs/blocks';
+import { ColorItem, ColorPalette, Meta } from '@storybook/addon-docs/blocks';
 
-<Meta title="Style Guide/Colors" />
+<Meta title="Style Guide/Colors/Light Mode" />
+
+# PopChoice Color System - Light Mode
+
+This document shows all colors used in the light theme of the PopChoice application.
 
 <ColorPalette>
   <ColorItem
-    title="theme.color.greyscale"
-    subtitle="Some of the greys"
-    colors={{ White: '#FFFFFF', Alabaster: '#F8F8F8', Concrete: '#F3F3F3' }}
-  />
-  <ColorItem title="theme.color.primary" subtitle="Coral" colors={{ WildWatermelon: '#FF4785' }} />
-  <ColorItem title="theme.color.secondary" subtitle="Ocean" colors={{ DodgerBlue: '#1EA7FD' }} />
-  <ColorItem
-    title="theme.color.positive"
-    subtitle="Green"
+    title="Core Theme Colors"
+    subtitle="Primary semantic colors for light theme"
     colors={{
-      Apple: 'rgba(102,191,60,1)',
-      Apple80: 'rgba(102,191,60,.8)',
-      Apple60: 'rgba(102,191,60,.6)',
-      Apple30: 'rgba(102,191,60,.3)',
+      Background: 'hsla(0, 0%, 100%, 1)',
+      Foreground: 'hsla(0, 0%, 3%, 1)',
+      Card: 'hsla(0, 0%, 100%, 1)',
+      Primary: 'hsla(0, 0%, 3%, 1)',
+      'Primary Foreground': 'hsla(0, 0%, 100%, 1)',
+      Secondary: '#f5f5f5',
+      'Secondary Foreground': 'hsla(0, 0%, 3%, 1)',
+      Muted: '#f5f5f5',
+      'Muted Foreground': 'hsla(0, 0%, 27%, 1)',
+      Accent: 'hsla(14, 100%, 57%, 1)',
+      'Accent Foreground': 'hsla(0, 0%, 100%, 1)',
+      Border: '#e5e5e5',
+      Input: '#e5e5e5',
+      Ring: 'hsla(0, 0%, 3%, 1)',
+      Alert: 'hsla(54, 100%, 62%, 1)',
     }}
   />
+
+<ColorItem
+  title="Brand & Interactive Colors"
+  subtitle="Primary brand colors and CTAs (replaces blue system)"
+  colors={{
+    'Primary Accent': 'hsla(14, 100%, 57%, 1)',
+    'Primary Accent (Hover)': 'hsla(14, 100%, 51%, 1)',
+    'Alert Yellow': 'hsla(54, 100%, 62%, 1)',
+    'Text Primary': 'hsla(0, 0%, 3%, 1)',
+    'Text Secondary': 'hsla(0, 0%, 27%, 1)',
+  }}
+/>
+
+<ColorItem
+  title="Gray Scale Palette"
+  subtitle="Text, borders, and neutral elements in light mode"
+  colors={{
+    'Gray 50': '#f9fafb',
+    'Gray 100': '#f3f4f6',
+    'Gray 200': '#e5e7eb',
+    'Gray 300': '#d1d5db',
+    'Gray 400': '#9ca3af',
+    'Gray 500': '#6b7280',
+    'Gray 600': '#4b5563',
+    'Gray 700': '#374151',
+    'Gray 800': '#1f2937',
+    'Gray 900': '#111827',
+  }}
+/>
+
+<ColorItem
+  title="Person Color Pairs"
+  subtitle="Unique color combinations for multi-person questionnaires"
+  colors={{
+    'Person 1 Primary': '#f20000',
+    'Person 1 Secondary': '#ffffff',
+    'Person 2 Primary': '#0066cc',
+    'Person 2 Secondary': '#ffeb3b',
+    'Person 3 Primary': '#4caf50',
+    'Person 3 Secondary': '#e91e63',
+    'Person 4 Primary': '#ff9800',
+    'Person 4 Secondary': '#9c27b0',
+    'Person 5 Primary': '#795548',
+    'Person 5 Secondary': '#00bcd4',
+  }}
+/>
+
+<ColorItem
+  title="Mascot Colors"
+  subtitle="Popcorn mascot illustration colors"
+  colors={{
+    'Kernel Golden': '#f7b017',
+    'Kernel Dark': '#6d3604',
+    'Popcorn Base': '#fbc940',
+    'Popcorn Light': '#fff2ce',
+    'Container Dark': '#330002',
+  }}
+/>
+
+<ColorItem
+  title="Age Rating Badge Colors - Light Mode"
+  subtitle="HSLA-based semantic color coding system for movie ratings"
+  colors={{
+    'G Rating Background': 'hsla(140, 62%, 90%, 1)',
+    'G Rating Text': 'hsla(140, 75%, 24%, 1)',
+    'PG Rating Background': 'hsla(220, 100%, 93%, 1)',
+    'PG Rating Text': 'hsla(220, 100%, 30%, 1)',
+    'PG-13 Rating Background': 'hsla(42, 100%, 86%, 1)',
+    'PG-13 Rating Text': 'hsla(42, 100%, 22%, 1)',
+    'R Rating Background': 'hsla(0, 100%, 91%, 1)',
+    'R Rating Text': 'hsla(0, 100%, 32%, 1)',
+    'Unrated Background': 'hsla(0, 0%, 89%, 1)',
+    'Unrated Text': 'hsla(0, 0%, 20%, 1)',
+  }}
+/>
+
   <ColorItem
-    title="gradient"
-    subtitle="Grayscale"
+    title="State & Feedback Colors"
+    subtitle="Success, warning, error, and info states"
     colors={{
-      Gradient: 'linear-gradient(to right,white,black)',
+      Success: '#10b981',
+      'Success Light': '#d1fae5',
+      Warning: '#f59e0b',
+      'Warning Light': '#fef3c7',
+      Error: '#ef4444',
+      'Error Light': '#fee2e2',
+      Info: '#3b82f6',
+      'Info Light': '#dbeafe',
     }}
-  />
-  <ColorItem
-    title="gradient"
-    subtitle="Grayscale"
-    colors={['linear-gradient(65deg,white,black)']}
   />
 </ColorPalette>
+
+## Light Mode Usage Guidelines
+
+### Background Colors
+
+- **Primary Background**: `hsla(0, 0%, 100%, 1)` - Main page backgrounds (pure white)
+- **Card Background**: `hsla(0, 0%, 100%, 1)` - Content cards and panels
+- **Secondary Background**: `#f5f5f5` - Input fields, subtle sections
+
+### Text Colors
+
+- **Primary Text**: `hsla(0, 0%, 3%, 1)` - Headlines, body text (very dark gray)
+- **Muted Text**: `hsla(0, 0%, 27%, 1)` - Helper text, labels (medium gray)
+
+### Interactive Elements
+
+- **Primary Actions**: `hsla(14, 100%, 57%, 1)` - Orange/coral accent for CTAs
+- **Alert States**: `hsla(54, 100%, 62%, 1)` - Yellow for warnings
+- **Focus States**: Primary color for accessibility
+- **Age Ratings**: HSLA-based semantic system with proper contrast

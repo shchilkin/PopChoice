@@ -1,3 +1,4 @@
+export * from './AgeRatingChip';
 export * from './Branding';
 export * from './Button';
 export * from './Mascot';

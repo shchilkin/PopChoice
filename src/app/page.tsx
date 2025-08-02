@@ -45,15 +45,13 @@ export default function IntroPage() {
               How many people?
             </label>
             <input
-              id="peopleCount"
               type="number"
               placeholder="Enter number of people"
               value={peopleCount}
               onChange={(e) => setPeopleCount(e.target.value)}
               min="1"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            />
-
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--input)] text-[var(--foreground)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />{' '}
             {/* Choice chips */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {[1, 2, 3, 5, 10].map((count) => (
@@ -63,7 +61,7 @@ export default function IntroPage() {
                   onClick={() => setPeopleCount(count.toString())}
                   className={`min-w-[4rem] flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     peopleCount === count.toString()
-                      ? 'bg-blue-500 text-white shadow-md'
+                      ? 'bg-[var(--accent)] text-[var(--accent-foreground)] shadow-md'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm'
                   }`}
                 >
@@ -85,7 +83,7 @@ export default function IntroPage() {
               placeholder="How much time do you have?"
               value={timeAvailable}
               onChange={(e) => setTimeAvailable(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--input)] text-[var(--foreground)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
 
             {/* Choice chips */}
@@ -97,7 +95,7 @@ export default function IntroPage() {
                   onClick={() => setTimeAvailable(time)}
                   className={`min-w-[4rem] flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                     timeAvailable === time
-                      ? 'bg-blue-500 text-white shadow-md'
+                      ? 'bg-[var(--accent)] text-[var(--accent-foreground)] shadow-md'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-sm'
                   }`}
                 >

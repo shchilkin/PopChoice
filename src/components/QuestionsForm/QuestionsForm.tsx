@@ -241,7 +241,7 @@ export const QuestionsForm = ({
       </form>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-black border-t border-gray-200 dark:border-gray-800 p-4 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] p-4 shadow-lg">
         <div className="max-w-md mx-auto">
           {totalPeople === 1 ? (
             // Single person - simple submit button
@@ -260,7 +260,7 @@ export const QuestionsForm = ({
                 <Button
                   disabled={!isFormValid}
                   onClick={handleSave}
-                  className="w-full bg-gray-500 hover:bg-gray-600 text-white"
+                  className="w-full bg-[var(--secondary)] hover:bg-[var(--secondary)]/80 text-[var(--secondary-foreground)]"
                 >
                   {isLastPerson
                     ? 'Complete Final Person'
@@ -273,7 +273,7 @@ export const QuestionsForm = ({
                 <Button
                   disabled={loading}
                   onClick={handleFinalSubmit}
-                  className="w-full bg-green-500 hover:bg-green-600 text-white"
+                  className="w-full bg-[var(--rating-safe-bg)] hover:bg-[var(--rating-safe-bg)]/80 text-[var(--rating-safe-text)]"
                 >
                   {loading ? 'Finding...' : 'Find Our Movie'}
                 </Button>
@@ -284,7 +284,7 @@ export const QuestionsForm = ({
                 <Button
                   disabled={!isFormValid}
                   onClick={handleSave}
-                  className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                  className="w-full bg-[var(--rating-caution-bg)] hover:bg-[var(--rating-caution-bg)]/80 text-[var(--rating-caution-text)]"
                 >
                   Update Preferences
                 </Button>
