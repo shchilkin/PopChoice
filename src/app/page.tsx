@@ -51,7 +51,7 @@ export default function IntroPage() {
               onChange={(e) => setPeopleCount(e.target.value)}
               min="1"
               className="w-full px-4 py-3 border border-[var(--border)] rounded-lg bg-[var(--input)] text-[var(--foreground)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            />{' '}
+            />
             {/* Choice chips */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {[1, 2, 3, 5, 10].map((count) => (
