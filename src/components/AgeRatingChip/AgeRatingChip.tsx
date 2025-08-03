@@ -108,7 +108,7 @@ export const AgeRatingChip: FC<AgeRatingChipProps> = ({ rating, size = 'md', cla
         inline-flex items-center justify-center
         font-semibold rounded-full
         transition-colors duration-200
-        border-[length:var(--rating-border-width)px]
+        border-solid
         ${colorClasses.background}
         ${colorClasses.text}
         ${colorClasses.border}
@@ -117,6 +117,9 @@ export const AgeRatingChip: FC<AgeRatingChipProps> = ({ rating, size = 'md', cla
       `
         .trim()
         .replace(/\s+/g, ' ')}
+      style={{
+        borderWidth: `calc(var(--rating-border-width) * 1px)`,
+      }}
       role="img"
       aria-label={`Age rating: ${rating}`}
       title={`Age rating: ${rating}`}
