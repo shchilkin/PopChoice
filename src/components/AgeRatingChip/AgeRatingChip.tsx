@@ -18,6 +18,7 @@ interface AgeRatingChipProps {
 function getRatingColorClasses(rating: AgeRating): {
   background: string;
   text: string;
+  border: string;
 } {
   const normalizedRating = rating.toUpperCase().trim();
 
@@ -27,6 +28,7 @@ function getRatingColorClasses(rating: AgeRating): {
       return {
         background: 'bg-[var(--rating-safe-bg)]',
         text: 'text-[var(--rating-safe-text)]',
+        border: 'border-[var(--rating-safe-border)]',
       };
 
     // Caution content - Blue (PG, 12+ ratings)
@@ -35,6 +37,7 @@ function getRatingColorClasses(rating: AgeRating): {
       return {
         background: 'bg-[var(--rating-caution-bg)]',
         text: 'text-[var(--rating-caution-text)]',
+        border: 'border-[var(--rating-caution-border)]',
       };
 
     // Teen content - Orange (PG-13 rating)
@@ -42,6 +45,7 @@ function getRatingColorClasses(rating: AgeRating): {
       return {
         background: 'bg-[var(--rating-teen-bg)]',
         text: 'text-[var(--rating-teen-text)]',
+        border: 'border-[var(--rating-teen-border)]',
       };
 
     // Mature content - Red (R, 15, 16+, 18+ ratings)
@@ -52,6 +56,7 @@ function getRatingColorClasses(rating: AgeRating): {
       return {
         background: 'bg-[var(--rating-mature-bg)]',
         text: 'text-[var(--rating-mature-text)]',
+        border: 'border-[var(--rating-mature-border)]',
       };
 
     // Unknown/Unrated - Gray (NR, NOT RATED)
@@ -61,6 +66,7 @@ function getRatingColorClasses(rating: AgeRating): {
       return {
         background: 'bg-[var(--rating-unknown-bg)]',
         text: 'text-[var(--rating-unknown-text)]',
+        border: 'border-[var(--rating-unknown-border)]',
       };
   }
 }
@@ -84,6 +90,8 @@ function getSizeClasses(size: 'sm' | 'md' | 'lg'): string {
  * AgeRatingChip - A reusable component for displaying movie age ratings
  *
  * Uses semantic color tokens that work across light and dark themes:
+ * - Light mode: Solid fill with no border
+ * - Dark mode: Outline style with 1px border
  * - rating-safe-* (G ratings)
  * - rating-caution-* (PG, 12+ ratings)
  * - rating-teen-* (PG-13 ratings)
@@ -100,13 +108,18 @@ export const AgeRatingChip: FC<AgeRatingChipProps> = ({ rating, size = 'md', cla
         inline-flex items-center justify-center
         font-semibold rounded-full
         transition-colors duration-200
+        border-solid
         ${colorClasses.background}
         ${colorClasses.text}
+        ${colorClasses.border}
         ${sizeClasses}
         ${className}
       `
         .trim()
         .replace(/\s+/g, ' ')}
+      style={{
+        borderWidth: `calc(var(--rating-border-width) * 1px)`,
+      }}
       role="img"
       aria-label={`Age rating: ${rating}`}
       title={`Age rating: ${rating}`}
