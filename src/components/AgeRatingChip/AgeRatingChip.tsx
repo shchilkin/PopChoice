@@ -118,7 +118,7 @@ export const AgeRatingChip: FC<AgeRatingChipProps> = ({ rating, size = 'md', cla
         .trim()
         .replace(/\s+/g, ' ')}
       style={{
-        borderWidth: 'var(--rating-border-width)px',
+        borderWidth: `calc(var(--rating-border-width) * 1px)`,
       }}
       role="img"
       aria-label={`Age rating: ${rating}`}
