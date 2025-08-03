@@ -18,17 +18,25 @@
   --ring: hsla(0, 0%, 3%, 1);
   --alert: hsla(54, 100%, 62%, 1);
 
-  /* Age Rating Color Tokens - Light Mode */
-  --rating-safe-bg: hsla(140, 62%, 90%, 1); /* G rating - green background */
-  --rating-safe-text: hsla(140, 75%, 24%, 1); /* G rating - green text */
-  --rating-caution-bg: hsla(220, 100%, 93%, 1); /* PG rating - blue background */
-  --rating-caution-text: hsla(220, 100%, 30%, 1); /* PG rating - blue text */
-  --rating-teen-bg: hsla(42, 100%, 86%, 1); /* PG-13 rating - orange background */
-  --rating-teen-text: hsla(42, 100%, 22%, 1); /* PG-13 rating - orange text */
-  --rating-mature-bg: hsla(0, 100%, 91%, 1); /* R rating - red background */
-  --rating-mature-text: hsla(0, 100%, 32%, 1); /* R rating - red text */
-  --rating-unknown-bg: hsla(0, 0%, 89%, 1); /* NR rating - gray background */
-  --rating-unknown-text: hsla(0, 0%, 20%, 1); /* NR rating - gray text */
+  /* Age Rating Color Tokens - Light Mode (Solid Fill) */
+  --rating-safe-bg: hsla(141, 56%, 40%, 1); /* G rating - green background */
+  --rating-safe-text: hsla(141, 100%, 95%, 1); /* G rating - light green text */
+  --rating-safe-border: hsla(0, 0%, 100%, 0); /* G rating - no border */
+  --rating-caution-bg: hsla(220, 100%, 61%, 1); /* PG rating - blue background */
+  --rating-caution-text: hsla(220, 100%, 97%, 1); /* PG rating - light blue text */
+  --rating-caution-border: hsla(0, 0%, 100%, 0); /* PG rating - no border */
+  --rating-teen-bg: hsla(42, 100%, 59%, 1); /* PG-13 rating - orange background */
+  --rating-teen-text: hsla(42, 19%, 13%, 1); /* PG-13 rating - dark orange text */
+  --rating-teen-border: hsla(0, 0%, 100%, 0); /* PG-13 rating - no border */
+  --rating-mature-bg: hsla(0, 66%, 47%, 1); /* R rating - red background */
+  --rating-mature-text: hsla(0, 100%, 96%, 1); /* R rating - light red text */
+  --rating-mature-border: hsla(0, 0%, 100%, 0); /* R rating - no border */
+  --rating-unknown-bg: hsla(0, 0%, 50%, 1); /* NR rating - gray background */
+  --rating-unknown-text: hsla(0, 0%, 97%, 1); /* NR rating - light gray text */
+  --rating-unknown-border: hsla(0, 0%, 100%, 0); /* NR rating - no border */
+
+  /* Border width for age rating chips */
+  --rating-border-width: 0; /* Light mode - no border */
 }
 
 .dark {
@@ -49,17 +57,25 @@
   --ring: hsla(0, 0%, 94%, 1);
   --alert: hsla(54, 100%, 62%, 1);
 
-  /* Age Rating Color Tokens - Dark Mode */
-  --rating-safe-bg: hsla(141, 56%, 40%, 1); /* G rating - dark green background */
-  --rating-safe-text: hsla(140, 100%, 95%, 1); /* G rating - light green text */
-  --rating-caution-bg: hsla(220, 100%, 61%, 1); /* PG rating - dark blue background */
-  --rating-caution-text: hsla(220, 100%, 97%, 1); /* PG rating - light blue text */
-  --rating-teen-bg: hsla(42, 100%, 59%, 1); /* PG-13 rating - dark orange background */
-  --rating-teen-text: hsla(42, 20%, 13%, 1); /* PG-13 rating - light orange text */
-  --rating-mature-bg: hsla(0, 66%, 47%, 1); /* R rating - dark red background */
-  --rating-mature-text: hsla(0, 100%, 96%, 1); /* R rating - light red text */
-  --rating-unknown-bg: hsla(0, 0%, 50%, 1); /* NR rating - dark gray background */
-  --rating-unknown-text: hsla(0, 0%, 97%, 1); /* NR rating - light gray text */
+  /* Age Rating Color Tokens - Dark Mode (Outline Style) */
+  --rating-safe-bg: hsla(141, 100%, 15%, 1); /* G rating - dark green background */
+  --rating-safe-text: hsla(141, 56%, 50%, 1); /* G rating - green text */
+  --rating-safe-border: hsla(141, 55%, 50%, 0.5); /* G rating - green border */
+  --rating-caution-bg: hsla(220, 100%, 15%, 1); /* PG rating - dark blue background */
+  --rating-caution-text: hsla(220, 100%, 71%, 1); /* PG rating - blue text */
+  --rating-caution-border: hsla(220, 100%, 71%, 0.5); /* PG rating - blue border */
+  --rating-teen-bg: hsla(42, 19%, 13%, 1); /* PG-13 rating - dark orange background */
+  --rating-teen-text: hsla(42, 100%, 59%, 1); /* PG-13 rating - orange text */
+  --rating-teen-border: hsla(42, 100%, 59%, 0.5); /* PG-13 rating - orange border */
+  --rating-mature-bg: hsla(0, 100%, 15%, 1); /* R rating - dark red background */
+  --rating-mature-text: hsla(0, 66%, 57%, 1); /* R rating - red text */
+  --rating-mature-border: hsla(0, 66%, 57%, 0.5); /* R rating - red border */
+  --rating-unknown-bg: hsla(0, 0%, 15%, 1); /* NR rating - dark gray background */
+  --rating-unknown-text: hsla(0, 0%, 70%, 1); /* NR rating - gray text */
+  --rating-unknown-border: hsla(0, 0%, 70%, 0.5); /* NR rating - gray border */
+
+  /* Border width for age rating chips */
+  --rating-border-width: 1; /* Dark mode - 1px border */
 }
 
 @theme inline {
