@@ -56,9 +56,6 @@ updates:
       prefix: 'deps'
       prefix-development: 'deps-dev'
       include: 'scope'
-    # Review PR automatically after creation for faster feedback
-    reviewers:
-      - 'shchilkin'
 
   # Monitor GitHub Actions in workflows
   - package-ecosystem: 'github-actions'
