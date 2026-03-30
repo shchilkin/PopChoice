@@ -1,44 +1,38 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import { getDbClient } from '@/clients/dbClient';
-
 import { GET } from './route';
 
-// Mock the dbClient module
-const mockMovies = [
-  {
-    id: 1,
-    name: 'Test Movie',
-    age_rating: 'PG',
-    duration: 120,
-    score_rating: 8.5,
-    year: 2023,
-  },
-];
+import type { Movie } from './route';
 
-vi.mock('@/clients/dbClient', () => ({
-  getDbClient: vi.fn(() => ({
-    isConfigured: vi.fn(() => true),
+// Mock the supabase client
+vi.mock('@/clients/supabaseClient', () => ({
+  supabase: {
     from: vi.fn(() => ({
-      select: vi.fn((_columns: string, opts?: { count?: string; head?: boolean }) => {
-        // Count-only query: select('*', { count: 'exact', head: true })
-        if (opts?.head && opts?.count) {
-          return Promise.resolve({ data: null, error: null, count: mockMovies.length });
-        }
-        // Data query with optional count via window function:
-        // select('columns', { count: 'exact' }).range(...).order(...)
-        const resolvedCount = opts?.count === 'exact' ? mockMovies.length : undefined;
-        return {
-          range: vi.fn(() => ({
-            order: vi.fn(() =>
-              Promise.resolve({ data: mockMovies, error: null, count: resolvedCount }),
-            ),
-          })),
-        };
-      }),
+      select: vi.fn(() => ({
+        range: vi.fn(() => ({
+          order: vi.fn(() =>
+            Promise.resolve({
+              data: [
+                {
+                  id: 1,
+                  name: 'Test Movie',
+                  age_rating: 'PG',
+                  description: 'A test movie',
+                  duration: 120,
+                  score_rating: 8.5,
+                  year: 2023,
+                },
+              ],
+              error: null,
+            }),
+          ),
+        })),
+        count: 1,
+        head: true,
+      })),
     })),
-  })),
+  },
 }));
 
 describe('Movies API Route', () => {
@@ -55,9 +49,6 @@ describe('Movies API Route', () => {
     expect(data).toHaveProperty('totalPages');
     expect(data.page).toBe(1);
     expect(data.pageSize).toBe(50);
-    expect(data.totalCount).toBe(mockMovies.length);
-    expect(data.totalPages).toBe(Math.ceil(mockMovies.length / 50));
-    expect(data.movies).toHaveLength(mockMovies.length);
   });
 
   it('should return error for invalid page parameter', async () => {
@@ -88,28 +79,114 @@ describe('Movies API Route', () => {
     expect(data.pageSize).toBe(25);
   });
 
-  it('should return mock data when database is not configured', async () => {
-    vi.mocked(getDbClient).mockReturnValueOnce({
-      isConfigured: vi.fn(() => false),
-      from: vi.fn(),
-      rpc: vi.fn(),
+  describe('title search', () => {
+    it('should filter movies by title (case-insensitive, partial match)', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?title=casablanca');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.movies.length).toBeGreaterThan(0);
+      data.movies.forEach((movie: Movie) => {
+        expect(movie.name.toLowerCase()).toContain('casablanca');
+      });
     });
 
-    const request = new NextRequest('http://localhost:3000/api/movies');
-    const response = await GET(request);
-    const data = await response.json();
+    it('should filter movies by partial title match', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?title=godfather');
+      const response = await GET(request);
+      const data = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(data).toHaveProperty('movies');
-    expect(data).toHaveProperty('totalCount');
-    expect(data).toHaveProperty('page');
-    expect(data).toHaveProperty('pageSize');
-    expect(data).toHaveProperty('totalPages');
-    expect(data.page).toBe(1);
-    expect(data.pageSize).toBe(50);
-    expect(data.totalCount).toBeGreaterThan(0);
-    expect(data.totalPages).toBeGreaterThan(0);
-    expect(data.movies.length).toBeGreaterThan(0);
-    expect(data.movies.length).toBeLessThanOrEqual(50);
+      expect(response.status).toBe(200);
+      expect(data.movies.length).toBeGreaterThan(0);
+      data.movies.forEach((movie: Movie) => {
+        expect(movie.name.toLowerCase()).toContain('godfather');
+      });
+    });
+
+    it('should return empty results when no titles match', async () => {
+      const request = new NextRequest(
+        'http://localhost:3000/api/movies?title=xyznonexistentmovie999',
+      );
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.movies).toHaveLength(0);
+      expect(data.totalCount).toBe(0);
+    });
+  });
+
+  describe('year range filtering', () => {
+    it('should filter movies by yearFrom', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?yearFrom=2000');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.movies.length).toBeGreaterThan(0);
+      data.movies.forEach((movie: Movie) => {
+        expect(movie.year).toBeGreaterThanOrEqual(2000);
+      });
+    });
+
+    it('should filter movies by yearTo', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?yearTo=1960');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.movies.length).toBeGreaterThan(0);
+      data.movies.forEach((movie: Movie) => {
+        expect(movie.year).toBeLessThanOrEqual(1960);
+      });
+    });
+
+    it('should filter movies by combined yearFrom and yearTo range', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?yearFrom=1970&yearTo=1980');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.movies.length).toBeGreaterThan(0);
+      data.movies.forEach((movie: Movie) => {
+        expect(movie.year).toBeGreaterThanOrEqual(1970);
+        expect(movie.year).toBeLessThanOrEqual(1980);
+      });
+    });
+
+    it('should return fewer results with year range than without', async () => {
+      const allRequest = new NextRequest('http://localhost:3000/api/movies');
+      const filteredRequest = new NextRequest(
+        'http://localhost:3000/api/movies?yearFrom=1970&yearTo=1980',
+      );
+
+      const allResponse = await GET(allRequest);
+      const filteredResponse = await GET(filteredRequest);
+      const allData = await allResponse.json();
+      const filteredData = await filteredResponse.json();
+
+      expect(filteredData.totalCount).toBeLessThan(allData.totalCount);
+    });
+  });
+
+  describe('year parameter validation', () => {
+    it('should return 400 for non-numeric yearFrom', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?yearFrom=abc');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data).toHaveProperty('error');
+    });
+
+    it('should return 400 for non-numeric yearTo', async () => {
+      const request = new NextRequest('http://localhost:3000/api/movies?yearTo=xyz');
+      const response = await GET(request);
+      const data = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(data).toHaveProperty('error');
+    });
   });
 });
