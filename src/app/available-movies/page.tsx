@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { TopNavigation, MoviesTable, MovieSearch, type SearchFilters } from '@/components';
+import { MovieSearch, MoviesTable, TopNavigation, type SearchFilters } from '@/components';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
@@ -115,8 +115,8 @@ export default function AvailableMoviesPage() {
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
           <TopNavigation logoSize={60} />
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600">Loading movies...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
+            <p className="text-lg text-[var(--muted-foreground)]">Loading movies...</p>
           </div>
         </main>
       </div>
@@ -129,10 +129,10 @@ export default function AvailableMoviesPage() {
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
           <TopNavigation logoSize={60} />
           <div className="text-center py-8">
-            <p className="text-lg text-red-600 mb-4">Error: {error}</p>
+            <p className="text-lg text-[var(--rating-mature-text)] mb-4">Error: {error}</p>
             <button
               onClick={() => fetchMovies(currentPage, searchFilters)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:bg-[var(--primary)]/90 transition-colors"
             >
               Try Again
             </button>
@@ -149,7 +149,9 @@ export default function AvailableMoviesPage() {
 
         {/* Header */}
         <div className="w-full mb-6">
-          <h1 className="text-3xl font-bold text-center mb-4">Available Movies</h1>
+          <h1 className="text-3xl font-bold text-center mb-4 text-[var(--foreground)]">
+            Available Movies
+          </h1>
         </div>
 
         {/* Search */}
@@ -157,7 +159,7 @@ export default function AvailableMoviesPage() {
 
         {/* Results Summary */}
         <div className="w-full mb-4">
-          <p className="text-center text-gray-600 dark:text-gray-400">
+          <p className="text-center text-[var(--muted-foreground)]">
             Showing {totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0} to{' '}
             {Math.min(currentPage * pageSize, totalCount)} of {totalCount} movies
           </p>
@@ -173,7 +175,7 @@ export default function AvailableMoviesPage() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm bg-[var(--card)] border border-[var(--border)] rounded-md text-[var(--foreground)] hover:bg-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -186,10 +188,10 @@ export default function AvailableMoviesPage() {
                     disabled={page === '...'}
                     className={`px-3 py-2 text-sm rounded-md ${
                       page === currentPage
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
                         : page === '...'
-                          ? 'text-gray-500 dark:text-gray-400 cursor-default'
-                          : 'bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                          ? 'text-[var(--muted-foreground)] cursor-default'
+                          : 'bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)]'
                     }`}
                   >
                     {page}
@@ -200,13 +202,13 @@ export default function AvailableMoviesPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm bg-[var(--card)] border border-[var(--border)] rounded-md text-[var(--foreground)] hover:bg-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
             </div>
 
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-[var(--muted-foreground)]">
               Page {currentPage} of {totalPages}
             </div>
           </div>

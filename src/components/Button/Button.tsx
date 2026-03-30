@@ -15,7 +15,7 @@ export const Button = ({
     'mt-4 w-full px-4 py-4 font-bold text-xl rounded-lg transition-colors duration-200 ' +
     (disabled
       ? 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
-      : 'bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-700 dark:hover:bg-blue-800');
+      : 'bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-[var(--accent)]/90');
 
   return (
     <button

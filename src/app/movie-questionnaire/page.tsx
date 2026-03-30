@@ -84,13 +84,14 @@ export default function QuestionsPage() {
   const currentPersonColors = getPersonColors(effectiveCurrentPerson);
 
   return (
-    <div className="flex flex-col min-h-screen bg-white dark:bg-black">
+    <div className="flex flex-col min-h-screen">
       <div className="flex-1 p-4 pb-24 sm:p-20 sm:pb-32 font-[family-name:var(--font-geist-sans)]">
         <main className="flex flex-col w-full items-center max-w-md mx-auto">
           <TopNavigation
             firstStripeColor={currentPersonColors.first}
             secondStripeColor={currentPersonColors.second}
             logoSize={60}
+            minimizeMode={true}
           />
 
           {/* Step Progress Indicator - only show for multiple people */}

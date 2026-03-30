@@ -147,7 +147,7 @@ export default function MovieSuggestionPage() {
   return (
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col w-full items-center max-w-6xl mx-auto">
-        <TopNavigation logoSize={60} />
+        <TopNavigation logoSize={60} minimizeMode={true} />
 
         {hasRecommendations && (
           <div className="w-full max-w-md mb-12">
@@ -170,7 +170,7 @@ export default function MovieSuggestionPage() {
                   </p>
                   <button
                     onClick={() => setShowAllMovies(true)}
-                    className="text-sm text-blue-500 hover:text-blue-700 underline"
+                    className="text-sm text-[var(--accent)] hover:text-[var(--accent)]/80 underline"
                   >
                     Show all {totalMovies} movies
                   </button>
@@ -178,7 +178,7 @@ export default function MovieSuggestionPage() {
               ) : (
                 <button
                   onClick={() => setShowAllMovies(false)}
-                  className="text-sm text-blue-500 hover:text-blue-700 underline mb-4"
+                  className="text-sm text-[var(--accent)] hover:text-[var(--accent)]/80 underline mb-4"
                 >
                   Show one at a time
                 </button>
@@ -254,7 +254,7 @@ export default function MovieSuggestionPage() {
                         onClick={() => setCurrentMovieIndex(index)}
                         className={`w-3 h-3 rounded-full transition-colors ${
                           index === currentMovieIndex
-                            ? 'bg-blue-500'
+                            ? 'bg-[var(--accent)]'
                             : 'bg-gray-300 hover:bg-gray-400'
                         }`}
                         aria-label={`Go to movie ${index + 1}`}

@@ -7,8 +7,8 @@ export default function AboutPage() {
         <TopNavigation logoSize={60} />
 
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold mb-4">About PopChoice</h1>
-          <div className="max-w-4xl mx-auto space-y-6 text-lg text-gray-700 dark:text-gray-300">
+          <h1 className="text-3xl font-bold mb-4 text-[var(--foreground)]">About PopChoice</h1>
+          <div className="max-w-4xl mx-auto space-y-6 text-lg text-[var(--muted-foreground)]">
             <p className="text-xl leading-relaxed">
               PopChoice is an intelligent movie recommendation platform that combines AI technology
               with personalized questionnaires to help you discover your next favorite film.
@@ -16,7 +16,7 @@ export default function AboutPage() {
 
             <div className="grid md:grid-cols-2 gap-8 mt-8">
               <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
                   🎯 Smart Recommendations
                 </h2>
                 <p className="text-base">
@@ -27,7 +27,7 @@ export default function AboutPage() {
               </div>
 
               <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
                   📝 Personalized Questionnaires
                 </h2>
                 <p className="text-base">
@@ -38,7 +38,7 @@ export default function AboutPage() {
               </div>
 
               <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
                   🤖 AI Technology
                 </h2>
                 <p className="text-base">
@@ -48,7 +48,7 @@ export default function AboutPage() {
               </div>
 
               <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
                   🎬 Comprehensive Movie Database
                 </h2>
                 <p className="text-base">
@@ -59,13 +59,11 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mt-8">
-              <h2 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">
-                How It Works
-              </h2>
+            <div className="bg-[var(--muted)] rounded-lg p-6 mt-8">
+              <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">How It Works</h2>
               <div className="text-left space-y-3 text-base">
                 <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
                     1
                   </span>
                   <p>
@@ -73,19 +71,19 @@ export default function AboutPage() {
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
                     2
                   </span>
                   <p>Our AI analyzes your responses using embedding technology</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
                     3
                   </span>
                   <p>Receive personalized movie recommendations with detailed information</p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
                     4
                   </span>
                   <p>Discover your next favorite movie and enjoy your viewing experience</p>

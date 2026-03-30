@@ -1,0 +1,1 @@
+export { AgeRatingChip } from './AgeRatingChip';
