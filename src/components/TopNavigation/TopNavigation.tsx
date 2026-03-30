@@ -3,7 +3,7 @@
 import { Rubik_Gemstones } from 'next/font/google';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Mascot } from '../Mascot/Maskot';
 
@@ -27,6 +27,7 @@ export const TopNavigation = ({
 }: TopNavigationProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
 
   const navigationLinks = [
     { href: '/about', label: 'About' },
@@ -38,19 +39,18 @@ export const TopNavigation = ({
   const closeMenu = useCallback(() => setIsMenuOpen(false), []);
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Close menu when clicking outside
+  // Close menu when clicking outside (using mousedown to avoid race condition with toggle)
   useEffect(() => {
     if (!isMenuOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      const nav = document.querySelector('nav');
-      if (nav && !nav.contains(event.target as Node)) {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) {
         closeMenu();
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMenuOpen, closeMenu]);
 
   // Close menu on escape key
@@ -68,7 +68,7 @@ export const TopNavigation = ({
   }, [isMenuOpen, closeMenu]);
 
   return (
-    <nav className="w-full mb-8 sm:mb-12">
+    <nav ref={navRef} className="w-full mb-8 sm:mb-12">
       <div className="flex items-center justify-between">
         {/* Logo and Brand */}
         <Link
