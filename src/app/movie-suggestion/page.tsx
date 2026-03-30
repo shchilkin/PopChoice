@@ -147,7 +147,7 @@ export default function MovieSuggestionPage() {
   return (
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col w-full items-center max-w-6xl mx-auto">
-        <TopNavigation logoSize={60} />
+        <TopNavigation logoSize={60} minimizeMode={true} />
 
         {hasRecommendations && (
           <div className="w-full max-w-md mb-12">
