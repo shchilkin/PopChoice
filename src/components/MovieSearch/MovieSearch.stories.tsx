@@ -1,15 +1,19 @@
-import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
-
 import { MovieSearch } from './MovieSearch';
+
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof MovieSearch> = {
   title: 'Components/MovieSearch',
   component: MovieSearch,
-  parameters: {
-    layout: 'padded',
-  },
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component:
+          'A search component for filtering movies by title and release year range with debounced input.',
+      },
+    },
+  },
   argTypes: {
     loading: {
       control: 'boolean',
@@ -17,8 +21,7 @@ const meta: Meta<typeof MovieSearch> = {
     },
   },
   args: {
-    onSearch: fn(),
-    onClear: fn(),
+    onSearch: () => {},
   },
 };
 
@@ -34,16 +37,5 @@ export const Default: Story = {
 export const Loading: Story = {
   args: {
     loading: true,
-  },
-};
-
-export const WithInitialFilters: Story = {
-  args: {
-    loading: false,
-  },
-  play: async ({ canvasElement }) => {
-    // Note: In a real implementation, you might want to programmatically
-    // set initial values, but for this story we'll show the empty state
-    // and let users interact with the controls
   },
 };
