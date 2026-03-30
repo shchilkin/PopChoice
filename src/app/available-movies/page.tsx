@@ -64,11 +64,6 @@ export default function AvailableMoviesPage() {
     setCurrentPage(1);
   }, []);
 
-  const handleClearSearch = useCallback(() => {
-    setSearchFilters({ title: '', yearFrom: '', yearTo: '' });
-    setCurrentPage(1);
-  }, []);
-
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
@@ -155,7 +150,7 @@ export default function AvailableMoviesPage() {
         </div>
 
         {/* Search */}
-        <MovieSearch onSearch={handleSearch} onClear={handleClearSearch} loading={loading} />
+        <MovieSearch onSearch={handleSearch} loading={loading} />
 
         {/* Results Summary */}
         <div className="w-full mb-4">

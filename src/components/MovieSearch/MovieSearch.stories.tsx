@@ -22,7 +22,6 @@ const meta: Meta<typeof MovieSearch> = {
   },
   args: {
     onSearch: () => {},
-    onClear: () => {},
   },
 };
 

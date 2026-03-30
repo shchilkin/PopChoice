@@ -26,16 +26,22 @@ export async function GET(request: NextRequest) {
 
     // Extract search parameters
     const title = searchParams.get('title') || '';
-    const yearFrom = searchParams.get('yearFrom')
-      ? parseInt(searchParams.get('yearFrom')!, 10)
-      : undefined;
-    const yearTo = searchParams.get('yearTo')
-      ? parseInt(searchParams.get('yearTo')!, 10)
-      : undefined;
+    const yearFromParam = searchParams.get('yearFrom');
+    const yearToParam = searchParams.get('yearTo');
+    const yearFrom = yearFromParam ? parseInt(yearFromParam, 10) : undefined;
+    const yearTo = yearToParam ? parseInt(yearToParam, 10) : undefined;
 
     // Validate page and pageSize
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       return NextResponse.json({ error: 'Invalid page or pageSize parameters' }, { status: 400 });
+    }
+
+    // Validate year parameters
+    if (yearFrom !== undefined && !Number.isFinite(yearFrom)) {
+      return NextResponse.json({ error: 'Invalid yearFrom parameter' }, { status: 400 });
+    }
+    if (yearTo !== undefined && !Number.isFinite(yearTo)) {
+      return NextResponse.json({ error: 'Invalid yearTo parameter' }, { status: 400 });
     }
 
     // Check if Supabase is configured

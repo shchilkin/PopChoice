@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export interface SearchFilters {
   title: string;
@@ -10,7 +10,6 @@ export interface SearchFilters {
 
 export interface MovieSearchProps {
   onSearch: (filters: SearchFilters) => void;
-  onClear: () => void;
   loading?: boolean;
 }
 
@@ -20,11 +19,18 @@ const EMPTY_FILTERS: SearchFilters = {
   yearTo: '',
 };
 
-export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchProps) {
+export function MovieSearch({ onSearch, loading = false }: MovieSearchProps) {
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
+  const isFirstRender = useRef(true);
 
-  // Debounce search to avoid too many API calls
+  // Debounce search to avoid too many API calls.
+  // Skip the initial mount to prevent an unnecessary fetch on load.
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     const timeoutId = setTimeout(() => {
       onSearch(filters);
     }, 300);
@@ -39,9 +45,10 @@ export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchP
     }));
   };
 
+  // Only update state; the debounced onSearch effect will handle the fetch,
+  // avoiding a duplicate request from calling onClear() directly.
   const handleClear = () => {
     setFilters(EMPTY_FILTERS);
-    onClear();
   };
 
   const hasActiveFilters = filters.title || filters.yearFrom || filters.yearTo;
