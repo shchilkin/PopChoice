@@ -137,7 +137,7 @@ export function MovieSearch({ onSearch, onClear, loading = false }: MovieSearchP
           )}
           {(filters.yearFrom || filters.yearTo) && (
             <span className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-2 py-1 rounded">
-              Year: {filters.yearFrom || '...'} – {filters.yearTo || '...'}
+              Year: {filters.yearFrom || '...'} - {filters.yearTo || '...'}
             </span>
           )}
         </div>
