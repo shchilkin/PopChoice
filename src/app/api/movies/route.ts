@@ -8,10 +8,6 @@ export interface Movie {
   duration: number;
   score_rating: number;
   year: number;
-  // Extended fields for enhanced search (available in mock data)
-  cast?: string[];
-  director?: string;
-  genres?: string[];
 }
 
 export interface MoviesResponse {
@@ -20,19 +16,6 @@ export interface MoviesResponse {
   page: number;
   pageSize: number;
   totalPages: number;
-  searchCapabilities: {
-    supportsBasicSearch: boolean; // title, year range
-    supportsAdvancedSearch: boolean; // cast, director, genres
-  };
-}
-
-export interface SearchParams {
-  title?: string;
-  cast?: string;
-  director?: string;
-  genres?: string[];
-  yearFrom?: number;
-  yearTo?: number;
 }
 
 export async function GET(request: NextRequest) {
@@ -42,10 +25,7 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
 
     // Extract search parameters
-    const searchTitle = searchParams.get('title') || '';
-    const searchCast = searchParams.get('cast') || '';
-    const searchDirector = searchParams.get('director') || '';
-    const searchGenres = searchParams.get('genres')?.split(',').filter(Boolean) || [];
+    const title = searchParams.get('title') || '';
     const yearFrom = searchParams.get('yearFrom')
       ? parseInt(searchParams.get('yearFrom')!, 10)
       : undefined;
@@ -64,22 +44,24 @@ export async function GET(request: NextRequest) {
 
     if (!privateKey || !url) {
       // Return mock data when Supabase is not configured (for development/demo)
-      const mockMovies = generateMockMovies();
+      let mockMovies = generateMockMovies();
 
       // Apply search filters to mock data
-      const filteredMovies = searchMovies(mockMovies, {
-        title: searchTitle,
-        cast: searchCast,
-        director: searchDirector,
-        genres: searchGenres,
-        yearFrom,
-        yearTo,
-      });
+      if (title) {
+        const lowerTitle = title.toLowerCase();
+        mockMovies = mockMovies.filter((m) => m.name.toLowerCase().includes(lowerTitle));
+      }
+      if (yearFrom) {
+        mockMovies = mockMovies.filter((m) => m.year >= yearFrom);
+      }
+      if (yearTo) {
+        mockMovies = mockMovies.filter((m) => m.year <= yearTo);
+      }
 
-      const totalCount = filteredMovies.length;
+      const totalCount = mockMovies.length;
       const totalPages = Math.ceil(totalCount / pageSize);
       const offset = (page - 1) * pageSize;
-      const paginatedMovies = filteredMovies.slice(offset, offset + pageSize);
+      const paginatedMovies = mockMovies.slice(offset, offset + pageSize);
 
       const response: MoviesResponse = {
         movies: paginatedMovies,
@@ -87,10 +69,6 @@ export async function GET(request: NextRequest) {
         page,
         pageSize,
         totalPages,
-        searchCapabilities: {
-          supportsBasicSearch: true,
-          supportsAdvancedSearch: true, // Mock data supports all search features
-        },
       };
 
       return NextResponse.json(response);
@@ -99,40 +77,27 @@ export async function GET(request: NextRequest) {
     // Only import Supabase when we have the credentials
     const { supabase } = await import('@/clients/supabaseClient');
 
-    // Build Supabase query with search filters
-    let query = supabase
+    // Build query with search filters
+    let countQuery = supabase.from('movies').select('*', { count: 'exact', head: true });
+    let dataQuery = supabase
       .from('movies')
       .select('id, name, age_rating, description, duration, score_rating, year');
 
-    // Apply search filters (basic fields only since extended fields don't exist in DB)
-    if (searchTitle) {
-      query = query.ilike('name', `%${searchTitle}%`);
-    }
-
-    if (yearFrom) {
-      query = query.gte('year', yearFrom);
-    }
-
-    if (yearTo) {
-      query = query.lte('year', yearTo);
-    }
-
-    // Get total count first (use a separate query for count)
-    let countQuery = supabase
-      .from('movies')
-      .select('*', { count: 'exact', head: true });
-
-    // Apply same filters to count query
-    if (searchTitle) {
-      countQuery = countQuery.ilike('name', `%${searchTitle}%`);
+    // Apply search filters to both queries
+    if (title) {
+      countQuery = countQuery.ilike('name', `%${title}%`);
+      dataQuery = dataQuery.ilike('name', `%${title}%`);
     }
     if (yearFrom) {
       countQuery = countQuery.gte('year', yearFrom);
+      dataQuery = dataQuery.gte('year', yearFrom);
     }
     if (yearTo) {
       countQuery = countQuery.lte('year', yearTo);
+      dataQuery = dataQuery.lte('year', yearTo);
     }
 
+    // Get total count
     const { count, error: countError } = await countQuery;
 
     if (countError) {
@@ -144,8 +109,8 @@ export async function GET(request: NextRequest) {
     const totalPages = Math.ceil(totalCount / pageSize);
     const offset = (page - 1) * pageSize;
 
-    // Get paginated movies with same filters
-    const { data: movies, error } = await query
+    // Get paginated movies
+    const { data: movies, error } = await dataQuery
       .range(offset, offset + pageSize - 1)
       .order('id', { ascending: true });
 
@@ -160,10 +125,6 @@ export async function GET(request: NextRequest) {
       page,
       pageSize,
       totalPages,
-      searchCapabilities: {
-        supportsBasicSearch: true,
-        supportsAdvancedSearch: false, // Real database doesn't have cast/director/genre data
-      },
     };
 
     return NextResponse.json(response);
@@ -171,53 +132,6 @@ export async function GET(request: NextRequest) {
     console.error('Unexpected error in movies API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-// Search function for filtering movies
-function searchMovies(movies: Movie[], searchParams: SearchParams): Movie[] {
-  return movies.filter((movie) => {
-    // Title search (case-insensitive, partial match)
-    if (searchParams.title) {
-      const titleMatch = movie.name.toLowerCase().includes(searchParams.title.toLowerCase());
-      if (!titleMatch) return false;
-    }
-
-    // Cast search (case-insensitive, partial match in any cast member)
-    if (searchParams.cast && movie.cast) {
-      const castMatch = movie.cast.some((actor) =>
-        actor.toLowerCase().includes(searchParams.cast!.toLowerCase()),
-      );
-      if (!castMatch) return false;
-    }
-
-    // Director search (case-insensitive, partial match)
-    if (searchParams.director && movie.director) {
-      const directorMatch = movie.director
-        .toLowerCase()
-        .includes(searchParams.director.toLowerCase());
-      if (!directorMatch) return false;
-    }
-
-    // Genre search (movie must have all selected genres)
-    if (searchParams.genres && searchParams.genres.length > 0 && movie.genres) {
-      const hasAllGenres = searchParams.genres.every((searchGenre) =>
-        movie.genres!.some((movieGenre) =>
-          movieGenre.toLowerCase().includes(searchGenre.toLowerCase()),
-        ),
-      );
-      if (!hasAllGenres) return false;
-    }
-
-    // Year range search
-    if (searchParams.yearFrom && movie.year < searchParams.yearFrom) {
-      return false;
-    }
-    if (searchParams.yearTo && movie.year > searchParams.yearTo) {
-      return false;
-    }
-
-    return true;
-  });
 }
 
 // Generate mock data for development/demo purposes
@@ -232,9 +146,6 @@ function generateMockMovies(): Movie[] {
       duration: 102,
       score_rating: 8.5,
       year: 1942,
-      cast: ['Humphrey Bogart', 'Ingrid Bergman', 'Paul Henreid', 'Claude Rains'],
-      director: 'Michael Curtiz',
-      genres: ['Drama', 'Romance', 'War'],
     },
     {
       name: 'Seven Samurai',
@@ -244,9 +155,6 @@ function generateMockMovies(): Movie[] {
       duration: 207,
       score_rating: 8.6,
       year: 1954,
-      cast: ['Toshiro Mifune', 'Takashi Shimura', 'Keiko Tsushima', 'Yukiko Shimazaki'],
-      director: 'Akira Kurosawa',
-      genres: ['Action', 'Adventure', 'Drama'],
     },
     {
       name: 'The Godfather',
@@ -256,9 +164,6 @@ function generateMockMovies(): Movie[] {
       duration: 175,
       score_rating: 9.2,
       year: 1972,
-      cast: ['Marlon Brando', 'Al Pacino', 'James Caan', 'Diane Keaton'],
-      director: 'Francis Ford Coppola',
-      genres: ['Crime', 'Drama'],
     },
     {
       name: 'One Flew Over the Cuckoo&apos;s Nest',
@@ -268,9 +173,6 @@ function generateMockMovies(): Movie[] {
       duration: 133,
       score_rating: 8.7,
       year: 1975,
-      cast: ['Jack Nicholson', 'Louise Fletcher', 'Danny DeVito', 'Christopher Lloyd'],
-      director: 'Milos Forman',
-      genres: ['Drama'],
     },
     {
       name: 'Star Wars: Episode IV - A New Hope',
@@ -280,9 +182,6 @@ function generateMockMovies(): Movie[] {
       duration: 121,
       score_rating: 8.6,
       year: 1977,
-      cast: ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness'],
-      director: 'George Lucas',
-      genres: ['Adventure', 'Fantasy', 'Sci-Fi'],
     },
     {
       name: 'The Avengers',
@@ -292,9 +191,6 @@ function generateMockMovies(): Movie[] {
       duration: 143,
       score_rating: 8.0,
       year: 2012,
-      cast: ['Robert Downey Jr.', 'Chris Evans', 'Scarlett Johansson', 'Mark Ruffalo'],
-      director: 'Joss Whedon',
-      genres: ['Action', 'Adventure', 'Sci-Fi'],
     },
     {
       name: 'Harry Potter and the Philosopher&apos;s Stone',
@@ -304,9 +200,6 @@ function generateMockMovies(): Movie[] {
       duration: 152,
       score_rating: 7.6,
       year: 2001,
-      cast: ['Daniel Radcliffe', 'Emma Watson', 'Rupert Grint', 'Alan Rickman'],
-      director: 'Chris Columbus',
-      genres: ['Adventure', 'Family', 'Fantasy'],
     },
     {
       name: 'Deadpool',
@@ -316,9 +209,6 @@ function generateMockMovies(): Movie[] {
       duration: 108,
       score_rating: 8.0,
       year: 2016,
-      cast: ['Ryan Reynolds', 'Morena Baccarin', 'T.J. Miller', 'Ed Skrein'],
-      director: 'Tim Miller',
-      genres: ['Action', 'Comedy', 'Adventure'],
     },
     {
       name: 'John Wick',
@@ -328,9 +218,6 @@ function generateMockMovies(): Movie[] {
       duration: 101,
       score_rating: 7.4,
       year: 2014,
-      cast: ['Keanu Reeves', 'Michael Nyqvist', 'Alfie Allen', 'Adrianne Palicki'],
-      director: 'Chad Stahelski',
-      genres: ['Action', 'Crime', 'Thriller'],
     },
   ];
 
@@ -346,9 +233,6 @@ function generateMockMovies(): Movie[] {
       duration: baseMovie.duration + (i % 10),
       score_rating: Math.round((baseMovie.score_rating + (i % 20) * 0.1) * 10) / 10,
       year: baseMovie.year + (i % 40),
-      cast: baseMovie.cast,
-      director: baseMovie.director,
-      genres: baseMovie.genres,
     });
   }
 

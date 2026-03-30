@@ -13,15 +13,8 @@ export default function AvailableMoviesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [searchCapabilities, setSearchCapabilities] = useState({
-    supportsBasicSearch: true,
-    supportsAdvancedSearch: true,
-  });
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({
     title: '',
-    cast: '',
-    director: '',
-    genres: [],
     yearFrom: '',
     yearTo: '',
   });
@@ -33,20 +26,16 @@ export default function AvailableMoviesPage() {
       setError(null);
 
       try {
-        const searchParams = new URLSearchParams({
+        const params = new URLSearchParams({
           page: page.toString(),
           pageSize: pageSize.toString(),
         });
 
-        // Add search parameters if they exist
-        if (filters.title) searchParams.append('title', filters.title);
-        if (filters.cast) searchParams.append('cast', filters.cast);
-        if (filters.director) searchParams.append('director', filters.director);
-        if (filters.genres.length > 0) searchParams.append('genres', filters.genres.join(','));
-        if (filters.yearFrom) searchParams.append('yearFrom', filters.yearFrom);
-        if (filters.yearTo) searchParams.append('yearTo', filters.yearTo);
+        if (filters.title) params.append('title', filters.title);
+        if (filters.yearFrom) params.append('yearFrom', filters.yearFrom);
+        if (filters.yearTo) params.append('yearTo', filters.yearTo);
 
-        const response = await fetch(`/api/movies?${searchParams.toString()}`);
+        const response = await fetch(`/api/movies?${params.toString()}`);
 
         if (!response.ok) {
           throw new Error(`Failed to fetch movies: ${response.statusText}`);
@@ -57,7 +46,6 @@ export default function AvailableMoviesPage() {
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
         setCurrentPage(data.page);
-        setSearchCapabilities(data.searchCapabilities);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -71,28 +59,21 @@ export default function AvailableMoviesPage() {
     fetchMovies(currentPage, searchFilters);
   }, [fetchMovies, currentPage, searchFilters]);
 
+  const handleSearch = useCallback((filters: SearchFilters) => {
+    setSearchFilters(filters);
+    setCurrentPage(1);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    setSearchFilters({ title: '', yearFrom: '', yearTo: '' });
+    setCurrentPage(1);
+  }, []);
+
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
-
-  const handleSearch = useCallback((filters: SearchFilters) => {
-    setSearchFilters(filters);
-    setCurrentPage(1); // Reset to first page when searching
-  }, []);
-
-  const handleClearSearch = useCallback(() => {
-    setSearchFilters({
-      title: '',
-      cast: '',
-      director: '',
-      genres: [],
-      yearFrom: '',
-      yearTo: '',
-    });
-    setCurrentPage(1);
-  }, []);
 
   const generatePageNumbers = () => {
     const delta = 2; // Number of pages to show on each side of current page
@@ -171,18 +152,13 @@ export default function AvailableMoviesPage() {
           <h1 className="text-3xl font-bold text-center mb-4">Available Movies</h1>
         </div>
 
-        {/* Search Component */}
-        <MovieSearch 
-          onSearch={handleSearch} 
-          onClear={handleClearSearch} 
-          loading={loading}
-          searchCapabilities={searchCapabilities}
-        />
+        {/* Search */}
+        <MovieSearch onSearch={handleSearch} onClear={handleClearSearch} loading={loading} />
 
         {/* Results Summary */}
         <div className="w-full mb-4">
-          <p className="text-center text-gray-600">
-            Showing {(currentPage - 1) * pageSize + 1} to{' '}
+          <p className="text-center text-gray-600 dark:text-gray-400">
+            Showing {totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0} to{' '}
             {Math.min(currentPage * pageSize, totalCount)} of {totalCount} movies
           </p>
         </div>
