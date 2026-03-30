@@ -50,9 +50,11 @@ export const MultipleChoiceQuestion: FC<MultipleChoiceQuestionProps> = ({
 
   return (
     <div>
-      <p className="text-md font-regular text-start w-full dark:text-gray-300 mb-2">
+      <p className="text-md font-regular text-start w-full text-[var(--foreground)] mb-2">
         {question}
-        {multiSelect && <span className="text-xs text-gray-500 ml-2">(multi-select)</span>}
+        {multiSelect && (
+          <span className="text-xs text-[var(--muted-foreground)] ml-2">(multi-select)</span>
+        )}
       </p>
       <div className="flex flex-row gap-2 flex-wrap">
         {options.map((option) => {
@@ -74,10 +76,10 @@ export const MultipleChoiceQuestion: FC<MultipleChoiceQuestionProps> = ({
               />
               <label
                 htmlFor={id}
-                className={`cursor-pointer px-4 py-1 rounded-lg border transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-amber-500 focus-within:ring-offset-2 ${
+                className={`cursor-pointer px-4 py-1 rounded-lg border transition-colors focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--ring)] focus-within:ring-offset-2 ${
                   isSelected
-                    ? 'bg-amber-300 text-black border-amber-300'
-                    : 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700 dark:text-gray-300'
+                    ? 'bg-[var(--accent)] text-[var(--accent-foreground)] border-[var(--accent)]'
+                    : 'border-[var(--border)] hover:bg-[var(--muted)] text-[var(--foreground)]'
                 }`}
                 tabIndex={0}
                 onKeyDown={(e) => {

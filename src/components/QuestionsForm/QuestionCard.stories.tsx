@@ -6,7 +6,7 @@ import { QuestionCard } from './QuestionCard';
 import type { Decorator, Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const fixedWidthDecorator: Decorator = (Story) => (
-  <div className="max-w-md mx-auto p-6 bg-white rounded-lg ">
+  <div className="max-w-md mx-auto p-6 bg-background rounded-lg ">
     <Story />
   </div>
 );

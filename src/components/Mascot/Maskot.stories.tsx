@@ -6,18 +6,7 @@ import { Mascot } from './Maskot';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const fixedSizeDecorator = (Story: React.ComponentType) => (
-  <div
-    style={{
-      width: 320,
-      height: 320,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#fff',
-      border: '1px solid #eee',
-      borderRadius: 16,
-    }}
-  >
+  <div className="w-80 h-80 flex items-center justify-center bg-background border border-border rounded-2xl">
     <Story />
   </div>
 );

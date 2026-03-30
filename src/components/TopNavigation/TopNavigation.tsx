@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Mascot } from '../Mascot/Maskot';
+import { ThemeToggle } from '../ThemeToggle';
 
 const rubik_Gemstones = Rubik_Gemstones({
   subsets: ['latin', 'cyrillic'],
@@ -93,53 +94,59 @@ export const TopNavigation = ({
           </h1>
         </Link>
 
-        {/* Navigation Links - Hidden in minimize mode */}
-        {!minimizeMode && (
-          <>
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-2">
-              {navigationLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
-                    isActiveLink(link.href)
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={toggleMenu}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-              aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              aria-expanded={isMenuOpen}
-            >
-              <div className="w-6 h-5 relative flex flex-col justify-between">
-                <span
-                  className={`block w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 origin-center ${
-                    isMenuOpen ? 'rotate-45 translate-y-[9px]' : ''
-                  }`}
-                />
-                <span
-                  className={`block w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 ${
-                    isMenuOpen ? 'opacity-0 scale-x-0' : ''
-                  }`}
-                />
-                <span
-                  className={`block w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 origin-center ${
-                    isMenuOpen ? '-rotate-45 -translate-y-[9px]' : ''
-                  }`}
-                />
+        {/* Right side: Navigation Links + Theme Toggle */}
+        <div className="flex items-center gap-4">
+          {/* Navigation Links - Hidden in minimize mode */}
+          {!minimizeMode && (
+            <>
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-2">
+                {navigationLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                      isActiveLink(link.href)
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
-            </button>
-          </>
-        )}
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={toggleMenu}
+                className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={isMenuOpen}
+              >
+                <div className="w-6 h-5 relative flex flex-col justify-between">
+                  <span
+                    className={`block w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 origin-center ${
+                      isMenuOpen ? 'rotate-45 translate-y-[9px]' : ''
+                    }`}
+                  />
+                  <span
+                    className={`block w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 ${
+                      isMenuOpen ? 'opacity-0 scale-x-0' : ''
+                    }`}
+                  />
+                  <span
+                    className={`block w-full h-0.5 bg-gray-600 dark:bg-gray-300 transition-all duration-300 origin-center ${
+                      isMenuOpen ? '-rotate-45 -translate-y-[9px]' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+            </>
+          )}
+
+          {/* Theme Toggle - Always visible */}
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* Mobile Navigation Menu - Hidden in minimize mode */}

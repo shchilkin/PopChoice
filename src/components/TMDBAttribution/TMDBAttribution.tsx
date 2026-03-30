@@ -11,15 +11,15 @@ export function TMDBAttribution() {
           height={43}
           className="inline-block"
         />
-        <p className="text-sm text-gray-600">
-          PopChoice uses the TMDB API s but is not endorsed or certified by TMDB.
+        <p className="text-sm text-[var(--muted-foreground)]">
+          PopChoice uses the TMDB API but is not endorsed or certified by TMDB.
         </p>
       </div>
       <a
         href="https://www.themoviedb.org/"
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs text-blue-500 hover:text-blue-700 underline"
+        className="text-xs text-[var(--primary)] hover:text-[var(--primary-foreground)] hover:bg-[var(--primary)] underline transition-colors duration-200"
       >
         Visit The Movie Database
       </a>

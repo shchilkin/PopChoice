@@ -1,28 +1,110 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: hsla(0, 0%, 100%, 1);
+  --foreground: hsla(0, 0%, 3%, 1);
+  --card: hsla(0, 0%, 100%, 1);
+  --card-foreground: hsla(0, 0%, 3%, 1);
+  --primary: hsla(0, 0%, 3%, 1);
+  --primary-foreground: hsla(0, 0%, 100%, 1);
+  --secondary: #f5f5f5;
+  --secondary-foreground: hsla(0, 0%, 3%, 1);
+  --muted: #f5f5f5;
+  --muted-foreground: hsla(0, 0%, 27%, 1);
+  --accent: hsla(14, 100%, 57%, 1);
+  --accent-foreground: hsla(0, 0%, 100%, 1);
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: hsla(0, 0%, 3%, 1);
+  --alert: hsla(54, 100%, 62%, 1);
+
+  /* Age Rating Color Tokens - Light Mode (Solid Fill) */
+  --rating-safe-bg: hsla(141, 56%, 40%, 1); /* G rating - green background */
+  --rating-safe-text: hsla(141, 100%, 95%, 1); /* G rating - light green text */
+  --rating-safe-border: hsla(0, 0%, 100%, 0); /* G rating - no border */
+  --rating-caution-bg: hsla(220, 100%, 61%, 1); /* PG rating - blue background */
+  --rating-caution-text: hsla(220, 100%, 97%, 1); /* PG rating - light blue text */
+  --rating-caution-border: hsla(0, 0%, 100%, 0); /* PG rating - no border */
+  --rating-teen-bg: hsla(42, 100%, 59%, 1); /* PG-13 rating - orange background */
+  --rating-teen-text: hsla(42, 19%, 13%, 1); /* PG-13 rating - dark orange text */
+  --rating-teen-border: hsla(0, 0%, 100%, 0); /* PG-13 rating - no border */
+  --rating-mature-bg: hsla(0, 66%, 47%, 1); /* R rating - red background */
+  --rating-mature-text: hsla(0, 100%, 96%, 1); /* R rating - light red text */
+  --rating-mature-border: hsla(0, 0%, 100%, 0); /* R rating - no border */
+  --rating-unknown-bg: hsla(0, 0%, 50%, 1); /* NR rating - gray background */
+  --rating-unknown-text: hsla(0, 0%, 97%, 1); /* NR rating - light gray text */
+  --rating-unknown-border: hsla(0, 0%, 100%, 0); /* NR rating - no border */
+
+  /* Border width for age rating chips */
+  --rating-border-width: 0; /* Light mode - no border */
+}
+
+.dark {
+  --background: hsla(0, 0%, 8%, 1);
+  --foreground: hsla(0, 0%, 94%, 1);
+  --card: hsla(0, 0%, 8%, 1);
+  --card-foreground: hsla(0, 0%, 94%, 1);
+  --primary: hsla(0, 0%, 94%, 1);
+  --primary-foreground: hsla(0, 0%, 8%, 1);
+  --secondary: #262626;
+  --secondary-foreground: hsla(0, 0%, 94%, 1);
+  --muted: #262626;
+  --muted-foreground: hsla(0, 0%, 85%, 1);
+  --accent: hsla(14, 80%, 51%, 1);
+  --accent-foreground: hsla(0, 0%, 100%, 1);
+  --border: #404040;
+  --input: #262626;
+  --ring: hsla(0, 0%, 94%, 1);
+  --alert: hsla(54, 100%, 62%, 1);
+
+  /* Age Rating Color Tokens - Dark Mode (Outline Style) */
+  --rating-safe-bg: hsla(141, 100%, 15%, 1); /* G rating - dark green background */
+  --rating-safe-text: hsla(141, 56%, 50%, 1); /* G rating - green text */
+  --rating-safe-border: hsla(141, 55%, 50%, 0.5); /* G rating - green border */
+  --rating-caution-bg: hsla(220, 100%, 15%, 1); /* PG rating - dark blue background */
+  --rating-caution-text: hsla(220, 100%, 71%, 1); /* PG rating - blue text */
+  --rating-caution-border: hsla(220, 100%, 71%, 0.5); /* PG rating - blue border */
+  --rating-teen-bg: hsla(42, 19%, 13%, 1); /* PG-13 rating - dark orange background */
+  --rating-teen-text: hsla(42, 100%, 59%, 1); /* PG-13 rating - orange text */
+  --rating-teen-border: hsla(42, 100%, 59%, 0.5); /* PG-13 rating - orange border */
+  --rating-mature-bg: hsla(0, 100%, 15%, 1); /* R rating - dark red background */
+  --rating-mature-text: hsla(0, 66%, 57%, 1); /* R rating - red text */
+  --rating-mature-border: hsla(0, 66%, 57%, 0.5); /* R rating - red border */
+  --rating-unknown-bg: hsla(0, 0%, 15%, 1); /* NR rating - dark gray background */
+  --rating-unknown-text: hsla(0, 0%, 70%, 1); /* NR rating - gray text */
+  --rating-unknown-border: hsla(0, 0%, 70%, 0.5); /* NR rating - gray border */
+
+  /* Border width for age rating chips */
+  --rating-border-width: 1; /* Dark mode - 1px border */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 /* Hide scrollbar for choice chips */
