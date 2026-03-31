@@ -40,6 +40,20 @@ const { Pool } = pg;
 type PgPool = InstanceType<typeof Pool>;
 
 // ---------------------------------------------------------------------------
+// Identifier validation – defence-in-depth against SQL injection.
+// All identifiers (table names, column names, function names, param keys)
+// are validated before being interpolated into SQL strings.
+// ---------------------------------------------------------------------------
+
+const SAFE_IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function assertSafeIdentifier(value: string, label: string): void {
+  if (!SAFE_IDENTIFIER_RE.test(value)) {
+    throw new Error(`Unsafe ${label}: "${value}"`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Internal query-state object that accumulates clauses as methods are chained.
 // ---------------------------------------------------------------------------
 
@@ -56,6 +70,7 @@ interface QueryState {
 }
 
 function defaultState(table: string): QueryState {
+  assertSafeIdentifier(table, 'table name');
   return {
     table,
     columns: '*',
@@ -102,12 +117,13 @@ function buildSelectSQL(state: QueryState): {
     sql += ` ORDER BY "${state.orderBy.column}" ${state.orderBy.ascending ? 'ASC' : 'DESC'}`;
   }
 
-  // LIMIT / OFFSET via range
+  // LIMIT / OFFSET via range (values are always integers from TypeScript-typed API)
   if (state.rangeFrom !== null && state.rangeTo !== null) {
-    const limit = state.rangeTo - state.rangeFrom + 1;
-    sql += ` LIMIT ${limit} OFFSET ${state.rangeFrom}`;
+    const limit = Math.trunc(state.rangeTo - state.rangeFrom + 1);
+    const offset = Math.trunc(state.rangeFrom);
+    sql += ` LIMIT ${limit} OFFSET ${offset}`;
   } else if (state.limitVal !== null) {
-    sql += ` LIMIT ${state.limitVal}`;
+    sql += ` LIMIT ${Math.trunc(state.limitVal)}`;
   }
 
   // Build count query if needed
@@ -183,6 +199,7 @@ function createTerminal<T>(pool: PgPool, state: QueryState): QueryTerminal<T> {
   return {
     then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
     order: (column: string, options?: { ascending?: boolean }) => {
+      assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
       return executeSelect<T>(pool, state);
     },
@@ -194,10 +211,12 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
   return {
     then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
     eq: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '=', value });
       return createFilter<T>(pool, state);
     },
     neq: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '!=', value });
       return executeSelect<T>(pool, state);
     },
@@ -211,6 +230,7 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
       return createTerminal<T>(pool, state);
     },
     order: (column: string, options?: { ascending?: boolean }) => {
+      assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
       return executeSelect<T>(pool, state);
     },
@@ -222,10 +242,12 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
   return {
     then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
     eq: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '=', value });
       return createFilter<T>(pool, state);
     },
     neq: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '!=', value });
       return executeSelect<T>(pool, state);
     },
@@ -239,15 +261,12 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
       return createTerminal<T>(pool, state);
     },
     order: (column: string, options?: { ascending?: boolean }) => {
+      assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
       return executeSelect<T>(pool, state);
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// INSERT builder
-// ---------------------------------------------------------------------------
 
 function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInsert<T> {
   const rowArray = Array.isArray(rows) ? rows : [rows];
@@ -258,8 +277,9 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
     }
 
     try {
-      // Get column names from the first row
+      // Get column names from the first row and validate
       const columns = Object.keys(rowArray[0] as Record<string, unknown>);
+      columns.forEach((c) => assertSafeIdentifier(c, 'column name'));
       const colList = columns.map((c) => `"${c}"`).join(', ');
 
       const valuePlaceholders: string[] = [];
@@ -283,6 +303,13 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
 
       let sql = `INSERT INTO "${table}" (${colList}) VALUES ${valuePlaceholders.join(', ')}`;
       if (returning) {
+        // Validate RETURNING column names
+        if (returning !== '*') {
+          returning
+            .split(',')
+            .map((c) => c.trim())
+            .forEach((c) => assertSafeIdentifier(c, 'column name'));
+        }
         sql += ` RETURNING ${returning}`;
       }
 
@@ -311,6 +338,7 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
 function createDelete<T>(pool: PgPool, table: string): QueryDelete<T> {
   return {
     neq: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
       const sql = `DELETE FROM "${table}" WHERE "${column}" != $1`;
       return pool
         .query(sql, [value])
@@ -353,10 +381,9 @@ export function createPgDbClient(): DbClient {
       select: (columns?: string, options?: { count?: 'exact'; head?: boolean }): QuerySelect<T> => {
         const state = defaultState(table);
         if (columns && columns !== '*') {
-          state.columns = columns
-            .split(',')
-            .map((c) => `"${c.trim()}"`)
-            .join(', ');
+          const colNames = columns.split(',').map((c) => c.trim());
+          colNames.forEach((c) => assertSafeIdentifier(c, 'column name'));
+          state.columns = colNames.map((c) => `"${c}"`).join(', ');
         }
         if (options?.count === 'exact') {
           state.countMode = 'exact';
@@ -377,6 +404,7 @@ export function createPgDbClient(): DbClient {
       params?: Record<string, unknown>,
     ): Promise<{ data: unknown[] | null; error: { message: string } | null }> => {
       try {
+        assertSafeIdentifier(fn, 'function name');
         const pool = getPool();
 
         // Build the function call with named parameters
@@ -385,6 +413,7 @@ export function createPgDbClient(): DbClient {
         const values: unknown[] = [];
 
         paramEntries.forEach(([key, val], i) => {
+          assertSafeIdentifier(key, 'parameter name');
           let paramVal = val;
           // Convert embedding arrays to pgvector-compatible format
           if (key.includes('embedding') && Array.isArray(paramVal)) {
