@@ -124,7 +124,7 @@ setDbClient(myClient);
 
 ```ts
 import { setDbClient, resetDbClient, type DbClient } from '@/clients/dbClient';
-import { afterEach } from 'vitest';
+import { afterEach, beforeEach } from 'vitest';
 
 const mockDb: DbClient = {
   from: () => ({
