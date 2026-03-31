@@ -21,7 +21,7 @@ export async function movieExists(name: string, year: number): Promise<boolean> 
     throw new Error(`Error checking movie existence: ${error.message}`);
   }
 
-  return (data && data.length > 0) ?? false;
+  return data !== null && data.length > 0;
 }
 
 /**
