@@ -8,9 +8,16 @@ Create a `.env` file in your project root with the following variables:
 # OpenAI Configuration
 OPENAI_API_KEY=your-openai-api-key-here
 
-# Supabase Configuration
+# Database – pick ONE of the following options:
+
+# Option A: Direct PostgreSQL (e.g. Railway)
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+
+# Option B: Supabase
 SUPABASE_URL=your-supabase-project-url
 SUPABASE_API_KEY=your-supabase-anon-key
+
+# If DATABASE_URL is set it takes priority over Supabase credentials.
 
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
@@ -70,6 +77,37 @@ For additional movie metadata and images:
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
 
+## Railway PostgreSQL Setup (Alternative to Supabase)
+
+You can host your own PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider) instead of using Supabase.
+
+### Steps:
+
+1. **Create a Railway project**
+   - Sign up at [Railway](https://railway.app)
+   - Create a new project and add a **PostgreSQL** service
+
+2. **Enable the pgvector extension**
+   - Connect to your database (e.g. via `psql` or the Railway SQL editor) and run:
+     ```sql
+     CREATE EXTENSION IF NOT EXISTS vector;
+     ```
+
+3. **Set up the database schema**
+   - Run the SQL from [`db/createDB.sql`](../db/createDB.sql)
+   - Run the SQL from [`db/match_movies.sql`](../db/match_movies.sql)
+
+4. **Configure environment variables**
+   - Copy the `DATABASE_URL` from your Railway dashboard
+   - Add it to your `.env` file:
+     ```env
+     DATABASE_URL=postgresql://user:password@host:5432/railway
+     ```
+   - When `DATABASE_URL` is set it takes priority over Supabase credentials
+
+5. **Populate the database**
+   - Run `npm run populate-db` – the script auto-detects `DATABASE_URL` and uses the pg backend
+
 ## Development Container Setup
 
 This project includes a development container configuration for consistent development environments.
@@ -100,6 +138,29 @@ This project includes a development container configuration for consistent devel
 ## Swapping Database Backends
 
 PopChoice uses a generic `DbClient` interface (`src/clients/dbClient.ts`) that decouples all storage logic from any specific database provider. By default it delegates to Supabase, but you can replace it with any backend.
+
+### Built-in backends
+
+| Backend    | Module                    | Env var(s)                          | Auto-selected when              |
+| ---------- | ------------------------- | ----------------------------------- | ------------------------------- |
+| Supabase   | `src/clients/dbClient.ts` | `SUPABASE_URL` + `SUPABASE_API_KEY` | Default (no `DATABASE_URL` set) |
+| PostgreSQL | `src/clients/pgClient.ts` | `DATABASE_URL`                      | `DATABASE_URL` is set           |
+
+### Using the PostgreSQL backend
+
+```ts
+import { setDbClient } from '@/clients/dbClient';
+import { createPgDbClient } from '@/clients/pgClient';
+
+// Call once at startup (e.g. in your app bootstrap or script entry point)
+setDbClient(createPgDbClient());
+```
+
+> **Note:** Ensure the target database has the `vector` extension enabled:
+>
+> ```sql
+> CREATE EXTENSION IF NOT EXISTS vector;
+> ```
 
 ### How it works
 
@@ -149,5 +210,7 @@ afterEach(() => resetDbClient());
 | File                           | Purpose                                                                                                |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
 | `src/clients/dbClient.ts`      | `DbClient` interface, Supabase implementation, `getDbClient` / `setDbClient` / `resetDbClient` helpers |
+| `src/clients/pgClient.ts`      | PostgreSQL (`pg`) implementation of `DbClient` with pgvector support                                   |
 | `src/clients/dbClient.test.ts` | Unit tests demonstrating mock injection                                                                |
+| `src/clients/pgClient.test.ts` | Unit tests for the PostgreSQL backend                                                                  |
 | `src/utils/database/`          | All database operations (use `getDbClient()` internally)                                               |
