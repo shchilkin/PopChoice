@@ -11,7 +11,9 @@ function createMockDbClient(overrides?: Partial<DbClient>): DbClient {
       select: () => Promise.resolve({ data: [], error: null }),
       insert: () => ({
         select: () => Promise.resolve({ data: [], error: null }),
-        then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
+        then: <TResult1 = unknown>(
+          resolve?: ((v: unknown) => TResult1) | null,
+        ): Promise<TResult1> => Promise.resolve({ data: [], error: null }).then(resolve),
       }),
       delete: () => ({ neq: () => Promise.resolve({ data: [], error: null }) }),
     }) as unknown as TableRef<T>;
@@ -76,11 +78,13 @@ describe('dbClient', () => {
                 data: Array.isArray(rows) ? rows : [rows],
                 error: null,
               }),
-            then: (resolve: (v: unknown) => void) =>
-              resolve({
+            then: <TResult1 = unknown>(
+              resolve?: ((v: unknown) => TResult1) | null,
+            ): Promise<TResult1> =>
+              Promise.resolve({
                 data: Array.isArray(rows) ? rows : [rows],
                 error: null,
-              }),
+              }).then(resolve),
           }),
           delete: () => ({
             neq: () => Promise.resolve({ data: [], error: null }),
