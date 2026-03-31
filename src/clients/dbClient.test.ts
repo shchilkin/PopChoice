@@ -11,9 +11,11 @@ function createMockDbClient(overrides?: Partial<DbClient>): DbClient {
       select: () => Promise.resolve({ data: [], error: null }),
       insert: () => ({
         select: () => Promise.resolve({ data: [], error: null }),
-        then: <TResult1 = unknown>(
-          resolve?: ((v: unknown) => TResult1) | null,
-        ): Promise<TResult1> => Promise.resolve({ data: [], error: null }).then(resolve),
+        then: <TResult1 = unknown, TResult2 = never>(
+          onfulfilled?: ((v: unknown) => TResult1) | null,
+          onrejected?: ((reason: unknown) => TResult2) | null,
+        ): Promise<TResult1 | TResult2> =>
+          Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected),
       }),
       delete: () => ({ neq: () => Promise.resolve({ data: [], error: null }) }),
     }) as unknown as TableRef<T>;
@@ -78,13 +80,14 @@ describe('dbClient', () => {
                 data: Array.isArray(rows) ? rows : [rows],
                 error: null,
               }),
-            then: <TResult1 = unknown>(
-              resolve?: ((v: unknown) => TResult1) | null,
-            ): Promise<TResult1> =>
+            then: <TResult1 = unknown, TResult2 = never>(
+              onfulfilled?: ((v: unknown) => TResult1) | null,
+              onrejected?: ((reason: unknown) => TResult2) | null,
+            ): Promise<TResult1 | TResult2> =>
               Promise.resolve({
                 data: Array.isArray(rows) ? rows : [rows],
                 error: null,
-              }).then(resolve),
+              }).then(onfulfilled, onrejected),
           }),
           delete: () => ({
             neq: () => Promise.resolve({ data: [], error: null }),
