@@ -6,6 +6,7 @@ import { GET } from './route';
 // Mock the dbClient module
 vi.mock('@/clients/dbClient', () => ({
   getDbClient: vi.fn(() => ({
+    isConfigured: vi.fn(() => true),
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         range: vi.fn(() => ({

@@ -109,6 +109,7 @@ All database operations go through `getDbClient()`, which returns the active `Db
 import { setDbClient, type DbClient } from '@/clients/dbClient';
 
 const myClient: DbClient = {
+  isConfigured: () => true,
   from: (table) => {
     /* return a TableRef that talks to your database */
   },
@@ -127,6 +128,7 @@ import { setDbClient, resetDbClient, type DbClient } from '@/clients/dbClient';
 import { afterEach, beforeEach } from 'vitest';
 
 const mockDb: DbClient = {
+  isConfigured: () => true,
   from: () => ({
     select: () => Promise.resolve({ data: [{ id: 1, name: 'Mock Movie' }], error: null }),
     insert: (rows) => ({

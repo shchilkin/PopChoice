@@ -17,6 +17,7 @@ function createMockDbClient(overrides?: Partial<DbClient>): DbClient {
     }) as unknown as TableRef<T>;
 
   return {
+    isConfigured: overrides?.isConfigured ?? (() => true),
     from: overrides?.from ?? defaultFrom,
     rpc: overrides?.rpc ?? (() => Promise.resolve({ data: [], error: null })),
   };
@@ -27,9 +28,10 @@ describe('dbClient', () => {
     resetDbClient();
   });
 
-  it('getDbClient returns a client with from and rpc methods', () => {
+  it('getDbClient returns a client with isConfigured, from and rpc methods', () => {
     const client = getDbClient();
     expect(client).toBeDefined();
+    expect(typeof client.isConfigured).toBe('function');
     expect(typeof client.from).toBe('function');
     expect(typeof client.rpc).toBe('function');
   });
@@ -51,6 +53,7 @@ describe('dbClient', () => {
     resetDbClient();
     const client = getDbClient();
     expect(client).not.toBe(mock);
+    expect(typeof client.isConfigured).toBe('function');
     expect(typeof client.from).toBe('function');
     expect(typeof client.rpc).toBe('function');
   });

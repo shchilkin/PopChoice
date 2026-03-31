@@ -97,6 +97,14 @@ export interface TableRef<T = unknown> {
  * making it trivial to drop in a different implementation.
  */
 export interface DbClient {
+  /**
+   * Whether the client is ready to execute queries.
+   *
+   * The default Supabase implementation checks for the required env vars;
+   * custom implementations can override this (e.g., always return `true`).
+   */
+  isConfigured: () => boolean;
+
   /** Return a chainable query builder for the given table. */
   from: <T = unknown>(table: string) => TableRef<T>;
 
@@ -130,6 +138,7 @@ function createSupabaseDbClient(): DbClient {
   }
 
   return {
+    isConfigured: () => Boolean(process.env.SUPABASE_API_KEY && process.env.SUPABASE_URL),
     from: <T = unknown>(table: string) => getSupabase().from(table) as unknown as TableRef<T>,
     rpc: (fn, params) =>
       getSupabase().rpc(fn, params) as PromiseLike<{

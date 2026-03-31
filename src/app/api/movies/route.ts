@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getDbClient } from '@/clients/dbClient';
+
 export interface Movie {
   id: number;
   name: string;
@@ -30,10 +32,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if database is configured
-    const privateKey = process.env.SUPABASE_API_KEY;
-    const url = process.env.SUPABASE_URL;
+    const db = getDbClient();
 
-    if (!privateKey || !url) {
+    if (!db.isConfigured()) {
       // Return mock data when database is not configured (for development/demo)
       const mockMovies = generateMockMovies();
       const totalCount = mockMovies.length;
@@ -52,9 +53,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Only import dbClient when we have the credentials
-    const { getDbClient } = await import('@/clients/dbClient');
-    const db = getDbClient();
     const offset = (page - 1) * pageSize;
 
     // Get total count first
@@ -81,7 +79,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response: MoviesResponse = {
-      movies: (movies as Movie[]) || [],
+      movies: movies ?? [],
       totalCount,
       page,
       pageSize,
