@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { GET } from './route';
 
-// Mock the supabase client
-vi.mock('@/clients/supabaseClient', () => ({
-  supabase: {
+// Mock the dbClient module
+vi.mock('@/clients/dbClient', () => ({
+  getDbClient: vi.fn(() => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         range: vi.fn(() => ({
@@ -30,7 +30,7 @@ vi.mock('@/clients/supabaseClient', () => ({
         head: true,
       })),
     })),
-  },
+  })),
 }));
 
 describe('Movies API Route', () => {

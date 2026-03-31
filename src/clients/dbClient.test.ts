@@ -1,0 +1,106 @@
+import { describe, expect, it, afterEach } from 'vitest';
+
+import { getDbClient, resetDbClient, setDbClient } from './dbClient';
+
+import type { DbClient, TableRef } from './dbClient';
+
+// Helper to create a mock DbClient - demonstrates how to inject a mock for tests
+function createMockDbClient(overrides?: Partial<DbClient>): DbClient {
+  const defaultFrom = <T = unknown>(): TableRef<T> =>
+    ({
+      select: () => Promise.resolve({ data: [], error: null }),
+      insert: () => ({
+        select: () => Promise.resolve({ data: [], error: null }),
+        then: (resolve: (v: unknown) => void) => resolve({ data: [], error: null }),
+      }),
+      delete: () => ({ neq: () => Promise.resolve({ data: [], error: null }) }),
+    }) as unknown as TableRef<T>;
+
+  return {
+    from: overrides?.from ?? defaultFrom,
+    rpc: overrides?.rpc ?? (() => Promise.resolve({ data: [], error: null })),
+  };
+}
+
+describe('dbClient', () => {
+  afterEach(() => {
+    resetDbClient();
+  });
+
+  it('getDbClient returns a client with from and rpc methods', () => {
+    const client = getDbClient();
+    expect(client).toBeDefined();
+    expect(typeof client.from).toBe('function');
+    expect(typeof client.rpc).toBe('function');
+  });
+
+  it('setDbClient replaces the global client', () => {
+    const mock = createMockDbClient();
+
+    setDbClient(mock);
+    const client = getDbClient();
+    expect(client).toBe(mock);
+  });
+
+  it('resetDbClient restores the default Supabase client', () => {
+    const mock = createMockDbClient();
+
+    setDbClient(mock);
+    expect(getDbClient()).toBe(mock);
+
+    resetDbClient();
+    const client = getDbClient();
+    expect(client).not.toBe(mock);
+    expect(typeof client.from).toBe('function');
+    expect(typeof client.rpc).toBe('function');
+  });
+
+  it('mock client can be used for database operations', async () => {
+    const mockData = [{ id: 1, name: 'Test Movie', year: 2023 }];
+
+    const mock = createMockDbClient({
+      from: <T = unknown>(): TableRef<T> =>
+        ({
+          select: () =>
+            Promise.resolve({
+              data: mockData,
+              error: null,
+              count: 1,
+            }),
+          insert: (rows: unknown) => ({
+            select: () =>
+              Promise.resolve({
+                data: Array.isArray(rows) ? rows : [rows],
+                error: null,
+              }),
+            then: (resolve: (v: unknown) => void) =>
+              resolve({
+                data: Array.isArray(rows) ? rows : [rows],
+                error: null,
+              }),
+          }),
+          delete: () => ({
+            neq: () => Promise.resolve({ data: [], error: null }),
+          }),
+        }) as unknown as TableRef<T>,
+      rpc: (_fn: string, params?: Record<string, unknown>) =>
+        Promise.resolve({
+          data: [{ id: 1, content: 'matched', similarity: 0.9, ...params }],
+          error: null,
+        }),
+    });
+
+    setDbClient(mock);
+    const db = getDbClient();
+
+    // Test select
+    const selectResult = await db.from('movies').select('*');
+    expect(selectResult.data).toEqual(mockData);
+    expect(selectResult.error).toBeNull();
+
+    // Test rpc
+    const rpcResult = await db.rpc('match_movies', { query_embedding: [1, 2, 3] });
+    expect(rpcResult.data).toBeDefined();
+    expect(rpcResult.error).toBeNull();
+  });
+});
