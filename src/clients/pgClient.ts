@@ -300,14 +300,19 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
 
       let sql = `INSERT INTO "${table}" (${colList}) VALUES ${valuePlaceholders.join(', ')}`;
       if (returning) {
-        // Validate RETURNING column names
-        if (returning !== '*') {
-          returning
-            .split(',')
-            .map((c) => c.trim())
-            .forEach((c) => assertSafeIdentifier(c, 'column name'));
-        }
-        sql += ` RETURNING ${returning}`;
+        // Validate RETURNING column names and quote identifiers consistently.
+        const returningClause =
+          returning === '*'
+            ? '*'
+            : returning
+                .split(',')
+                .map((c) => c.trim())
+                .map((c) => {
+                  assertSafeIdentifier(c, 'column name');
+                  return `"${c}"`;
+                })
+                .join(', ');
+        sql += ` RETURNING ${returningClause}`;
       }
 
       const result = await pool.query(sql, values);
