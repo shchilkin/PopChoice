@@ -57,8 +57,13 @@ export async function filterNewMovies(movies: MovieRecord[]): Promise<number[]> 
       } else {
         logger.debug('Skipping duplicate', { name: movie.name, year: movie.year });
       }
-    } catch {
+    } catch (err) {
       // If check fails, assume new (will be caught by unique constraint)
+      logger.warn('Duplicate check failed, assuming new movie', {
+        name: movie.name,
+        year: movie.year,
+        error: err instanceof Error ? err.message : String(err),
+      });
       newIndices.push(i);
     }
   }
@@ -109,7 +114,11 @@ export async function insertMovies(
         inserted,
         total: movies.length,
       });
-    } catch {
+    } catch (batchErr) {
+      logger.warn('Batch insert failed, falling back to individual inserts', {
+        batch: Math.floor(i / batchSize) + 1,
+        error: batchErr instanceof Error ? batchErr.message : String(batchErr),
+      });
       // Fallback: insert one by one to isolate failures
       for (const movie of batch) {
         try {
