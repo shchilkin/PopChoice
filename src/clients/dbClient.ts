@@ -17,6 +17,7 @@
  * import { setDbClient, type DbClient } from '@/clients/dbClient';
  *
  * const mock: DbClient = {
+ *   isConfigured: () => true,
  *   from: () => ({ ... }),
  *   rpc:  () => Promise.resolve({ data: [], error: null }),
  * };

@@ -38,7 +38,7 @@ This application uses the OpenAI API to generate embeddings and chat completions
 
 3. **Verify setup**
    - Your application will automatically load the API key from `.env`
-   - See [`src/utils/openaiClient.ts`](../src/utils/openaiClient.ts) for usage example
+   - See [`src/clients/openaiClient.ts`](../src/clients/openaiClient.ts) for usage example
 
 ## Supabase Database Setup
 
@@ -192,10 +192,13 @@ const mockDb: DbClient = {
   isConfigured: () => true,
   from: () => ({
     select: () => Promise.resolve({ data: [{ id: 1, name: 'Mock Movie' }], error: null }),
-    insert: (rows) => ({
-      select: () => Promise.resolve({ data: Array.isArray(rows) ? rows : [rows], error: null }),
-      then: (resolve) => resolve({ data: Array.isArray(rows) ? rows : [rows], error: null }),
-    }),
+    insert: (rows) => {
+      const result = { data: Array.isArray(rows) ? rows : [rows], error: null };
+      return {
+        select: () => Promise.resolve(result),
+        then: (onfulfilled?, onrejected?) => Promise.resolve(result).then(onfulfilled, onrejected),
+      };
+    },
     delete: () => ({ neq: () => Promise.resolve({ data: [], error: null }) }),
   }),
   rpc: () => Promise.resolve({ data: [], error: null }),

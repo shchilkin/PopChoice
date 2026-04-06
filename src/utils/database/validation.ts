@@ -62,7 +62,7 @@ export async function filterExistingMovies(movieRecords: MovieRecord[]): Promise
 
 /**
  * Clear all movies from the database (use with caution!)
- * @returns Number of deleted records
+ * @returns Number of movies remaining after deletion (expected to be 0)
  */
 export async function clearAllMovies(): Promise<number> {
   const db = getDbClient();
