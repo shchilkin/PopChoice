@@ -141,10 +141,12 @@ PopChoice uses a generic `DbClient` interface (`src/clients/dbClient.ts`) that d
 
 ### Built-in backends
 
-| Backend    | Module                    | Env var(s)                          | Auto-selected when              |
-| ---------- | ------------------------- | ----------------------------------- | ------------------------------- |
-| Supabase   | `src/clients/dbClient.ts` | `SUPABASE_URL` + `SUPABASE_API_KEY` | Default (no `DATABASE_URL` set) |
-| PostgreSQL | `src/clients/pgClient.ts` | `DATABASE_URL`                      | `DATABASE_URL` is set           |
+| Backend    | Module                    | Env var(s)                          | Notes                                                              |
+| ---------- | ------------------------- | ----------------------------------- | ------------------------------------------------------------------ |
+| Supabase   | `src/clients/dbClient.ts` | `SUPABASE_URL` + `SUPABASE_API_KEY` | Default — used unless you call `setDbClient()` with another client |
+| PostgreSQL | `src/clients/pgClient.ts` | `DATABASE_URL`                      | Must be activated explicitly via `setDbClient(createPgDbClient())` |
+
+> **Note:** The `scripts/populate-database.ts` script auto-detects `DATABASE_URL` and switches backend automatically. For the main app or other entry points you must call `setDbClient(createPgDbClient())` at startup if you want to use the pg backend.
 
 ### Using the PostgreSQL backend
 

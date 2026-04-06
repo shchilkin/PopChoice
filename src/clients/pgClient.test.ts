@@ -331,6 +331,28 @@ describe('pgClient', () => {
     expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
+  it('from().insert().select() does not execute until awaited', async () => {
+    mockQuery.mockResolvedValue({ rows: [{ id: 1 }] });
+
+    const client = createPgDbClient();
+    const query = client.from('movies').insert({ name: 'Movie', year: 2024 }).select('id');
+    expect(mockQuery).not.toHaveBeenCalled();
+
+    await query;
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('from().delete().neq() does not execute until awaited', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    const client = createPgDbClient();
+    const query = client.from('movies').delete().neq('id', 0);
+    expect(mockQuery).not.toHaveBeenCalled();
+
+    await query;
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
   it('from().insert().select() executes exactly one INSERT', async () => {
     mockQuery.mockResolvedValue({ rows: [{ id: 1 }] });
 

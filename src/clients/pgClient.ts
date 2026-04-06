@@ -54,6 +54,20 @@ function assertSafeIdentifier(value: string, label: string): void {
 }
 
 // ---------------------------------------------------------------------------
+// Numeric helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Coerce a value to a non-negative integer for safe SQL interpolation.
+ * Returns 0 for NaN, Infinity, or negative values.
+ */
+function safeNonNegativeInt(value: number): number {
+  const n = Math.trunc(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
+// ---------------------------------------------------------------------------
 // Internal query-state object that accumulates clauses as methods are chained.
 // ---------------------------------------------------------------------------
 
@@ -117,13 +131,13 @@ function buildSelectSQL(state: QueryState): {
     sql += ` ORDER BY "${state.orderBy.column}" ${state.orderBy.ascending ? 'ASC' : 'DESC'}`;
   }
 
-  // LIMIT / OFFSET via range (values are always integers from TypeScript-typed API)
+  // LIMIT / OFFSET via range
   if (state.rangeFrom !== null && state.rangeTo !== null) {
-    const limit = Math.trunc(state.rangeTo - state.rangeFrom + 1);
-    const offset = Math.trunc(state.rangeFrom);
+    const limit = safeNonNegativeInt(state.rangeTo - state.rangeFrom + 1);
+    const offset = safeNonNegativeInt(state.rangeFrom);
     sql += ` LIMIT ${limit} OFFSET ${offset}`;
   } else if (state.limitVal !== null) {
-    sql += ` LIMIT ${Math.trunc(state.limitVal)}`;
+    sql += ` LIMIT ${safeNonNegativeInt(state.limitVal)}`;
   }
 
   // Build count query if needed
@@ -349,7 +363,9 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
     then: (onfulfilled, onrejected) => executeInsert().then(onfulfilled, onrejected),
     select: (columns?: string) => {
       returning = columns || '*';
-      return executeInsert();
+      return {
+        then: (onfulfilled, onrejected) => executeInsert().then(onfulfilled, onrejected),
+      } as PromiseLike<QueryResult<T>>;
     },
   };
 }
@@ -363,13 +379,20 @@ function createDelete<T>(pool: PgPool, table: string): QueryDelete<T> {
     neq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       const sql = `DELETE FROM "${table}" WHERE "${column}" != $1`;
-      return pool
-        .query(sql, [value])
-        .then(() => ({ data: [] as T[], error: null }))
-        .catch((err: unknown) => ({
-          data: null,
-          error: { message: err instanceof Error ? err.message : String(err) },
-        }));
+      return {
+        then: (onfulfilled, onrejected) =>
+          pool
+            .query(sql, [value])
+            .then(() => ({ data: [] as T[], error: null }) as QueryResult<T>)
+            .catch(
+              (err: unknown) =>
+                ({
+                  data: null,
+                  error: { message: err instanceof Error ? err.message : String(err) },
+                }) as QueryResult<T>,
+            )
+            .then(onfulfilled, onrejected),
+      } as PromiseLike<QueryResult<T>>;
     },
   };
 }
