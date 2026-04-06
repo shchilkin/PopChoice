@@ -8,7 +8,7 @@
  * 2. Splits into individual movie chunks (1:1 mapping)
  * 3. Checks for duplicates to avoid expensive embedding creation
  * 4. Creates embeddings only for new movies (cost optimization)
- * 5. Inserts new movies into Supabase database
+ * 5. Inserts new movies into the configured database (Supabase or PostgreSQL)
  *
  * Usage:
  *   npm run populate-db
@@ -19,6 +19,8 @@
 
 import path from 'path';
 
+import { setDbClient } from '@/clients/dbClient';
+import { createPgDbClient } from '@/clients/pgClient';
 import { getMovieFileStats, splitMovieDocument } from '@/utils';
 
 import { createEmbeddingsWithProgress } from '../src/utils/ai/embeddings';
@@ -43,8 +45,13 @@ Options:
 
 Environment Variables:
   OPENAI_API_KEY     Required for creating embeddings
-  SUPABASE_URL       Required for database connection  
-  SUPABASE_API_KEY   Required for database connection
+
+  Database (one of the following):
+  DATABASE_URL       PostgreSQL connection string (e.g. Railway)
+  SUPABASE_URL       Supabase project URL (used with SUPABASE_API_KEY)
+  SUPABASE_API_KEY   Supabase anon key
+
+  If DATABASE_URL is set it takes priority over Supabase credentials.
 
 Examples:
   npm run populate-db                    # Normal operation (skip duplicates)
@@ -55,16 +62,29 @@ Examples:
 }
 
 // Check required environment variables
-const requiredEnvVars = ['OPENAI_API_KEY', 'SUPABASE_URL'];
-const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+const hasPg = Boolean(process.env.DATABASE_URL);
+const hasSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_API_KEY);
 
-if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:');
-  missingVars.forEach((varName) => {
-    console.error(`  - ${varName}`);
-  });
-  console.error('\nPlease set these variables in your .env file or environment.');
+if (!hasOpenAI) {
+  console.error('❌ Missing required environment variable: OPENAI_API_KEY');
   process.exit(1);
+}
+
+if (!hasPg && !hasSupabase) {
+  console.error('❌ Missing database configuration.');
+  console.error(
+    '   Set DATABASE_URL for PostgreSQL or SUPABASE_URL + SUPABASE_API_KEY for Supabase.',
+  );
+  process.exit(1);
+}
+
+// If DATABASE_URL is set, configure the pg backend
+if (hasPg) {
+  console.log('🐘 Using PostgreSQL backend (DATABASE_URL detected)');
+  setDbClient(createPgDbClient());
+} else {
+  console.log('⚡ Using Supabase backend (SUPABASE_URL and SUPABASE_API_KEY detected)');
 }
 
 async function main() {
