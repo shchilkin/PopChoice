@@ -32,10 +32,7 @@ interface TMDBDiscoverResponse {
  * Fetch movies from TMDB /discover/movie endpoint.
  * Returns up to `maxPages` pages of results.
  */
-export async function fetchTMDBMovies(
-  apiKey: string,
-  maxPages: number = 3,
-): Promise<TMDBMovie[]> {
+export async function fetchTMDBMovies(apiKey: string, maxPages: number = 3): Promise<TMDBMovie[]> {
   const allMovies: TMDBMovie[] = [];
 
   for (let page = 1; page <= maxPages; page++) {

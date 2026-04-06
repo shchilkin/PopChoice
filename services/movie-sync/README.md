@@ -11,22 +11,22 @@ A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB
 
 ## Modes
 
-| Mode | Trigger | Behavior |
-| --- | --- | --- |
-| **One-shot** | `--once` flag or `CRON_SCHEDULE=""` | Runs a single sync, then exits |
-| **Scheduled** | Default (`CRON_SCHEDULE` set) | Runs on a cron schedule (default: daily at 3 AM UTC) |
+| Mode          | Trigger                             | Behavior                                             |
+| ------------- | ----------------------------------- | ---------------------------------------------------- |
+| **One-shot**  | `--once` flag or `CRON_SCHEDULE=""` | Runs a single sync, then exits                       |
+| **Scheduled** | Default (`CRON_SCHEDULE` set)       | Runs on a cron schedule (default: daily at 3 AM UTC) |
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `TMDB_API_KEY` | Yes | — | TMDB API read access (bearer) token |
-| `OPENAI_API_KEY` | Yes | — | OpenAI API key for embeddings |
-| `SUPABASE_URL` | Yes | — | Supabase project URL |
-| `SUPABASE_API_KEY` | Yes | — | Supabase anon or service-role key |
-| `CRON_SCHEDULE` | No | `0 3 * * *` | Cron expression for scheduled mode |
-| `DRY_RUN` | No | `false` | Set to `true` to skip embedding creation and DB inserts |
-| `LOG_LEVEL` | No | `info` | Set to `debug` for verbose logging |
+| Variable           | Required | Default     | Description                                             |
+| ------------------ | -------- | ----------- | ------------------------------------------------------- |
+| `TMDB_API_KEY`     | Yes      | —           | TMDB API read access (bearer) token                     |
+| `OPENAI_API_KEY`   | Yes      | —           | OpenAI API key for embeddings                           |
+| `SUPABASE_URL`     | Yes      | —           | Supabase project URL                                    |
+| `SUPABASE_API_KEY` | Yes      | —           | Supabase anon or service-role key                       |
+| `CRON_SCHEDULE`    | No       | `0 3 * * *` | Cron expression for scheduled mode                      |
+| `DRY_RUN`          | No       | `false`     | Set to `true` to skip embedding creation and DB inserts |
+| `LOG_LEVEL`        | No       | `info`      | Set to `debug` for verbose logging                      |
 
 ## Local Development
 
