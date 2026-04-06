@@ -3,7 +3,7 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 
 COPY tsconfig.json ./
 COPY src/ ./src/
@@ -15,7 +15,7 @@ FROM node:20-slim
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
 

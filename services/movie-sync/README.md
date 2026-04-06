@@ -20,7 +20,7 @@ A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB
 
 | Variable           | Required | Default     | Description                                             |
 | ------------------ | -------- | ----------- | ------------------------------------------------------- |
-| `TMDB_API_KEY`     | Yes      | —           | TMDB API read access (bearer) token                     |
+| `TMDB_API_KEY`     | Yes      | —           | TMDB v4 read access token (used as Bearer auth)         |
 | `OPENAI_API_KEY`   | Yes      | —           | OpenAI API key for embeddings                           |
 | `SUPABASE_URL`     | Yes      | —           | Supabase project URL                                    |
 | `SUPABASE_API_KEY` | Yes      | —           | Supabase anon or service-role key                       |
@@ -77,7 +77,7 @@ Railway supports deploying services from subdirectories. Follow these steps to a
 
 In the service's **Variables** tab, add:
 
-- `TMDB_API_KEY` — your TMDB read access token
+- `TMDB_API_KEY` — your TMDB v4 read access token
 - `OPENAI_API_KEY` — your OpenAI API key
 - `SUPABASE_URL` — your Supabase project URL
 - `SUPABASE_API_KEY` — your Supabase API key

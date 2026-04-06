@@ -36,7 +36,7 @@ export function loadConfig(): Config {
     openaiApiKey: openaiApiKey!,
     supabaseUrl: supabaseUrl!,
     supabaseApiKey: supabaseApiKey!,
-    cronSchedule: process.env.CRON_SCHEDULE || '0 3 * * *', // Default: 3 AM daily
+    cronSchedule: process.env.CRON_SCHEDULE?.trim() ?? '0 3 * * *', // Default: 3 AM daily UTC
     dryRun: process.env.DRY_RUN === 'true',
   };
 }

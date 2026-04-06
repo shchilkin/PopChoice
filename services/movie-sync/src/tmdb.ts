@@ -1,5 +1,6 @@
 /**
  * TMDB API client for fetching popular/discover movies.
+ * Uses the TMDB v4 read access token (Bearer auth).
  */
 
 import { logger } from './logger.js';

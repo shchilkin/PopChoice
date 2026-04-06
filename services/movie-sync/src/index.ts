@@ -4,10 +4,10 @@
  * Supports two modes:
  *   - One-shot: runs a single sync immediately, then exits.
  *     Triggered when CRON_SCHEDULE is empty or the --once flag is passed.
- *   - Scheduled: runs on a cron schedule (default: 3 AM daily).
+ *   - Scheduled: runs on a cron schedule (default: 3 AM daily UTC).
  *
  * Environment variables:
- *   TMDB_API_KEY      — TMDB API bearer token (required)
+ *   TMDB_API_KEY      — TMDB v4 read access token (Bearer auth, required)
  *   OPENAI_API_KEY    — OpenAI API key (required)
  *   SUPABASE_URL      — Supabase project URL (required)
  *   SUPABASE_API_KEY  — Supabase anon/service key (required)
@@ -20,6 +20,21 @@ import cron from 'node-cron';
 import { loadConfig } from './config.js';
 import { logger } from './logger.js';
 import { runSync } from './sync.js';
+
+let isSyncing = false;
+
+async function guardedSync(config: ReturnType<typeof loadConfig>, label: string): Promise<void> {
+  if (isSyncing) {
+    logger.info('Sync already in progress, skipping', { trigger: label });
+    return;
+  }
+  isSyncing = true;
+  try {
+    await runSync(config);
+  } finally {
+    isSyncing = false;
+  }
+}
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -50,22 +65,29 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  logger.info('Scheduling sync', { cronSchedule: config.cronSchedule });
-
-  cron.schedule(config.cronSchedule, async () => {
-    try {
-      await runSync(config);
-    } catch (err) {
-      logger.error('Scheduled sync failed', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+  logger.info('Scheduling sync', {
+    cronSchedule: config.cronSchedule,
+    timezone: 'UTC',
   });
+
+  cron.schedule(
+    config.cronSchedule,
+    async () => {
+      try {
+        await guardedSync(config, 'cron');
+      } catch (err) {
+        logger.error('Scheduled sync failed', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+    { timezone: 'UTC' },
+  );
 
   // Run once immediately on startup as well
   logger.info('Running initial sync on startup');
   try {
-    await runSync(config);
+    await guardedSync(config, 'startup');
   } catch (err) {
     logger.error('Initial sync failed', {
       error: err instanceof Error ? err.message : String(err),
