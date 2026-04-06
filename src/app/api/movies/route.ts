@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getDbClient } from '@/clients/dbClient';
+
 export interface Movie {
   id: number;
   name: string;
@@ -29,12 +31,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid page or pageSize parameters' }, { status: 400 });
     }
 
-    // Check if Supabase is configured
-    const privateKey = process.env.SUPABASE_API_KEY;
-    const url = process.env.SUPABASE_URL;
+    // Check if database is configured
+    const db = getDbClient();
 
-    if (!privateKey || !url) {
-      // Return mock data when Supabase is not configured (for development/demo)
+    if (!db.isConfigured()) {
+      // Return mock data when database is not configured (for development/demo)
       const mockMovies = generateMockMovies();
       const totalCount = mockMovies.length;
       const totalPages = Math.ceil(totalCount / pageSize);
@@ -52,26 +53,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Only import Supabase when we have the credentials
-    const { supabase } = await import('@/clients/supabaseClient');
     const offset = (page - 1) * pageSize;
 
     // Get total count first
-    const { count, error: countError } = await supabase
-      .from('movies')
-      .select('*', { count: 'exact', head: true });
+    const countResult = await db.from('movies').select('*', { count: 'exact', head: true });
 
-    if (countError) {
-      console.error('Error getting movie count:', countError);
+    if (countResult.error) {
+      console.error('Error getting movie count:', countResult.error);
       return NextResponse.json({ error: 'Failed to fetch movie count' }, { status: 500 });
     }
 
-    const totalCount = count || 0;
+    const totalCount = countResult.count || 0;
     const totalPages = Math.ceil(totalCount / pageSize);
 
     // Get paginated movies
-    const { data: movies, error } = await supabase
-      .from('movies')
+    const { data: movies, error } = await db
+      .from<Movie>('movies')
       .select('id, name, age_rating, description, duration, score_rating, year')
       .range(offset, offset + pageSize - 1)
       .order('id', { ascending: true });
@@ -82,7 +79,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response: MoviesResponse = {
-      movies: movies || [],
+      movies: movies ?? [],
       totalCount,
       page,
       pageSize,

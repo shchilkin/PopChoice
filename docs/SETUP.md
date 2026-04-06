@@ -31,11 +31,11 @@ This application uses the OpenAI API to generate embeddings and chat completions
 
 3. **Verify setup**
    - Your application will automatically load the API key from `.env`
-   - See [`src/utils/openaiClient.ts`](../src/utils/openaiClient.ts) for usage example
+   - See [`src/clients/openaiClient.ts`](../src/clients/openaiClient.ts) for usage example
 
 ## Supabase Database Setup
 
-This application uses Supabase (PostgreSQL) to store movie embeddings.
+This application uses a generic database client abstraction (`src/clients/dbClient.ts`) that defaults to Supabase (PostgreSQL) for storing movie embeddings. See [Swapping Database Backends](#swapping-database-backends) for how to use a different provider.
 
 ### Steps:
 
@@ -96,3 +96,61 @@ This project includes a development container configuration for consistent devel
 - All VS Code extensions pre-configured
 - Port forwarding for development servers (3000, 6006)
 - Automatic npm install on container creation
+
+## Swapping Database Backends
+
+PopChoice uses a generic `DbClient` interface (`src/clients/dbClient.ts`) that decouples all storage logic from any specific database provider. By default it delegates to Supabase, but you can replace it with any backend.
+
+### How it works
+
+All database operations go through `getDbClient()`, which returns the active `DbClient` instance. You can swap the implementation at any time with `setDbClient()`:
+
+```ts
+import { setDbClient, type DbClient } from '@/clients/dbClient';
+
+const myClient: DbClient = {
+  isConfigured: () => true,
+  from: (table) => {
+    /* return a TableRef that talks to your database */
+  },
+  rpc: (fn, params) => {
+    /* call a stored procedure */
+  },
+};
+
+setDbClient(myClient);
+```
+
+### Using a mock in tests
+
+```ts
+import { setDbClient, resetDbClient, type DbClient } from '@/clients/dbClient';
+import { afterEach, beforeEach } from 'vitest';
+
+const mockDb: DbClient = {
+  isConfigured: () => true,
+  from: () => ({
+    select: () => Promise.resolve({ data: [{ id: 1, name: 'Mock Movie' }], error: null }),
+    insert: (rows) => {
+      const result = { data: Array.isArray(rows) ? rows : [rows], error: null };
+      return {
+        select: () => Promise.resolve(result),
+        then: (onfulfilled?, onrejected?) => Promise.resolve(result).then(onfulfilled, onrejected),
+      };
+    },
+    delete: () => ({ neq: () => Promise.resolve({ data: [], error: null }) }),
+  }),
+  rpc: () => Promise.resolve({ data: [], error: null }),
+};
+
+beforeEach(() => setDbClient(mockDb));
+afterEach(() => resetDbClient());
+```
+
+### Key files
+
+| File                           | Purpose                                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `src/clients/dbClient.ts`      | `DbClient` interface, Supabase implementation, `getDbClient` / `setDbClient` / `resetDbClient` helpers |
+| `src/clients/dbClient.test.ts` | Unit tests demonstrating mock injection                                                                |
+| `src/utils/database/`          | All database operations (use `getDbClient()` internally)                                               |

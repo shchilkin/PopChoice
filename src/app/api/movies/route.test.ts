@@ -1,36 +1,41 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { getDbClient } from '@/clients/dbClient';
+
 import { GET } from './route';
 
-// Mock the supabase client
-vi.mock('@/clients/supabaseClient', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        range: vi.fn(() => ({
-          order: vi.fn(() =>
-            Promise.resolve({
-              data: [
-                {
-                  id: 1,
-                  name: 'Test Movie',
-                  age_rating: 'PG',
-                  description: 'A test movie',
-                  duration: 120,
-                  score_rating: 8.5,
-                  year: 2023,
-                },
-              ],
-              error: null,
-            }),
-          ),
-        })),
-        count: 1,
-        head: true,
-      })),
-    })),
+// Mock the dbClient module
+const mockMovies = [
+  {
+    id: 1,
+    name: 'Test Movie',
+    age_rating: 'PG',
+    description: 'A test movie',
+    duration: 120,
+    score_rating: 8.5,
+    year: 2023,
   },
+];
+
+vi.mock('@/clients/dbClient', () => ({
+  getDbClient: vi.fn(() => ({
+    isConfigured: vi.fn(() => true),
+    from: vi.fn(() => ({
+      select: vi.fn((_columns: string, opts?: { count?: string; head?: boolean }) => {
+        // Count-only query: select('*', { count: 'exact', head: true })
+        if (opts?.head && opts?.count) {
+          return Promise.resolve({ data: null, error: null, count: mockMovies.length });
+        }
+        // Data query: select('columns').range(...).order(...)
+        return {
+          range: vi.fn(() => ({
+            order: vi.fn(() => Promise.resolve({ data: mockMovies, error: null })),
+          })),
+        };
+      }),
+    })),
+  })),
 }));
 
 describe('Movies API Route', () => {
@@ -47,6 +52,9 @@ describe('Movies API Route', () => {
     expect(data).toHaveProperty('totalPages');
     expect(data.page).toBe(1);
     expect(data.pageSize).toBe(50);
+    expect(data.totalCount).toBe(mockMovies.length);
+    expect(data.totalPages).toBe(Math.ceil(mockMovies.length / 50));
+    expect(data.movies).toHaveLength(mockMovies.length);
   });
 
   it('should return error for invalid page parameter', async () => {
@@ -75,5 +83,30 @@ describe('Movies API Route', () => {
     expect(response.status).toBe(200);
     expect(data.page).toBe(2);
     expect(data.pageSize).toBe(25);
+  });
+
+  it('should return mock data when database is not configured', async () => {
+    vi.mocked(getDbClient).mockReturnValueOnce({
+      isConfigured: vi.fn(() => false),
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/movies');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data).toHaveProperty('movies');
+    expect(data).toHaveProperty('totalCount');
+    expect(data).toHaveProperty('page');
+    expect(data).toHaveProperty('pageSize');
+    expect(data).toHaveProperty('totalPages');
+    expect(data.page).toBe(1);
+    expect(data.pageSize).toBe(50);
+    expect(data.totalCount).toBeGreaterThan(0);
+    expect(data.totalPages).toBeGreaterThan(0);
+    expect(data.movies.length).toBeGreaterThan(0);
+    expect(data.movies.length).toBeLessThanOrEqual(50);
   });
 });
