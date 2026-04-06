@@ -191,6 +191,16 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
 }
 
 // ---------------------------------------------------------------------------
+// Lazy PromiseLike wrapper – defers executeSelect until .then() is called.
+// ---------------------------------------------------------------------------
+
+function lazyResult<T>(pool: PgPool, state: QueryState): PromiseLike<QueryResult<T>> {
+  return {
+    then: (onfulfilled, onrejected) => executeSelect<T>(pool, state).then(onfulfilled, onrejected),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Chainable builder that mirrors the Supabase query surface
 // ---------------------------------------------------------------------------
 
@@ -200,7 +210,7 @@ function createTerminal<T>(pool: PgPool, state: QueryState): QueryTerminal<T> {
     order: (column: string, options?: { ascending?: boolean }) => {
       assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
   };
 }
@@ -216,11 +226,11 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
     neq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '!=', value });
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
     limit: (count: number) => {
       state.limitVal = count;
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
     range: (from: number, to: number) => {
       state.rangeFrom = from;
@@ -230,7 +240,7 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
     order: (column: string, options?: { ascending?: boolean }) => {
       assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
   };
 }
@@ -246,11 +256,11 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
     neq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '!=', value });
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
     limit: (count: number) => {
       state.limitVal = count;
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
     range: (from: number, to: number) => {
       state.rangeFrom = from;
@@ -260,7 +270,7 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
     order: (column: string, options?: { ascending?: boolean }) => {
       assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
-      return executeSelect<T>(pool, state);
+      return lazyResult<T>(pool, state);
     },
   };
 }
@@ -394,7 +404,10 @@ export function createPgDbClient(): DbClient {
       assertSafeIdentifier(table, 'table name');
 
       return {
-        select: (columns?: string, options?: { count?: 'exact'; head?: boolean }): QuerySelect<T> => {
+        select: (
+          columns?: string,
+          options?: { count?: 'exact'; head?: boolean },
+        ): QuerySelect<T> => {
           const state = defaultState(table);
           if (columns && columns !== '*') {
             const colNames = columns.split(',').map((c) => c.trim());

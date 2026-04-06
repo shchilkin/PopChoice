@@ -84,9 +84,7 @@ if (hasPg) {
   console.log('🐘 Using PostgreSQL backend (DATABASE_URL detected)');
   setDbClient(createPgDbClient());
 } else {
-  console.log(
-    '⚡ Using Supabase backend (SUPABASE_URL and SUPABASE_API_KEY detected)',
-  );
+  console.log('⚡ Using Supabase backend (SUPABASE_URL and SUPABASE_API_KEY detected)');
 }
 
 async function main() {

@@ -178,7 +178,7 @@ describe('pgClient', () => {
       .select('id');
 
     expect(mockQuery).toHaveBeenCalledWith(
-      'INSERT INTO "movies" ("name", "year") VALUES ($1, $2) RETURNING id',
+      'INSERT INTO "movies" ("name", "year") VALUES ($1, $2) RETURNING "id"',
       ['New Movie', 2024],
     );
     expect(result.data).toEqual([{ id: 5 }]);
@@ -301,6 +301,36 @@ describe('pgClient', () => {
     expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
+  it('terminal methods (order, limit, neq) do not execute until awaited', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    const client = createPgDbClient();
+
+    // .order() should be lazy
+    const orderQuery = client.from('movies').select('*').order('name');
+    expect(mockQuery).not.toHaveBeenCalled();
+    await orderQuery;
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    // .limit() should be lazy
+    const limitQuery = client.from('movies').select('*').limit(5);
+    expect(mockQuery).not.toHaveBeenCalled();
+    await limitQuery;
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    // .neq() should be lazy
+    const neqQuery = client.from('movies').select('*').neq('id', 0);
+    expect(mockQuery).not.toHaveBeenCalled();
+    await neqQuery;
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
   it('from().insert().select() executes exactly one INSERT', async () => {
     mockQuery.mockResolvedValue({ rows: [{ id: 1 }] });
 
@@ -310,7 +340,7 @@ describe('pgClient', () => {
     // Only one INSERT query should have been executed (with RETURNING)
     expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(mockQuery).toHaveBeenCalledWith(
-      'INSERT INTO "movies" ("name", "year") VALUES ($1, $2) RETURNING id',
+      'INSERT INTO "movies" ("name", "year") VALUES ($1, $2) RETURNING "id"',
       ['Movie', 2024],
     );
     expect(result.data).toEqual([{ id: 1 }]);
