@@ -385,28 +385,31 @@ export function createPgDbClient(): DbClient {
   return {
     isConfigured: () => Boolean(process.env.DATABASE_URL),
 
-    from: <T = unknown>(table: string): TableRef<T> => ({
-      select: (columns?: string, options?: { count?: 'exact'; head?: boolean }): QuerySelect<T> => {
-        const state = defaultState(table);
-        if (columns && columns !== '*') {
-          const colNames = columns.split(',').map((c) => c.trim());
-          colNames.forEach((c) => assertSafeIdentifier(c, 'column name'));
-          state.columns = colNames.map((c) => `"${c}"`).join(', ');
-        }
-        if (options?.count === 'exact') {
-          state.countMode = 'exact';
-        }
-        if (options?.head) {
-          state.headOnly = true;
-        }
-        return createSelect<T>(getPool(), state);
-      },
+    from: <T = unknown>(table: string): TableRef<T> => {
+      assertSafeIdentifier(table, 'table name');
 
-      insert: (rows: T | T[]): QueryInsert<T> => createInsert<T>(getPool(), table, rows),
+      return {
+        select: (columns?: string, options?: { count?: 'exact'; head?: boolean }): QuerySelect<T> => {
+          const state = defaultState(table);
+          if (columns && columns !== '*') {
+            const colNames = columns.split(',').map((c) => c.trim());
+            colNames.forEach((c) => assertSafeIdentifier(c, 'column name'));
+            state.columns = colNames.map((c) => `"${c}"`).join(', ');
+          }
+          if (options?.count === 'exact') {
+            state.countMode = 'exact';
+          }
+          if (options?.head) {
+            state.headOnly = true;
+          }
+          return createSelect<T>(getPool(), state);
+        },
 
-      delete: (): QueryDelete<T> => createDelete<T>(getPool(), table),
-    }),
+        insert: (rows: T | T[]): QueryInsert<T> => createInsert<T>(getPool(), table, rows),
 
+        delete: (): QueryDelete<T> => createDelete<T>(getPool(), table),
+      };
+    },
     rpc: async (
       fn: string,
       params?: Record<string, unknown>,
