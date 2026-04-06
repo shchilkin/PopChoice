@@ -44,7 +44,7 @@ async function main(): Promise<void> {
     dryRun: config.dryRun,
   });
 
-  const oneShot = process.argv.includes('--once') || process.env.CRON_SCHEDULE === '';
+  const oneShot = process.argv.includes('--once') || config.cronSchedule === '';
 
   if (oneShot) {
     logger.info('Running in one-shot mode');
