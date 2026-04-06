@@ -15,7 +15,7 @@ import type { TMDBMovie } from './tmdb.js';
  * Convert a TMDB movie to a partial MovieRecord (without embedding).
  */
 function tmdbToMovieRecord(movie: TMDBMovie): Omit<MovieRecord, 'embedding'> {
-  const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+  const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0; // 0 = unknown year sentinel
 
   return {
     name: movie.title,
