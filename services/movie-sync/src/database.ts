@@ -17,17 +17,24 @@ export interface MovieRecord {
   embedding: number[];
 }
 
-let supabase: SupabaseClient;
+let supabase: SupabaseClient | null = null;
 
 export function initSupabase(url: string, apiKey: string): void {
   supabase = createClient(url, apiKey);
+}
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    throw new Error('Supabase client not initialized — call initSupabase() first');
+  }
+  return supabase;
 }
 
 /**
  * Check if a movie already exists in the database by name and year.
  */
 export async function movieExists(name: string, year: number): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('movies')
     .select('id')
     .eq('name', name)
@@ -75,7 +82,7 @@ export async function filterNewMovies(movies: MovieRecord[]): Promise<number[]> 
  * Get count of movies currently in database.
  */
 export async function getMovieCount(): Promise<number> {
-  const { count, error } = await supabase
+  const { count, error } = await getSupabase()
     .from('movies')
     .select('id', { count: 'exact', head: true });
 
@@ -87,7 +94,8 @@ export async function getMovieCount(): Promise<number> {
 }
 
 /**
- * Insert movie records into Supabase in batches.
+ * Upsert movie records into Supabase in batches.
+ * Uses onConflict to handle duplicate (name, year) entries idempotently.
  */
 export async function insertMovies(
   movies: MovieRecord[],
@@ -100,7 +108,10 @@ export async function insertMovies(
     const batch = movies.slice(i, i + batchSize);
 
     try {
-      const { data, error } = await supabase.from('movies').insert(batch).select('id');
+      const { data, error } = await getSupabase()
+        .from('movies')
+        .upsert(batch, { onConflict: 'name,year', ignoreDuplicates: true })
+        .select('id');
 
       if (error) {
         throw error;
@@ -109,25 +120,27 @@ export async function insertMovies(
       const inserted = data?.length || 0;
       success += inserted;
 
-      logger.info('Batch inserted', {
+      logger.info('Batch upserted', {
         batch: Math.floor(i / batchSize) + 1,
         inserted,
         total: movies.length,
       });
     } catch (batchErr) {
-      logger.warn('Batch insert failed, falling back to individual inserts', {
+      logger.warn('Batch upsert failed, falling back to individual upserts', {
         batch: Math.floor(i / batchSize) + 1,
         error: batchErr instanceof Error ? batchErr.message : String(batchErr),
       });
-      // Fallback: insert one by one to isolate failures
+      // Fallback: upsert one by one to isolate failures
       for (const movie of batch) {
         try {
-          const { error } = await supabase.from('movies').insert([movie]);
+          const { error } = await getSupabase()
+            .from('movies')
+            .upsert([movie], { onConflict: 'name,year', ignoreDuplicates: true });
           if (error) throw error;
           success++;
         } catch (singleErr) {
           errors++;
-          logger.warn('Failed to insert movie', {
+          logger.warn('Failed to upsert movie', {
             name: movie.name,
             year: movie.year,
             error: singleErr instanceof Error ? singleErr.message : String(singleErr),
