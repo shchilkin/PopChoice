@@ -87,7 +87,7 @@ export function estimateAgeRating(movie: TMDBMovie): string {
  * Convert a TMDB movie into a text description suitable for embedding.
  */
 export function movieToEmbeddingText(movie: TMDBMovie): string {
-  const year = movie.release_date ? movie.release_date.substring(0, 4) : 'Unknown';
+  const year = movie.release_date?.substring(0, 4) || 'Unknown';
   const rating = estimateAgeRating(movie);
   const score = movie.vote_average.toFixed(1);
 

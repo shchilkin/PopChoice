@@ -2,21 +2,20 @@
  * Main sync orchestration: fetch → deduplicate → embed → insert.
  */
 
-import type { Config } from './config.js';
 import { filterNewMovies, getMovieCount, initSupabase, insertMovies } from './database.js';
-import type { MovieRecord } from './database.js';
 import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
 import { estimateAgeRating, fetchTMDBMovies, movieToEmbeddingText } from './tmdb.js';
+
+import type { Config } from './config.js';
+import type { MovieRecord } from './database.js';
 import type { TMDBMovie } from './tmdb.js';
 
 /**
  * Convert a TMDB movie to a partial MovieRecord (without embedding).
  */
 function tmdbToMovieRecord(movie: TMDBMovie): Omit<MovieRecord, 'embedding'> {
-  const year = movie.release_date
-    ? parseInt(movie.release_date.substring(0, 4), 10)
-    : new Date().getFullYear();
+  const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
 
   return {
     name: movie.title,
