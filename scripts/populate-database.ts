@@ -233,7 +233,7 @@ async function main() {
 
     // Insert into database (skip duplicate check since we already filtered)
     console.log(`\n💾 Inserting movies into database...`);
-    const { batchInsertMovies } = await import('../src/utils/database/insertMovies');
+    const { batchInsertMovies } = await import('../src/utils/database/operations');
     const insertResult = await batchInsertMovies(chunksWithEmbeddings, 100);
 
     // Final summary
