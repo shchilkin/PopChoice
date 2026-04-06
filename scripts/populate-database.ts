@@ -64,7 +64,7 @@ Examples:
 // Check required environment variables
 const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
 const hasPg = Boolean(process.env.DATABASE_URL);
-const hasSupabase = Boolean(process.env.SUPABASE_URL);
+const hasSupabase = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_API_KEY);
 
 if (!hasOpenAI) {
   console.error('❌ Missing required environment variable: OPENAI_API_KEY');

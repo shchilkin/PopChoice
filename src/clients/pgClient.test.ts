@@ -285,6 +285,38 @@ describe('pgClient', () => {
   });
 
   // -----------------------------------------------------------------------
+  // Lazy execution – queries should not fire until awaited
+  // -----------------------------------------------------------------------
+
+  it('from().select() does not execute until awaited', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    const client = createPgDbClient();
+    // Build the query chain without awaiting
+    const query = client.from('movies').select('*').eq('name', 'Test');
+    expect(mockQuery).not.toHaveBeenCalled();
+
+    // Now await – this should trigger the query
+    await query;
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('from().insert().select() executes exactly one INSERT', async () => {
+    mockQuery.mockResolvedValue({ rows: [{ id: 1 }] });
+
+    const client = createPgDbClient();
+    const result = await client.from('movies').insert({ name: 'Movie', year: 2024 }).select('id');
+
+    // Only one INSERT query should have been executed (with RETURNING)
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledWith(
+      'INSERT INTO "movies" ("name", "year") VALUES ($1, $2) RETURNING id',
+      ['Movie', 2024],
+    );
+    expect(result.data).toEqual([{ id: 1 }]);
+  });
+
+  // -----------------------------------------------------------------------
   // Integration-style: works as a drop-in for Supabase client
   // -----------------------------------------------------------------------
 

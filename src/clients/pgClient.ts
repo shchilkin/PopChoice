@@ -195,9 +195,8 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
 // ---------------------------------------------------------------------------
 
 function createTerminal<T>(pool: PgPool, state: QueryState): QueryTerminal<T> {
-  const promise = executeSelect<T>(pool, state);
   return {
-    then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
+    then: (onfulfilled, onrejected) => executeSelect<T>(pool, state).then(onfulfilled, onrejected),
     order: (column: string, options?: { ascending?: boolean }) => {
       assertSafeIdentifier(column, 'column name');
       state.orderBy = { column, ascending: options?.ascending ?? true };
@@ -207,9 +206,8 @@ function createTerminal<T>(pool: PgPool, state: QueryState): QueryTerminal<T> {
 }
 
 function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
-  const promise = executeSelect<T>(pool, state);
   return {
-    then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
+    then: (onfulfilled, onrejected) => executeSelect<T>(pool, state).then(onfulfilled, onrejected),
     eq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '=', value });
@@ -238,9 +236,8 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
 }
 
 function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
-  const promise = executeSelect<T>(pool, state);
   return {
-    then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
+    then: (onfulfilled, onrejected) => executeSelect<T>(pool, state).then(onfulfilled, onrejected),
     eq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '=', value });
@@ -323,11 +320,22 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
     }
   }
 
-  const promise = doInsert(null);
+  let returning: string | null = null;
+  let insertPromise: Promise<QueryResult<T>> | null = null;
+
+  function executeInsert(): Promise<QueryResult<T>> {
+    if (!insertPromise) {
+      insertPromise = doInsert(returning);
+    }
+    return insertPromise;
+  }
 
   return {
-    then: (onfulfilled, onrejected) => promise.then(onfulfilled, onrejected),
-    select: (columns?: string) => doInsert(columns || '*'),
+    then: (onfulfilled, onrejected) => executeInsert().then(onfulfilled, onrejected),
+    select: (columns?: string) => {
+      returning = columns || '*';
+      return executeInsert();
+    },
   };
 }
 
@@ -369,7 +377,7 @@ export function createPgDbClient(): DbClient {
       if (!connectionString) {
         throw new Error('Expected env var DATABASE_URL');
       }
-      _pool = new Pool({ connectionString });
+      _pool = new Pool({ connectionString, allowExitOnIdle: true });
     }
     return _pool;
   }
