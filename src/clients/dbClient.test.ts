@@ -75,7 +75,7 @@ describe('dbClient', () => {
     expect(client).toBe(mock);
   });
 
-  it('resetDbClient restores the default Supabase client', () => {
+  it('resetDbClient restores the default pg client', () => {
     const mock = createMockDbClient();
 
     setDbClient(mock);

@@ -52,8 +52,7 @@
   },
   "remoteUser": "node",
   "containerEnv": {
-    "SUPABASE_URL": "${localEnv:SUPABASE_URL}",
-    "SUPABASE_API_KEY": "${localEnv:SUPABASE_API_KEY}",
+    "DATABASE_URL": "${localEnv:DATABASE_URL}",
     "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
     "TMDB_API_KEY": "${localEnv:TMDB_API_KEY}"
   }

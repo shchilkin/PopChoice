@@ -8,16 +8,8 @@ Create a `.env` file in your project root with the following variables:
 # OpenAI Configuration
 OPENAI_API_KEY=your-openai-api-key-here
 
-# Database – pick ONE of the following options:
-
-# Option A: Direct PostgreSQL (e.g. Railway)
+# Database – PostgreSQL connection string
 DATABASE_URL=postgresql://user:password@host:5432/dbname
-
-# Option B: Supabase
-SUPABASE_URL=your-supabase-project-url
-SUPABASE_API_KEY=your-supabase-anon-key
-
-# If DATABASE_URL is set it takes priority over Supabase credentials.
 
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
@@ -40,35 +32,37 @@ This application uses the OpenAI API to generate embeddings and chat completions
    - Your application will automatically load the API key from `.env`
    - See [`src/clients/openaiClient.ts`](../src/clients/openaiClient.ts) for usage example
 
-## Supabase Database Setup
+## PostgreSQL Database Setup
 
-This application uses a generic database client abstraction (`src/clients/dbClient.ts`) that defaults to Supabase (PostgreSQL) for storing movie embeddings. See [Swapping Database Backends](#swapping-database-backends) for how to use a different provider.
+This application uses a generic database client abstraction (`src/clients/dbClient.ts`) backed by PostgreSQL via `pgClient.ts` for storing movie embeddings.
 
 ### Steps:
 
-1. **Create a Supabase project**
-   - Sign up at [Supabase](https://supabase.com)
-   - Create a new project
-   - Wait for the database to be provisioned
+1. **Provision a PostgreSQL database**
+   - Use any PostgreSQL provider, e.g. [Railway](https://railway.app), [Neon](https://neon.tech), or a self-hosted instance
 
-2. **Set up the database schema**
-   - Go to the SQL Editor in your Supabase dashboard
-   - Run the SQL from [`src/utils/db/createDB.sql`](../src/utils/db/createDB.sql)
+2. **Enable the pgvector extension**
+   - Connect to your database and run:
+     ```sql
+     CREATE EXTENSION IF NOT EXISTS vector;
+     ```
 
-3. **Add the matching function**
-   - In the SQL Editor, run the SQL from [`src/utils/db/match_movies.sql`](../src/utils/db/match_movies.sql)
+3. **Set up the database schema**
+   - Run the SQL from [`db/createDB.sql`](../db/createDB.sql)
 
-4. **Configure environment variables**
-   - Get your project URL and anon key from Supabase dashboard
-   - Add them to your `.env` file
+4. **Add the matching function**
+   - Run the SQL from [`db/match_movies.sql`](../db/match_movies.sql)
 
-5. **Test your setup**
-   - Use the Supabase dashboard to verify tables were created
-   - Test the connection using the provided utility scripts
+5. **Configure environment variables**
+   - Add `DATABASE_URL` to your `.env` file:
+     ```env
+     DATABASE_URL=postgresql://user:password@host:5432/dbname
+     ```
+
+6. **Populate the database**
+   - Run `npm run populate-db`
 
 ## TMDB API Setup (Optional)
-
-For additional movie metadata and images:
 
 1. **Create TMDB account**
    - Sign up at [The Movie Database](https://www.themoviedb.org/signup)
@@ -77,9 +71,9 @@ For additional movie metadata and images:
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
 
-## Railway PostgreSQL Setup (Alternative to Supabase)
+## Railway PostgreSQL Setup
 
-You can host your own PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider) instead of using Supabase.
+You can host your PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider).
 
 ### Steps:
 
@@ -103,10 +97,9 @@ You can host your own PostgreSQL database on [Railway](https://railway.app) (or 
      ```env
      DATABASE_URL=postgresql://user:password@host:5432/railway
      ```
-   - When `DATABASE_URL` is set it takes priority over Supabase credentials
 
 5. **Populate the database**
-   - Run `npm run populate-db` – the script auto-detects `DATABASE_URL` and uses the pg backend
+   - Run `npm run populate-db`
 
 ## Development Container Setup
 
@@ -137,32 +130,13 @@ This project includes a development container configuration for consistent devel
 
 ## Swapping Database Backends
 
-PopChoice uses a generic `DbClient` interface (`src/clients/dbClient.ts`) that decouples all storage logic from any specific database provider. By default it delegates to Supabase, but you can replace it with any backend.
+PopChoice uses a generic `DbClient` interface (`src/clients/dbClient.ts`) that decouples all storage logic from any specific database provider. By default it uses the PostgreSQL backend via `pgClient.ts`.
 
-### Built-in backends
+### Built-in backend
 
-| Backend    | Module                    | Env var(s)                          | Notes                                                              |
-| ---------- | ------------------------- | ----------------------------------- | ------------------------------------------------------------------ |
-| Supabase   | `src/clients/dbClient.ts` | `SUPABASE_URL` + `SUPABASE_API_KEY` | Default — used unless you call `setDbClient()` with another client |
-| PostgreSQL | `src/clients/pgClient.ts` | `DATABASE_URL`                      | Must be activated explicitly via `setDbClient(createPgDbClient())` |
-
-> **Note:** The `scripts/populate-database.ts` script auto-detects `DATABASE_URL` and switches backend automatically. For the main app or other entry points you must call `setDbClient(createPgDbClient())` at startup if you want to use the pg backend.
-
-### Using the PostgreSQL backend
-
-```ts
-import { setDbClient } from '@/clients/dbClient';
-import { createPgDbClient } from '@/clients/pgClient';
-
-// Call once at startup (e.g. in your app bootstrap or script entry point)
-setDbClient(createPgDbClient());
-```
-
-> **Note:** Ensure the target database has the `vector` extension enabled:
->
-> ```sql
-> CREATE EXTENSION IF NOT EXISTS vector;
-> ```
+| Backend    | Module                    | Env var        | Notes   |
+| ---------- | ------------------------- | -------------- | ------- |
+| PostgreSQL | `src/clients/pgClient.ts` | `DATABASE_URL` | Default |
 
 ### How it works
 
@@ -212,10 +186,10 @@ afterEach(() => resetDbClient());
 
 ### Key files
 
-| File                           | Purpose                                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `src/clients/dbClient.ts`      | `DbClient` interface, Supabase implementation, `getDbClient` / `setDbClient` / `resetDbClient` helpers |
-| `src/clients/pgClient.ts`      | PostgreSQL (`pg`) implementation of `DbClient` with pgvector support                                   |
-| `src/clients/dbClient.test.ts` | Unit tests demonstrating mock injection                                                                |
-| `src/clients/pgClient.test.ts` | Unit tests for the PostgreSQL backend                                                                  |
-| `src/utils/database/`          | All database operations (use `getDbClient()` internally)                                               |
+| File                           | Purpose                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `src/clients/dbClient.ts`      | `DbClient` interface, `getDbClient` / `setDbClient` / `resetDbClient` helpers |
+| `src/clients/pgClient.ts`      | PostgreSQL (`pg`) implementation of `DbClient` with pgvector support          |
+| `src/clients/dbClient.test.ts` | Unit tests demonstrating mock injection                                       |
+| `src/clients/pgClient.test.ts` | Unit tests for the PostgreSQL backend                                         |
+| `src/utils/database/`          | All database operations (use `getDbClient()` internally)                      |
