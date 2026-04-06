@@ -180,7 +180,7 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
           count: parseInt(countResult.rows[0]?.count ?? '0', 10),
         };
       }
-      return { data: null, error: null, count: 0 };
+      return { data: null, error: null };
     }
 
     const result = await pool.query(text, values);
