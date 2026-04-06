@@ -31,7 +31,7 @@ This application uses the OpenAI API to generate embeddings and chat completions
 
 3. **Verify setup**
    - Your application will automatically load the API key from `.env`
-   - See [`src/utils/openaiClient.ts`](../src/utils/openaiClient.ts) for usage example
+   - See [`src/clients/openaiClient.ts`](../src/clients/openaiClient.ts) for usage example
 
 ## Supabase Database Setup
 

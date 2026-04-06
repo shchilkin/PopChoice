@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { getDbClient } from '@/clients/dbClient';
+
 import { GET } from './route';
 
 // Mock the dbClient module
@@ -81,5 +83,30 @@ describe('Movies API Route', () => {
     expect(response.status).toBe(200);
     expect(data.page).toBe(2);
     expect(data.pageSize).toBe(25);
+  });
+
+  it('should return mock data when database is not configured', async () => {
+    vi.mocked(getDbClient).mockReturnValueOnce({
+      isConfigured: vi.fn(() => false),
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/movies');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data).toHaveProperty('movies');
+    expect(data).toHaveProperty('totalCount');
+    expect(data).toHaveProperty('page');
+    expect(data).toHaveProperty('pageSize');
+    expect(data).toHaveProperty('totalPages');
+    expect(data.page).toBe(1);
+    expect(data.pageSize).toBe(50);
+    expect(data.totalCount).toBeGreaterThan(0);
+    expect(data.totalPages).toBeGreaterThan(0);
+    expect(data.movies.length).toBeGreaterThan(0);
+    expect(data.movies.length).toBeLessThanOrEqual(50);
   });
 });
