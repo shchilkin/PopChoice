@@ -163,9 +163,11 @@ Spider-Man: Into the Spider-Verse: 2018 | Teen Miles Morales becomes the Spider-
 
     expect(result).toHaveLength(2);
 
-    // The current parsing logic splits on the first colon, so we expect these names:
-    expect(result.some((movie) => movie.name === 'The Lord of the Rings')).toBe(true);
-    expect(result.some((movie) => movie.name === 'Spider-Man')).toBe(true);
+    // The parser extracts the full title (everything before the trailing ": YYYY"):
+    expect(
+      result.some((movie) => movie.name === 'The Lord of the Rings: The Fellowship of the Ring'),
+    ).toBe(true);
+    expect(result.some((movie) => movie.name === 'Spider-Man: Into the Spider-Verse')).toBe(true);
   });
 
   it('should handle multi-line movie descriptions', () => {

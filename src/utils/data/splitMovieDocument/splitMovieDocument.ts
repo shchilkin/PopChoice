@@ -28,7 +28,8 @@ export const splitMovieDocument = async (pathToFile: string): Promise<LangChainM
 
     // Check if this is a valid movie entry (starts with movie title and year)
     if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
-      const movieName = lines[0].split(':')[0].trim();
+      const movieHeaderMatch = lines[0].match(/^(.*): \d{4} \|/);
+      const movieName = movieHeaderMatch ? movieHeaderMatch[1].trim() : lines[0].trim();
 
       // Create metadata object
       const metadata: MovieMetadata = {

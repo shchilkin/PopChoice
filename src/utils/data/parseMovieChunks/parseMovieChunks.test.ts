@@ -31,8 +31,8 @@ function parseMovieChunks(filePath: string): RawMovieChunk[] {
     const lines = chunk.trim().split('\n');
 
     // Check if first line contains movie title with year (format: "Title: YYYY | ...")
-    if (lines.length > 0 && /^[A-Za-z].*: \d{4} \|/.test(lines[0])) {
-      const movieName = lines[0].split(':')[0].trim();
+    if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
+      const movieName = lines[0].replace(/: \d{4} \|.*$/, '').trim();
       const chunkSize = chunk.length;
       const lineCount = lines.length;
 
@@ -139,15 +139,16 @@ Interstellar: 2014 | PG-13 | 2h 49m | 8.6 rating
 Another valid movie entry.
 
 123: 2020 | R | 1h | 5.0 rating
-Starts with numbers - should be ignored.`;
+Starts with numbers - should now be counted.`;
 
     const testFile = await createTestMovieFile(movieData);
     const result = parseMovieChunks(testFile);
 
-    // Should only find 2 valid movies: Inception and Interstellar
-    expect(result).toHaveLength(2);
+    // Should find 3 valid movies: Inception, Interstellar, and 123
+    expect(result).toHaveLength(3);
     expect(result[0].name).toBe('Inception');
     expect(result[1].name).toBe('Interstellar');
+    expect(result[2].name).toBe('123');
   });
 
   it('should calculate chunk sizes correctly', async () => {
@@ -193,10 +194,10 @@ Classic space opera.`;
 
     expect(result).toHaveLength(3);
 
-    // Should extract name correctly (everything before first colon)
-    expect(result[0].name).toBe('Spider-Man');
-    expect(result[1].name).toBe('The Lord of the Rings');
-    expect(result[2].name).toBe('Star Wars');
+    // Should extract full title (everything before the trailing ": YYYY")
+    expect(result[0].name).toBe('Spider-Man: Into the Spider-Verse');
+    expect(result[1].name).toBe('The Lord of the Rings: The Fellowship of the Ring');
+    expect(result[2].name).toBe('Star Wars: Episode IV - A New Hope');
   });
 
   it('should handle movies with multi-line descriptions', async () => {
@@ -237,7 +238,7 @@ Valid Movie 2: 2021 | R | 1h 30m | 7.5 rating
 Second valid movie.
 
 123: 2022 | G | 1h | 6.0 rating
-Starts with number - invalid.
+Starts with number - now valid.
 
 Valid Movie 3: 2023 | PG-13 | 2h 15m | 8.5 rating
 Third valid movie.`;
@@ -245,7 +246,7 @@ Third valid movie.`;
     const testFile = await createTestMovieFile(movieData);
     const result = parseMovieChunks(testFile);
 
-    expect(result).toHaveLength(3);
+    expect(result).toHaveLength(4);
 
     // Check that chunk numbers reflect original positions in file
     expect(result[0].name).toBe('Valid Movie 1');
@@ -254,8 +255,11 @@ Third valid movie.`;
     expect(result[1].name).toBe('Valid Movie 2');
     expect(result[1].chunkNumber).toBe(4); // Fourth chunk (after skipping 2 invalid ones)
 
-    expect(result[2].name).toBe('Valid Movie 3');
-    expect(result[2].chunkNumber).toBe(6); // Sixth chunk (after skipping invalid entry at position 5)
+    expect(result[2].name).toBe('123');
+    expect(result[2].chunkNumber).toBe(5); // Fifth chunk
+
+    expect(result[3].name).toBe('Valid Movie 3');
+    expect(result[3].chunkNumber).toBe(6); // Sixth chunk
   });
 
   it('should handle edge case years correctly', async () => {
@@ -339,7 +343,7 @@ Movie with multiple capital letters.`;
 
     expect(result).toHaveLength(3);
     expect(result[0].name).toBe('Amélie');
-    expect(result[1].name).toBe('Spider-Man');
+    expect(result[1].name).toBe('Spider-Man: No Way Home');
     expect(result[2].name).toBe('The Grand Budapest Hotel');
   });
 });

@@ -20,7 +20,7 @@ export function parseMovieChunks(filePath: string): unknown[] {
 
     // Check if first line contains movie title with year (format: "Title: YYYY | ...")
     if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
-      const movieName = lines[0].split(':')[0].trim();
+      const movieName = lines[0].replace(/: \d{4} \|.*$/, '').trim();
       const chunkSize = chunk.length;
       const lineCount = lines.length;
 

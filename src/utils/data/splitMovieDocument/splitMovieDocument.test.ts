@@ -320,7 +320,7 @@ A jury holdout attempts to prevent a miscarriage of justice.`;
     const result = await splitMovieDocument(testFilePath);
 
     expect(result).toHaveLength(3);
-    expect(result[0].metadata.movieName).toBe('2001');
+    expect(result[0].metadata.movieName).toBe('2001: A Space Odyssey');
     expect(result[1].metadata.movieName).toBe('12 Angry Men');
     expect(result[2].metadata.movieName).toBe('Twelve Angry Men');
   });
