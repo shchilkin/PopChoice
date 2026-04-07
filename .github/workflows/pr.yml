@@ -111,6 +111,7 @@ jobs:
 
       - name: Install Playwright system dependencies
         run: npx playwright install-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
 
       - name: Install Playwright browsers
         run: npx playwright install

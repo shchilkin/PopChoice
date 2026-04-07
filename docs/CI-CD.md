@@ -28,11 +28,11 @@ Each concern (lint, type-check, tests, build) runs as an independent job. A fail
 
 ### Hard Failure on Playwright Install
 
-The `storybook-tests` job runs `npm run pretest:storybook` without a fallback — if Playwright browser installation fails, the job fails visibly rather than silently skipping the tests.
+The `storybook-tests` job runs `npx playwright install-deps` and `npx playwright install` without a fallback — if Playwright installation fails, the job fails visibly rather than silently skipping the tests.
 
 ### Playwright Browser Caching
 
-The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-playwright` using `actions/cache@v4`, keyed on the OS and `package-lock.json` hash. On a cache hit the browser install step is skipped entirely, reducing the job runtime from ~17 minutes to under a minute on warm runs.
+The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-playwright` using `actions/cache@v4`, keyed on the OS and `package-lock.json` hash. On a cache hit, both the browser download and system dependency installation steps are skipped entirely, reducing the job runtime significantly on warm runs.
 
 ### Code Coverage
 
