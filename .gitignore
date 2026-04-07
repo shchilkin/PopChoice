@@ -45,3 +45,7 @@ storybook-static
 
 # Aider
 .aider*
+
+# Services
+services/*/node_modules
+services/*/dist
