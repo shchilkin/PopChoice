@@ -128,6 +128,76 @@ export async function filterNewMovies(movies: MovieRecord[]): Promise<number[]> 
 }
 
 /**
+ * Ensure the database schema is up-to-date.
+ * Creates the vector extension, movies table, and match_movies function if they do not exist.
+ * Safe to call multiple times — all operations are idempotent.
+ */
+export async function ensureSchema(): Promise<void> {
+  await getPool().query('CREATE EXTENSION IF NOT EXISTS vector;');
+
+  await getPool().query(`
+    CREATE TABLE IF NOT EXISTS movies (
+      id bigserial PRIMARY KEY,
+      name text NOT NULL,
+      age_rating text NOT NULL,
+      description text NOT NULL,
+      duration integer NOT NULL,
+      score_rating float NOT NULL,
+      year int NOT NULL,
+      embedding vector(3072),
+      UNIQUE(name, year)
+    );
+  `);
+
+  await getPool().query(`
+    CREATE OR REPLACE FUNCTION match_movies (
+      query_embedding vector(3072),
+      match_threshold float DEFAULT 0.1,
+      match_count int DEFAULT 5
+    )
+    RETURNS TABLE (
+      id bigint,
+      name text,
+      age_rating text,
+      description text,
+      duration integer,
+      score_rating float,
+      year int,
+      similarity float,
+      content text
+    )
+    LANGUAGE sql STABLE AS $$
+      SELECT
+        movies.id,
+        movies.name,
+        movies.age_rating,
+        movies.description,
+        movies.duration,
+        movies.score_rating,
+        movies.year,
+        1 - (movies.embedding <=> query_embedding) AS similarity,
+        format(
+          '%s (%s) | %s | Duration: %s min | Rating: %s/10%s%s',
+          movies.name,
+          movies.year,
+          movies.age_rating,
+          movies.duration,
+          movies.score_rating,
+          chr(10),
+          movies.description
+        ) AS content
+      FROM movies
+      WHERE movies.embedding IS NOT NULL
+        AND 1 - (movies.embedding <=> query_embedding) > match_threshold
+      ORDER BY similarity DESC
+      LIMIT match_count;
+    $$;
+  `);
+
+  logger.info('Schema ensured');
+}
+
+/**
  * Get count of movies currently in database.
  */
 export async function getMovieCount(): Promise<number> {
