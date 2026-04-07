@@ -15,3 +15,9 @@ buildCommand = "npm ci && npm run build-storybook"
 
 [services.deploy]
 startCommand = "npm run start:storybook"
+
+[[services]]
+name = "movie-sync"
+
+[services.build]
+dockerfilePath = "services/movie-sync/Dockerfile"
