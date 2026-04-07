@@ -1,5 +1,17 @@
-[build]
+[[services]]
+name = "web"
+
+[services.build]
+buildCommand = "npm install && npm run build"
+
+[services.deploy]
+startCommand = "npm run start"
+
+[[services]]
+name = "storybook"
+
+[services.build]
 buildCommand = "npm install && npm run build-storybook"
 
-[deploy]
+[services.deploy]
 startCommand = "npm run start:storybook"
