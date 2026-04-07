@@ -16,16 +16,17 @@ export interface Config {
 
 /**
  * Resolve the default path to movies.txt when MOVIES_FILE_PATH is not set.
- * Tries <cwd>/movies.txt first (works in Docker where cwd=/app and in repo root).
- * Falls back to <cwd>/../../movies.txt so the service also works when started
- * from its own subdirectory (e.g. `npm run dev` from services/movie-sync/).
+ * Tries <cwd>/movies.txt first (works in Docker where cwd=/app and when running
+ * from services/movie-sync/ directly).
+ * Falls back to <cwd>/services/movie-sync/movies.txt so the service also works when
+ * started from the repository root.
  */
 function resolveDefaultMoviesFilePath(): string {
   const cwdPath = path.resolve(process.cwd(), 'movies.txt');
   if (existsSync(cwdPath)) return cwdPath;
 
-  const repoRootPath = path.resolve(process.cwd(), '../../movies.txt');
-  if (existsSync(repoRootPath)) return repoRootPath;
+  const serviceLocalPath = path.resolve(process.cwd(), 'services/movie-sync/movies.txt');
+  if (existsSync(serviceLocalPath)) return serviceLocalPath;
 
   // Neither found – return the cwd path so the error is clear when the file is read
   return cwdPath;
