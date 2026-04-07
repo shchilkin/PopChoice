@@ -57,6 +57,35 @@ updates:
       prefix-development: 'deps-dev'
       include: 'scope'
 
+  # Monitor npm dependencies in services/movie-sync
+  - package-ecosystem: 'npm'
+    directory: '/services/movie-sync'
+    schedule:
+      interval: 'weekly'
+      day: 'monday'
+      time: '09:00'
+      timezone: 'UTC'
+    open-pull-requests-limit: 5
+    assignees:
+      - 'shchilkin'
+    labels:
+      - 'dependencies'
+      - 'automated'
+      - 'npm'
+    allow:
+      - dependency-type: 'all'
+    groups:
+      movie-sync-dependencies:
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+    commit-message:
+      prefix: 'deps'
+      prefix-development: 'deps-dev'
+      include: 'scope'
+
   # Monitor GitHub Actions in workflows
   - package-ecosystem: 'github-actions'
     directory: '/.github/workflows'
