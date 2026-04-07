@@ -21,7 +21,7 @@ export function getMovieStats(filePath: string): { movieCount: number; maxChunkS
     const lines = chunk.trim().split('\n');
 
     // Check if first line contains movie title with year (format: "Title: YYYY | ...")
-    if (lines.length > 0 && /^[A-Za-z].*: \d{4} \|/.test(lines[0])) {
+    if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
       movieCount++;
       const chunkSize = chunk.length;
       if (chunkSize > maxChunkSize) {

@@ -3,19 +3,18 @@
  * All required and optional env vars are validated here at startup.
  */
 
+import path from 'path';
+
 export interface Config {
-  tmdbApiKey: string;
   openaiApiKey: string;
   databaseUrl: string;
   cronSchedule: string;
   dryRun: boolean;
+  moviesFilePath: string;
 }
 
 export function loadConfig(): Config {
   const missing: string[] = [];
-
-  const tmdbApiKey = process.env.TMDB_API_KEY;
-  if (!tmdbApiKey) missing.push('TMDB_API_KEY');
 
   const openaiApiKey = process.env.OPENAI_API_KEY;
   if (!openaiApiKey) missing.push('OPENAI_API_KEY');
@@ -27,11 +26,13 @@ export function loadConfig(): Config {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
 
+  const moviesFilePath = process.env.MOVIES_FILE_PATH ?? path.resolve(process.cwd(), 'movies.txt');
+
   return {
-    tmdbApiKey: tmdbApiKey!,
     openaiApiKey: openaiApiKey!,
     databaseUrl: databaseUrl!,
     cronSchedule: process.env.CRON_SCHEDULE?.trim() ?? '0 3 * * *', // Default: 3 AM daily UTC
     dryRun: process.env.DRY_RUN === 'true',
+    moviesFilePath,
   };
 }

@@ -1,10 +1,10 @@
 # Movie Sync Service
 
-A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB into the PopChoice PostgreSQL database with OpenAI embeddings.
+A standalone Node.js/TypeScript cron service that syncs movies from `movies.txt` into the PopChoice PostgreSQL database with OpenAI embeddings.
 
 ## What It Does
 
-1. **Fetches** popular/trending movies from the TMDB `/discover/movie` endpoint
+1. **Reads** all movies from `movies.txt` (the curated source of truth)
 2. **De-duplicates** against movies already in the database (by name + year)
 3. **Creates embeddings** via OpenAI (`text-embedding-3-large`) for new movies only
 4. **Inserts** new movie records into the `movies` table via PostgreSQL
@@ -18,16 +18,14 @@ A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB
 
 ## Environment Variables
 
-| Variable         | Required | Default     | Description                                             |
-| ---------------- | -------- | ----------- | ------------------------------------------------------- |
-| `TMDB_API_KEY`   | Yes      | —           | TMDB v4 read access token (used as Bearer auth)         |
-| `OPENAI_API_KEY` | Yes      | —           | OpenAI API key for embeddings                           |
-| `DATABASE_URL`   | Yes      | —           | PostgreSQL connection string                            |
-| `CRON_SCHEDULE`  | No       | `0 3 * * *` | Cron expression for scheduled mode                      |
-| `DRY_RUN`        | No       | `false`     | Set to `true` to skip embedding creation and DB inserts |
-| `LOG_LEVEL`      | No       | `info`      | Set to `debug` for verbose logging                      |
-
-> **Important:** For this service, `TMDB_API_KEY` must be your **TMDB v4 read access token** and is sent using **Bearer authentication**. This is different from `NEXT_PUBLIC_TMDB_API_KEY`, which is used elsewhere in the repo for browser/client-side **v3-style `api_key=` requests**. Do not use `NEXT_PUBLIC_TMDB_API_KEY` in place of `TMDB_API_KEY` here.
+| Variable           | Required | Default        | Description                                             |
+| ------------------ | -------- | -------------- | ------------------------------------------------------- |
+| `OPENAI_API_KEY`   | Yes      | —              | OpenAI API key for embeddings                           |
+| `DATABASE_URL`     | Yes      | —              | PostgreSQL connection string                            |
+| `MOVIES_FILE_PATH` | No       | `./movies.txt` | Absolute or relative path to the movies text file       |
+| `CRON_SCHEDULE`    | No       | `0 3 * * *`    | Cron expression for scheduled mode                      |
+| `DRY_RUN`          | No       | `false`        | Set to `true` to skip embedding creation and DB inserts |
+| `LOG_LEVEL`        | No       | `info`         | Set to `debug` for verbose logging                      |
 
 ## Local Development
 
@@ -53,9 +51,23 @@ npm start -- --once # one-shot mode
 
 ## Docker
 
+The Docker build context must be the **repository root** (not the service subdirectory) so that `movies.txt` can be included in the image.
+
 ```bash
-docker build -t movie-sync .
+# Build from the repository root
+docker build -f services/movie-sync/Dockerfile -t movie-sync .
+
+# Run (movies.txt is already baked into the image)
 docker run --env-file .env movie-sync
+```
+
+Alternatively, mount `movies.txt` at runtime and set `MOVIES_FILE_PATH`:
+
+```bash
+docker run --env-file .env \
+  -v /path/to/movies.txt:/data/movies.txt \
+  -e MOVIES_FILE_PATH=/data/movies.txt \
+  movie-sync
 ```
 
 ## Railway Deployment
@@ -68,17 +80,18 @@ Railway supports deploying services from subdirectories. Follow these steps to a
 - Click **"+ New"** → **"GitHub Repo"**
 - Select the **PopChoice** repository
 
-### 2. Set the Root Directory
+### 2. Set the Root Directory and Dockerfile
 
 - Go to the new service's **Settings** tab
-- Under **Root Directory**, enter: `services/movie-sync`
-- Railway will use the `Dockerfile` in that directory automatically
+- Under **Root Directory**, leave it as `.` (the repository root)
+- Under **Dockerfile Path**, enter: `services/movie-sync/Dockerfile`
+
+> **Why the repo root?** The Dockerfile copies `movies.txt` from the project root into the image. Using the subdirectory as the build context would prevent that file from being found.
 
 ### 3. Configure Environment Variables
 
 In the service's **Variables** tab, add:
 
-- `TMDB_API_KEY` — your TMDB v4 read access token
 - `OPENAI_API_KEY` — your OpenAI API key
 - `DATABASE_URL` — your PostgreSQL connection string
 - `CRON_SCHEDULE` — e.g., `0 3 * * *` for daily at 3 AM UTC (or leave default)
@@ -91,5 +104,5 @@ Railway will automatically build and deploy the service using the Dockerfile. Th
 ### Tips
 
 - Use **Railway's log viewer** to monitor sync runs (all output is structured JSON)
-- Set `DRY_RUN=true` initially to verify TMDB fetching and duplicate detection without writing to the database
+- Set `DRY_RUN=true` initially to verify file parsing and duplicate detection without writing to the database
 - Adjust `CRON_SCHEDULE` as needed — e.g., `0 */6 * * *` for every 6 hours

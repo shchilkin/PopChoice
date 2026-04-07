@@ -5,31 +5,27 @@
 import { filterNewMovies, getMovieCount, insertMovies } from './database.js';
 import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
-import { estimateAgeRating, fetchTMDBMovies, movieToEmbeddingText } from './tmdb.js';
+import { readMoviesFile } from './movies-file.js';
 
 import type { Config } from './config.js';
 import type { MovieRecord } from './database.js';
-import type { TMDBMovie } from './tmdb.js';
 
 /**
- * Convert a TMDB movie to a partial MovieRecord (without embedding).
+ * Convert a MovieRecord to a text description suitable for embedding.
  */
-function tmdbToMovieRecord(movie: TMDBMovie): Omit<MovieRecord, 'embedding'> {
-  const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0; // 0 = unknown year sentinel
-
-  return {
-    name: movie.title,
-    year,
-    age_rating: estimateAgeRating(movie),
-    description: movie.overview || 'No description available.',
-    duration: 0, // TMDB discover doesn't return runtime; set to 0
-    score_rating: movie.vote_average,
-  };
+function movieToEmbeddingText(movie: Omit<MovieRecord, 'embedding'>): string {
+  return [
+    `${movie.name} (${movie.year})`,
+    `Rating: ${movie.age_rating}`,
+    `Duration: ${movie.duration} min`,
+    `Score: ${movie.score_rating.toFixed(1)}/10`,
+    `Description: ${movie.description}`,
+  ].join('\n');
 }
 
 /**
  * Run a single sync cycle:
- * 1. Fetch movies from TMDB
+ * 1. Read movies from movies.txt
  * 2. De-duplicate against database
  * 3. Create embeddings for new movies
  * 4. Insert into database
@@ -42,19 +38,19 @@ export async function runSync(config: Config): Promise<void> {
   const countBefore = await getMovieCount();
   logger.info('Current database state', { movieCount: countBefore });
 
-  // 1. Fetch movies from TMDB
-  const tmdbMovies = await fetchTMDBMovies(config.tmdbApiKey);
-  logger.info('Fetched movies from TMDB', { count: tmdbMovies.length });
+  // 1. Read movies from movies.txt
+  const partialRecords = readMoviesFile(config.moviesFilePath);
+  logger.info('Read movies from file', {
+    count: partialRecords.length,
+    path: config.moviesFilePath,
+  });
 
-  if (tmdbMovies.length === 0) {
-    logger.info('No movies fetched, nothing to do');
+  if (partialRecords.length === 0) {
+    logger.info('No movies found in file, nothing to do');
     return;
   }
 
-  // 2. Build partial records (without embeddings) for duplicate check
-  const partialRecords = tmdbMovies.map(tmdbToMovieRecord);
-
-  // Use placeholder embeddings for the duplicate check
+  // 2. Build placeholder records (without embeddings) for duplicate check
   const recordsForCheck: MovieRecord[] = partialRecords.map((r) => ({
     ...r,
     embedding: [],
@@ -62,9 +58,9 @@ export async function runSync(config: Config): Promise<void> {
 
   const newIndices = await filterNewMovies(recordsForCheck);
   logger.info('Duplicate check complete', {
-    total: tmdbMovies.length,
+    total: partialRecords.length,
     new: newIndices.length,
-    duplicates: tmdbMovies.length - newIndices.length,
+    duplicates: partialRecords.length - newIndices.length,
   });
 
   if (newIndices.length === 0) {
@@ -85,7 +81,7 @@ export async function runSync(config: Config): Promise<void> {
   }
 
   // 4. Create embeddings only for new movies
-  const newMovies = newIndices.map((i) => tmdbMovies[i]);
+  const newMovies = newIndices.map((i) => partialRecords[i]);
   const texts = newMovies.map(movieToEmbeddingText);
   const embeddings = await createEmbeddings(config.openaiApiKey, texts);
 
