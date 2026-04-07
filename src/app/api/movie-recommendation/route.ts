@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
-import { openAIClient, supabase } from '@/clients';
+import { openAIClient } from '@/clients';
+import { getDbClient } from '@/clients/dbClient';
 import { MovieService } from '@/services';
 
 const prompt = `
@@ -131,7 +132,8 @@ const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string =
 };
 
 async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch[] | null> {
-  const { error, data } = await supabase.rpc('match_movies', {
+  const db = getDbClient();
+  const { error, data } = await db.rpc('match_movies', {
     query_embedding: embedding,
     match_threshold: 0.1,
     match_count: 6, // Get 6 movies: 1 main recommendation + 5 additional movies
@@ -384,7 +386,7 @@ export async function POST(req: NextRequest) {
           }
         : undefined,
       similarMovies: moviesWithDescriptions.map((movie) => ({
-        id: movie.id,
+        id: Number(movie.id),
         name: movie.name,
         year: movie.year,
         similarity: movie.similarity,

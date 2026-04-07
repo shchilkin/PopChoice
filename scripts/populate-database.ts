@@ -8,7 +8,7 @@
  * 2. Splits into individual movie chunks (1:1 mapping)
  * 3. Checks for duplicates to avoid expensive embedding creation
  * 4. Creates embeddings only for new movies (cost optimization)
- * 5. Inserts new movies into Supabase database
+ * 5. Inserts new movies into the PostgreSQL database
  *
  * Usage:
  *   npm run populate-db
@@ -43,8 +43,7 @@ Options:
 
 Environment Variables:
   OPENAI_API_KEY     Required for creating embeddings
-  SUPABASE_URL       Required for database connection  
-  SUPABASE_API_KEY   Required for database connection
+  DATABASE_URL       PostgreSQL connection string (e.g. Railway)
 
 Examples:
   npm run populate-db                    # Normal operation (skip duplicates)
@@ -55,15 +54,17 @@ Examples:
 }
 
 // Check required environment variables
-const requiredEnvVars = ['OPENAI_API_KEY', 'SUPABASE_URL'];
-const missingVars = requiredEnvVars.filter((varName) => !process.env[varName]);
+const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+const hasPg = Boolean(process.env.DATABASE_URL);
 
-if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:');
-  missingVars.forEach((varName) => {
-    console.error(`  - ${varName}`);
-  });
-  console.error('\nPlease set these variables in your .env file or environment.');
+if (!hasOpenAI) {
+  console.error('❌ Missing required environment variable: OPENAI_API_KEY');
+  process.exit(1);
+}
+
+if (!hasPg) {
+  console.error('❌ Missing required environment variable: DATABASE_URL');
+  console.error('   Set DATABASE_URL to your PostgreSQL connection string.');
   process.exit(1);
 }
 
@@ -233,7 +234,7 @@ async function main() {
 
     // Insert into database (skip duplicate check since we already filtered)
     console.log(`\n💾 Inserting movies into database...`);
-    const { batchInsertMovies } = await import('../src/utils/database/insertMovies');
+    const { batchInsertMovies } = await import('../src/utils/database/operations');
     const insertResult = await batchInsertMovies(chunksWithEmbeddings, 100);
 
     // Final summary

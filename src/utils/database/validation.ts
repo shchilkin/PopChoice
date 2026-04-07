@@ -1,4 +1,4 @@
-import { supabase } from '@/clients';
+import { getDbClient } from '@/clients/dbClient';
 
 import type { MovieRecord } from '../types';
 
@@ -9,7 +9,8 @@ import type { MovieRecord } from '../types';
  * @returns True if movie exists, false otherwise
  */
 export async function movieExists(name: string, year: number): Promise<boolean> {
-  const { data, error } = await supabase
+  const db = getDbClient();
+  const { data, error } = await db
     .from('movies')
     .select('id')
     .eq('name', name)
@@ -20,7 +21,7 @@ export async function movieExists(name: string, year: number): Promise<boolean> 
     throw new Error(`Error checking movie existence: ${error.message}`);
   }
 
-  return data && data.length > 0;
+  return data !== null && data.length > 0;
 }
 
 /**
@@ -61,10 +62,11 @@ export async function filterExistingMovies(movieRecords: MovieRecord[]): Promise
 
 /**
  * Clear all movies from the database (use with caution!)
- * @returns Number of deleted records
+ * @returns Number of movies remaining after deletion (expected to be 0)
  */
 export async function clearAllMovies(): Promise<number> {
-  const { error } = await supabase.from('movies').delete().neq('id', 0); // Delete all records
+  const db = getDbClient();
+  const { error } = await db.from('movies').delete().neq('id', 0); // Delete all records
 
   if (error) {
     throw new Error(`Error clearing movies: ${error.message}`);
@@ -80,13 +82,12 @@ export async function clearAllMovies(): Promise<number> {
  * @returns Number of movies in database
  */
 export async function getMovieCount(): Promise<number> {
-  const { count, error } = await supabase
-    .from('movies')
-    .select('id', { count: 'exact', head: true });
+  const db = getDbClient();
+  const result = await db.from('movies').select('id', { count: 'exact', head: true });
 
-  if (error) {
-    throw new Error(`Error getting movie count: ${error.message}`);
+  if (result.error) {
+    throw new Error(`Error getting movie count: ${result.error.message}`);
   }
 
-  return count || 0;
+  return result.count || 0;
 }

@@ -18,6 +18,7 @@
     "populate-db": "tsx scripts/populate-database.ts",
     "prepare": "husky",
     "start": "next start",
+    "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
     "test:server": "vitest --project=server",
@@ -26,17 +27,18 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.53.0",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.12.2",
     "canvas-confetti": "^1.9.3",
     "langchain": "^0.3.30",
-    "next": "15.4.5",
+    "next": "15.4.10",
     "next-themes": "^0.4.6",
     "openai": "^5.11.0",
+    "pg": "^8.20.0",
     "react": "^19.1.1",
     "react-canvas-confetti": "^2.0.7",
     "react-dom": "^19.1.1",
+    "serve": "^14.2.6",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -49,6 +51,7 @@
     "@storybook/nextjs-vite": "^9.1.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/browser": "^3.2.4",

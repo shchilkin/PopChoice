@@ -1,4 +1,4 @@
-import { supabase } from '@/clients/supabaseClient';
+import { getDbClient } from '@/clients/dbClient';
 import { convertTextToMovieObjects, parseMovieNameAndYear } from '@/utils/data';
 
 import { filterExistingMovies, getMovieCount } from './validation';
@@ -6,11 +6,11 @@ import { filterExistingMovies, getMovieCount } from './validation';
 import type { ChunkWithEmbedding, MovieDocument, MovieRecord } from '../types';
 
 /**
- * Insert movies into Supabase movies table
+ * Insert movies into the database
  * @param chunksWithEmbeddings - Array of chunks with embeddings
  * @returns Results of the insertion
  */
-export async function insertMoviesIntoSupabase(
+export async function insertMovies(
   chunksWithEmbeddings: ChunkWithEmbedding<MovieDocument>[],
 ): Promise<{ success: number; errors: Array<{ index: number; error: string }> }> {
   const movieRecords: MovieRecord[] = [];
@@ -53,12 +53,13 @@ export async function insertMoviesIntoSupabase(
     }
   }
 
-  // Insert valid records into Supabase
+  // Insert valid records into database
   let successCount = 0;
+  const db = getDbClient();
 
   if (movieRecords.length > 0) {
     try {
-      const { data, error } = await supabase.from('movies').insert(movieRecords).select('id');
+      const { data, error } = await db.from('movies').insert(movieRecords).select('id');
 
       if (error) {
         throw error;
@@ -69,7 +70,7 @@ export async function insertMoviesIntoSupabase(
       // If bulk insert fails, try individual inserts to isolate problematic records
       for (let i = 0; i < movieRecords.length; i++) {
         try {
-          const { error } = await supabase.from('movies').insert([movieRecords[i]]);
+          const { error } = await db.from('movies').insert([movieRecords[i]]);
 
           if (error) {
             throw error;
@@ -111,7 +112,7 @@ export async function batchInsertMovies(
   let totalSuccess = 0;
   const allErrors: Array<{ index: number; error: string }> = [];
 
-  console.log(`\n📝 Inserting ${chunksWithEmbeddings.length} movies into Supabase...`);
+  console.log(`\n📝 Inserting ${chunksWithEmbeddings.length} movies into database...`);
 
   // Process in batches
   for (let i = 0; i < chunksWithEmbeddings.length; i += batchSize) {
@@ -122,7 +123,7 @@ export async function batchInsertMovies(
     console.log(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} movies)`);
 
     try {
-      const result = await insertMoviesIntoSupabase(batch);
+      const result = await insertMovies(batch);
 
       totalSuccess += result.success;
 

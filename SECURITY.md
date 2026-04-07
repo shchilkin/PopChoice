@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the security measures and vulnerability management for the PopChoice application. PopChoice is a Next.js movie recommendation app that integrates with OpenAI, Supabase, and TMDB APIs.
+This document outlines the security measures and vulnerability management for the PopChoice application. PopChoice is a Next.js movie recommendation app that integrates with OpenAI, PostgreSQL, and TMDB APIs.
 
 ## Security Checklist
 
@@ -72,7 +72,7 @@ This document outlines the security measures and vulnerability management for th
   - [ ] Regular security audits
 
 - [ ] **Database Security**
-  - [ ] Implement proper Supabase RLS (Row Level Security) policies
+  - [ ] Implement proper PostgreSQL row-level security policies if needed
   - [ ] Regular database security reviews
   - [ ] Implement data encryption at rest
   - [ ] Add database query monitoring
@@ -115,8 +115,7 @@ This document outlines the security measures and vulnerability management for th
 Ensure these environment variables are properly secured:
 
 - `OPENAI_API_KEY` - OpenAI API access
-- `SUPABASE_URL` - Supabase database URL
-- `SUPABASE_API_KEY` - Supabase API key
+- `DATABASE_URL` - PostgreSQL database connection string
 - `TMDB_API_KEY` - The Movie Database API key
 
 ## Reporting Security Vulnerabilities
