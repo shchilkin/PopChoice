@@ -28,7 +28,11 @@ Each concern (lint, type-check, tests, build) runs as an independent job. A fail
 
 ### Hard Failure on Playwright Install
 
-The `storybook-tests` job runs `npm run pretest:storybook` without a fallback — if Playwright browser installation fails, the job fails visibly rather than silently skipping the tests.
+The `storybook-tests` job runs `npx playwright install-deps` and `npx playwright install` without a fallback — if Playwright installation fails, the job fails visibly rather than silently skipping the tests.
+
+### Playwright Browser Caching
+
+The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-playwright` using `actions/cache@v4`, keyed on the OS and `package-lock.json` hash. On a cache hit, both the browser download and system dependency installation steps are skipped entirely, reducing the job runtime significantly on warm runs.
 
 ### Code Coverage
 
@@ -44,7 +48,7 @@ The `movie-sync-ci` job installs dependencies and runs `tsc` (`npm run build`) i
 
 ### Dependency Review
 
-The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability.
+The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability. This job requires `pull-requests: write` (in addition to the standard `contents: read`) so that the action can post vulnerability details as a comment on the PR.
 
 ## Workflow Trigger
 
@@ -75,6 +79,10 @@ npm run type-check
 
 # Server tests with coverage
 npx vitest --project=server --run --coverage
+
+# Storybook tests (requires Playwright browsers)
+npm run pretest:storybook
+npm run test:storybook
 
 # Verify build
 NEXT_FONT_GOOGLE_DISABLE=1 npm run build
