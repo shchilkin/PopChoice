@@ -18,6 +18,7 @@
     "populate-db": "tsx scripts/populate-database.ts",
     "prepare": "husky",
     "start": "next start",
+    "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
     "test:server": "vitest --project=server",
@@ -37,6 +38,7 @@
     "react": "^19.1.1",
     "react-canvas-confetti": "^2.0.7",
     "react-dom": "^19.1.1",
+    "serve": "^14.2.6",
     "zod": "^3.25.76"
   },
   "devDependencies": {
