@@ -21,14 +21,14 @@ function parseMovieChunks(filePath: string): RawMovieChunk[] {
   const content = readFileSync(filePath, 'utf-8');
 
   // Split by empty lines to separate movie entries
-  const chunks = content.split('\n\n');
+  const chunks = content.split(/(?:\r?\n){2,}/);
 
   const rawMovieChunks: RawMovieChunk[] = [];
 
   chunks.forEach((chunk, i) => {
     if (!chunk.trim()) return;
 
-    const lines = chunk.trim().split('\n');
+    const lines = chunk.trim().split(/\r?\n/);
 
     // Check if first line contains movie title with year (format: "Title: YYYY | ...")
     if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
