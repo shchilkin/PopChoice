@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "node-cron": "^3.0.3",
-    "openai": "^5.11.0",
+    "openai": "^6.33.0",
     "pg": "^8.20.0"
   },
   "devDependencies": {
