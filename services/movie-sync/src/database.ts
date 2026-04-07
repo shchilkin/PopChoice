@@ -59,8 +59,24 @@ async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>>
 
   for (let i = 0; i < movies.length; i += batchSize) {
     const batch = movies.slice(i, i + batchSize);
-    const names = batch.map((movie) => movie.name);
-    const years = batch.map((movie) => movie.year);
+
+    // Deduplicate (name, year) pairs within the batch before querying.
+    const seenBatchKeys = new Set<string>();
+    const uniqueBatch: MovieRecord[] = [];
+
+    for (const movie of batch) {
+      const movieKey = getMovieKey(movie.name, movie.year);
+
+      if (seenBatchKeys.has(movieKey)) {
+        continue;
+      }
+
+      seenBatchKeys.add(movieKey);
+      uniqueBatch.push(movie);
+    }
+
+    const names = uniqueBatch.map((movie) => movie.name);
+    const years = uniqueBatch.map((movie) => movie.year);
 
     // Join with unnest to match (name, year) pairs exactly, avoiding a Cartesian product.
     const result = await getPool().query<{ name: string; year: number }>(
