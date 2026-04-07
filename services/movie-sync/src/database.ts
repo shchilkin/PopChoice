@@ -128,9 +128,9 @@ export async function filterNewMovies(movies: MovieRecord[]): Promise<number[]> 
 }
 
 /**
- * Ensure the database schema is up-to-date.
- * Creates the vector extension, movies table, and match_movies function if they do not exist.
- * Safe to call multiple times — all operations are idempotent.
+ * Ensure the initial database schema exists.
+ * Creates the vector extension, movies table, and match_movies function if they are missing.
+ * Safe to call multiple times — these bootstrap operations are idempotent.
  */
 export async function ensureSchema(): Promise<void> {
   await getPool().query('CREATE EXTENSION IF NOT EXISTS vector;');
@@ -148,6 +148,8 @@ export async function ensureSchema(): Promise<void> {
       UNIQUE(name, year)
     );
   `);
+
+  await getPool().query('DROP FUNCTION IF EXISTS match_movies(vector, float, int);');
 
   await getPool().query(`
     CREATE OR REPLACE FUNCTION match_movies (
