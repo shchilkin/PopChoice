@@ -13,8 +13,8 @@ import type { LangChainMovieDocument, MovieMetadata } from '@/utils/types';
 export const splitMovieDocument = async (pathToFile: string): Promise<LangChainMovieDocument[]> => {
   const content = await readFile(pathToFile, 'utf-8');
 
-  // Split by double newlines to separate movies
-  const movieChunks = content.split('\n\n');
+  // Split by blank lines to separate movies (CRLF-safe)
+  const movieChunks = content.split(/(?:\r?\n){2,}/);
 
   const documents: LangChainMovieDocument[] = [];
 
@@ -24,7 +24,7 @@ export const splitMovieDocument = async (pathToFile: string): Promise<LangChainM
     // Skip empty chunks
     if (!trimmedChunk) return;
 
-    const lines = trimmedChunk.split('\n');
+    const lines = trimmedChunk.split(/\r?\n/);
 
     // Check if this is a valid movie entry (starts with movie title and year)
     if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {

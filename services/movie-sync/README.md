@@ -18,14 +18,14 @@ A standalone Node.js/TypeScript cron service that syncs movies from `movies.txt`
 
 ## Environment Variables
 
-| Variable           | Required | Default        | Description                                             |
-| ------------------ | -------- | -------------- | ------------------------------------------------------- |
-| `OPENAI_API_KEY`   | Yes      | —              | OpenAI API key for embeddings                           |
-| `DATABASE_URL`     | Yes      | —              | PostgreSQL connection string                            |
-| `MOVIES_FILE_PATH` | No       | `./movies.txt` | Absolute or relative path to the movies text file       |
-| `CRON_SCHEDULE`    | No       | `0 3 * * *`    | Cron expression for scheduled mode                      |
-| `DRY_RUN`          | No       | `false`        | Set to `true` to skip embedding creation and DB inserts |
-| `LOG_LEVEL`        | No       | `info`         | Set to `debug` for verbose logging                      |
+| Variable           | Required | Default       | Description                                                                                                                                                                                                                                         |
+| ------------------ | -------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`   | Yes      | —             | OpenAI API key for embeddings                                                                                                                                                                                                                       |
+| `DATABASE_URL`     | Yes      | —             | PostgreSQL connection string                                                                                                                                                                                                                        |
+| `MOVIES_FILE_PATH` | No       | auto-detected | Path to the movies text file. Defaults to `./movies.txt` relative to the working directory, with an automatic fallback to `../../movies.txt` (repo root) when running from `services/movie-sync/`. Set this explicitly if the file lives elsewhere. |
+| `CRON_SCHEDULE`    | No       | `0 3 * * *`   | Cron expression for scheduled mode                                                                                                                                                                                                                  |
+| `DRY_RUN`          | No       | `false`       | Set to `true` to skip embedding creation and DB inserts                                                                                                                                                                                             |
+| `LOG_LEVEL`        | No       | `info`        | Set to `debug` for verbose logging                                                                                                                                                                                                                  |
 
 ## Local Development
 
