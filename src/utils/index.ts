@@ -25,7 +25,7 @@ export { createEmbeddingsForChunks, createEmbeddingsWithProgress } from './ai/em
 export {
   batchInsertMovies,
   batchInsertMoviesWithDuplicateCheck,
-  insertMoviesIntoSupabase,
+  insertMovies,
 } from './database/operations';
 
 export { filterExistingMovies, getMovieCount, movieExists } from './database/validation';

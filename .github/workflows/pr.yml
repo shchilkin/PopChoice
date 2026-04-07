@@ -9,8 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     steps:
       - name: Checkout code
@@ -53,8 +52,6 @@ jobs:
           # Skip telemetry for CI builds
           NEXT_TELEMETRY_DISABLED: 1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
 
       - name: Build status
         run: |

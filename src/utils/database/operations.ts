@@ -10,7 +10,7 @@ import type { ChunkWithEmbedding, MovieDocument, MovieRecord } from '../types';
  * @param chunksWithEmbeddings - Array of chunks with embeddings
  * @returns Results of the insertion
  */
-export async function insertMoviesIntoSupabase(
+export async function insertMovies(
   chunksWithEmbeddings: ChunkWithEmbedding<MovieDocument>[],
 ): Promise<{ success: number; errors: Array<{ index: number; error: string }> }> {
   const movieRecords: MovieRecord[] = [];
@@ -112,7 +112,7 @@ export async function batchInsertMovies(
   let totalSuccess = 0;
   const allErrors: Array<{ index: number; error: string }> = [];
 
-  console.log(`\n📝 Inserting ${chunksWithEmbeddings.length} movies into Supabase...`);
+  console.log(`\n📝 Inserting ${chunksWithEmbeddings.length} movies into database...`);
 
   // Process in batches
   for (let i = 0; i < chunksWithEmbeddings.length; i += batchSize) {
@@ -123,7 +123,7 @@ export async function batchInsertMovies(
     console.log(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} movies)`);
 
     try {
-      const result = await insertMoviesIntoSupabase(batch);
+      const result = await insertMovies(batch);
 
       totalSuccess += result.success;
 

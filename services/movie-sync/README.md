@@ -1,13 +1,13 @@
 # Movie Sync Service
 
-A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB into the PopChoice Supabase database with OpenAI embeddings.
+A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB into the PopChoice PostgreSQL database with OpenAI embeddings.
 
 ## What It Does
 
 1. **Fetches** popular/trending movies from the TMDB `/discover/movie` endpoint
-2. **De-duplicates** against movies already in the Supabase database (by name + year)
+2. **De-duplicates** against movies already in the database (by name + year)
 3. **Creates embeddings** via OpenAI (`text-embedding-3-large`) for new movies only
-4. **Inserts** new movie records into the `movies` table in Supabase
+4. **Inserts** new movie records into the `movies` table via PostgreSQL
 
 ## Modes
 
@@ -18,15 +18,14 @@ A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB
 
 ## Environment Variables
 
-| Variable           | Required | Default     | Description                                             |
-| ------------------ | -------- | ----------- | ------------------------------------------------------- |
-| `TMDB_API_KEY`     | Yes      | —           | TMDB v4 read access token (used as Bearer auth)         |
-| `OPENAI_API_KEY`   | Yes      | —           | OpenAI API key for embeddings                           |
-| `SUPABASE_URL`     | Yes      | —           | Supabase project URL                                    |
-| `SUPABASE_API_KEY` | Yes      | —           | Supabase anon or service-role key                       |
-| `CRON_SCHEDULE`    | No       | `0 3 * * *` | Cron expression for scheduled mode                      |
-| `DRY_RUN`          | No       | `false`     | Set to `true` to skip embedding creation and DB inserts |
-| `LOG_LEVEL`        | No       | `info`      | Set to `debug` for verbose logging                      |
+| Variable         | Required | Default     | Description                                             |
+| ---------------- | -------- | ----------- | ------------------------------------------------------- |
+| `TMDB_API_KEY`   | Yes      | —           | TMDB v4 read access token (used as Bearer auth)         |
+| `OPENAI_API_KEY` | Yes      | —           | OpenAI API key for embeddings                           |
+| `DATABASE_URL`   | Yes      | —           | PostgreSQL connection string                            |
+| `CRON_SCHEDULE`  | No       | `0 3 * * *` | Cron expression for scheduled mode                      |
+| `DRY_RUN`        | No       | `false`     | Set to `true` to skip embedding creation and DB inserts |
+| `LOG_LEVEL`      | No       | `info`      | Set to `debug` for verbose logging                      |
 
 > **Important:** For this service, `TMDB_API_KEY` must be your **TMDB v4 read access token** and is sent using **Bearer authentication**. This is different from `NEXT_PUBLIC_TMDB_API_KEY`, which is used elsewhere in the repo for browser/client-side **v3-style `api_key=` requests**. Do not use `NEXT_PUBLIC_TMDB_API_KEY` in place of `TMDB_API_KEY` here.
 
@@ -81,8 +80,7 @@ In the service's **Variables** tab, add:
 
 - `TMDB_API_KEY` — your TMDB v4 read access token
 - `OPENAI_API_KEY` — your OpenAI API key
-- `SUPABASE_URL` — your Supabase project URL
-- `SUPABASE_API_KEY` — your Supabase API key
+- `DATABASE_URL` — your PostgreSQL connection string
 - `CRON_SCHEDULE` — e.g., `0 3 * * *` for daily at 3 AM UTC (or leave default)
 - `DRY_RUN` — set to `true` for testing without DB writes
 

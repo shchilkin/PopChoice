@@ -2,8 +2,7 @@
  * Generic Database Client Abstraction
  *
  * Provides a provider-agnostic interface for all database operations used by PopChoice.
- * The default implementation delegates to Supabase, but can be swapped for any backend
- * (e.g., raw pg, an in-memory mock for tests, or a different cloud provider).
+ * The default implementation delegates to the PostgreSQL backend via `pgClient.ts`.
  *
  * ## Swapping the database backend
  *
@@ -25,9 +24,7 @@
  * ```
  */
 
-import { createClient } from '@supabase/supabase-js';
-
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createPgDbClient } from './pgClient';
 
 // ---------------------------------------------------------------------------
 // Query-builder types (mirror the chainable Supabase API surface used by the
@@ -94,14 +91,14 @@ export interface TableRef<T = unknown> {
 /**
  * Generic database client interface.
  *
- * Mirrors the subset of the Supabase JS client that PopChoice actually uses,
+ * Provides a provider-agnostic API for all database operations used by PopChoice,
  * making it trivial to drop in a different implementation.
  */
 export interface DbClient {
   /**
    * Whether the client is ready to execute queries.
    *
-   * The default Supabase implementation checks for the required env vars;
+   * The default pg implementation checks for the DATABASE_URL env var;
    * custom implementations can override this (e.g., always return `true`).
    */
   isConfigured: () => boolean;
@@ -117,48 +114,15 @@ export interface DbClient {
 }
 
 // ---------------------------------------------------------------------------
-// Supabase-backed default implementation
-// ---------------------------------------------------------------------------
-
-function createSupabaseDbClient(): DbClient {
-  // Lazy-load so that the module can be imported even when env vars are not
-  // set (e.g., during tests or when mock data is used).
-  let _supabase: SupabaseClient | null = null;
-
-  function getSupabase(): SupabaseClient {
-    if (!_supabase) {
-      const privateKey = process.env.SUPABASE_API_KEY;
-      const url = process.env.SUPABASE_URL;
-
-      if (!privateKey) throw new Error('Expected env var SUPABASE_API_KEY');
-      if (!url) throw new Error('Expected env var SUPABASE_URL');
-
-      _supabase = createClient(url, privateKey);
-    }
-    return _supabase;
-  }
-
-  return {
-    isConfigured: () => Boolean(process.env.SUPABASE_API_KEY && process.env.SUPABASE_URL),
-    from: <T = unknown>(table: string) => getSupabase().from(table) as unknown as TableRef<T>,
-    rpc: (fn, params) =>
-      getSupabase().rpc(fn, params) as PromiseLike<{
-        data: unknown[] | null;
-        error: { message: string } | null;
-      }>,
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Singleton with setter (dependency injection)
 // ---------------------------------------------------------------------------
 
-let _client: DbClient = createSupabaseDbClient();
+let _client: DbClient = createPgDbClient();
 
 /**
  * Get the current database client instance.
  *
- * By default this returns the Supabase-backed client. Call {@link setDbClient}
+ * By default this returns the pg-backed client. Call {@link setDbClient}
  * to replace it (e.g., in tests or when migrating to a different backend).
  */
 export function getDbClient(): DbClient {
@@ -177,10 +141,10 @@ export function setDbClient(client: DbClient): void {
 }
 
 /**
- * Reset the database client back to the default Supabase implementation.
+ * Reset the database client back to the default pg implementation.
  *
  * Primarily useful in test teardown.
  */
 export function resetDbClient(): void {
-  _client = createSupabaseDbClient();
+  _client = createPgDbClient();
 }
