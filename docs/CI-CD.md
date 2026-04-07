@@ -30,6 +30,10 @@ Each concern (lint, type-check, tests, build) runs as an independent job. A fail
 
 The `storybook-tests` job runs `npm run pretest:storybook` without a fallback — if Playwright browser installation fails, the job fails visibly rather than silently skipping the tests.
 
+### Playwright Browser Caching
+
+The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-playwright` using `actions/cache@v4`, keyed on the OS and `package-lock.json` hash. On a cache hit the browser install step is skipped entirely, reducing the job runtime from ~17 minutes to under a minute on warm runs.
+
 ### Code Coverage
 
 Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (HTML, JSON, LCOV) are uploaded as a GitHub Actions artifact named `coverage-report` and retained for 30 days. Coverage is configured in `vitest.config.ts`.
@@ -44,7 +48,7 @@ The `movie-sync-ci` job installs dependencies and runs `tsc` (`npm run build`) i
 
 ### Dependency Review
 
-The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability.
+The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability. This job requires `pull-requests: write` (in addition to the standard `contents: read`) so that the action can post vulnerability details as a comment on the PR.
 
 ## Workflow Trigger
 
@@ -75,6 +79,10 @@ npm run type-check
 
 # Server tests with coverage
 npx vitest --project=server --run --coverage
+
+# Storybook tests (requires Playwright browsers)
+npm run pretest:storybook
+npm run test:storybook
 
 # Verify build
 NEXT_FONT_GOOGLE_DISABLE=1 npm run build
