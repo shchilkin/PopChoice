@@ -30,22 +30,40 @@ function getSupabase(): SupabaseClient {
   return supabase;
 }
 
-/**
- * Check if a movie already exists in the database by name and year.
- */
-export async function movieExists(name: string, year: number): Promise<boolean> {
-  const { data, error } = await getSupabase()
-    .from('movies')
-    .select('id')
-    .eq('name', name)
-    .eq('year', year)
-    .limit(1);
+function getMovieKey(name: string, year: number): string {
+  return `${name}\u0000${year}`;
+}
 
-  if (error) {
-    throw new Error(`Error checking movie existence: ${error.message}`);
+async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>> {
+  const existingKeys = new Set<string>();
+
+  if (movies.length === 0) {
+    return existingKeys;
   }
 
-  return data !== null && data.length > 0;
+  const batchSize = 100;
+
+  for (let i = 0; i < movies.length; i += batchSize) {
+    const batch = movies.slice(i, i + batchSize);
+    const names = [...new Set(batch.map((movie) => movie.name))];
+    const years = [...new Set(batch.map((movie) => movie.year))];
+
+    const { data, error } = await getSupabase()
+      .from('movies')
+      .select('name, year')
+      .in('name', names)
+      .in('year', years);
+
+    if (error) {
+      throw new Error(`Error checking movie existence: ${error.message}`);
+    }
+
+    for (const movie of data ?? []) {
+      existingKeys.add(getMovieKey(movie.name, movie.year));
+    }
+  }
+
+  return existingKeys;
 }
 
 /**
@@ -53,29 +71,31 @@ export async function movieExists(name: string, year: number): Promise<boolean> 
  * Returns indices of new (non-duplicate) movies.
  */
 export async function filterNewMovies(movies: MovieRecord[]): Promise<number[]> {
-  const newIndices: number[] = [];
+  try {
+    const existingKeys = await getExistingMovieKeys(movies);
+    const newIndices: number[] = [];
 
-  for (let i = 0; i < movies.length; i++) {
-    const movie = movies[i];
-    try {
-      const exists = await movieExists(movie.name, movie.year);
+    for (let i = 0; i < movies.length; i++) {
+      const movie = movies[i];
+      const exists = existingKeys.has(getMovieKey(movie.name, movie.year));
+
       if (!exists) {
         newIndices.push(i);
       } else {
         logger.debug('Skipping duplicate', { name: movie.name, year: movie.year });
       }
-    } catch (err) {
-      // If check fails, assume new (will be caught by unique constraint)
-      logger.warn('Duplicate check failed, assuming new movie', {
-        name: movie.name,
-        year: movie.year,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      newIndices.push(i);
     }
-  }
 
-  return newIndices;
+    return newIndices;
+  } catch (err) {
+    // If batch check fails, assume all are new (will be caught by unique constraint)
+    logger.warn('Duplicate check failed, assuming all movies are new', {
+      error: err instanceof Error ? err.message : String(err),
+      movieCount: movies.length,
+    });
+
+    return movies.map((_, index) => index);
+  }
 }
 
 /**
@@ -133,11 +153,12 @@ export async function insertMovies(
       // Fallback: upsert one by one to isolate failures
       for (const movie of batch) {
         try {
-          const { error } = await getSupabase()
+          const { data, error } = await getSupabase()
             .from('movies')
-            .upsert([movie], { onConflict: 'name,year', ignoreDuplicates: true });
+            .upsert([movie], { onConflict: 'name,year', ignoreDuplicates: true })
+            .select('id');
           if (error) throw error;
-          success++;
+          success += data?.length || 0;
         } catch (singleErr) {
           errors++;
           logger.warn('Failed to upsert movie', {

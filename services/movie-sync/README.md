@@ -28,6 +28,8 @@ A standalone Node.js/TypeScript cron service that syncs popular movies from TMDB
 | `DRY_RUN`          | No       | `false`     | Set to `true` to skip embedding creation and DB inserts |
 | `LOG_LEVEL`        | No       | `info`      | Set to `debug` for verbose logging                      |
 
+> **Important:** For this service, `TMDB_API_KEY` must be your **TMDB v4 read access token** and is sent using **Bearer authentication**. This is different from `NEXT_PUBLIC_TMDB_API_KEY`, which is used elsewhere in the repo for browser/client-side **v3-style `api_key=` requests**. Do not use `NEXT_PUBLIC_TMDB_API_KEY` in place of `TMDB_API_KEY` here.
+
 ## Local Development
 
 ```bash
