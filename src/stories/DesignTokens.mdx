@@ -1,0 +1,141 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Design System/Design Tokens" />
+
+# Design Tokens
+
+PopChoice uses a token-based design system built on CSS custom properties. All tokens are defined in
+`src/app/globals.css` and adapt automatically to the active theme (light/dark).
+
+---
+
+## Color Tokens
+
+Color tokens are semantic CSS variables that describe the _role_ of a color rather than its literal
+value. This allows all components to respond correctly to theme changes without any per-component
+logic.
+
+### Base
+
+| Token            | Role                         |
+| ---------------- | ---------------------------- |
+| `--background`   | Page and layout background   |
+| `--foreground`   | Primary body text            |
+
+### Card
+
+| Token                | Role                    |
+| -------------------- | ----------------------- |
+| `--card`             | Card surface background |
+| `--card-foreground`  | Text rendered on cards  |
+
+### Primary
+
+| Token                   | Role                                    |
+| ----------------------- | --------------------------------------- |
+| `--primary`             | Primary interactive color (e.g. buttons, links) |
+| `--primary-foreground`  | Text rendered on primary surfaces       |
+
+### Secondary
+
+| Token                     | Role                          |
+| ------------------------- | ----------------------------- |
+| `--secondary`             | Subtle surface / chip backgrounds |
+| `--secondary-foreground`  | Text on secondary surfaces    |
+
+### Muted
+
+| Token                  | Role                                |
+| ---------------------- | ----------------------------------- |
+| `--muted`              | De-emphasized surface               |
+| `--muted-foreground`   | Placeholder / meta / caption text   |
+
+### Accent
+
+| Token                  | Role                                     |
+| ---------------------- | ---------------------------------------- |
+| `--accent`             | Brand accent – used for CTAs and highlights |
+| `--accent-foreground`  | Text rendered on accent surfaces         |
+
+### Utility
+
+| Token      | Role                        |
+| ---------- | --------------------------- |
+| `--border` | Default border color        |
+| `--input`  | Input field background      |
+| `--ring`   | Focus ring                  |
+| `--alert`  | Warning / alert highlights  |
+
+### Age Rating Tokens
+
+Age rating chips use a dedicated set of semantic tokens with three variants per category:
+`-bg` (background), `-text` (foreground), and `-border` (border).
+
+| Category | Tokens                                                                 |
+| -------- | ---------------------------------------------------------------------- |
+| Safe (G) | `--rating-safe-bg`, `--rating-safe-text`, `--rating-safe-border`       |
+| Caution (PG) | `--rating-caution-bg`, `--rating-caution-text`, `--rating-caution-border` |
+| Teen (PG-13) | `--rating-teen-bg`, `--rating-teen-text`, `--rating-teen-border`   |
+| Mature (R) | `--rating-mature-bg`, `--rating-mature-text`, `--rating-mature-border` |
+| Unknown (NR) | `--rating-unknown-bg`, `--rating-unknown-text`, `--rating-unknown-border` |
+
+For a visual preview of all color tokens see the [Colors story](?path=/story/design-system-colors--all-colors).
+
+---
+
+## Typography Tokens
+
+Typography tokens define the font families and a consistent type scale.
+
+### Font Families
+
+| Token          | Value                       | Usage              |
+| -------------- | --------------------------- | ------------------ |
+| `--font-sans`  | Geist Sans (Google Fonts)   | Body text, UI      |
+| `--font-mono`  | Geist Mono (Google Fonts)   | Code, tech labels  |
+
+The `body` element uses `var(--font-sans)` as its `font-family`.
+
+### Font Size Scale
+
+| Token               | Value      | Pixels  | Usage                   |
+| ------------------- | ---------- | ------- | ----------------------- |
+| `--font-size-xs`    | `0.75rem`  | 12 px   | Captions, badges        |
+| `--font-size-sm`    | `0.875rem` | 14 px   | Helper text, secondary  |
+| `--font-size-base`  | `1rem`     | 16 px   | Body text (default)     |
+| `--font-size-lg`    | `1.125rem` | 18 px   | Slightly larger body    |
+| `--font-size-xl`    | `1.25rem`  | 20 px   | Sub-headings            |
+| `--font-size-2xl`   | `1.5rem`   | 24 px   | Section headings        |
+| `--font-size-3xl`   | `1.875rem` | 30 px   | Page headings           |
+| `--font-size-4xl`   | `2.25rem`  | 36 px   | Display headings        |
+| `--font-size-5xl`   | `3rem`     | 48 px   | Hero / brand headings   |
+
+---
+
+## Spacing Tokens
+
+Spacing tokens provide a consistent layout scale. They follow a base-4 / base-8 grid.
+
+| Token           | Value      | Pixels | Common Usage           |
+| --------------- | ---------- | ------ | ---------------------- |
+| `--spacing-1`   | `0.25rem`  | 4 px   | Micro gaps             |
+| `--spacing-2`   | `0.5rem`   | 8 px   | Tight gaps, icon pads  |
+| `--spacing-3`   | `0.75rem`  | 12 px  | Compact padding        |
+| `--spacing-4`   | `1rem`     | 16 px  | Standard padding       |
+| `--spacing-6`   | `1.5rem`   | 24 px  | Section padding        |
+| `--spacing-8`   | `2rem`     | 32 px  | Large gaps             |
+| `--spacing-12`  | `3rem`     | 48 px  | Section dividers       |
+| `--spacing-16`  | `4rem`     | 64 px  | Hero spacing           |
+
+---
+
+## Best Practices
+
+- **Always use tokens** — avoid hardcoded color, font-size, or spacing values in components or
+  styles. Reference tokens via `var(--token-name)` or the equivalent Tailwind utility class.
+- **Respect semantic naming** — use `--accent` for interactive CTAs, `--muted-foreground` for
+  helper/meta text, etc. Don't reuse a token for an unintended role.
+- **Test in both themes** — switch to dark mode in the Storybook toolbar to confirm that your
+  component looks correct in both themes.
+- **Extend via tokens** — if you need a new color, add it as a CSS custom property in
+  `globals.css` (for both `:root` and `.dark`) and document it in this file.
