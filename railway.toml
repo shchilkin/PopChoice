@@ -1,0 +1,5 @@
+[build]
+buildCommand = "npm install && npm run build-storybook"
+
+[deploy]
+startCommand = "npm run start:storybook"
