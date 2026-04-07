@@ -9,8 +9,8 @@ import { readFileSync } from 'fs';
 export function getMovieStats(filePath: string): { movieCount: number; maxChunkSize: number } {
   const content = readFileSync(filePath, 'utf-8');
 
-  // Split by empty lines to separate movie entries
-  const chunks = content.split('\n\n');
+  // Split by empty lines to separate movie entries (CRLF-safe)
+  const chunks = content.split(/(?:\r?\n){2,}/);
 
   let movieCount = 0;
   let maxChunkSize = 0;
@@ -18,10 +18,10 @@ export function getMovieStats(filePath: string): { movieCount: number; maxChunkS
   chunks.forEach((chunk) => {
     if (!chunk.trim()) return;
 
-    const lines = chunk.trim().split('\n');
+    const lines = chunk.trim().split(/\r?\n/);
 
     // Check if first line contains movie title with year (format: "Title: YYYY | ...")
-    if (lines.length > 0 && /^[A-Za-z].*: \d{4} \|/.test(lines[0])) {
+    if (lines.length > 0 && /^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
       movieCount++;
       const chunkSize = chunk.length;
       if (chunkSize > maxChunkSize) {

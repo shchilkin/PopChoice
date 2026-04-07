@@ -160,7 +160,7 @@ Another random line
 Not a movie.
 
 123: 2020 | R | 1h | 5.0 rating
-This starts with numbers, should be ignored.
+This starts with numbers, should now be counted.
 
 Valid Movie: 2023 | PG | 2h | 8.0 rating
 This should be counted.`;
@@ -168,9 +168,9 @@ This should be counted.`;
     const testFile = await createTestMovieFile(movieData);
     const result = getMovieStats(testFile);
 
-    // Should count: The Matrix, Inception, Valid Movie (3 total)
-    // Should ignore: Random text, Another random line, 123: 2020 (starts with numbers)
-    expect(result.movieCount).toBe(3);
+    // Should count: The Matrix, Inception, 123, Valid Movie (4 total)
+    // Should ignore: Random text, Another random line
+    expect(result.movieCount).toBe(4);
     expect(result.maxChunkSize).toBeGreaterThan(0);
   });
 

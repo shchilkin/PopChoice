@@ -305,9 +305,12 @@ Valid movie entry.`;
     expect(metadata.source.length).toBeGreaterThan(0);
   });
 
-  it('should skip movies starting with numbers (due to regex constraint)', async () => {
-    const movieData = `A Space Odyssey 2001: 1968 | G | Sci-Fi
-After discovering a mysterious artifact buried beneath the Lunar surface.
+  it('should parse movies with numeric titles', async () => {
+    const movieData = `2001: A Space Odyssey: 1968 | G | Sci-Fi
+A mysterious monolith guides humanity from apes to astronauts.
+
+12 Angry Men: 1957 | NR | Crime, Drama
+A jury holdout attempts to prevent a miscarriage of justice.
 
 Twelve Angry Men: 1957 | NR | Crime, Drama
 A jury holdout attempts to prevent a miscarriage of justice.`;
@@ -316,9 +319,10 @@ A jury holdout attempts to prevent a miscarriage of justice.`;
 
     const result = await splitMovieDocument(testFilePath);
 
-    expect(result).toHaveLength(2);
-    expect(result[0].metadata.movieName).toBe('A Space Odyssey 2001');
-    expect(result[1].metadata.movieName).toBe('Twelve Angry Men');
+    expect(result).toHaveLength(3);
+    expect(result[0].metadata.movieName).toBe('2001: A Space Odyssey');
+    expect(result[1].metadata.movieName).toBe('12 Angry Men');
+    expect(result[2].metadata.movieName).toBe('Twelve Angry Men');
   });
 
   it('should handle edge case with regex pattern', async () => {
