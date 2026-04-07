@@ -49,7 +49,10 @@ export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>
     if (!trimmed) continue;
 
     const lines = trimmed.split(/\r?\n/);
-    if (lines.length < 2) continue;
+    if (lines.length < 2) {
+      skipped++;
+      continue;
+    }
 
     // Validate header: must start with a letter or digit and contain ": YYYY |"
     if (!/^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
@@ -84,9 +87,9 @@ export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>
       const score = parseFloat(scoreStr.replace(/rating/i, '').trim());
       const description = lines.slice(1).join(' ').trim();
 
-      if (duration === 0) {
+      if (duration <= 0) {
         skipped++;
-        logger.warn('Skipping entry with unparseable duration', {
+        logger.warn('Skipping entry with non-positive duration', {
           firstLine: lines[0],
           durationStr,
         });
