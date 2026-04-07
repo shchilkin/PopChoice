@@ -17,6 +17,7 @@
 import cron from 'node-cron';
 
 import { loadConfig } from './config.js';
+import { closeDatabase, initDatabase } from './database.js';
 import { logger } from './logger.js';
 import { runSync } from './sync.js';
 
@@ -38,6 +39,9 @@ async function guardedSync(config: ReturnType<typeof loadConfig>, label: string)
 async function main(): Promise<void> {
   const config = loadConfig();
 
+  // Initialize the database pool once at startup (idempotent on repeat calls).
+  initDatabase(config.databaseUrl);
+
   logger.info('Movie sync service starting', {
     cronSchedule: config.cronSchedule,
     dryRun: config.dryRun,
@@ -54,6 +58,8 @@ async function main(): Promise<void> {
         error: err instanceof Error ? err.message : String(err),
       });
       process.exit(1);
+    } finally {
+      await closeDatabase();
     }
     return;
   }

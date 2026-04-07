@@ -22,7 +22,19 @@ export interface MovieRecord {
 let pool: InstanceType<typeof Pool> | null = null;
 
 export function initDatabase(databaseUrl: string): void {
-  pool = new Pool({ connectionString: databaseUrl });
+  if (pool) {
+    return;
+  }
+  pool = new Pool({ connectionString: databaseUrl, allowExitOnIdle: true });
+}
+
+export async function closeDatabase(): Promise<void> {
+  if (!pool) {
+    return;
+  }
+  const currentPool = pool;
+  pool = null;
+  await currentPool.end();
 }
 
 function getPool(): InstanceType<typeof Pool> {
@@ -108,8 +120,9 @@ export async function getMovieCount(): Promise<number> {
 }
 
 /**
- * Upsert movie records into the database in batches.
- * Uses ON CONFLICT to handle duplicate (name, year) entries idempotently.
+ * Insert movie records into the database in batches.
+ * Uses ON CONFLICT DO NOTHING to handle duplicate (name, year) entries idempotently
+ * by skipping rows that already exist instead of updating them.
  */
 export async function insertMovies(
   movies: MovieRecord[],
@@ -153,13 +166,13 @@ export async function insertMovies(
       const inserted = result.rowCount ?? 0;
       success += inserted;
 
-      logger.info('Batch upserted', {
+      logger.info('Batch inserted', {
         batch: batchNum,
         inserted,
         total: movies.length,
       });
     } catch (batchErr) {
-      logger.warn('Batch upsert failed, falling back to individual upserts', {
+      logger.warn('Batch insert failed, falling back to individual inserts', {
         batch: batchNum,
         error: batchErr instanceof Error ? batchErr.message : String(batchErr),
       });
@@ -184,7 +197,7 @@ export async function insertMovies(
           success += result.rowCount ?? 0;
         } catch (singleErr) {
           errors++;
-          logger.warn('Failed to upsert movie', {
+          logger.warn('Failed to insert movie', {
             name: movie.name,
             year: movie.year,
             error: singleErr instanceof Error ? singleErr.message : String(singleErr),
