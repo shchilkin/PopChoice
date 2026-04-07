@@ -11,47 +11,112 @@ updates:
       day: 'monday'
       time: '09:00'
       timezone: 'UTC'
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     assignees:
       - 'shchilkin'
     labels:
       - 'dependencies'
       - 'automated'
       - 'npm'
-    # Allow only patch and minor updates for production dependencies
-    # Major updates require manual review (handled by groups configuration below)
-    # Enable automatic security updates (this is enabled by default but made explicit)
     allow:
       - dependency-type: 'all'
-    # Group related updates together to reduce PR noise
     groups:
-      production-dependencies:
+      framework:
+        applies-to: version-updates
         patterns:
-          - 'react*'
-          - 'next*'
-          - '@supabase/*'
-          - 'openai'
-          - 'langchain'
-          - 'axios'
-          - 'zod'
+          - 'next'
+          - 'next-themes'
+          - 'react'
+          - 'react-dom'
+        dependency-type: 'production'
         update-types:
           - 'minor'
           - 'patch'
-      development-dependencies:
+      ai:
+        applies-to: version-updates
         patterns:
-          - '@types/*'
-          - 'eslint*'
-          - 'prettier'
-          - '@storybook/*'
-          - 'vitest*'
-          - 'playwright'
+          - 'openai'
+          - 'langchain'
+          - '@langchain/*'
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      database:
+        applies-to: version-updates
+        patterns:
+          - 'pg'
+          - '@supabase/*'
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      ui-utilities:
+        applies-to: version-updates
+        patterns:
+          - 'canvas-confetti'
+          - 'react-canvas-confetti'
+          - 'axios'
+          - 'zod'
+          - 'serve'
+          - '@vercel/*'
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      typescript-types:
+        applies-to: version-updates
+        patterns:
           - 'typescript'
-          - 'husky'
+          - '@types/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      linting-formatting:
+        applies-to: version-updates
+        patterns:
+          - 'eslint*'
+          - '@eslint/*'
+          - 'prettier'
+          - 'sort-package-json'
           - 'lint-staged'
         update-types:
           - 'minor'
           - 'patch'
-    # Custom commit message format
+      testing:
+        applies-to: version-updates
+        patterns:
+          - 'vitest'
+          - '@vitest/*'
+          - 'playwright'
+          - 'msw'
+        update-types:
+          - 'minor'
+          - 'patch'
+      storybook:
+        applies-to: version-updates
+        patterns:
+          - 'storybook'
+          - '@storybook/*'
+          - '@chromatic-com/*'
+          - 'msw-storybook-addon'
+        update-types:
+          - 'minor'
+          - 'patch'
+      build-tools:
+        applies-to: version-updates
+        patterns:
+          - 'tailwindcss'
+          - '@tailwindcss/*'
+          - 'husky'
+          - 'tsx'
+        update-types:
+          - 'minor'
+          - 'patch'
+      npm-security-patches:
+        applies-to: security-updates
+        patterns:
+          - '*'
     commit-message:
       prefix: 'deps'
       prefix-development: 'deps-dev'
@@ -75,12 +140,26 @@ updates:
     allow:
       - dependency-type: 'all'
     groups:
-      movie-sync-dependencies:
+      movie-sync-production:
+        applies-to: version-updates
+        dependency-type: 'production'
         patterns:
           - '*'
         update-types:
           - 'minor'
           - 'patch'
+      movie-sync-development:
+        applies-to: version-updates
+        dependency-type: 'development'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      movie-sync-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
     commit-message:
       prefix: 'deps'
       prefix-development: 'deps-dev'
@@ -94,13 +173,25 @@ updates:
       day: 'monday'
       time: '09:00'
       timezone: 'UTC'
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 5
     assignees:
       - 'shchilkin'
     labels:
       - 'dependencies'
       - 'automated'
       - 'github-actions'
+    groups:
+      github-actions:
+        applies-to: version-updates
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      github-actions-security:
+        applies-to: security-updates
+        patterns:
+          - '*'
     commit-message:
       prefix: 'ci'
       include: 'scope'
