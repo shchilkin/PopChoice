@@ -386,7 +386,7 @@ export async function POST(req: NextRequest) {
           }
         : undefined,
       similarMovies: moviesWithDescriptions.map((movie) => ({
-        id: movie.id,
+        id: Number(movie.id),
         name: movie.name,
         year: movie.year,
         similarity: movie.similarity,
