@@ -55,6 +55,7 @@ updates:
         applies-to: version-updates
         patterns:
           - 'canvas-confetti'
+          - 'react-canvas-confetti'
           - 'axios'
           - 'zod'
           - 'serve'
@@ -98,6 +99,7 @@ updates:
           - 'storybook'
           - '@storybook/*'
           - '@chromatic-com/*'
+          - 'msw-storybook-addon'
         update-types:
           - 'minor'
           - 'patch'
