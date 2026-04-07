@@ -47,11 +47,15 @@ async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>>
 
   for (let i = 0; i < movies.length; i += batchSize) {
     const batch = movies.slice(i, i + batchSize);
-    const names = [...new Set(batch.map((movie) => movie.name))];
-    const years = [...new Set(batch.map((movie) => movie.year))];
+    const names = batch.map((movie) => movie.name);
+    const years = batch.map((movie) => movie.year);
 
+    // Join with unnest to match (name, year) pairs exactly, avoiding a Cartesian product.
     const result = await getPool().query<{ name: string; year: number }>(
-      'SELECT name, year FROM movies WHERE name = ANY($1) AND year = ANY($2)',
+      `SELECT m.name, m.year
+       FROM movies m
+       INNER JOIN unnest($1::text[], $2::int[]) AS t(n, y)
+         ON m.name = t.n AND m.year = t.y`,
       [names, years],
     );
 
@@ -116,46 +120,55 @@ export async function insertMovies(
 
   for (let i = 0; i < movies.length; i += batchSize) {
     const batch = movies.slice(i, i + batchSize);
+    const batchNum = Math.floor(i / batchSize) + 1;
 
     try {
-      let inserted = 0;
-      for (const movie of batch) {
-        const result = await getPool().query<{ id: number }>(
-          `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (name, year) DO NOTHING
-           RETURNING id`,
-          [
-            movie.name,
-            movie.year,
-            movie.age_rating,
-            movie.description,
-            movie.duration,
-            movie.score_rating,
-            JSON.stringify(movie.embedding),
-          ],
-        );
-        inserted += result.rowCount ?? 0;
-      }
+      // Use unnest() to insert the whole batch in a single round-trip.
+      // Embeddings are passed as JSON strings and cast to vector by PostgreSQL.
+      const result = await getPool().query<{ id: number }>(
+        `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
+         SELECT n, y, ar, d, du, sr, e::vector
+         FROM unnest(
+           $1::text[],
+           $2::int[],
+           $3::text[],
+           $4::text[],
+           $5::int[],
+           $6::float8[],
+           $7::text[]
+         ) AS t(n, y, ar, d, du, sr, e)
+         ON CONFLICT (name, year) DO NOTHING
+         RETURNING id`,
+        [
+          batch.map((m) => m.name),
+          batch.map((m) => m.year),
+          batch.map((m) => m.age_rating),
+          batch.map((m) => m.description),
+          batch.map((m) => m.duration),
+          batch.map((m) => m.score_rating),
+          batch.map((m) => JSON.stringify(m.embedding)),
+        ],
+      );
 
+      const inserted = result.rowCount ?? 0;
       success += inserted;
 
       logger.info('Batch upserted', {
-        batch: Math.floor(i / batchSize) + 1,
+        batch: batchNum,
         inserted,
         total: movies.length,
       });
     } catch (batchErr) {
       logger.warn('Batch upsert failed, falling back to individual upserts', {
-        batch: Math.floor(i / batchSize) + 1,
+        batch: batchNum,
         error: batchErr instanceof Error ? batchErr.message : String(batchErr),
       });
-      // Fallback: upsert one by one to isolate failures
+      // Fallback: insert one by one to isolate failures
       for (const movie of batch) {
         try {
           const result = await getPool().query<{ id: number }>(
             `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             VALUES ($1, $2, $3, $4, $5, $6, $7::vector)
              ON CONFLICT (name, year) DO NOTHING
              RETURNING id`,
             [
