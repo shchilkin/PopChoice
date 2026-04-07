@@ -22,7 +22,7 @@ A standalone Node.js/TypeScript cron service that syncs movies from `movies.txt`
 | ------------------ | -------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`   | Yes      | —             | OpenAI API key for embeddings                                                                                                                                                                                                                       |
 | `DATABASE_URL`     | Yes      | —             | PostgreSQL connection string                                                                                                                                                                                                                        |
-| `MOVIES_FILE_PATH` | No       | auto-detected | Path to the movies text file. Defaults to `./movies.txt` relative to the working directory, with an automatic fallback to `../../movies.txt` (repo root) when running from `services/movie-sync/`. Set this explicitly if the file lives elsewhere. |
+| `MOVIES_FILE_PATH` | No       | auto-detected | Path to the movies text file. Defaults to `./movies.txt` relative to the working directory, with an automatic fallback to `./services/movie-sync/movies.txt` when running from the repo root. Set this explicitly if the file lives elsewhere. |
 | `CRON_SCHEDULE`    | No       | `0 3 * * *`   | Cron expression for scheduled mode                                                                                                                                                                                                                  |
 | `DRY_RUN`          | No       | `false`       | Set to `true` to skip embedding creation and DB inserts                                                                                                                                                                                             |
 | `LOG_LEVEL`        | No       | `info`        | Set to `debug` for verbose logging                                                                                                                                                                                                                  |
@@ -51,7 +51,7 @@ npm start -- --once # one-shot mode
 
 ## Docker
 
-The Docker build context must be the **repository root** (not the service subdirectory) so that `movies.txt` can be included in the image.
+Build from the repository root so that `services/movie-sync/movies.txt` is accessible in the build context:
 
 ```bash
 # Build from the repository root
@@ -86,7 +86,7 @@ Railway supports deploying services from subdirectories. Follow these steps to a
 - Under **Root Directory**, leave it as `.` (the repository root)
 - Under **Dockerfile Path**, enter: `services/movie-sync/Dockerfile`
 
-> **Why the repo root?** The Dockerfile copies `movies.txt` from the project root into the image. Using the subdirectory as the build context would prevent that file from being found.
+> **Note:** The Dockerfile copies `movies.txt` from `services/movie-sync/` into the image. Build from the repository root so all service files are within the build context.
 
 ### 3. Configure Environment Variables
 
