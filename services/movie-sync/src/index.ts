@@ -9,8 +9,7 @@
  * Environment variables:
  *   TMDB_API_KEY      — TMDB v4 read access token (Bearer auth, required)
  *   OPENAI_API_KEY    — OpenAI API key (required)
- *   SUPABASE_URL      — Supabase project URL (required)
- *   SUPABASE_API_KEY  — Supabase anon/service key (required)
+ *   DATABASE_URL      — PostgreSQL connection string (required)
  *   CRON_SCHEDULE     — Cron expression (default: "0 3 * * *")
  *   DRY_RUN           — Set to "true" to skip embeddings/inserts
  */

@@ -6,8 +6,7 @@
 export interface Config {
   tmdbApiKey: string;
   openaiApiKey: string;
-  supabaseUrl: string;
-  supabaseApiKey: string;
+  databaseUrl: string;
   cronSchedule: string;
   dryRun: boolean;
 }
@@ -21,11 +20,8 @@ export function loadConfig(): Config {
   const openaiApiKey = process.env.OPENAI_API_KEY;
   if (!openaiApiKey) missing.push('OPENAI_API_KEY');
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  if (!supabaseUrl) missing.push('SUPABASE_URL');
-
-  const supabaseApiKey = process.env.SUPABASE_API_KEY;
-  if (!supabaseApiKey) missing.push('SUPABASE_API_KEY');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) missing.push('DATABASE_URL');
 
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
@@ -34,8 +30,7 @@ export function loadConfig(): Config {
   return {
     tmdbApiKey: tmdbApiKey!,
     openaiApiKey: openaiApiKey!,
-    supabaseUrl: supabaseUrl!,
-    supabaseApiKey: supabaseApiKey!,
+    databaseUrl: databaseUrl!,
     cronSchedule: process.env.CRON_SCHEDULE?.trim() ?? '0 3 * * *', // Default: 3 AM daily UTC
     dryRun: process.env.DRY_RUN === 'true',
   };

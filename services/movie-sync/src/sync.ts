@@ -2,7 +2,7 @@
  * Main sync orchestration: fetch → deduplicate → embed → insert.
  */
 
-import { filterNewMovies, getMovieCount, initSupabase, insertMovies } from './database.js';
+import { filterNewMovies, getMovieCount, initDatabase, insertMovies } from './database.js';
 import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
 import { estimateAgeRating, fetchTMDBMovies, movieToEmbeddingText } from './tmdb.js';
@@ -32,15 +32,15 @@ function tmdbToMovieRecord(movie: TMDBMovie): Omit<MovieRecord, 'embedding'> {
  * 1. Fetch movies from TMDB
  * 2. De-duplicate against database
  * 3. Create embeddings for new movies
- * 4. Insert into Supabase
+ * 4. Insert into database
  */
 export async function runSync(config: Config): Promise<void> {
   const startTime = Date.now();
 
   logger.info('Sync started', { dryRun: config.dryRun });
 
-  // 1. Initialize Supabase
-  initSupabase(config.supabaseUrl, config.supabaseApiKey);
+  // 1. Initialize database connection
+  initDatabase(config.databaseUrl);
 
   const countBefore = await getMovieCount();
   logger.info('Current database state', { movieCount: countBefore });

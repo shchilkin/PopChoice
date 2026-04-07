@@ -1,11 +1,13 @@
 /**
  * Database operations for movie-sync service.
- * Adapted from src/utils/database/ in the main PopChoice app.
+ * Uses pg (node-postgres) with direct SQL queries.
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import pg from 'pg';
 
 import { logger } from './logger.js';
+
+const { Pool } = pg;
 
 export interface MovieRecord {
   name: string;
@@ -17,17 +19,17 @@ export interface MovieRecord {
   embedding: number[];
 }
 
-let supabase: SupabaseClient | null = null;
+let pool: InstanceType<typeof Pool> | null = null;
 
-export function initSupabase(url: string, apiKey: string): void {
-  supabase = createClient(url, apiKey);
+export function initDatabase(databaseUrl: string): void {
+  pool = new Pool({ connectionString: databaseUrl });
 }
 
-function getSupabase(): SupabaseClient {
-  if (!supabase) {
-    throw new Error('Supabase client not initialized — call initSupabase() first');
+function getPool(): InstanceType<typeof Pool> {
+  if (!pool) {
+    throw new Error('Database pool not initialized — call initDatabase() first');
   }
-  return supabase;
+  return pool;
 }
 
 function getMovieKey(name: string, year: number): string {
@@ -48,17 +50,12 @@ async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>>
     const names = [...new Set(batch.map((movie) => movie.name))];
     const years = [...new Set(batch.map((movie) => movie.year))];
 
-    const { data, error } = await getSupabase()
-      .from('movies')
-      .select('name, year')
-      .in('name', names)
-      .in('year', years);
+    const result = await getPool().query<{ name: string; year: number }>(
+      'SELECT name, year FROM movies WHERE name = ANY($1) AND year = ANY($2)',
+      [names, years],
+    );
 
-    if (error) {
-      throw new Error(`Error checking movie existence: ${error.message}`);
-    }
-
-    for (const movie of data ?? []) {
+    for (const movie of result.rows) {
       existingKeys.add(getMovieKey(movie.name, movie.year));
     }
   }
@@ -102,20 +99,13 @@ export async function filterNewMovies(movies: MovieRecord[]): Promise<number[]> 
  * Get count of movies currently in database.
  */
 export async function getMovieCount(): Promise<number> {
-  const { count, error } = await getSupabase()
-    .from('movies')
-    .select('id', { count: 'exact', head: true });
-
-  if (error) {
-    throw new Error(`Error getting movie count: ${error.message}`);
-  }
-
-  return count || 0;
+  const result = await getPool().query<{ count: string }>('SELECT COUNT(*) AS count FROM movies');
+  return parseInt(result.rows[0].count, 10);
 }
 
 /**
- * Upsert movie records into Supabase in batches.
- * Uses onConflict to handle duplicate (name, year) entries idempotently.
+ * Upsert movie records into the database in batches.
+ * Uses ON CONFLICT to handle duplicate (name, year) entries idempotently.
  */
 export async function insertMovies(
   movies: MovieRecord[],
@@ -128,16 +118,26 @@ export async function insertMovies(
     const batch = movies.slice(i, i + batchSize);
 
     try {
-      const { data, error } = await getSupabase()
-        .from('movies')
-        .upsert(batch, { onConflict: 'name,year', ignoreDuplicates: true })
-        .select('id');
-
-      if (error) {
-        throw error;
+      let inserted = 0;
+      for (const movie of batch) {
+        const result = await getPool().query<{ id: number }>(
+          `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
+           ON CONFLICT (name, year) DO NOTHING
+           RETURNING id`,
+          [
+            movie.name,
+            movie.year,
+            movie.age_rating,
+            movie.description,
+            movie.duration,
+            movie.score_rating,
+            JSON.stringify(movie.embedding),
+          ],
+        );
+        inserted += result.rowCount ?? 0;
       }
 
-      const inserted = data?.length || 0;
       success += inserted;
 
       logger.info('Batch upserted', {
@@ -153,12 +153,22 @@ export async function insertMovies(
       // Fallback: upsert one by one to isolate failures
       for (const movie of batch) {
         try {
-          const { data, error } = await getSupabase()
-            .from('movies')
-            .upsert([movie], { onConflict: 'name,year', ignoreDuplicates: true })
-            .select('id');
-          if (error) throw error;
-          success += data?.length || 0;
+          const result = await getPool().query<{ id: number }>(
+            `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (name, year) DO NOTHING
+             RETURNING id`,
+            [
+              movie.name,
+              movie.year,
+              movie.age_rating,
+              movie.description,
+              movie.duration,
+              movie.score_rating,
+              JSON.stringify(movie.embedding),
+            ],
+          );
+          success += result.rowCount ?? 0;
         } catch (singleErr) {
           errors++;
           logger.warn('Failed to upsert movie', {
