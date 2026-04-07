@@ -17,7 +17,7 @@
 import cron from 'node-cron';
 
 import { loadConfig } from './config.js';
-import { closeDatabase, initDatabase } from './database.js';
+import { closeDatabase, ensureSchema, initDatabase } from './database.js';
 import { logger } from './logger.js';
 import { runSync } from './sync.js';
 
@@ -41,6 +41,7 @@ async function main(): Promise<void> {
 
   // Initialize the database pool once at startup (idempotent on repeat calls).
   initDatabase(config.databaseUrl);
+  await ensureSchema();
 
   logger.info('Movie sync service starting', {
     cronSchedule: config.cronSchedule,
