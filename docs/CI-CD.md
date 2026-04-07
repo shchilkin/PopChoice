@@ -48,7 +48,7 @@ The `movie-sync-ci` job installs dependencies and runs `tsc` (`npm run build`) i
 
 ### Dependency Review
 
-The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability. This job requires `pull-requests: write` (in addition to the standard `contents: read`) so that the action can post vulnerability details as a comment on the PR.
+The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability. It does this by failing the GitHub Actions check, which can then prevent merging when that check is required. The workflow only grants `contents: read` for this job; it does not require `pull-requests: write`.
 
 ## Workflow Trigger
 
