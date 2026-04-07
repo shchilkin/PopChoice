@@ -40,7 +40,7 @@ function parseDuration(duration: string): number {
  */
 export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>[] {
   const content = readFileSync(filePath, 'utf-8');
-  const chunks = content.split('\n\n');
+  const chunks = content.split(/(?:\r?\n){2,}/);
   const movies: Omit<MovieRecord, 'embedding'>[] = [];
   let skipped = 0;
 
@@ -48,7 +48,7 @@ export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>
     const trimmed = chunk.trim();
     if (!trimmed) continue;
 
-    const lines = trimmed.split('\n');
+    const lines = trimmed.split(/\r?\n/);
     if (lines.length < 2) continue;
 
     // Validate header: must start with a letter or digit and contain ": YYYY |"
@@ -83,6 +83,21 @@ export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>
       const duration = parseDuration(durationStr);
       const score = parseFloat(scoreStr.replace(/rating/i, '').trim());
       const description = lines.slice(1).join(' ').trim();
+
+      if (duration === 0) {
+        skipped++;
+        logger.warn('Skipping entry with unparseable duration', {
+          firstLine: lines[0],
+          durationStr,
+        });
+        continue;
+      }
+
+      if (!Number.isFinite(score)) {
+        skipped++;
+        logger.warn('Skipping entry with unparseable score', { firstLine: lines[0], scoreStr });
+        continue;
+      }
 
       movies.push({
         name,
