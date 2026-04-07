@@ -13,7 +13,7 @@ import { logger } from './logger.js';
 import type { MovieRecord } from './database.js';
 
 /**
- * Parse a duration string like "1h 42m", "2h", or "90m" into total minutes.
+ * Parse a duration string like "1h 42m", "2h", "90m", or a bare integer (minutes) into total minutes.
  */
 function parseDuration(duration: string): number {
   const trimmed = duration.trim();
@@ -102,7 +102,7 @@ export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>
   }
 
   if (skipped > 0) {
-    logger.warn('Skipped invalid or unrecognised movie entries', { skipped });
+    logger.warn('Skipped invalid or unrecognized movie entries', { skipped });
   }
 
   return movies;
