@@ -59,6 +59,17 @@ export default function ResultsPage() {
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 8);
   }, []);
 
+  // Sync scroll state once movies are rendered and on window resize
+  useEffect(() => {
+    if (movies.length === 0) return;
+    const raf = requestAnimationFrame(handleScroll);
+    window.addEventListener('resize', handleScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [movies, handleScroll]);
+
   function toggleSuggestion(id: number) {
     setActiveSuggestion((prev) => (prev === id ? null : id));
   }
@@ -245,6 +256,7 @@ export default function ResultsPage() {
               <button
                 onClick={() => scrollCarousel('left')}
                 disabled={!canScrollLeft}
+                aria-label="Scroll left"
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                 style={{
                   background: canScrollLeft ? 'var(--pc-bd2)' : 'var(--pc-bd1)',
@@ -258,6 +270,7 @@ export default function ResultsPage() {
               <button
                 onClick={() => scrollCarousel('right')}
                 disabled={!canScrollRight}
+                aria-label="Scroll right"
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                 style={{
                   background: canScrollRight ? 'var(--pc-bd2)' : 'var(--pc-bd1)',
@@ -311,6 +324,8 @@ export default function ResultsPage() {
               <button
                 key={movie.id}
                 onClick={() => toggleSuggestion(movie.id)}
+                aria-label={`Show details for ${movie.name}`}
+                aria-pressed={activeSuggestion === movie.id}
                 className="rounded-full transition-all duration-200"
                 style={{
                   width: activeSuggestion === movie.id ? 16 : 6,

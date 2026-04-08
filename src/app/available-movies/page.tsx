@@ -90,7 +90,7 @@ export default function AvailableMoviesPage() {
       <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20">
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--pc-t3)] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--pc-gold)] mx-auto mb-4"></div>
             <p className="text-lg text-[var(--pc-t3)]">Loading movies...</p>
           </div>
         </main>
@@ -106,7 +106,8 @@ export default function AvailableMoviesPage() {
             <p className="text-lg text-[var(--rating-mature-text)] mb-4">Error: {error}</p>
             <button
               onClick={() => fetchMovies(currentPage)}
-              className="px-4 py-2 bg-[var(--pc-cta)] text-[var(--pc-cta-text)] rounded-lg transition-colors"
+              className="px-4 py-2 text-[var(--pc-cta-text)] rounded-lg transition-colors"
+              style={{ background: 'var(--pc-cta)' }}
             >
               Try Again
             </button>
@@ -153,11 +154,12 @@ export default function AvailableMoviesPage() {
                     disabled={page === '...'}
                     className={`px-3 py-2 text-sm rounded-md ${
                       page === currentPage
-                        ? 'bg-[var(--pc-cta)] text-[var(--pc-cta-text)]'
+                        ? 'text-[var(--pc-cta-text)]'
                         : page === '...'
                           ? 'text-[var(--pc-t3)] cursor-default'
                           : 'bg-[var(--pc-surface)] border border-[var(--pc-bd2)] text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)]'
                     }`}
+                    style={page === currentPage ? { background: 'var(--pc-cta)' } : undefined}
                   >
                     {page}
                   </button>

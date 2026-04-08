@@ -28,8 +28,7 @@ export const Button = ({
     VARIANT_STYLES[variant] +
     (disabled ? ' cursor-not-allowed opacity-50' : '');
 
-  const ctaStyle =
-    variant === 'cta' && !disabled ? { background: 'var(--pc-cta)', ...style } : style;
+  const ctaStyle = variant === 'cta' ? { background: 'var(--pc-cta)', ...style } : style;
 
   return (
     <button

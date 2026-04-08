@@ -23,7 +23,17 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
   return (
     <motion.div
       layout
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-pressed={active}
+      aria-label={movie.name}
       className="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300"
       style={{
         background: 'var(--pc-surface)',
