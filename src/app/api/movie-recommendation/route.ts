@@ -408,11 +408,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
-    logger.error({ err: error }, 'Error in movie recommendation API');
-
-    // Handle validation errors specifically
+    // Handle validation errors first — these are client errors (400), not server errors
     if (error instanceof z.ZodError) {
-      logger.warn({ err: error, issues: error.errors }, 'Zod validation error');
+      logger.warn({ err: error, issues: error.errors }, 'Invalid request body');
       return NextResponse.json(
         {
           error: 'Invalid request data',
@@ -421,6 +419,8 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    logger.error({ err: error }, 'Error in movie recommendation API');
 
     // Handle other known errors
     if (error instanceof Error) {
