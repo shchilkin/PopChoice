@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { MoviesTable, TopNavigation } from '@/components';
+import { MoviesTable } from '@/components';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
@@ -89,7 +89,6 @@ export default function AvailableMoviesPage() {
     return (
       <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
-          <TopNavigation logoSize={60} />
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
             <p className="text-lg text-[var(--muted-foreground)]">Loading movies...</p>
@@ -103,7 +102,6 @@ export default function AvailableMoviesPage() {
     return (
       <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
-          <TopNavigation logoSize={60} />
           <div className="text-center py-8">
             <p className="text-lg text-[var(--rating-mature-text)] mb-4">Error: {error}</p>
             <button
@@ -121,8 +119,6 @@ export default function AvailableMoviesPage() {
   return (
     <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
-        <TopNavigation logoSize={60} />
-
         {/* Header */}
         <div className="w-full mb-8">
           <h1 className="text-3xl font-bold text-center mb-4 text-[var(--foreground)]">
