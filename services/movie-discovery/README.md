@@ -8,22 +8,23 @@ This service fetches movies from multiple TMDB endpoints (`now_playing`, `upcomi
 
 ## Environment Variables
 
-| Variable               | Required | Default           | Description                                                          |
-| ---------------------- | -------- | ----------------- | -------------------------------------------------------------------- |
-| `TMDB_API_KEY`         | ✅        | —                 | TMDB v4 Bearer read access token                                     |
-| `OPENAI_API_KEY`       | ✅        | —                 | OpenAI API key for generating embeddings                             |
-| `DATABASE_URL`         | ✅        | —                 | PostgreSQL connection string (with pgvector extension)               |
-| `TMDB_SOURCES`         | ❌        | all four          | Comma-separated: `now_playing,upcoming,top_rated,popular`            |
-| `MAX_PAGES_PER_SOURCE` | ❌        | `3`               | Number of TMDB pages to fetch per source endpoint                    |
-| `MIN_VOTE_COUNT`       | ❌        | `500`             | Minimum number of votes a movie must have                            |
-| `MIN_VOTE_AVERAGE`     | ❌        | `6.5`             | Minimum TMDB vote average                                            |
-| `MAX_MOVIES_PER_RUN`   | ❌        | `50`              | Cap on new movies embedded and inserted per run                      |
-| `SYNC_SCHEDULE`        | ❌        | `0 0 * * 0`       | Cron expression for scheduled mode (UTC). Empty string = one-shot.  |
-| `DRY_RUN`              | ❌        | `false`           | Set to `"true"` to skip embeddings and database inserts              |
+| Variable               | Required | Default     | Description                                                        |
+| ---------------------- | -------- | ----------- | ------------------------------------------------------------------ |
+| `TMDB_API_KEY`         | ✅       | —           | TMDB v4 Bearer read access token                                   |
+| `OPENAI_API_KEY`       | ✅       | —           | OpenAI API key for generating embeddings                           |
+| `DATABASE_URL`         | ✅       | —           | PostgreSQL connection string (with pgvector extension)             |
+| `TMDB_SOURCES`         | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular`          |
+| `MAX_PAGES_PER_SOURCE` | ❌       | `3`         | Number of TMDB pages to fetch per source endpoint                  |
+| `MIN_VOTE_COUNT`       | ❌       | `500`       | Minimum number of votes a movie must have                          |
+| `MIN_VOTE_AVERAGE`     | ❌       | `6.5`       | Minimum TMDB vote average                                          |
+| `MAX_MOVIES_PER_RUN`   | ❌       | `50`        | Cap on new movies embedded and inserted per run                    |
+| `SYNC_SCHEDULE`        | ❌       | `0 0 * * 0` | Cron expression for scheduled mode (UTC). Empty string = one-shot. |
+| `DRY_RUN`              | ❌       | `false`     | Set to `"true"` to skip embeddings and database inserts            |
 
 ## Modes
 
 ### Scheduled (default)
+
 Starts a cron scheduler and also runs an initial sync on startup.
 
 ```bash
@@ -33,6 +34,7 @@ SYNC_SCHEDULE="0 3 * * *" npm start
 ```
 
 ### One-shot
+
 Runs a single sync and exits. Useful for CI/CD pipelines or manual runs.
 
 ```bash
@@ -70,6 +72,7 @@ docker run --env-file .env movie-discovery
 ## Quality Filter
 
 Movies are included only if they satisfy **all** of the following:
+
 - `vote_count > MIN_VOTE_COUNT`
 - `vote_average >= MIN_VOTE_AVERAGE`
 - `overview.length > 50`

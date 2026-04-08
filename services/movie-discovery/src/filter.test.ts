@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { applyQualityFilter, isWorthy } from './filter.js';
+
 import type { TMDBMovie } from './tmdb.js';
 
 const makeMovie = (overrides: Partial<TMDBMovie> = {}): TMDBMovie => ({
@@ -49,7 +50,11 @@ describe('isWorthy', () => {
 
   it('returns false when overview is undefined/null', () => {
     expect(
-      isWorthy(makeMovie({ overview: undefined as unknown as string }), minVoteCount, minVoteAverage),
+      isWorthy(
+        makeMovie({ overview: undefined as unknown as string }),
+        minVoteCount,
+        minVoteAverage,
+      ),
     ).toBe(false);
   });
 });

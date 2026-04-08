@@ -3,11 +3,7 @@ import type { TMDBMovie } from './tmdb.js';
 /**
  * Check if a movie meets the quality thresholds.
  */
-export function isWorthy(
-  movie: TMDBMovie,
-  minVoteCount: number,
-  minVoteAverage: number,
-): boolean {
+export function isWorthy(movie: TMDBMovie, minVoteCount: number, minVoteAverage: number): boolean {
   return (
     movie.vote_count > minVoteCount &&
     movie.vote_average >= minVoteAverage &&

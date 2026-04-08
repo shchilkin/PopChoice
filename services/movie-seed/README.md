@@ -8,12 +8,12 @@ This service is designed to be run once (or on-demand) to populate the database 
 
 ## Environment Variables
 
-| Variable          | Required | Default                     | Description                                      |
-| ----------------- | -------- | --------------------------- | ------------------------------------------------ |
-| `OPENAI_API_KEY`  | ✅        | —                           | OpenAI API key used to generate embeddings       |
-| `DATABASE_URL`    | ✅        | —                           | PostgreSQL connection string (with pgvector)     |
-| `MOVIES_FILE_PATH`| ❌        | `<cwd>/movies.txt`          | Path to the movies.txt file to parse             |
-| `DRY_RUN`         | ❌        | `false`                     | Set to `"true"` to skip embeddings and inserts   |
+| Variable           | Required | Default            | Description                                    |
+| ------------------ | -------- | ------------------ | ---------------------------------------------- |
+| `OPENAI_API_KEY`   | ✅       | —                  | OpenAI API key used to generate embeddings     |
+| `DATABASE_URL`     | ✅       | —                  | PostgreSQL connection string (with pgvector)   |
+| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt` | Path to the movies.txt file to parse           |
+| `DRY_RUN`          | ❌       | `false`            | Set to `"true"` to skip embeddings and inserts |
 
 ## movies.txt Format
 

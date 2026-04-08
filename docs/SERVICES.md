@@ -6,10 +6,10 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service             | Type      | Trigger         | Source           |
-| ------------------- | --------- | --------------- | ---------------- |
-| `movie-seed`        | One-shot  | Manual / CI     | `movies.txt`     |
-| `movie-discovery`   | Scheduled | Cron / One-shot | TMDB API         |
+| Service           | Type      | Trigger         | Source       |
+| ----------------- | --------- | --------------- | ------------ |
+| `movie-seed`      | One-shot  | Manual / CI     | `movies.txt` |
+| `movie-discovery` | Scheduled | Cron / One-shot | TMDB API     |
 
 ---
 
@@ -34,6 +34,7 @@ Description of the movie.
 ```
 
 Example:
+
 ```
 Casablanca: 1942 | PG | 1h 42m | 8.5 rating
 A cynical expatriate American café owner struggles to decide whether to help his former lover...
@@ -41,12 +42,12 @@ A cynical expatriate American café owner struggles to decide whether to help hi
 
 ### Environment Variables
 
-| Variable           | Required | Default               | Description                             |
-| ------------------ | -------- | --------------------- | --------------------------------------- |
-| `OPENAI_API_KEY`   | ✅        | —                     | OpenAI API key for embeddings           |
-| `DATABASE_URL`     | ✅        | —                     | PostgreSQL connection string            |
-| `MOVIES_FILE_PATH` | ❌        | `<cwd>/movies.txt`    | Path to the movies.txt file             |
-| `DRY_RUN`          | ❌        | `false`               | `"true"` to skip embeddings/inserts     |
+| Variable           | Required | Default            | Description                         |
+| ------------------ | -------- | ------------------ | ----------------------------------- |
+| `OPENAI_API_KEY`   | ✅       | —                  | OpenAI API key for embeddings       |
+| `DATABASE_URL`     | ✅       | —                  | PostgreSQL connection string        |
+| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt` | Path to the movies.txt file         |
+| `DRY_RUN`          | ❌       | `false`            | `"true"` to skip embeddings/inserts |
 
 ### Running
 
@@ -80,24 +81,25 @@ DRY_RUN=true npm run dev    # dry run
 ### Quality Filter
 
 A movie passes if **all** conditions are met:
+
 - `vote_count > MIN_VOTE_COUNT` (default: 500)
 - `vote_average >= MIN_VOTE_AVERAGE` (default: 6.5)
 - `overview.length > 50`
 
 ### Environment Variables
 
-| Variable               | Required | Default        | Description                                                         |
-| ---------------------- | -------- | -------------- | ------------------------------------------------------------------- |
-| `TMDB_API_KEY`         | ✅        | —              | TMDB v4 Bearer read access token                                    |
-| `OPENAI_API_KEY`       | ✅        | —              | OpenAI API key for embeddings                                       |
-| `DATABASE_URL`         | ✅        | —              | PostgreSQL connection string                                        |
-| `TMDB_SOURCES`         | ❌        | all four       | Comma-separated: `now_playing,upcoming,top_rated,popular`           |
-| `MAX_PAGES_PER_SOURCE` | ❌        | `3`            | TMDB pages to fetch per source                                      |
-| `MIN_VOTE_COUNT`       | ❌        | `500`          | Minimum vote count                                                  |
-| `MIN_VOTE_AVERAGE`     | ❌        | `6.5`          | Minimum TMDB vote average                                           |
-| `MAX_MOVIES_PER_RUN`   | ❌        | `50`           | Cap on movies embedded per run                                      |
-| `SYNC_SCHEDULE`        | ❌        | `0 0 * * 0`    | Cron expression (UTC). Set to `""` for one-shot mode.               |
-| `DRY_RUN`              | ❌        | `false`        | `"true"` to skip embeddings/inserts                                 |
+| Variable               | Required | Default     | Description                                               |
+| ---------------------- | -------- | ----------- | --------------------------------------------------------- |
+| `TMDB_API_KEY`         | ✅       | —           | TMDB v4 Bearer read access token                          |
+| `OPENAI_API_KEY`       | ✅       | —           | OpenAI API key for embeddings                             |
+| `DATABASE_URL`         | ✅       | —           | PostgreSQL connection string                              |
+| `TMDB_SOURCES`         | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular` |
+| `MAX_PAGES_PER_SOURCE` | ❌       | `3`         | TMDB pages to fetch per source                            |
+| `MIN_VOTE_COUNT`       | ❌       | `500`       | Minimum vote count                                        |
+| `MIN_VOTE_AVERAGE`     | ❌       | `6.5`       | Minimum TMDB vote average                                 |
+| `MAX_MOVIES_PER_RUN`   | ❌       | `50`        | Cap on movies embedded per run                            |
+| `SYNC_SCHEDULE`        | ❌       | `0 0 * * 0` | Cron expression (UTC). Set to `""` for one-shot mode.     |
+| `DRY_RUN`              | ❌       | `false`     | `"true"` to skip embeddings/inserts                       |
 
 ### Running
 
