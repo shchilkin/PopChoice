@@ -1,81 +1,217 @@
 @import 'tailwindcss';
 
+/* ── PopChoice Design Tokens ─────────────────────────────────────────────── */
+
 :root {
-  --background: hsla(0, 0%, 100%, 1);
-  --foreground: hsla(0, 0%, 3%, 1);
-  --card: hsla(0, 0%, 100%, 1);
-  --card-foreground: hsla(0, 0%, 3%, 1);
-  --primary: hsla(0, 0%, 3%, 1);
-  --primary-foreground: hsla(0, 0%, 100%, 1);
-  --secondary: #f5f5f5;
-  --secondary-foreground: hsla(0, 0%, 3%, 1);
-  --muted: #f5f5f5;
-  --muted-foreground: hsla(0, 0%, 27%, 1);
-  --accent: hsla(14, 100%, 57%, 1);
-  --accent-foreground: hsla(0, 0%, 100%, 1);
-  --border: #e5e5e5;
-  --input: #e5e5e5;
-  --ring: hsla(0, 0%, 3%, 1);
+  /* Backgrounds */
+  --pc-bg: #f7f5ee;
+  --pc-surface: #ffffff;
+  --pc-surface-hover: #f0ece2;
+  --pc-surface-deep: #e8e3d6;
+  --pc-header-bg: rgba(247, 245, 238, 0.92);
+  --pc-fog: #f7f5ee;
+
+  /* Text */
+  --pc-t1: #0d0d1a;
+  --pc-t2: #424260;
+  --pc-t3: #6a6a88;
+  --pc-t4: #9090b0;
+  --pc-t5: #b0b0c8;
+
+  /* Borders */
+  --pc-bd1: rgba(0, 0, 0, 0.06);
+  --pc-bd2: rgba(0, 0, 0, 0.09);
+  --pc-bd3: rgba(0, 0, 0, 0.11);
+  --pc-bd4: rgba(0, 0, 0, 0.14);
+
+  /* Brand */
+  --pc-gold: #c4950a;
+  --pc-amber: #d4760c;
+
+  /* CTA / decorative gradients */
+  --pc-cta: linear-gradient(135deg, #f5c518, #ff9f1c);
+  --pc-cta-h: linear-gradient(90deg, #f5c518, #ff9f1c);
+  --pc-accent-bar: linear-gradient(180deg, #f5c518, #ff9f1c);
+  --pc-progress: linear-gradient(90deg, #f5c518, #ff9f1c);
+
+  /* Footer */
+  --pc-footer: #9090b0;
+  --pc-footer-bd: rgba(0, 0, 0, 0.06);
+
+  /* Interactive surfaces */
+  --pc-ghost: rgba(0, 0, 0, 0.04);
+
+  /* Gold accent states */
+  --pc-gold-subtle: rgba(196, 149, 10, 0.1);
+  --pc-gold-tint: rgba(196, 149, 10, 0.12);
+  --pc-gold-wash: rgba(196, 149, 10, 0.15);
+  --pc-gold-focus: rgba(196, 149, 10, 0.5);
+  --pc-gold-ring: 0 0 0 3px rgba(245, 197, 24, 0.06);
+  --pc-gold-bd-subtle: rgba(196, 149, 10, 0.25);
+  --pc-gold-bd: rgba(245, 197, 24, 0.3);
+  --pc-gold-bd-strong: rgba(245, 197, 24, 0.4);
+
+  /* AI content blocks */
+  --pc-ai-bg: rgba(196, 149, 10, 0.05);
+  --pc-ai-bd: rgba(196, 149, 10, 0.15);
+
+  /* Image/poster overlays */
+  --pc-poster-grad: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.6) 60%,
+    #ffffff 100%
+  );
+  --pc-overlay-bg: rgba(255, 255, 255, 0.85);
+  --pc-overlay-text: #0d0d1a;
+  --pc-overlay-shadow: 0 1px 8px rgba(255, 255, 255, 0.8);
+
+  /* CTA foreground */
+  --pc-cta-text: #09090f;
+
+  /* Shadows */
+  --pc-card-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  --pc-cta-shadow: 0 4px 20px rgba(196, 149, 10, 0.3), 0 2px 8px rgba(196, 149, 10, 0.15);
+  --pc-cta-shadow-hover: 0 8px 30px rgba(196, 149, 10, 0.4), 0 4px 16px rgba(196, 149, 10, 0.2);
+
+  /* Legacy tokens */
+  --background: #f7f5ee;
+  --foreground: #0d0d1a;
+  --card: #ffffff;
+  --card-foreground: #0d0d1a;
+  --primary: #0d0d1a;
+  --primary-foreground: #f7f5ee;
+  --secondary: #f0ece2;
+  --secondary-foreground: #0d0d1a;
+  --muted: #f0ece2;
+  --muted-foreground: #6a6a88;
+  --accent: #c4950a;
+  --accent-foreground: #0d0d1a;
+  --border: rgba(0, 0, 0, 0.09);
+  --input: #f0ece2;
+  --ring: #c4950a;
   --alert: hsla(54, 100%, 62%, 1);
 
   /* Age Rating Color Tokens - Light Mode (Solid Fill) */
-  --rating-safe-bg: hsla(141, 56%, 40%, 1); /* G rating - green background */
-  --rating-safe-text: hsla(141, 100%, 95%, 1); /* G rating - light green text */
-  --rating-safe-border: hsla(0, 0%, 100%, 0); /* G rating - no border */
-  --rating-caution-bg: hsla(220, 100%, 61%, 1); /* PG rating - blue background */
-  --rating-caution-text: hsla(220, 100%, 97%, 1); /* PG rating - light blue text */
-  --rating-caution-border: hsla(0, 0%, 100%, 0); /* PG rating - no border */
-  --rating-teen-bg: hsla(42, 100%, 59%, 1); /* PG-13 rating - orange background */
-  --rating-teen-text: hsla(42, 19%, 13%, 1); /* PG-13 rating - dark orange text */
-  --rating-teen-border: hsla(0, 0%, 100%, 0); /* PG-13 rating - no border */
-  --rating-mature-bg: hsla(0, 66%, 47%, 1); /* R rating - red background */
-  --rating-mature-text: hsla(0, 100%, 96%, 1); /* R rating - light red text */
-  --rating-mature-border: hsla(0, 0%, 100%, 0); /* R rating - no border */
-  --rating-unknown-bg: hsla(0, 0%, 50%, 1); /* NR rating - gray background */
-  --rating-unknown-text: hsla(0, 0%, 97%, 1); /* NR rating - light gray text */
-  --rating-unknown-border: hsla(0, 0%, 100%, 0); /* NR rating - no border */
-
-  /* Border width for age rating chips */
-  --rating-border-width: 0; /* Light mode - no border */
+  --rating-safe-bg: hsla(141, 56%, 40%, 1);
+  --rating-safe-text: hsla(141, 100%, 95%, 1);
+  --rating-safe-border: hsla(0, 0%, 100%, 0);
+  --rating-caution-bg: hsla(220, 100%, 61%, 1);
+  --rating-caution-text: hsla(220, 100%, 97%, 1);
+  --rating-caution-border: hsla(0, 0%, 100%, 0);
+  --rating-teen-bg: hsla(42, 100%, 59%, 1);
+  --rating-teen-text: hsla(42, 19%, 13%, 1);
+  --rating-teen-border: hsla(0, 0%, 100%, 0);
+  --rating-mature-bg: hsla(0, 66%, 47%, 1);
+  --rating-mature-text: hsla(0, 100%, 96%, 1);
+  --rating-mature-border: hsla(0, 0%, 100%, 0);
+  --rating-unknown-bg: hsla(0, 0%, 50%, 1);
+  --rating-unknown-text: hsla(0, 0%, 97%, 1);
+  --rating-unknown-border: hsla(0, 0%, 100%, 0);
+  --rating-border-width: 0;
 }
 
 .dark {
-  --background: hsla(0, 0%, 8%, 1);
-  --foreground: hsla(0, 0%, 94%, 1);
-  --card: hsla(0, 0%, 8%, 1);
-  --card-foreground: hsla(0, 0%, 94%, 1);
-  --primary: hsla(0, 0%, 94%, 1);
-  --primary-foreground: hsla(0, 0%, 8%, 1);
-  --secondary: #262626;
-  --secondary-foreground: hsla(0, 0%, 94%, 1);
-  --muted: #262626;
-  --muted-foreground: hsla(0, 0%, 85%, 1);
-  --accent: hsla(14, 80%, 51%, 1);
-  --accent-foreground: hsla(0, 0%, 100%, 1);
-  --border: #404040;
-  --input: #262626;
-  --ring: hsla(0, 0%, 94%, 1);
+  /* Backgrounds */
+  --pc-bg: #09090f;
+  --pc-surface: #13131f;
+  --pc-surface-hover: #1a1a30;
+  --pc-surface-deep: #1c1c2e;
+  --pc-header-bg: rgba(9, 9, 15, 0.85);
+  --pc-fog: #09090f;
+
+  /* Text */
+  --pc-t1: #f8f8ff;
+  --pc-t2: #8888aa;
+  --pc-t3: #5a5a78;
+  --pc-t4: #3d3d55;
+  --pc-t5: #2d2d45;
+
+  /* Borders */
+  --pc-bd1: rgba(255, 255, 255, 0.06);
+  --pc-bd2: rgba(255, 255, 255, 0.08);
+  --pc-bd3: rgba(255, 255, 255, 0.1);
+  --pc-bd4: rgba(255, 255, 255, 0.12);
+
+  /* Brand */
+  --pc-gold: #f5c518;
+  --pc-amber: #ff9f1c;
+
+  /* Footer */
+  --pc-footer: #3d3d55;
+  --pc-footer-bd: rgba(255, 255, 255, 0.04);
+
+  /* Interactive surfaces */
+  --pc-ghost: rgba(255, 255, 255, 0.05);
+
+  /* Gold accent states */
+  --pc-gold-subtle: rgba(245, 197, 24, 0.1);
+  --pc-gold-tint: rgba(245, 197, 24, 0.2);
+  --pc-gold-wash: rgba(245, 197, 24, 0.15);
+  --pc-gold-focus: rgba(245, 197, 24, 0.4);
+  --pc-gold-ring: 0 0 0 3px rgba(245, 197, 24, 0.06);
+  --pc-gold-bd-subtle: rgba(245, 197, 24, 0.2);
+  --pc-gold-bd: rgba(245, 197, 24, 0.3);
+  --pc-gold-bd-strong: rgba(245, 197, 24, 0.4);
+
+  /* AI content blocks */
+  --pc-ai-bg: rgba(245, 197, 24, 0.05);
+  --pc-ai-bd: rgba(245, 197, 24, 0.1);
+
+  /* Image/poster overlays */
+  --pc-poster-grad: linear-gradient(
+    to bottom,
+    rgba(9, 9, 15, 0.2) 0%,
+    rgba(9, 9, 15, 0.7) 60%,
+    #13131f 100%
+  );
+  --pc-overlay-bg: rgba(9, 9, 15, 0.8);
+  --pc-overlay-text: #ffffff;
+  --pc-overlay-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+
+  /* CTA foreground */
+  --pc-cta-text: #09090f;
+
+  /* Shadows */
+  --pc-card-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+  --pc-cta-shadow: 0 0 40px rgba(245, 197, 24, 0.35), 0 8px 32px rgba(245, 197, 24, 0.2);
+  --pc-cta-shadow-hover: 0 0 60px rgba(245, 197, 24, 0.5), 0 12px 40px rgba(245, 197, 24, 0.3);
+
+  /* Legacy tokens */
+  --background: #09090f;
+  --foreground: #f8f8ff;
+  --card: #13131f;
+  --card-foreground: #f8f8ff;
+  --primary: #f8f8ff;
+  --primary-foreground: #09090f;
+  --secondary: #1a1a30;
+  --secondary-foreground: #f8f8ff;
+  --muted: #1a1a30;
+  --muted-foreground: #8888aa;
+  --accent: #f5c518;
+  --accent-foreground: #09090f;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: #1a1a30;
+  --ring: #f5c518;
   --alert: hsla(54, 100%, 62%, 1);
 
   /* Age Rating Color Tokens - Dark Mode (Outline Style) */
-  --rating-safe-bg: hsla(141, 100%, 15%, 1); /* G rating - dark green background */
-  --rating-safe-text: hsla(141, 56%, 50%, 1); /* G rating - green text */
-  --rating-safe-border: hsla(141, 55%, 50%, 0.5); /* G rating - green border */
-  --rating-caution-bg: hsla(220, 100%, 15%, 1); /* PG rating - dark blue background */
-  --rating-caution-text: hsla(220, 100%, 71%, 1); /* PG rating - blue text */
-  --rating-caution-border: hsla(220, 100%, 71%, 0.5); /* PG rating - blue border */
-  --rating-teen-bg: hsla(42, 19%, 13%, 1); /* PG-13 rating - dark orange background */
-  --rating-teen-text: hsla(42, 100%, 59%, 1); /* PG-13 rating - orange text */
-  --rating-teen-border: hsla(42, 100%, 59%, 0.5); /* PG-13 rating - orange border */
-  --rating-mature-bg: hsla(0, 100%, 15%, 1); /* R rating - dark red background */
-  --rating-mature-text: hsla(0, 66%, 57%, 1); /* R rating - red text */
-  --rating-mature-border: hsla(0, 66%, 57%, 0.5); /* R rating - red border */
-  --rating-unknown-bg: hsla(0, 0%, 15%, 1); /* NR rating - dark gray background */
-  --rating-unknown-text: hsla(0, 0%, 70%, 1); /* NR rating - gray text */
-  --rating-unknown-border: hsla(0, 0%, 70%, 0.5); /* NR rating - gray border */
-
-  /* Border width for age rating chips */
-  --rating-border-width: 1; /* Dark mode - 1px border */
+  --rating-safe-bg: hsla(141, 100%, 15%, 1);
+  --rating-safe-text: hsla(141, 56%, 50%, 1);
+  --rating-safe-border: hsla(141, 55%, 50%, 0.5);
+  --rating-caution-bg: hsla(220, 100%, 15%, 1);
+  --rating-caution-text: hsla(220, 100%, 71%, 1);
+  --rating-caution-border: hsla(220, 100%, 71%, 0.5);
+  --rating-teen-bg: hsla(42, 19%, 13%, 1);
+  --rating-teen-text: hsla(42, 100%, 59%, 1);
+  --rating-teen-border: hsla(42, 100%, 59%, 0.5);
+  --rating-mature-bg: hsla(0, 100%, 15%, 1);
+  --rating-mature-text: hsla(0, 66%, 57%, 1);
+  --rating-mature-border: hsla(0, 66%, 57%, 0.5);
+  --rating-unknown-bg: hsla(0, 0%, 15%, 1);
+  --rating-unknown-text: hsla(0, 0%, 70%, 1);
+  --rating-unknown-border: hsla(0, 0%, 70%, 0.5);
+  --rating-border-width: 1;
 }
 
 @theme inline {
@@ -94,24 +230,51 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-dm-sans);
+  --font-mono: var(--font-bebas-neue);
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--pc-bg);
+  color: var(--pc-t1);
+  font-family: 'DM Sans', 'Inter', Arial, Helvetica, sans-serif;
   transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+    background 0.3s,
+    color 0.3s;
 }
 
-/* Hide scrollbar for choice chips */
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 .scrollbar-hide {
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .scrollbar-hide::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
+}
+
+/* Gradient text — reliable across theme switches (avoid inline background-clip) */
+.pc-gradient-text {
+  background: linear-gradient(135deg, #0d0d1a 0%, #c4950a 55%, #d4760c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  display: inline-block;
+}
+.dark .pc-gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #f5c518 60%, #ff9f1c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
