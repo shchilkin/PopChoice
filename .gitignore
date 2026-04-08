@@ -49,3 +49,8 @@ storybook-static
 # Services
 services/*/node_modules
 services/*/dist
+
+# Docusaurus
+website/node_modules/
+website/.docusaurus/
+website/build/
