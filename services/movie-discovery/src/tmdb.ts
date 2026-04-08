@@ -49,7 +49,7 @@ interface TMDBListResponse {
  * Returns up to `maxPages` pages of results.
  */
 async function fetchFromSource(
-  apiKey: string,
+  readAccessToken: string,
   source: TMDBSource,
   maxPages: number,
 ): Promise<TMDBMovie[]> {
@@ -64,7 +64,7 @@ async function fetchFromSource(
 
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${readAccessToken}`,
         Accept: 'application/json',
       },
     });
@@ -95,7 +95,7 @@ async function fetchFromSource(
  * Deduplicates by movie ID across sources.
  */
 export async function fetchFromSources(
-  apiKey: string,
+  readAccessToken: string,
   sources: TMDBSource[],
   maxPagesPerSource: number,
 ): Promise<TMDBMovie[]> {
@@ -103,7 +103,7 @@ export async function fetchFromSources(
   const allMovies: TMDBMovie[] = [];
 
   for (const source of sources) {
-    const movies = await fetchFromSource(apiKey, source, maxPagesPerSource);
+    const movies = await fetchFromSource(readAccessToken, source, maxPagesPerSource);
     for (const movie of movies) {
       if (!seenIds.has(movie.id)) {
         seenIds.add(movie.id);
@@ -120,7 +120,7 @@ export async function fetchFromSources(
  * Fetch full movie details including runtime and US certification.
  */
 export async function fetchMovieDetails(
-  apiKey: string,
+  readAccessToken: string,
   movieId: number,
 ): Promise<TMDBMovieDetails> {
   const url = new URL(`${TMDB_BASE_URL}/movie/${movieId}`);
@@ -128,7 +128,7 @@ export async function fetchMovieDetails(
 
   const response = await fetch(url.toString(), {
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${readAccessToken}`,
       Accept: 'application/json',
     },
   });

@@ -104,7 +104,7 @@ export async function runSync(config: Config): Promise<void> {
 
   const moviesToProcess = cappedIndices.map((i) => validYearCandidates[i]);
 
-  // 5. Dry run — stop before details/embeddings/inserts
+  // 6. Dry run — stop before details/embeddings/inserts
   if (config.dryRun) {
     logger.info('DRY RUN: would fetch details and insert', {
       moviesToInsert: moviesToProcess.length,
@@ -116,7 +116,7 @@ export async function runSync(config: Config): Promise<void> {
     return;
   }
 
-  // 6. Fetch full details (runtime + real age rating) for each movie in small batches
+  // 7. Fetch full details (runtime + real age rating) for each movie in small batches
   // to avoid hitting TMDB rate limits (default: 40 req/10 s on v4 API).
   logger.info('Fetching movie details', {
     count: moviesToProcess.length,
@@ -144,7 +144,7 @@ export async function runSync(config: Config): Promise<void> {
     detailedMovies.push(...batchResults);
   }
 
-  // 7. Build records and embedding texts
+  // 8. Build records and embedding texts
   const finalPartialRecords: Omit<MovieRecord, 'embedding'>[] = [];
   const embeddingTexts: string[] = [];
 
@@ -178,16 +178,16 @@ export async function runSync(config: Config): Promise<void> {
     );
   }
 
-  // 8. Create embeddings
+  // 9. Create embeddings
   const embeddings = await createEmbeddings(config.openaiApiKey, embeddingTexts);
 
-  // 9. Build final records
+  // 10. Build final records
   const finalRecords: MovieRecord[] = finalPartialRecords.map((r, idx) => ({
     ...r,
     embedding: embeddings[idx],
   }));
 
-  // 10. Insert into database
+  // 11. Insert into database
   const result = await insertMovies(finalRecords);
 
   const countAfter = await getMovieCount();
