@@ -1,5 +1,5 @@
 /**
- * OpenAI embedding utilities for movie-sync service.
+ * OpenAI embedding utilities for movie-seed service.
  * Adapted from src/utils/ai/embeddings.ts in the main PopChoice app.
  */
 

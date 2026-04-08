@@ -1,5 +1,5 @@
 /**
- * Environment configuration for movie-sync service.
+ * Environment configuration for movie-seed service.
  * All required and optional env vars are validated here at startup.
  */
 
@@ -9,23 +9,22 @@ import path from 'path';
 export interface Config {
   openaiApiKey: string;
   databaseUrl: string;
-  cronSchedule: string;
-  dryRun: boolean;
   moviesFilePath: string;
+  dryRun: boolean;
 }
 
 /**
  * Resolve the default path to movies.txt when MOVIES_FILE_PATH is not set.
  * Tries <cwd>/movies.txt first (works in Docker where cwd=/app and when running
- * from services/movie-sync/ directly).
- * Falls back to <cwd>/services/movie-sync/movies.txt so the service also works when
+ * from services/movie-seed/ directly).
+ * Falls back to <cwd>/services/movie-seed/movies.txt so the service also works when
  * started from the repository root.
  */
 function resolveDefaultMoviesFilePath(): string {
   const cwdPath = path.resolve(process.cwd(), 'movies.txt');
   if (existsSync(cwdPath)) return cwdPath;
 
-  const serviceLocalPath = path.resolve(process.cwd(), 'services/movie-sync/movies.txt');
+  const serviceLocalPath = path.resolve(process.cwd(), 'services/movie-seed/movies.txt');
   if (existsSync(serviceLocalPath)) return serviceLocalPath;
 
   // Neither found – return the cwd path so the error is clear when the file is read
@@ -50,7 +49,6 @@ export function loadConfig(): Config {
   return {
     openaiApiKey: openaiApiKey!,
     databaseUrl: databaseUrl!,
-    cronSchedule: process.env.CRON_SCHEDULE?.trim() ?? '0 3 * * *', // Default: 3 AM daily UTC
     dryRun: process.env.DRY_RUN === 'true',
     moviesFilePath,
   };

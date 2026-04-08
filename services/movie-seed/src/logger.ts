@@ -1,5 +1,5 @@
 /**
- * Structured JSON logger for the movie-sync service.
+ * Structured JSON logger for the movie-seed service.
  */
 
 type LogLevel = 'info' | 'warn' | 'error' | 'debug';

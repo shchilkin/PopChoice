@@ -1,4 +1,4 @@
-FROM node:20-slim AS builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY src/ ./src/
 
 RUN npm run build
 
-FROM node:20-slim
+FROM node:22-slim
 
 WORKDIR /app
 
@@ -18,6 +18,5 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
-COPY movies.txt ./
 
 CMD ["node", "dist/index.js"]

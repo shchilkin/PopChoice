@@ -33,7 +33,7 @@ function movieToEmbeddingText(movie: Omit<MovieRecord, 'embedding'>): string {
 export async function runSync(config: Config): Promise<void> {
   const startTime = Date.now();
 
-  logger.info('Sync started', { dryRun: config.dryRun });
+  logger.info('Seed sync started', { dryRun: config.dryRun });
 
   const countBefore = await getMovieCount();
   logger.info('Current database state', { movieCount: countBefore });
@@ -97,7 +97,7 @@ export async function runSync(config: Config): Promise<void> {
   const countAfter = await getMovieCount();
   const durationMs = Date.now() - startTime;
 
-  logger.info('Sync complete', {
+  logger.info('Seed sync complete', {
     inserted: result.success,
     errors: result.errors,
     movieCountBefore: countBefore,
