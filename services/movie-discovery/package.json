@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.2.1",
     "openai": "^6.33.0",
     "pg": "^8.20.0"
   },
