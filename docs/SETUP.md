@@ -71,6 +71,34 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
 
+## Local Docker PostgreSQL Setup
+
+You can run a fully-configured local PostgreSQL instance with pgvector using Docker Compose — no external provider needed.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
+
+### Steps:
+
+1. **Start the container**
+   ```bash
+   docker compose up -d
+   ```
+   Docker automatically runs `db/init/01_schema.sql` and `db/init/02_match_movies.sql` on first start, enabling the `vector` extension, creating the `movies` table, and installing the `match_movies` function.
+
+2. **Configure environment variables**
+   - Add `DATABASE_URL` to your `.env` file:
+     ```env
+     DATABASE_URL=postgresql://postgres:postgres@localhost:5432/popchoice
+     ```
+
+3. **Populate the database**
+   - Run `npm run populate-db`
+
+> **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
+> To reset the database from scratch, run `docker compose down -v` (removes the volume) then `docker compose up -d` again.
+
 ## Railway PostgreSQL Setup
 
 You can host your PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider).
