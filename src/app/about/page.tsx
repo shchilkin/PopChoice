@@ -1,14 +1,6 @@
 'use client';
 
-import {
-  Brain,
-  Database,
-  ListChecks,
-  Play,
-  Search,
-  Sparkles,
-  Zap,
-} from 'lucide-react';
+import { Brain, Database, ListChecks, Play, Search, Sparkles, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 
@@ -132,9 +124,8 @@ export default function AboutPage() {
           style={{ color: 'var(--pc-t2)', lineHeight: 1.75, fontSize: '0.95rem' }}
         >
           PopChoice isn&apos;t just a genre filter. It uses vector embeddings and AI to understand
-          what makes a film feel right to{' '}
-          <span style={{ color: 'var(--pc-t1)' }}>you</span> — then finds movies that genuinely
-          match that feeling.
+          what makes a film feel right to <span style={{ color: 'var(--pc-t1)' }}>you</span> — then
+          finds movies that genuinely match that feeling.
         </p>
       </motion.div>
 
@@ -344,9 +335,7 @@ export default function AboutPage() {
             ? 'linear-gradient(135deg, rgba(245,197,24,0.08) 0%, rgba(139,92,246,0.08) 100%)'
             : 'linear-gradient(135deg, rgba(196,149,10,0.07) 0%, rgba(139,92,246,0.07) 100%)',
           border: '1px solid',
-          borderColor: isDark
-            ? 'rgba(245,197,24,0.12)'
-            : 'rgba(196,149,10,0.18)',
+          borderColor: isDark ? 'rgba(245,197,24,0.12)' : 'rgba(196,149,10,0.18)',
         }}
       >
         <div className="text-4xl mb-4">🍿</div>

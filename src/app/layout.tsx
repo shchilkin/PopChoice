@@ -96,9 +96,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <PCLayout>
-            {children}
-          </PCLayout>
+          <PCLayout>{children}</PCLayout>
           <Analytics />
         </ThemeProvider>
       </body>

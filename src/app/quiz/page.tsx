@@ -2,26 +2,26 @@
 
 import axios from 'axios';
 import {
-    ChevronLeft,
-    ChevronRight,
-    Clapperboard,
-    Clock,
-    CloudSun,
-    Film,
-    FlaskConical,
-    Ghost,
-    Globe,
-    Heart,
-    Moon,
-    Plus,
-    Skull,
-    Smile,
-    Star,
-    Sun,
-    Trash2,
-    User,
-    Users,
-    Zap,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
+  Clock,
+  CloudSun,
+  Film,
+  FlaskConical,
+  Ghost,
+  Globe,
+  Heart,
+  Moon,
+  Plus,
+  Skull,
+  Smile,
+  Star,
+  Sun,
+  Trash2,
+  User,
+  Users,
+  Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
@@ -148,9 +148,7 @@ function toApiFormat(person: PersonAnswers) {
   return {
     favoriteMovie: person.favoriteMovie,
     newVsClassic: eraMap[person.era] || person.era,
-    moodPreference: person.moods.map(
-      (m) => GENRES.find((g) => g.id === m)?.label || m,
-    ),
+    moodPreference: person.moods.map((m) => GENRES.find((g) => g.id === m)?.label || m),
     tonePreference: toneMap[person.tone] || person.tone,
   };
 }
@@ -172,19 +170,11 @@ export default function QuizPage() {
   const currentPerson = people[currentPersonIdx];
 
   const ghostBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-  const iconUnselectedBg = isDark
-    ? 'rgba(255,255,255,0.05)'
-    : 'rgba(0,0,0,0.05)';
-  const chipUnselectedBg = isDark
-    ? 'rgba(255,255,255,0.05)'
-    : 'rgba(0,0,0,0.04)';
+  const iconUnselectedBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+  const chipUnselectedBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
-    setPeople((prev) =>
-      prev.map((p, i) =>
-        i === currentPersonIdx ? { ...p, ...updates } : p,
-      ),
-    );
+    setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
   }
 
   async function submitToApi() {
@@ -195,10 +185,7 @@ export default function QuizPage() {
       const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
 
       const response = await axios.post('/api/movie-recommendation', dataToSend);
-      localStorage.setItem(
-        'popchoice_recommendation',
-        JSON.stringify(response.data),
-      );
+      localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
       router.push('/loading');
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -317,14 +304,11 @@ export default function QuizPage() {
                 (e.currentTarget as HTMLElement).style.borderColor = isDark
                   ? 'rgba(245,197,24,0.4)'
                   : 'rgba(196,149,10,0.4)';
-                (e.currentTarget as HTMLElement).style.background =
-                  'var(--pc-surface-hover)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  'var(--pc-bd2)';
-                (e.currentTarget as HTMLElement).style.background =
-                  'var(--pc-surface)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface)';
               }}
             >
               <div
@@ -366,16 +350,12 @@ export default function QuizPage() {
                 border: '1px solid var(--pc-bd2)',
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  'rgba(139,92,246,0.4)';
-                (e.currentTarget as HTMLElement).style.background =
-                  'var(--pc-surface-hover)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.4)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  'var(--pc-bd2)';
-                (e.currentTarget as HTMLElement).style.background =
-                  'var(--pc-surface)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface)';
               }}
             >
               <div
@@ -455,9 +435,7 @@ export default function QuizPage() {
                 <input
                   value={name}
                   onChange={(e) =>
-                    setGroupNames((prev) =>
-                      prev.map((n, j) => (j === i ? e.target.value : n)),
-                    )
+                    setGroupNames((prev) => prev.map((n, j) => (j === i ? e.target.value : n)))
                   }
                   placeholder={`Person ${i + 1}'s name`}
                   className="flex-1 px-4 py-3 rounded-xl outline-none transition-all duration-200"
@@ -472,27 +450,21 @@ export default function QuizPage() {
                       'rgba(139,92,246,0.5)';
                   }}
                   onBlur={(e) => {
-                    (e.currentTarget as HTMLInputElement).style.borderColor =
-                      'var(--pc-bd2)';
+                    (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
                   }}
                 />
                 {groupNames.length > 2 && (
                   <button
-                    onClick={() =>
-                      setGroupNames((prev) => prev.filter((_, j) => j !== i))
-                    }
+                    onClick={() => setGroupNames((prev) => prev.filter((_, j) => j !== i))}
                     className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                     style={{ color: 'var(--pc-t3)' }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLElement).style.color = '#EF4444';
-                      (e.currentTarget as HTMLElement).style.background =
-                        'rgba(239,68,68,0.1)';
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.color =
-                        'var(--pc-t3)';
-                      (e.currentTarget as HTMLElement).style.background =
-                        'transparent';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--pc-t3)';
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
                     }}
                   >
                     <Trash2 size={15} />
@@ -512,13 +484,11 @@ export default function QuizPage() {
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLElement).style.color = '#A78BFA';
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  'rgba(139,92,246,0.4)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.4)';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.color = 'var(--pc-t3)';
-                (e.currentTarget as HTMLElement).style.borderColor =
-                  'var(--pc-bd4)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd4)';
               }}
             >
               <Plus size={15} /> Add another person
@@ -580,9 +550,7 @@ export default function QuizPage() {
           </h2>
           <p className="mb-8" style={{ color: 'var(--pc-t2)' }}>
             Now it&apos;s{' '}
-            <span style={{ color: 'var(--pc-gold)', fontWeight: 600 }}>
-              {nextName}
-            </span>
+            <span style={{ color: 'var(--pc-gold)', fontWeight: 600 }}>{nextName}</span>
             &apos;s turn. Hand over the phone!
           </p>
           <button
@@ -605,8 +573,7 @@ export default function QuizPage() {
   // ── QUESTIONS ──────────────────────────────────────────────────────────────
 
   const totalPeople = people.length;
-  const personLabel =
-    totalPeople > 1 ? `${currentPerson.name}'s turn` : null;
+  const personLabel = totalPeople > 1 ? `${currentPerson.name}'s turn` : null;
 
   return (
     <div className="flex-1 flex flex-col min-h-[80vh]">
@@ -653,9 +620,7 @@ export default function QuizPage() {
             </span>
           </div>
           {personLabel && (
-            <span style={{ color: 'var(--pc-t2)', fontSize: '0.8rem' }}>
-              👤 {personLabel}
-            </span>
+            <span style={{ color: 'var(--pc-t2)', fontSize: '0.8rem' }}>👤 {personLabel}</span>
           )}
         </div>
 
@@ -699,8 +664,7 @@ export default function QuizPage() {
                   </div>
                   <h2
                     style={{
-                      fontFamily:
-                        "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                      fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                       fontSize: '1.8rem',
                       letterSpacing: '0.04em',
                       color: 'var(--pc-t1)',
@@ -717,20 +681,15 @@ export default function QuizPage() {
                     marginTop: -8,
                   }}
                 >
-                  This helps us understand your taste. Any film that made an
-                  impression on you.
+                  This helps us understand your taste. Any film that made an impression on you.
                 </p>
 
                 <div className="relative">
                   <input
                     autoFocus
                     value={currentPerson.favoriteMovie}
-                    onChange={(e) =>
-                      updateCurrentPerson({ favoriteMovie: e.target.value })
-                    }
-                    onKeyDown={(e) =>
-                      e.key === 'Enter' && canProceed() && goNext()
-                    }
+                    onChange={(e) => updateCurrentPerson({ favoriteMovie: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && canProceed() && goNext()}
                     placeholder="e.g. The Dark Knight, Parasite, Coco…"
                     className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
                     style={{
@@ -740,18 +699,15 @@ export default function QuizPage() {
                       fontSize: '1rem',
                     }}
                     onFocus={(e) => {
-                      (e.currentTarget as HTMLInputElement).style.borderColor =
-                        isDark
-                          ? 'rgba(245,197,24,0.4)'
-                          : 'rgba(196,149,10,0.5)';
+                      (e.currentTarget as HTMLInputElement).style.borderColor = isDark
+                        ? 'rgba(245,197,24,0.4)'
+                        : 'rgba(196,149,10,0.5)';
                       (e.currentTarget as HTMLInputElement).style.boxShadow =
                         '0 0 0 3px rgba(245,197,24,0.06)';
                     }}
                     onBlur={(e) => {
-                      (e.currentTarget as HTMLInputElement).style.borderColor =
-                        'var(--pc-bd2)';
-                      (e.currentTarget as HTMLInputElement).style.boxShadow =
-                        'none';
+                      (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
+                      (e.currentTarget as HTMLInputElement).style.boxShadow = 'none';
                     }}
                   />
                 </div>
@@ -778,9 +734,7 @@ export default function QuizPage() {
                     ].map((film) => (
                       <button
                         key={film}
-                        onClick={() =>
-                          updateCurrentPerson({ favoriteMovie: film })
-                        }
+                        onClick={() => updateCurrentPerson({ favoriteMovie: film })}
                         className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
                         style={{
                           background:
@@ -822,8 +776,7 @@ export default function QuizPage() {
                   </div>
                   <h2
                     style={{
-                      fontFamily:
-                        "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                      fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                       fontSize: '1.8rem',
                       letterSpacing: '0.04em',
                       color: 'var(--pc-t1)',
@@ -867,15 +820,11 @@ export default function QuizPage() {
                         onClick={() => updateCurrentPerson({ era: opt.id })}
                         className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
                         style={{
-                          background: selected
-                            ? `${opt.color}18`
-                            : 'var(--pc-surface)',
+                          background: selected ? `${opt.color}18` : 'var(--pc-surface)',
                           border: selected
                             ? `1.5px solid ${opt.color}60`
                             : '1px solid var(--pc-bd2)',
-                          boxShadow: selected
-                            ? `0 0 20px ${opt.color}18`
-                            : 'none',
+                          boxShadow: selected ? `0 0 20px ${opt.color}18` : 'none',
                         }}
                       >
                         <div className="text-2xl">{opt.emoji}</div>
@@ -903,12 +852,7 @@ export default function QuizPage() {
                             className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
                             style={{ background: opt.color }}
                           >
-                            <svg
-                              width="10"
-                              height="10"
-                              viewBox="0 0 10 10"
-                              fill="none"
-                            >
+                            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                               <path
                                 d="M2 5l2.5 2.5L8 3"
                                 stroke="#09090F"
@@ -942,8 +886,7 @@ export default function QuizPage() {
                   <div>
                     <h2
                       style={{
-                        fontFamily:
-                          "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                        fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                         fontSize: '1.8rem',
                         letterSpacing: '0.04em',
                         color: 'var(--pc-t1)',
@@ -978,20 +921,14 @@ export default function QuizPage() {
                         }}
                         className="flex items-center gap-3 p-3.5 rounded-xl text-left transition-all duration-200 active:scale-[0.97]"
                         style={{
-                          background: selected
-                            ? `${g.color}18`
-                            : 'var(--pc-surface)',
-                          border: selected
-                            ? `1.5px solid ${g.color}50`
-                            : '1px solid var(--pc-bd1)',
+                          background: selected ? `${g.color}18` : 'var(--pc-surface)',
+                          border: selected ? `1.5px solid ${g.color}50` : '1px solid var(--pc-bd1)',
                         }}
                       >
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                           style={{
-                            background: selected
-                              ? `${g.color}25`
-                              : iconUnselectedBg,
+                            background: selected ? `${g.color}25` : iconUnselectedBg,
                             color: selected ? g.color : 'var(--pc-t3)',
                           }}
                         >
@@ -1041,8 +978,7 @@ export default function QuizPage() {
                   </div>
                   <h2
                     style={{
-                      fontFamily:
-                        "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                      fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                       fontSize: '1.8rem',
                       letterSpacing: '0.04em',
                       color: 'var(--pc-t1)',
@@ -1059,28 +995,18 @@ export default function QuizPage() {
                     return (
                       <button
                         key={t.id}
-                        onClick={() =>
-                          updateCurrentPerson({ tone: t.id as Tone })
-                        }
+                        onClick={() => updateCurrentPerson({ tone: t.id as Tone })}
                         className="flex flex-col items-start gap-3 p-4 rounded-2xl text-left transition-all duration-200 active:scale-[0.97]"
                         style={{
-                          background: selected
-                            ? t.grad
-                            : 'var(--pc-surface)',
-                          border: selected
-                            ? `1.5px solid ${t.color}50`
-                            : '1px solid var(--pc-bd1)',
-                          boxShadow: selected
-                            ? `0 0 20px ${t.color}14`
-                            : 'none',
+                          background: selected ? t.grad : 'var(--pc-surface)',
+                          border: selected ? `1.5px solid ${t.color}50` : '1px solid var(--pc-bd1)',
+                          boxShadow: selected ? `0 0 20px ${t.color}14` : 'none',
                         }}
                       >
                         <div
                           className="w-9 h-9 rounded-xl flex items-center justify-center"
                           style={{
-                            background: selected
-                              ? `${t.color}20`
-                              : iconUnselectedBg,
+                            background: selected ? `${t.color}20` : iconUnselectedBg,
                             color: selected ? t.color : 'var(--pc-t3)',
                           }}
                         >
@@ -1144,13 +1070,10 @@ export default function QuizPage() {
           disabled={!canProceed() || isSubmitting}
           className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
           style={{
-            background:
-              canProceed() && !isSubmitting ? 'var(--pc-cta)' : 'var(--pc-bd2)',
-            color:
-              canProceed() && !isSubmitting ? '#09090F' : 'var(--pc-t4)',
+            background: canProceed() && !isSubmitting ? 'var(--pc-cta)' : 'var(--pc-bd2)',
+            color: canProceed() && !isSubmitting ? '#09090F' : 'var(--pc-t4)',
             fontWeight: 700,
-            cursor:
-              canProceed() && !isSubmitting ? 'pointer' : 'not-allowed',
+            cursor: canProceed() && !isSubmitting ? 'pointer' : 'not-allowed',
           }}
         >
           {isSubmitting ? (

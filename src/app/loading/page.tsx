@@ -184,10 +184,7 @@ export default function LoadingPage() {
               transition={{ duration: 0.3 }}
             />
           </div>
-          <p
-            className="mt-2 text-right"
-            style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}
-          >
+          <p className="mt-2 text-right" style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>
             {progress}%
           </p>
         </div>
@@ -199,13 +196,9 @@ export default function LoadingPage() {
           transition={{ delay: 1.5, duration: 0.8 }}
           className="mt-10 p-4 rounded-xl max-w-xs"
           style={{
-            background: isDark
-              ? 'rgba(245,197,24,0.06)'
-              : 'rgba(196,149,10,0.06)',
+            background: isDark ? 'rgba(245,197,24,0.06)' : 'rgba(196,149,10,0.06)',
             border: '1px solid',
-            borderColor: isDark
-              ? 'rgba(245,197,24,0.12)'
-              : 'rgba(196,149,10,0.18)',
+            borderColor: isDark ? 'rgba(245,197,24,0.12)' : 'rgba(196,149,10,0.18)',
           }}
         >
           <p
@@ -215,10 +208,9 @@ export default function LoadingPage() {
               lineHeight: 1.6,
             }}
           >
-            <span style={{ color: 'var(--pc-gold)' }}>🍿 Did you know?</span> The
-            average person spends{' '}
-            <span style={{ color: 'var(--pc-t1)' }}>18 minutes</span> deciding what to
-            watch — PopChoice does it in seconds.
+            <span style={{ color: 'var(--pc-gold)' }}>🍿 Did you know?</span> The average person
+            spends <span style={{ color: 'var(--pc-t1)' }}>18 minutes</span> deciding what to watch
+            — PopChoice does it in seconds.
           </p>
         </motion.div>
       </motion.div>

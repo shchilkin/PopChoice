@@ -59,8 +59,7 @@ function FilmParticles() {
               bottom: '-20px',
               width: size,
               height: size,
-              background:
-                i % 3 === 0 ? '#F5C518' : i % 3 === 1 ? '#FF9F1C' : '#8B5CF6',
+              background: i % 3 === 0 ? '#F5C518' : i % 3 === 1 ? '#FF9F1C' : '#8B5CF6',
               opacity,
               animation: `float-up ${dur}s ${delay}s linear infinite`,
             }}
@@ -129,9 +128,7 @@ export default function LandingPage() {
             style={{
               background: isDark ? 'rgba(245,197,24,0.12)' : 'rgba(196,149,10,0.1)',
               border: '1px solid',
-              borderColor: isDark
-                ? 'rgba(245,197,24,0.25)'
-                : 'rgba(196,149,10,0.3)',
+              borderColor: isDark ? 'rgba(245,197,24,0.25)' : 'rgba(196,149,10,0.3)',
               color: 'var(--pc-gold)',
             }}
           >
@@ -162,20 +159,12 @@ export default function LandingPage() {
             className="mb-3 tracking-tight"
           >
             <span
+              className="pc-gradient-text"
               style={{
-                display: 'inline-block',
-                fontFamily:
-                  "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                 fontSize: 'clamp(3.5rem, 10vw, 6rem)',
                 lineHeight: 1,
                 letterSpacing: '0.04em',
-                background: isDark
-                  ? 'linear-gradient(135deg, #FFFFFF 0%, #F5C518 60%, #FF9F1C 100%)'
-                  : 'linear-gradient(135deg, #0D0D1A 0%, #C4950A 55%, #D4760C 100%)',
-                WebkitBackgroundClip: 'text',
-                backgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                color: 'transparent',
               }}
             >
               PopChoice
@@ -189,10 +178,9 @@ export default function LandingPage() {
             className="mb-10 max-w-lg"
             style={{ color: 'var(--pc-t2)', fontSize: '1.1rem', lineHeight: 1.7 }}
           >
-            Stop endlessly scrolling. Answer 4 quick questions and let AI find
-            the{' '}
-            <span style={{ color: 'var(--pc-gold)' }}>perfect movie</span> for
-            your mood, your night, your vibe.
+            Stop endlessly scrolling. Answer 4 quick questions and let AI find the{' '}
+            <span style={{ color: 'var(--pc-gold)' }}>perfect movie</span> for your mood, your
+            night, your vibe.
           </motion.p>
 
           {/* CTA */}
@@ -214,14 +202,11 @@ export default function LandingPage() {
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.boxShadow =
                   'var(--pc-cta-shadow-hover)';
-                (e.currentTarget as HTMLButtonElement).style.transform =
-                  'translateY(-2px)';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.boxShadow =
-                  'var(--pc-cta-shadow)';
-                (e.currentTarget as HTMLButtonElement).style.transform =
-                  'translateY(0)';
+                (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--pc-cta-shadow)';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
               }}
             >
               <Play size={18} className="fill-current" />
@@ -234,21 +219,15 @@ export default function LandingPage() {
               style={{
                 color: 'var(--pc-t2)',
                 border: '1px solid var(--pc-bd2)',
-                background: isDark
-                  ? 'rgba(255,255,255,0.03)'
-                  : 'rgba(0,0,0,0.03)',
+                background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  'var(--pc-t1)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  'var(--pc-bd4)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--pc-t1)';
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pc-bd4)';
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  'var(--pc-t2)';
-                (e.currentTarget as HTMLButtonElement).style.borderColor =
-                  'var(--pc-bd2)';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--pc-t2)';
+                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pc-bd2)';
               }}
             >
               How it works
@@ -276,12 +255,7 @@ export default function LandingPage() {
           style={{ color: 'var(--pc-t4)' }}
         >
           <div style={{ animation: 'bounce-soft 2s ease-in-out infinite' }}>
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 14l-5-5h10l-5 5z" />
             </svg>
           </div>
@@ -301,8 +275,7 @@ export default function LandingPage() {
           <h2
             className="mb-3"
             style={{
-              fontFamily:
-                "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
               fontSize: 'clamp(2rem, 5vw, 3rem)',
               letterSpacing: '0.05em',
               color: 'var(--pc-t1)',
@@ -372,10 +345,7 @@ export default function LandingPage() {
             className="w-full h-full object-cover"
             style={{ opacity: isDark ? 0.12 : 0.07 }}
           />
-          <div
-            className="absolute inset-0"
-            style={{ background: sectionFadeGrad }}
-          />
+          <div className="absolute inset-0" style={{ background: sectionFadeGrad }} />
         </div>
 
         <motion.div
@@ -394,8 +364,7 @@ export default function LandingPage() {
           <h2
             className="mb-4"
             style={{
-              fontFamily:
-                "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
               fontSize: 'clamp(2rem, 6vw, 3.5rem)',
               letterSpacing: '0.04em',
               color: 'var(--pc-t1)',
@@ -403,12 +372,9 @@ export default function LandingPage() {
           >
             Your next favorite film is one quiz away
           </h2>
-          <p
-            className="mb-8"
-            style={{ color: 'var(--pc-t2)', lineHeight: 1.7 }}
-          >
-            Whether it&apos;s a cozy solo night or a rowdy group screening,
-            PopChoice reads the room and delivers a pick everyone will love.
+          <p className="mb-8" style={{ color: 'var(--pc-t2)', lineHeight: 1.7 }}>
+            Whether it&apos;s a cozy solo night or a rowdy group screening, PopChoice reads the room
+            and delivers a pick everyone will love.
           </p>
           <button
             onClick={() => router.push('/quiz')}

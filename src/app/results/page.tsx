@@ -1,14 +1,14 @@
 'use client';
 
 import {
-    ChevronLeft,
-    ChevronRight,
-    Clapperboard,
-    Clock,
-    RotateCcw,
-    Sparkles,
-    Star,
-    Users,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
+  Clock,
+  RotateCcw,
+  Sparkles,
+  Star,
+  Users,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
@@ -61,14 +61,7 @@ function StarRating({ score }: { score: number }) {
 
 function SimilarityBadge({ similarity }: { similarity: number }) {
   const pct = Math.round(similarity * 100);
-  const color =
-    pct >= 95
-      ? '#14B8A6'
-      : pct >= 90
-        ? '#F5C518'
-        : pct >= 85
-          ? '#FF9F1C'
-          : '#8B5CF6';
+  const color = pct >= 95 ? '#14B8A6' : pct >= 90 ? '#F5C518' : pct >= 85 ? '#FF9F1C' : '#8B5CF6';
   return (
     <div
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
@@ -152,9 +145,7 @@ function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
             <div
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
               style={{
-                background: isDark
-                  ? 'rgba(9,9,15,0.8)'
-                  : 'rgba(255,255,255,0.85)',
+                background: isDark ? 'rgba(9,9,15,0.8)' : 'rgba(255,255,255,0.85)',
                 border: '1px solid rgba(245,197,24,0.25)',
                 color: 'var(--pc-gold)',
                 backdropFilter: 'blur(8px)',
@@ -272,9 +263,7 @@ function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
         {score > 0 && (
           <div className="flex items-center gap-2 mb-4">
             <StarRating score={score} />
-            <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
-              {score}/10
-            </span>
+            <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>{score}/10</span>
           </div>
         )}
 
@@ -283,13 +272,9 @@ function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
           <div
             className="p-4 rounded-2xl"
             style={{
-              background: isDark
-                ? 'rgba(245,197,24,0.05)'
-                : 'rgba(196,149,10,0.05)',
+              background: isDark ? 'rgba(245,197,24,0.05)' : 'rgba(196,149,10,0.05)',
               border: '1px solid',
-              borderColor: isDark
-                ? 'rgba(245,197,24,0.1)'
-                : 'rgba(196,149,10,0.15)',
+              borderColor: isDark ? 'rgba(245,197,24,0.1)' : 'rgba(196,149,10,0.15)',
             }}
           >
             <div className="flex items-center gap-2 mb-2">
@@ -337,9 +322,7 @@ function SmallSuggestionCard({
       className="relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-300"
       style={{
         background: 'var(--pc-surface)',
-        border: active
-          ? '1.5px solid rgba(245,197,24,0.4)'
-          : '1px solid var(--pc-bd2)',
+        border: active ? '1.5px solid rgba(245,197,24,0.4)' : '1px solid var(--pc-bd2)',
         boxShadow: active ? '0 0 30px rgba(245,197,24,0.1)' : 'none',
         minWidth: '220px',
         maxWidth: '260px',
@@ -377,8 +360,7 @@ function SmallSuggestionCard({
         <div
           className="absolute inset-0"
           style={{
-            background:
-              'linear-gradient(to bottom, transparent 40%, var(--pc-surface) 100%)',
+            background: 'linear-gradient(to bottom, transparent 40%, var(--pc-surface) 100%)',
           }}
         />
         <div className="absolute top-2 right-2">
@@ -435,11 +417,7 @@ function SmallSuggestionCard({
   );
 }
 
-function ExpandedSuggestion({
-  movie,
-}: {
-  movie: MovieRecommendation;
-}) {
+function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
   const { isDark } = usePCTheme();
   const score = movie.score_rating ?? 0;
 
@@ -456,19 +434,13 @@ function ExpandedSuggestion({
         style={{
           background: 'var(--pc-surface)',
           border: '1px solid',
-          borderColor: isDark
-            ? 'rgba(245,197,24,0.15)'
-            : 'rgba(196,149,10,0.2)',
+          borderColor: isDark ? 'rgba(245,197,24,0.15)' : 'rgba(196,149,10,0.2)',
         }}
       >
         <div className="flex items-start gap-4">
           {movie.posterURL && (
             <div className="relative shrink-0 w-20 h-28 rounded-xl overflow-hidden">
-              <img
-                src={movie.posterURL}
-                alt={movie.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={movie.posterURL} alt={movie.name} className="w-full h-full object-cover" />
             </div>
           )}
           <div className="flex-1 min-w-0">
@@ -476,8 +448,7 @@ function ExpandedSuggestion({
               <div>
                 <h3
                   style={{
-                    fontFamily:
-                      "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                    fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                     fontSize: '1.3rem',
                     letterSpacing: '0.03em',
                     color: 'var(--pc-t1)',
@@ -517,13 +488,9 @@ function ExpandedSuggestion({
           <div
             className="mt-4 p-3.5 rounded-xl"
             style={{
-              background: isDark
-                ? 'rgba(245,197,24,0.04)'
-                : 'rgba(196,149,10,0.05)',
+              background: isDark ? 'rgba(245,197,24,0.04)' : 'rgba(196,149,10,0.05)',
               border: '1px solid',
-              borderColor: isDark
-                ? 'rgba(245,197,24,0.08)'
-                : 'rgba(196,149,10,0.12)',
+              borderColor: isDark ? 'rgba(245,197,24,0.08)' : 'rgba(196,149,10,0.12)',
             }}
           >
             <div className="flex items-center gap-2 mb-1.5">
@@ -657,10 +624,7 @@ export default function ResultsPage() {
         >
           No recommendations found
         </h2>
-        <p
-          className="mb-6"
-          style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}
-        >
+        <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
           Try the quiz again with different answers.
         </p>
         <button
@@ -690,13 +654,9 @@ export default function ResultsPage() {
         <div
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs mb-4 uppercase tracking-widest"
           style={{
-            background: isDark
-              ? 'rgba(245,197,24,0.1)'
-              : 'rgba(196,149,10,0.08)',
+            background: isDark ? 'rgba(245,197,24,0.1)' : 'rgba(196,149,10,0.08)',
             border: '1px solid',
-            borderColor: isDark
-              ? 'rgba(245,197,24,0.2)'
-              : 'rgba(196,149,10,0.25)',
+            borderColor: isDark ? 'rgba(245,197,24,0.2)' : 'rgba(196,149,10,0.25)',
             color: 'var(--pc-gold)',
           }}
         >
@@ -713,10 +673,7 @@ export default function ResultsPage() {
         >
           We found your perfect film
         </h1>
-        <p
-          className="mt-2"
-          style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}
-        >
+        <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
           Matched from 10,000+ films using AI taste analysis
         </p>
       </motion.div>
@@ -727,14 +684,10 @@ export default function ResultsPage() {
           <div
             className="w-1.5 h-5 rounded-full"
             style={{
-              background:
-                'linear-gradient(180deg, var(--pc-gold), var(--pc-amber))',
+              background: 'linear-gradient(180deg, var(--pc-gold), var(--pc-amber))',
             }}
           />
-          <span
-            className="uppercase tracking-widest text-xs"
-            style={{ color: 'var(--pc-gold)' }}
-          >
+          <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-gold)' }}>
             Top Pick
           </span>
         </div>
@@ -756,10 +709,7 @@ export default function ResultsPage() {
                   background: 'linear-gradient(180deg, #8B5CF6, #14B8A6)',
                 }}
               />
-              <span
-                className="uppercase tracking-widest text-xs"
-                style={{ color: 'var(--pc-t2)' }}
-              >
+              <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
                 More suggestions
               </span>
             </div>
@@ -769,9 +719,7 @@ export default function ResultsPage() {
                 disabled={!canScrollLeft}
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                 style={{
-                  background: canScrollLeft
-                    ? 'var(--pc-bd2)'
-                    : 'var(--pc-bd1)',
+                  background: canScrollLeft ? 'var(--pc-bd2)' : 'var(--pc-bd1)',
                   border: '1px solid var(--pc-bd2)',
                   color: canScrollLeft ? 'var(--pc-t1)' : 'var(--pc-t4)',
                   cursor: canScrollLeft ? 'pointer' : 'not-allowed',
@@ -784,9 +732,7 @@ export default function ResultsPage() {
                 disabled={!canScrollRight}
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                 style={{
-                  background: canScrollRight
-                    ? 'var(--pc-bd2)'
-                    : 'var(--pc-bd1)',
+                  background: canScrollRight ? 'var(--pc-bd2)' : 'var(--pc-bd1)',
                   border: '1px solid var(--pc-bd2)',
                   color: canScrollRight ? 'var(--pc-t1)' : 'var(--pc-t4)',
                   cursor: canScrollRight ? 'pointer' : 'not-allowed',
@@ -854,9 +800,7 @@ export default function ResultsPage() {
             {activeSuggestion !== null && (
               <ExpandedSuggestion
                 key={activeSuggestion}
-                movie={
-                  otherMovies.find((m) => m.id === activeSuggestion)!
-                }
+                movie={otherMovies.find((m) => m.id === activeSuggestion)!}
               />
             )}
           </AnimatePresence>
@@ -877,9 +821,7 @@ export default function ResultsPage() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
-            background: isDark
-              ? 'rgba(255,255,255,0.05)'
-              : 'rgba(0,0,0,0.04)',
+            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
             border: '1px solid var(--pc-bd2)',
             color: 'var(--pc-t2)',
             fontSize: '0.9rem',
@@ -913,10 +855,7 @@ export default function ResultsPage() {
         </button>
       </motion.div>
 
-      <p
-        className="mt-8 text-center"
-        style={{ color: 'var(--pc-t5)', fontSize: '0.72rem' }}
-      >
+      <p className="mt-8 text-center" style={{ color: 'var(--pc-t5)', fontSize: '0.72rem' }}>
         Recommendations are AI-generated based on your taste profile.
       </p>
     </div>
