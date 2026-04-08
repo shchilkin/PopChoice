@@ -32,6 +32,7 @@ export async function runSync(config: Config): Promise<void> {
     config.tmdbReadAccessToken,
     config.sources,
     config.maxPagesPerSource,
+    config.language,
   );
   logger.info('Fetched candidates from TMDB', { count: candidates.length });
 
@@ -129,7 +130,7 @@ export async function runSync(config: Config): Promise<void> {
     const batchResults = await Promise.all(
       batch.map(async (m) => {
         try {
-          const details = await fetchMovieDetails(config.tmdbReadAccessToken, m.id);
+          const details = await fetchMovieDetails(config.tmdbReadAccessToken, m.id, config.language);
           return details;
         } catch (err) {
           logger.warn('Failed to fetch movie details, using basic data', {

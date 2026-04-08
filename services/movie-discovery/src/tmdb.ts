@@ -52,12 +52,13 @@ async function fetchFromSource(
   readAccessToken: string,
   source: TMDBSource,
   maxPages: number,
+  language: string,
 ): Promise<TMDBMovie[]> {
   const allMovies: TMDBMovie[] = [];
 
   for (let page = 1; page <= maxPages; page++) {
     const url = new URL(`${TMDB_BASE_URL}/movie/${source}`);
-    url.searchParams.set('language', 'en-US');
+    url.searchParams.set('language', language);
     url.searchParams.set('page', String(page));
 
     logger.info('Fetching TMDB source page', { source, page, maxPages });
@@ -98,12 +99,13 @@ export async function fetchFromSources(
   readAccessToken: string,
   sources: TMDBSource[],
   maxPagesPerSource: number,
+  language: string,
 ): Promise<TMDBMovie[]> {
   const seenIds = new Set<number>();
   const allMovies: TMDBMovie[] = [];
 
   for (const source of sources) {
-    const movies = await fetchFromSource(readAccessToken, source, maxPagesPerSource);
+    const movies = await fetchFromSource(readAccessToken, source, maxPagesPerSource, language);
     for (const movie of movies) {
       if (!seenIds.has(movie.id)) {
         seenIds.add(movie.id);
@@ -122,9 +124,11 @@ export async function fetchFromSources(
 export async function fetchMovieDetails(
   readAccessToken: string,
   movieId: number,
+  language: string,
 ): Promise<TMDBMovieDetails> {
   const url = new URL(`${TMDB_BASE_URL}/movie/${movieId}`);
   url.searchParams.set('append_to_response', 'release_dates');
+  url.searchParams.set('language', language);
 
   const response = await fetch(url.toString(), {
     headers: {

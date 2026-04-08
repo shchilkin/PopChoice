@@ -18,6 +18,7 @@ This service fetches movies from multiple TMDB endpoints (`now_playing`, `upcomi
 | `MIN_VOTE_COUNT`         | ❌       | `500`       | Minimum number of votes a movie must have                          |
 | `MIN_VOTE_AVERAGE`       | ❌       | `6.5`       | Minimum TMDB vote average                                          |
 | `MAX_MOVIES_PER_RUN`     | ❌       | `50`        | Cap on new movies embedded and inserted per run                    |
+| `TMDB_LANGUAGE`          | ❌       | `en-US`     | TMDB API language/locale tag (e.g. `fi-FI`, `ru-RU`)              |
 | `SYNC_SCHEDULE`          | ❌       | `0 0 * * 0` | Cron expression for scheduled mode (UTC). Empty string = one-shot. |
 | `DRY_RUN`                | ❌       | `false`     | Set to `"true"` to skip embeddings and database inserts            |
 

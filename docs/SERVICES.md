@@ -98,6 +98,7 @@ A movie passes if **all** conditions are met:
 | `MIN_VOTE_COUNT`         | ❌       | `500`       | Minimum vote count                                        |
 | `MIN_VOTE_AVERAGE`       | ❌       | `6.5`       | Minimum TMDB vote average                                 |
 | `MAX_MOVIES_PER_RUN`     | ❌       | `50`        | Cap on movies embedded per run                            |
+| `TMDB_LANGUAGE`          | ❌       | `en-US`     | TMDB API language/locale tag (e.g. `fi-FI`, `ru-RU`)     |
 | `SYNC_SCHEDULE`          | ❌       | `0 0 * * 0` | Cron expression (UTC). Set to `""` for one-shot mode.     |
 | `DRY_RUN`                | ❌       | `false`     | `"true"` to skip embeddings/inserts                       |
 
@@ -122,4 +123,4 @@ Both services share the same PostgreSQL schema managed by `ensureSchema()` in `d
 - **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, and a 3072-dimension embedding vector
 - **Function:** `match_movies(query_embedding, match_threshold, match_count)` — returns movies ordered by cosine similarity
 
-The schema setup uses `CREATE IF NOT EXISTS` for the extension and table (additive/idempotent), but the `match_movies` function is always dropped and recreated on startup to keep its definition current.
+The schema setup uses `CREATE IF NOT EXISTS` for the extension and table (additive/idempotent), and updates the `match_movies` function definition with `CREATE OR REPLACE FUNCTION` on startup to keep it current without dropping it first.

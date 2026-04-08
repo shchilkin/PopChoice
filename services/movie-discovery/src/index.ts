@@ -15,6 +15,7 @@
  *   MIN_VOTE_COUNT        — Minimum vote count threshold (default: 500)
  *   MIN_VOTE_AVERAGE      — Minimum vote average threshold (default: 6.5)
  *   MAX_MOVIES_PER_RUN    — Max movies to embed per run (default: 50)
+ *   TMDB_LANGUAGE         — TMDB API language/locale tag (default: "en-US")
  *   SYNC_SCHEDULE         — Cron expression (default: "0 0 * * 0")
  *   DRY_RUN               — Set to "true" to skip embeddings/inserts
  */

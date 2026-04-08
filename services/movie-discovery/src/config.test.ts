@@ -163,4 +163,17 @@ describe('loadConfig', () => {
     const config = loadConfig();
     expect(config.schedule).toBe('0 3 * * 1');
   });
+
+  // ---- TMDB_LANGUAGE -------------------------------------------------------
+
+  it('defaults language to en-US when TMDB_LANGUAGE not set', () => {
+    const config = loadConfig();
+    expect(config.language).toBe('en-US');
+  });
+
+  it('uses custom language when TMDB_LANGUAGE is provided', () => {
+    vi.stubEnv('TMDB_LANGUAGE', 'fi-FI');
+    const config = loadConfig();
+    expect(config.language).toBe('fi-FI');
+  });
 });

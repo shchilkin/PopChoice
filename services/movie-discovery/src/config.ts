@@ -9,6 +9,7 @@ export interface Config {
   minVoteCount: number;
   minVoteAverage: number;
   maxMoviesPerRun: number;
+  language: string;
   dryRun: boolean;
   schedule: string;
 }
@@ -76,6 +77,7 @@ export function loadConfig(): Config {
     minVoteCount: parsePositiveInt(process.env.MIN_VOTE_COUNT, 500, 'MIN_VOTE_COUNT'),
     minVoteAverage: parsePositiveFloat(process.env.MIN_VOTE_AVERAGE, 6.5, 'MIN_VOTE_AVERAGE'),
     maxMoviesPerRun: parsePositiveInt(process.env.MAX_MOVIES_PER_RUN, 50, 'MAX_MOVIES_PER_RUN'),
+    language: process.env.TMDB_LANGUAGE?.trim() || 'en-US',
     dryRun: process.env.DRY_RUN === 'true',
     schedule: process.env.SYNC_SCHEDULE?.trim() ?? '0 0 * * 0', // Default: weekly Sunday midnight UTC
   };
