@@ -71,7 +71,7 @@
     "sort-package-json": "^3.4.0",
     "storybook": "^9.1.0",
     "tailwindcss": "^4",
-    "tsx": "^4.20.3",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^3.2.4"
   },
