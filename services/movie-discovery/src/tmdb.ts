@@ -160,14 +160,16 @@ export function extractUSCertification(details: TMDBMovieDetails): string {
  */
 export function movieToEmbeddingText(movie: TMDBMovieDetails, ageRating: string): string {
   const year = movie.release_date?.substring(0, 4) || 'Unknown';
-  const runtime = movie.runtime ?? 0;
+  const runtime = movie.runtime;
   const score = movie.vote_average.toFixed(1);
+  const durationText =
+    typeof runtime === 'number' && runtime > 0 ? `Duration: ${runtime} min` : 'Duration: unknown';
 
   return [
     `${movie.title} (${year})`,
     `Rating: ${ageRating}`,
     `Score: ${score}/10`,
-    `Duration: ${runtime} min`,
+    durationText,
     `Description: ${movie.overview || 'No description available.'}`,
   ].join('\n');
 }
