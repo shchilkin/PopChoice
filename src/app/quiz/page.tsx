@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
-import { usePCTheme } from '@/hooks/usePCTheme';
 
 import {
   BetweenPersons,
@@ -24,7 +23,6 @@ import type { PersonAnswers, Phase } from './types';
 
 export default function QuizPage() {
   const router = useRouter();
-  const { isDark } = usePCTheme();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [mode, setMode] = useState<'solo' | 'group'>('solo');
@@ -36,7 +34,6 @@ export default function QuizPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentPerson = people[currentPersonIdx];
-  const ghostBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
@@ -162,23 +159,16 @@ export default function QuizPage() {
                 key={i}
                 className="text-xs px-3 py-1 rounded-full transition-all duration-200"
                 style={{
-                  background:
-                    i === currentPersonIdx
-                      ? isDark
-                        ? 'rgba(245,197,24,0.15)'
-                        : 'rgba(196,149,10,0.12)'
-                      : ghostBg,
+                  background: i === currentPersonIdx ? 'var(--pc-gold-wash)' : 'var(--pc-ghost)',
                   color:
                     i === currentPersonIdx
                       ? 'var(--pc-gold)'
                       : i < currentPersonIdx
-                        ? isDark
-                          ? 'rgba(245,197,24,0.4)'
-                          : 'rgba(196,149,10,0.5)'
+                        ? 'var(--pc-gold-focus)'
                         : 'var(--pc-t4)',
                   border:
                     i === currentPersonIdx
-                      ? '1px solid rgba(245,197,24,0.3)'
+                      ? '1px solid var(--pc-gold-bd)'
                       : '1px solid transparent',
                 }}
               >

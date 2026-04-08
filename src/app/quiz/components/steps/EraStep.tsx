@@ -2,6 +2,8 @@
 
 import { Clock } from 'lucide-react';
 
+import { palette } from '@/styles/designTokens';
+
 import type { Era, PersonAnswers } from '../../types';
 
 interface EraStepProps {
@@ -15,21 +17,21 @@ const ERA_OPTIONS = [
     emoji: '✨',
     title: 'New Releases',
     desc: 'Recent films from the last 5 years',
-    color: '#14B8A6',
+    color: palette.teal,
   },
   {
     id: 'classic' as Era,
     emoji: '🎞️',
     title: 'Timeless Classics',
     desc: 'Golden films that stood the test of time',
-    color: '#F5C518',
+    color: palette.gold,
   },
   {
     id: 'both' as Era,
     emoji: '🎬',
     title: "I'm open to both",
     desc: "Surprise me — old or new, as long as it's great",
-    color: '#8B5CF6',
+    color: palette.purple,
   },
 ];
 
@@ -101,7 +103,7 @@ export function EraStep({ person, onUpdate }: EraStepProps) {
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                     <path
                       d="M2 5l2.5 2.5L8 3"
-                      stroke="#09090F"
+                      stroke="var(--pc-cta-text)"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"

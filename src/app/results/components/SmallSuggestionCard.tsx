@@ -4,6 +4,8 @@ import { Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 
+import { palette } from '@/styles/designTokens';
+
 import type { MovieRecommendation } from '@/utils/client';
 
 interface SmallSuggestionCardProps {
@@ -71,7 +73,7 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
             style={{
               background: 'rgba(9,9,15,0.85)',
               border: '1px solid rgba(245,197,24,0.2)',
-              color: '#F5C518',
+              color: palette.gold,
               backdropFilter: 'blur(6px)',
             }}
           >
@@ -102,7 +104,7 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
             <>
               <span>·</span>
               <span className="flex items-center gap-0.5">
-                <Star size={10} fill="#F5C518" stroke="none" />
+                <Star size={10} fill={palette.gold} stroke="none" />
                 {score}
               </span>
             </>

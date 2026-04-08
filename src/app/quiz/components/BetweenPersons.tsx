@@ -39,7 +39,7 @@ export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: Be
           className="px-8 py-3.5 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: 'var(--pc-cta)',
-            color: '#09090F',
+            color: 'var(--pc-cta-text)',
             fontWeight: 700,
             fontSize: '1rem',
           }}

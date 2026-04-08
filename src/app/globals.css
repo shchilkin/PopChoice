@@ -38,6 +38,37 @@
   --pc-footer: #9090b0;
   --pc-footer-bd: rgba(0, 0, 0, 0.06);
 
+  /* Interactive surfaces */
+  --pc-ghost: rgba(0, 0, 0, 0.04);
+
+  /* Gold accent states */
+  --pc-gold-subtle: rgba(196, 149, 10, 0.1);
+  --pc-gold-tint: rgba(196, 149, 10, 0.12);
+  --pc-gold-wash: rgba(196, 149, 10, 0.15);
+  --pc-gold-focus: rgba(196, 149, 10, 0.5);
+  --pc-gold-ring: 0 0 0 3px rgba(245, 197, 24, 0.06);
+  --pc-gold-bd-subtle: rgba(196, 149, 10, 0.25);
+  --pc-gold-bd: rgba(245, 197, 24, 0.3);
+  --pc-gold-bd-strong: rgba(245, 197, 24, 0.4);
+
+  /* AI content blocks */
+  --pc-ai-bg: rgba(196, 149, 10, 0.05);
+  --pc-ai-bd: rgba(196, 149, 10, 0.15);
+
+  /* Image/poster overlays */
+  --pc-poster-grad: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.6) 60%,
+    #ffffff 100%
+  );
+  --pc-overlay-bg: rgba(255, 255, 255, 0.85);
+  --pc-overlay-text: #0d0d1a;
+  --pc-overlay-shadow: 0 1px 8px rgba(255, 255, 255, 0.8);
+
+  /* CTA foreground */
+  --pc-cta-text: #09090f;
+
   /* Shadows */
   --pc-card-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
   --pc-cta-shadow: 0 4px 20px rgba(196, 149, 10, 0.3), 0 2px 8px rgba(196, 149, 10, 0.15);
@@ -109,6 +140,37 @@
   /* Footer */
   --pc-footer: #3d3d55;
   --pc-footer-bd: rgba(255, 255, 255, 0.04);
+
+  /* Interactive surfaces */
+  --pc-ghost: rgba(255, 255, 255, 0.05);
+
+  /* Gold accent states */
+  --pc-gold-subtle: rgba(245, 197, 24, 0.1);
+  --pc-gold-tint: rgba(245, 197, 24, 0.2);
+  --pc-gold-wash: rgba(245, 197, 24, 0.15);
+  --pc-gold-focus: rgba(245, 197, 24, 0.4);
+  --pc-gold-ring: 0 0 0 3px rgba(245, 197, 24, 0.06);
+  --pc-gold-bd-subtle: rgba(245, 197, 24, 0.2);
+  --pc-gold-bd: rgba(245, 197, 24, 0.3);
+  --pc-gold-bd-strong: rgba(245, 197, 24, 0.4);
+
+  /* AI content blocks */
+  --pc-ai-bg: rgba(245, 197, 24, 0.05);
+  --pc-ai-bd: rgba(245, 197, 24, 0.1);
+
+  /* Image/poster overlays */
+  --pc-poster-grad: linear-gradient(
+    to bottom,
+    rgba(9, 9, 15, 0.2) 0%,
+    rgba(9, 9, 15, 0.7) 60%,
+    #13131f 100%
+  );
+  --pc-overlay-bg: rgba(9, 9, 15, 0.8);
+  --pc-overlay-text: #ffffff;
+  --pc-overlay-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+
+  /* CTA foreground */
+  --pc-cta-text: #09090f;
 
   /* Shadows */
   --pc-card-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);

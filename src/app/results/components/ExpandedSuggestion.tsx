@@ -3,7 +3,7 @@
 import { Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 import { SimilarityBadge } from './SimilarityBadge';
 import { StarRating } from './StarRating';
@@ -11,7 +11,6 @@ import { StarRating } from './StarRating';
 import type { MovieRecommendation } from '@/utils/client';
 
 export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
-  const { isDark } = usePCTheme();
   const score = movie.score_rating ?? 0;
 
   return (
@@ -27,7 +26,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
         style={{
           background: 'var(--pc-surface)',
           border: '1px solid',
-          borderColor: isDark ? 'rgba(245,197,24,0.15)' : 'rgba(196,149,10,0.2)',
+          borderColor: 'var(--pc-ai-bd)',
         }}
       >
         <div className="flex items-start gap-4">
@@ -64,7 +63,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                     <>
                       <span>·</span>
                       <span className="flex items-center gap-0.5">
-                        <Star size={10} fill="#F5C518" stroke="none" />
+                        <Star size={10} fill={palette.gold} stroke="none" />
                         {score}
                       </span>
                     </>
@@ -81,9 +80,9 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
           <div
             className="mt-4 p-3.5 rounded-xl"
             style={{
-              background: isDark ? 'rgba(245,197,24,0.04)' : 'rgba(196,149,10,0.05)',
+              background: 'var(--pc-ai-bg)',
               border: '1px solid',
-              borderColor: isDark ? 'rgba(245,197,24,0.08)' : 'rgba(196,149,10,0.12)',
+              borderColor: 'var(--pc-ai-bd)',
             }}
           >
             <div className="flex items-center gap-2 mb-1.5">

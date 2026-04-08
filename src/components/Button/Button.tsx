@@ -10,7 +10,7 @@ export type BaseButtonProps = {
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
   default: 'bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90',
-  cta: 'text-[#09090F] font-bold hover:opacity-90 active:scale-95',
+  cta: 'text-[var(--pc-cta-text)] font-bold hover:opacity-90 active:scale-95',
   ghost:
     'bg-transparent text-[var(--pc-t2)] border border-[var(--pc-bd2)] hover:text-[var(--pc-t1)] hover:border-[var(--pc-bd4)]',
 };

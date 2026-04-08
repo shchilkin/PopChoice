@@ -2,8 +2,6 @@
 
 import { Smile } from 'lucide-react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
-
 import { GENRES } from '../../constants';
 
 import type { PersonAnswers } from '../../types';
@@ -14,9 +12,6 @@ interface MoodStepProps {
 }
 
 export function MoodStep({ person, onUpdate }: MoodStepProps) {
-  const { isDark } = usePCTheme();
-  const iconUnselectedBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-
   return (
     <div className="flex flex-col gap-5 pt-2">
       <div className="flex items-center gap-3">
@@ -74,7 +69,7 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                 style={{
-                  background: selected ? `${g.color}25` : iconUnselectedBg,
+                  background: selected ? `${g.color}25` : 'var(--pc-ghost)',
                   color: selected ? g.color : 'var(--pc-t3)',
                 }}
               >

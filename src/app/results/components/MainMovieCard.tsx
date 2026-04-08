@@ -4,7 +4,7 @@ import { Clapperboard, Clock, Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 import { GenrePill } from './GenrePill';
 import { SimilarityBadge } from './SimilarityBadge';
@@ -13,7 +13,6 @@ import { StarRating } from './StarRating';
 import type { MovieRecommendation } from '@/utils/client';
 
 export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
-  const { isDark } = usePCTheme();
   const [imgLoaded, setImgLoaded] = useState(false);
   const score = movie.score_rating ?? 0;
   const pct = Math.round(movie.similarity * 100);
@@ -49,9 +48,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
           <div
             className="absolute inset-0"
             style={{
-              background: isDark
-                ? 'linear-gradient(to bottom, rgba(9,9,15,0.2) 0%, rgba(9,9,15,0.7) 60%, #13131F 100%)'
-                : 'linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.6) 60%, #FFFFFF 100%)',
+              background: 'var(--pc-poster-grad)',
             }}
           />
 
@@ -65,8 +62,8 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
             <div
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
               style={{
-                background: isDark ? 'rgba(9,9,15,0.8)' : 'rgba(255,255,255,0.85)',
-                border: '1px solid rgba(245,197,24,0.25)',
+                background: 'var(--pc-overlay-bg)',
+                border: `1px solid ${palette.gold}40`,
                 color: 'var(--pc-gold)',
                 backdropFilter: 'blur(8px)',
               }}
@@ -84,11 +81,9 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
                 fontSize: 'clamp(1.8rem, 5vw, 3rem)',
                 letterSpacing: '0.04em',
-                color: isDark ? '#FFFFFF' : '#0D0D1A',
+                color: 'var(--pc-overlay-text)',
                 lineHeight: 1,
-                textShadow: isDark
-                  ? '0 2px 20px rgba(0,0,0,0.8)'
-                  : '0 1px 8px rgba(255,255,255,0.8)',
+                textShadow: 'var(--pc-overlay-shadow)',
               }}
             >
               {movie.name}
@@ -125,7 +120,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 <>
                   <span>·</span>
                   <span className="flex items-center gap-1">
-                    <Star size={11} fill="#F5C518" stroke="none" />
+                    <Star size={11} fill={palette.gold} stroke="none" />
                     <span style={{ color: 'var(--pc-gold)' }}>{score}</span>/10
                   </span>
                 </>
@@ -192,9 +187,9 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
           <div
             className="p-4 rounded-2xl"
             style={{
-              background: isDark ? 'rgba(245,197,24,0.05)' : 'rgba(196,149,10,0.05)',
+              background: 'var(--pc-ai-bg)',
               border: '1px solid',
-              borderColor: isDark ? 'rgba(245,197,24,0.1)' : 'rgba(196,149,10,0.15)',
+              borderColor: 'var(--pc-ai-bd)',
             }}
           >
             <div className="flex items-center gap-2 mb-2">

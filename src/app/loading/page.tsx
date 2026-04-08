@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const MAX_RETRIES = 3;
 
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 const TIPS = [
   'Analyzing your taste profile with vector embeddings… 🧠',
@@ -209,7 +210,7 @@ export default function LoadingPage() {
               <motion.div
                 className="h-full rounded-full"
                 style={{
-                  background: 'linear-gradient(90deg, #F5C518, #FF9F1C)',
+                  background: `linear-gradient(90deg, ${palette.gold}, ${palette.amber})`,
                   width: `${progress}%`,
                 }}
                 transition={{ duration: 0.3 }}
@@ -228,13 +229,13 @@ export default function LoadingPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center gap-4 w-full max-w-xs"
           >
-            <p style={{ color: '#EF4444', fontSize: '0.88rem', lineHeight: 1.6 }}>
+            <p style={{ color: palette.red, fontSize: '0.88rem', lineHeight: 1.6 }}>
               Something went wrong. Attempt {retryCount.current} of {MAX_RETRIES}.
             </p>
             <button
               onClick={callApi}
               className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
-              style={{ background: 'var(--pc-cta)', color: '#09090F', fontWeight: 700 }}
+              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)', fontWeight: 700 }}
             >
               Try again
             </button>
@@ -255,7 +256,7 @@ export default function LoadingPage() {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center gap-4 w-full max-w-xs"
           >
-            <p style={{ color: '#EF4444', fontSize: '0.88rem', lineHeight: 1.6 }}>
+            <p style={{ color: palette.red, fontSize: '0.88rem', lineHeight: 1.6 }}>
               The service is not available right now. Please try again later.
             </p>
             <p style={{ color: 'var(--pc-t3)', fontSize: '0.8rem', lineHeight: 1.6 }}>
@@ -265,7 +266,7 @@ export default function LoadingPage() {
             <button
               onClick={() => router.push('/')}
               className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
-              style={{ background: 'var(--pc-cta)', color: '#09090F', fontWeight: 700 }}
+              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)', fontWeight: 700 }}
             >
               Go to home
             </button>
@@ -279,9 +280,9 @@ export default function LoadingPage() {
           transition={{ delay: 1.5, duration: 0.8 }}
           className="mt-10 p-4 rounded-xl max-w-xs"
           style={{
-            background: isDark ? 'rgba(245,197,24,0.06)' : 'rgba(196,149,10,0.06)',
+            background: 'var(--pc-ai-bg)',
             border: '1px solid',
-            borderColor: isDark ? 'rgba(245,197,24,0.12)' : 'rgba(196,149,10,0.18)',
+            borderColor: 'var(--pc-ai-bd)',
           }}
         >
           <p

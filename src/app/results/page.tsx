@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
 import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from './components';
@@ -37,7 +37,6 @@ interface ApiResponse {
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { isDark } = usePCTheme();
   const [movies, setMovies] = useState<MovieRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
@@ -149,7 +148,7 @@ export default function ResultsPage() {
           className="px-6 py-3 rounded-2xl"
           style={{
             background: 'var(--pc-cta)',
-            color: '#09090F',
+            color: 'var(--pc-cta-text)',
             fontWeight: 700,
           }}
         >
@@ -171,9 +170,9 @@ export default function ResultsPage() {
         <div
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs mb-4 uppercase tracking-widest"
           style={{
-            background: isDark ? 'rgba(245,197,24,0.1)' : 'rgba(196,149,10,0.08)',
+            background: 'var(--pc-gold-subtle)',
             border: '1px solid',
-            borderColor: isDark ? 'rgba(245,197,24,0.2)' : 'rgba(196,149,10,0.25)',
+            borderColor: 'var(--pc-gold-bd-subtle)',
             color: 'var(--pc-gold)',
           }}
         >
@@ -223,7 +222,7 @@ export default function ResultsPage() {
               <div
                 className="w-1.5 h-5 rounded-full"
                 style={{
-                  background: 'linear-gradient(180deg, #8B5CF6, #14B8A6)',
+                  background: `linear-gradient(180deg, ${palette.purple}, ${palette.teal})`,
                 }}
               />
               <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
@@ -306,7 +305,7 @@ export default function ResultsPage() {
                   height: 6,
                   background:
                     activeSuggestion === movie.id
-                      ? 'linear-gradient(90deg, #F5C518, #FF9F1C)'
+                      ? `linear-gradient(90deg, ${palette.gold}, ${palette.amber})`
                       : 'var(--pc-bd3)',
                 }}
               />
@@ -338,7 +337,7 @@ export default function ResultsPage() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
-            background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+            background: 'var(--pc-ghost)',
             border: '1px solid var(--pc-bd2)',
             color: 'var(--pc-t2)',
             fontSize: '0.9rem',
@@ -362,7 +361,7 @@ export default function ResultsPage() {
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
-            background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)',
+            background: `linear-gradient(135deg, ${palette.purple}, #6D28D9)`,
             color: '#F8F8FF',
             fontSize: '0.9rem',
             fontWeight: 600,

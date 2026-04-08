@@ -2,8 +2,6 @@
 
 import { Moon } from 'lucide-react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
-
 import { TONES } from '../../constants';
 
 import type { PersonAnswers, Tone } from '../../types';
@@ -14,9 +12,6 @@ interface ToneStepProps {
 }
 
 export function ToneStep({ person, onUpdate }: ToneStepProps) {
-  const { isDark } = usePCTheme();
-  const iconUnselectedBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-
   return (
     <div className="flex flex-col gap-5 pt-2">
       <div className="flex items-center gap-3">
@@ -59,7 +54,7 @@ export function ToneStep({ person, onUpdate }: ToneStepProps) {
               <div
                 className="w-9 h-9 rounded-xl flex items-center justify-center"
                 style={{
-                  background: selected ? `${t.color}20` : iconUnselectedBg,
+                  background: selected ? `${t.color}20` : 'var(--pc-ghost)',
                   color: selected ? t.color : 'var(--pc-t3)',
                 }}
               >

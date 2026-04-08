@@ -14,19 +14,21 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { palette } from '@/styles/designTokens';
+
 import type { PersonAnswers, Tone } from './types';
 
 export const GENRES = [
-  { id: 'action', label: 'Action', icon: Zap, color: '#FF9F1C' },
-  { id: 'comedy', label: 'Comedy', icon: Smile, color: '#F5C518' },
-  { id: 'drama', label: 'Drama', icon: Film, color: '#8B5CF6' },
-  { id: 'scifi', label: 'Sci-Fi', icon: FlaskConical, color: '#14B8A6' },
-  { id: 'thriller', label: 'Thriller', icon: Ghost, color: '#EF4444' },
-  { id: 'romance', label: 'Romance', icon: Heart, color: '#EC4899' },
-  { id: 'horror', label: 'Horror', icon: Skull, color: '#6B7280' },
-  { id: 'adventure', label: 'Adventure', icon: Globe, color: '#10B981' },
-  { id: 'animation', label: 'Animation', icon: Star, color: '#A78BFA' },
-  { id: 'documentary', label: 'Documentary', icon: Clock, color: '#60A5FA' },
+  { id: 'action', label: 'Action', icon: Zap, color: palette.amber },
+  { id: 'comedy', label: 'Comedy', icon: Smile, color: palette.gold },
+  { id: 'drama', label: 'Drama', icon: Film, color: palette.purple },
+  { id: 'scifi', label: 'Sci-Fi', icon: FlaskConical, color: palette.teal },
+  { id: 'thriller', label: 'Thriller', icon: Ghost, color: palette.red },
+  { id: 'romance', label: 'Romance', icon: Heart, color: palette.pink },
+  { id: 'horror', label: 'Horror', icon: Skull, color: palette.gray },
+  { id: 'adventure', label: 'Adventure', icon: Globe, color: palette.green },
+  { id: 'animation', label: 'Animation', icon: Star, color: palette.purpleLight },
+  { id: 'documentary', label: 'Documentary', icon: Clock, color: palette.blue },
 ];
 
 export const TONES: {
@@ -42,32 +44,32 @@ export const TONES: {
     label: 'Light & Fun',
     desc: 'Easy going, uplifting',
     icon: Sun,
-    color: '#F5C518',
-    grad: 'linear-gradient(135deg, #F5C51818, #FF9F1C18)',
+    color: palette.gold,
+    grad: `linear-gradient(135deg, ${palette.gold}18, ${palette.amber}18)`,
   },
   {
     id: 'balanced',
     label: 'Balanced',
     desc: 'Mix of everything',
     icon: CloudSun,
-    color: '#14B8A6',
-    grad: 'linear-gradient(135deg, #14B8A618, #60A5FA18)',
+    color: palette.teal,
+    grad: `linear-gradient(135deg, ${palette.teal}18, ${palette.blue}18)`,
   },
   {
     id: 'serious',
     label: 'Serious',
     desc: 'Thought-provoking',
     icon: Star,
-    color: '#8B5CF6',
-    grad: 'linear-gradient(135deg, #8B5CF618, #A78BFA18)',
+    color: palette.purple,
+    grad: `linear-gradient(135deg, ${palette.purple}18, ${palette.purpleLight}18)`,
   },
   {
     id: 'dark',
     label: 'Dark & Intense',
     desc: 'Gripping, complex',
     icon: Moon,
-    color: '#EF4444',
-    grad: 'linear-gradient(135deg, #EF444418, #6B728018)',
+    color: palette.red,
+    grad: `linear-gradient(135deg, ${palette.red}18, ${palette.gray}18)`,
   },
 ];
 

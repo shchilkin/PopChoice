@@ -3,7 +3,7 @@
 import { ChevronRight, User, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 interface QuizIntroProps {
   onStartSolo: () => void;
@@ -11,8 +11,6 @@ interface QuizIntroProps {
 }
 
 export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
-  const { isDark } = usePCTheme();
-
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
       <motion.div
@@ -49,9 +47,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
               border: '1px solid var(--pc-bd2)',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = isDark
-                ? 'rgba(245,197,24,0.4)'
-                : 'rgba(196,149,10,0.4)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-gold-bd-strong)';
               (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
             }}
             onMouseLeave={(e) => {
@@ -98,7 +94,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
               border: '1px solid var(--pc-bd2)',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.4)';
+              (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
               (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
             }}
             onMouseLeave={(e) => {
@@ -108,7 +104,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
           >
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: 'rgba(139,92,246,0.15)', color: '#8B5CF6' }}
+              style={{ background: `${palette.purple}26`, color: palette.purple }}
             >
               <Users size={22} />
             </div>
@@ -128,7 +124,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
             </div>
             <div
               className="ml-auto shrink-0 text-xs px-2 py-1 rounded-full"
-              style={{ background: 'rgba(139,92,246,0.15)', color: '#A78BFA' }}
+              style={{ background: `${palette.purple}26`, color: palette.purpleLight }}
             >
               NEW
             </div>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 const CINEMA_BG =
   'https://images.unsplash.com/photo-1759230766134-e3ff1c27d20e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkYXJrJTIwY2luZW1hJTIwdGhlYXRlciUyMHNlYXRzJTIwZHJhbWF0aWN8ZW58MXx8fHwxNzc0ODk0MzUxfDA&ixlib=rb-4.1.0&q=80&w=1080';
@@ -18,25 +19,25 @@ const features = [
     icon: Sparkles,
     title: 'AI-Powered',
     desc: 'Vector search finds films that truly match your vibe',
-    color: '#F5C518',
+    color: palette.gold,
   },
   {
     icon: Play,
     title: '5 Quick Questions',
     desc: 'No endless forms — just a 60-second taste quiz',
-    color: '#FF9F1C',
+    color: palette.amber,
   },
   {
     icon: Users,
     title: 'Group Mode',
     desc: 'Find a film everyone at movie night will enjoy',
-    color: '#8B5CF6',
+    color: palette.purple,
   },
   {
     icon: Zap,
     title: 'Instant Results',
     desc: 'Get 6 curated recommendations in seconds',
-    color: '#14B8A6',
+    color: palette.teal,
   },
 ];
 
@@ -59,7 +60,7 @@ function FilmParticles() {
               bottom: '-20px',
               width: size,
               height: size,
-              background: i % 3 === 0 ? '#F5C518' : i % 3 === 1 ? '#FF9F1C' : '#8B5CF6',
+              background: i % 3 === 0 ? palette.gold : i % 3 === 1 ? palette.amber : palette.purple,
               opacity,
               animation: `float-up ${dur}s ${delay}s linear infinite`,
             }}
@@ -86,9 +87,8 @@ export default function LandingPage() {
     ? 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245,197,24,0.06) 0%, transparent 70%), linear-gradient(180deg, #09090F 0%, rgba(9,9,15,0.4) 30%, rgba(9,9,15,0.6) 70%, #09090F 100%)'
     : 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(196,149,10,0.06) 0%, transparent 70%), linear-gradient(180deg, #F7F5EE 0%, rgba(247,245,238,0.35) 30%, rgba(247,245,238,0.55) 70%, #F7F5EE 100%)';
 
-  const sectionFadeGrad = isDark
-    ? 'linear-gradient(180deg, #09090F 0%, transparent 30%, transparent 70%, #09090F 100%)'
-    : 'linear-gradient(180deg, #F7F5EE 0%, transparent 30%, transparent 70%, #F7F5EE 100%)';
+  const sectionFadeGrad =
+    'linear-gradient(180deg, var(--pc-bg) 0%, transparent 30%, transparent 70%, var(--pc-bg) 100%)';
 
   return (
     <div style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', 'Inter', sans-serif" }}>
@@ -126,9 +126,9 @@ export default function LandingPage() {
             transition={{ duration: 0.5 }}
             className="mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs uppercase tracking-widest"
             style={{
-              background: isDark ? 'rgba(245,197,24,0.12)' : 'rgba(196,149,10,0.1)',
+              background: 'var(--pc-gold-subtle)',
               border: '1px solid',
-              borderColor: isDark ? 'rgba(245,197,24,0.25)' : 'rgba(196,149,10,0.3)',
+              borderColor: 'var(--pc-gold-bd-subtle)',
               color: 'var(--pc-gold)',
             }}
           >
@@ -195,7 +195,7 @@ export default function LandingPage() {
               className="group relative flex items-center gap-3 px-8 py-4 rounded-2xl transition-all duration-300 active:scale-95"
               style={{
                 background: 'var(--pc-cta)',
-                color: '#09090F',
+                color: 'var(--pc-cta-text)',
                 fontSize: '1.05rem',
                 boxShadow: 'var(--pc-cta-shadow)',
               }}
@@ -219,7 +219,7 @@ export default function LandingPage() {
               style={{
                 color: 'var(--pc-t2)',
                 border: '1px solid var(--pc-bd2)',
-                background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                background: 'var(--pc-ghost)',
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.color = 'var(--pc-t1)';
@@ -381,7 +381,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl transition-all duration-200 active:scale-95"
             style={{
               background: 'var(--pc-cta)',
-              color: '#09090F',
+              color: 'var(--pc-cta-text)',
               fontWeight: 700,
               fontSize: '0.95rem',
             }}

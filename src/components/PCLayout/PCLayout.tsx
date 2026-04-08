@@ -92,7 +92,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               className="ml-1 px-3 py-2 rounded-xl text-sm"
               style={{
                 background: 'var(--pc-cta)',
-                color: '#09090F',
+                color: 'var(--pc-cta-text)',
                 fontWeight: 600,
               }}
             >

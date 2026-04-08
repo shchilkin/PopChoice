@@ -2,8 +2,6 @@
 
 import { User } from 'lucide-react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
-
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteActorStepProps {
@@ -13,9 +11,6 @@ interface FavoriteActorStepProps {
 }
 
 export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorStepProps) {
-  const { isDark } = usePCTheme();
-  const chipUnselectedBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)';
-
   return (
     <div className="flex flex-col gap-6 pt-2">
       <div className="flex items-center gap-3">
@@ -65,11 +60,8 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
             fontSize: '1rem',
           }}
           onFocus={(e) => {
-            (e.currentTarget as HTMLInputElement).style.borderColor = isDark
-              ? 'rgba(245,197,24,0.4)'
-              : 'rgba(196,149,10,0.5)';
-            (e.currentTarget as HTMLInputElement).style.boxShadow =
-              '0 0 0 3px rgba(245,197,24,0.06)';
+            (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-gold-focus)';
+            (e.currentTarget as HTMLInputElement).style.boxShadow = 'var(--pc-gold-ring)';
           }}
           onBlur={(e) => {
             (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
@@ -104,14 +96,10 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
               className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
               style={{
                 background:
-                  person.favoriteActor === actor
-                    ? isDark
-                      ? 'rgba(245,197,24,0.2)'
-                      : 'rgba(196,149,10,0.12)'
-                    : chipUnselectedBg,
+                  person.favoriteActor === actor ? 'var(--pc-gold-tint)' : 'var(--pc-ghost)',
                 border:
                   person.favoriteActor === actor
-                    ? '1px solid rgba(245,197,24,0.4)'
+                    ? '1px solid var(--pc-gold-bd-strong)'
                     : '1px solid var(--pc-bd1)',
                 color: person.favoriteActor === actor ? 'var(--pc-gold)' : 'var(--pc-t2)',
               }}

@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 interface GroupSetupProps {
   groupNames: string[];
@@ -13,9 +13,6 @@ interface GroupSetupProps {
 }
 
 export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: GroupSetupProps) {
-  const { isDark } = usePCTheme();
-  const ghostBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
       <motion.div
@@ -47,8 +44,8 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs"
                 style={{
-                  background: 'rgba(139,92,246,0.2)',
-                  color: '#A78BFA',
+                  background: `${palette.purple}33`,
+                  color: palette.purpleLight,
                   fontWeight: 700,
                 }}
               >
@@ -68,7 +65,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
                   fontSize: '0.95rem',
                 }}
                 onFocus={(e) => {
-                  (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(139,92,246,0.5)';
+                  (e.currentTarget as HTMLInputElement).style.borderColor = `${palette.purple}80`;
                 }}
                 onBlur={(e) => {
                   (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
@@ -80,8 +77,8 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                   style={{ color: 'var(--pc-t3)' }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.color = '#EF4444';
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
+                    (e.currentTarget as HTMLElement).style.color = palette.red;
+                    (e.currentTarget as HTMLElement).style.background = `${palette.red}1a`;
                   }}
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLElement).style.color = 'var(--pc-t3)';
@@ -104,8 +101,8 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               color: 'var(--pc-t3)',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = '#A78BFA';
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(139,92,246,0.4)';
+              (e.currentTarget as HTMLElement).style.color = palette.purpleLight;
+              (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.color = 'var(--pc-t3)';
@@ -121,7 +118,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
             onClick={onBack}
             className="flex-1 py-3 rounded-xl text-sm transition-all duration-200"
             style={{
-              background: ghostBg,
+              background: 'var(--pc-ghost)',
               border: '1px solid var(--pc-bd2)',
               color: 'var(--pc-t2)',
             }}
@@ -133,7 +130,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
             className="flex-1 py-3 rounded-xl text-sm transition-all duration-200"
             style={{
               background: 'var(--pc-cta)',
-              color: '#09090F',
+              color: 'var(--pc-cta-text)',
               fontWeight: 700,
             }}
           >

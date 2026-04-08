@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 import { TMDBAttribution } from '@/components';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 const HOW_IT_WORKS = [
   {
@@ -13,14 +14,14 @@ const HOW_IT_WORKS = [
     icon: ListChecks,
     title: 'You answer 5 quick questions',
     desc: 'Tell us your favorite film (and why!), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you&apos;re after, and your favorite actor. It takes about 60 seconds.',
-    color: '#F5C518',
+    color: palette.gold,
   },
   {
     step: '02',
     icon: Brain,
     title: 'We build your taste profile',
     desc: 'Your answers are transformed into a high-dimensional vector that captures the nuances of your preferences — not just genres, but cinematographic style, narrative complexity, and emotional tone.',
-    color: '#8B5CF6',
+    color: palette.purple,
   },
   {
     step: '03',
@@ -28,14 +29,14 @@ const HOW_IT_WORKS = [
     // TODO: replace hardcoded film count with live value fetched from the DB
     title: 'AI searches our film database',
     desc: 'Using vector similarity search, we find the films in our database that are closest to your taste profile. Every film has been pre-analyzed for tone, pacing, themes, and emotional resonance.',
-    color: '#14B8A6',
+    color: palette.teal,
   },
   {
     step: '04',
     icon: Sparkles,
     title: 'You get curated results',
     desc: 'We surface your top match plus 5 additional great options, each with a personalized AI-written explanation of exactly why it fits your taste tonight.',
-    color: '#FF9F1C',
+    color: palette.amber,
   },
 ];
 
@@ -44,25 +45,25 @@ const TECH_STACK = [
     name: 'Vector Search',
     desc: 'Semantic similarity matching across 10k+ films',
     icon: Search,
-    color: '#14B8A6',
+    color: palette.teal,
   },
   {
     name: 'AI Language Model',
     desc: 'Generates personalized recommendations for each user',
     icon: Brain,
-    color: '#8B5CF6',
+    color: palette.purple,
   },
   {
     name: 'Film Database',
     desc: 'Curated metadata including tone, themes & cinematography',
     icon: Database,
-    color: '#F5C518',
+    color: palette.gold,
   },
   {
     name: 'Real-time Processing',
     desc: 'Results in under 4 seconds from submission to screen',
     icon: Zap,
-    color: '#FF9F1C',
+    color: palette.amber,
   },
 ];
 
@@ -100,9 +101,9 @@ export default function AboutPage() {
         <div
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs mb-5 uppercase tracking-widest"
           style={{
-            background: 'rgba(139,92,246,0.12)',
-            border: '1px solid rgba(139,92,246,0.25)',
-            color: '#A78BFA',
+            background: `${palette.purple}1f`,
+            border: `1px solid ${palette.purple}40`,
+            color: palette.purpleLight,
           }}
         >
           <Brain size={11} />
@@ -333,10 +334,10 @@ export default function AboutPage() {
         className="text-center p-8 rounded-3xl mb-8"
         style={{
           background: isDark
-            ? 'linear-gradient(135deg, rgba(245,197,24,0.08) 0%, rgba(139,92,246,0.08) 100%)'
-            : 'linear-gradient(135deg, rgba(196,149,10,0.07) 0%, rgba(139,92,246,0.07) 100%)',
+            ? `linear-gradient(135deg, ${palette.gold}14 0%, ${palette.purple}14 100%)`
+            : `linear-gradient(135deg, rgba(196,149,10,0.07) 0%, ${palette.purple}12 100%)`,
           border: '1px solid',
-          borderColor: isDark ? 'rgba(245,197,24,0.12)' : 'rgba(196,149,10,0.18)',
+          borderColor: 'var(--pc-ai-bd)',
         }}
       >
         <div className="text-4xl mb-4">🍿</div>
@@ -359,7 +360,7 @@ export default function AboutPage() {
           className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: 'var(--pc-cta)',
-            color: '#09090F',
+            color: 'var(--pc-cta-text)',
             fontWeight: 700,
             fontSize: '0.95rem',
           }}

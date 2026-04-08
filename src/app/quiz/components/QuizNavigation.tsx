@@ -2,8 +2,6 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { usePCTheme } from '@/hooks/usePCTheme';
-
 interface QuizNavigationProps {
   onBack: () => void;
   onNext: () => void;
@@ -21,16 +19,13 @@ export function QuizNavigation({
   isLastStep,
   isLastPerson,
 }: QuizNavigationProps) {
-  const { isDark } = usePCTheme();
-  const ghostBg = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
-
   return (
     <div className="px-5 py-6 max-w-xl mx-auto w-full flex gap-3">
       <button
         onClick={onBack}
         className="flex items-center gap-1.5 px-5 py-3.5 rounded-2xl text-sm transition-all duration-200"
         style={{
-          background: ghostBg,
+          background: 'var(--pc-ghost)',
           border: '1px solid var(--pc-bd2)',
           color: 'var(--pc-t3)',
         }}
@@ -44,7 +39,7 @@ export function QuizNavigation({
         className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
         style={{
           background: canProceed && !isSubmitting ? 'var(--pc-cta)' : 'var(--pc-bd2)',
-          color: canProceed && !isSubmitting ? '#09090F' : 'var(--pc-t4)',
+          color: canProceed && !isSubmitting ? 'var(--pc-cta-text)' : 'var(--pc-t4)',
           fontWeight: 700,
           cursor: canProceed && !isSubmitting ? 'pointer' : 'not-allowed',
         }}
