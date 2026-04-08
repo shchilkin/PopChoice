@@ -13,7 +13,7 @@ const HOW_IT_WORKS = [
     step: '01',
     icon: ListChecks,
     title: 'You answer 5 quick questions',
-    desc: 'Tell us your favorite film (and why!), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you&apos;re after, and your favorite actor. It takes about 60 seconds.',
+    desc: "Tell us your favorite film (and why!), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you're after, and your favorite actor. It takes about 60 seconds.",
     color: palette.gold,
   },
   {
@@ -74,11 +74,11 @@ const FAQ = [
   },
   {
     q: 'How does group mode work?',
-    a: 'Each person in the group fills out the 4-question quiz on the same device. PopChoice then finds films that score highly across everyone&apos;s taste profiles — a true compromise, but a good one.',
+    a: "Each person in the group fills out the 4-question quiz on the same device. PopChoice then finds films that score highly across everyone's taste profiles — a true compromise, but a good one.",
   },
   {
     q: 'How accurate are the recommendations?',
-    a: 'The AI uses vector similarity across multiple film attributes (not just genre), which leads to surprisingly accurate taste matching. Of course, movie taste is subjective — that&apos;s why we give you 6 options!',
+    a: "The AI uses vector similarity across multiple film attributes (not just genre), which leads to surprisingly accurate taste matching. Of course, movie taste is subjective — that's why we give you 6 options!",
   },
   {
     q: 'Where does the film data come from?',

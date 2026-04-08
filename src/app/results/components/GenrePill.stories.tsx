@@ -15,7 +15,7 @@ const meta: Meta<typeof GenrePill> = {
     },
   },
   argTypes: {
-    genre: {
+    label: {
       control: 'text',
       description: 'Text to display inside the pill',
     },
@@ -26,13 +26,13 @@ export default meta;
 type Story = StoryObj<typeof GenrePill>;
 
 export const AgeRating: Story = {
-  args: { genre: 'PG-13' },
+  args: { label: 'PG-13' },
 };
 
 export const Genre: Story = {
-  args: { genre: 'Sci-Fi' },
+  args: { label: 'Sci-Fi' },
 };
 
 export const Rated: Story = {
-  args: { genre: 'R' },
+  args: { label: 'R' },
 };

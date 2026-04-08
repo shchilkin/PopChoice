@@ -2,6 +2,7 @@
 
 import { Star } from 'lucide-react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 import { useState } from 'react';
 
 import { palette } from '@/styles/designTokens';
@@ -45,10 +46,12 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
                 opacity: imgLoaded ? 0 : 1,
               }}
             />
-            <img
+            <Image
               src={movie.posterURL}
               alt={movie.name}
-              className="w-full h-full object-cover"
+              fill
+              sizes="260px"
+              className="object-cover"
               onLoad={() => setImgLoaded(true)}
               style={{ opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.4s' }}
             />

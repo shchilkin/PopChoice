@@ -2,6 +2,7 @@
 
 import { Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 
 import { palette } from '@/styles/designTokens';
 
@@ -32,7 +33,13 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
         <div className="flex items-start gap-4">
           {movie.posterURL && (
             <div className="relative shrink-0 w-20 h-28 rounded-xl overflow-hidden">
-              <img src={movie.posterURL} alt={movie.name} className="w-full h-full object-cover" />
+              <Image
+                src={movie.posterURL}
+                alt={movie.name}
+                fill
+                sizes="80px"
+                className="object-cover"
+              />
             </div>
           )}
           <div className="flex-1 min-w-0">

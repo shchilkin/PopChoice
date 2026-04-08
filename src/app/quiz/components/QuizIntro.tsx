@@ -109,25 +109,18 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
               <Users size={22} />
             </div>
             <div>
-              <div
-                style={{
-                  color: 'var(--pc-t1)',
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                }}
-              >
+              <div style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '1rem' }}>
                 Group mode 🎉
               </div>
               <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                Find a film everyone will enjoy
+                Find a film everyone will enjoy · up to 6 people
               </div>
             </div>
-            <div
-              className="ml-auto shrink-0 text-xs px-2 py-1 rounded-full"
-              style={{ background: `${palette.purple}26`, color: palette.purpleLight }}
-            >
-              NEW
-            </div>
+            <ChevronRight
+              size={18}
+              className="ml-auto shrink-0"
+              style={{ color: 'var(--pc-t4)' }}
+            />
           </button>
         </div>
       </motion.div>

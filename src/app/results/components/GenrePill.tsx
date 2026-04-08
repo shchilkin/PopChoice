@@ -1,4 +1,4 @@
-export function GenrePill({ genre }: { genre: string }) {
+export function GenrePill({ label }: { label: string }) {
   return (
     <span
       className="px-2.5 py-1 rounded-full text-xs"
@@ -8,7 +8,7 @@ export function GenrePill({ genre }: { genre: string }) {
         color: 'var(--pc-t2)',
       }}
     >
-      {genre}
+      {label}
     </span>
   );
 }

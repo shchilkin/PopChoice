@@ -2,6 +2,7 @@
 
 import { Clapperboard, Clock, Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 import { useState } from 'react';
 
 import { palette } from '@/styles/designTokens';
@@ -38,10 +39,12 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               background: 'var(--pc-surface-deep)',
             }}
           />
-          <img
+          <Image
             src={movie.posterURL}
             alt={movie.name}
-            className="w-full h-full object-cover transition-opacity duration-700"
+            fill
+            sizes="(max-width: 768px) 100vw, 600px"
+            className="object-cover transition-opacity duration-700"
             style={{ opacity: imgLoaded ? 1 : 0 }}
             onLoad={() => setImgLoaded(true)}
           />
@@ -172,7 +175,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               {movie.year} · {pct}% match
             </span>
           </div>
-          {movie.age_rating && <GenrePill genre={movie.age_rating} />}
+          {movie.age_rating && <GenrePill label={movie.age_rating} />}
         </div>
 
         {score > 0 && (

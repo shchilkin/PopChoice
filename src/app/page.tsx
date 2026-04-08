@@ -2,7 +2,9 @@
 
 import { Play, Sparkles, Users, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
@@ -41,32 +43,48 @@ const features = [
   },
 ];
 
+interface ParticleConfig {
+  x: number;
+  delay: number;
+  dur: number;
+  size: number;
+  opacity: number;
+}
+
 function FilmParticles() {
-  const particles = Array.from({ length: 14 });
+  const [particles, setParticles] = useState<ParticleConfig[]>([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 14 }, () => ({
+        x: Math.random() * 100,
+        delay: Math.random() * 6,
+        dur: 8 + Math.random() * 10,
+        size: 4 + Math.random() * 6,
+        opacity: 0.15 + Math.random() * 0.25,
+      })),
+    );
+  }, []);
+
+  if (particles.length === 0) return null;
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((_, i) => {
-        const x = Math.random() * 100;
-        const delay = Math.random() * 6;
-        const dur = 8 + Math.random() * 10;
-        const size = 4 + Math.random() * 6;
-        const opacity = 0.15 + Math.random() * 0.25;
-        return (
-          <div
-            key={i}
-            className="absolute rounded-full"
-            style={{
-              left: `${x}%`,
-              bottom: '-20px',
-              width: size,
-              height: size,
-              background: i % 3 === 0 ? palette.gold : i % 3 === 1 ? palette.amber : palette.purple,
-              opacity,
-              animation: `float-up ${dur}s ${delay}s linear infinite`,
-            }}
-          />
-        );
-      })}
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: `${p.x}%`,
+            bottom: '-20px',
+            width: p.size,
+            height: p.size,
+            background: i % 3 === 0 ? palette.gold : i % 3 === 1 ? palette.amber : palette.purple,
+            opacity: p.opacity,
+            animation: `float-up ${p.dur}s ${p.delay}s linear infinite`,
+          }}
+        />
+      ))}
       <style>{`
         @keyframes float-up {
           0% { transform: translateY(0) rotate(0deg); opacity: 0; }
@@ -96,12 +114,14 @@ export default function LandingPage() {
       <section className="relative min-h-[92vh] flex flex-col items-center justify-center px-5 overflow-hidden">
         {/* Background image */}
         <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={CINEMA_BG}
             alt=""
-            className="w-full h-full object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
             style={{ opacity: isDark ? 0.18 : 0.1 }}
+            priority
           />
           <div className="absolute inset-0" style={{ background: heroOverlay }} />
         </div>
@@ -338,11 +358,12 @@ export default function LandingPage() {
       {/* Movie night visual */}
       <section className="relative overflow-hidden py-20 px-5">
         <div className="absolute inset-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={POPCORN_IMG}
             alt=""
-            className="w-full h-full object-cover"
+            fill
+            sizes="100vw"
+            className="object-cover"
             style={{ opacity: isDark ? 0.12 : 0.07 }}
           />
           <div className="absolute inset-0" style={{ background: sectionFadeGrad }} />

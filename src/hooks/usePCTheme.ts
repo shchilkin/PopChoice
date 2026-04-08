@@ -4,8 +4,9 @@ import { useTheme } from 'next-themes';
 
 export function usePCTheme() {
   const { resolvedTheme, setTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
+  const theme = (resolvedTheme ?? 'dark') as 'dark' | 'light';
+  const isDark = theme === 'dark';
   const toggle = () => setTheme(isDark ? 'light' : 'dark');
 
-  return { theme: resolvedTheme as 'dark' | 'light', isDark, toggle, setTheme };
+  return { theme, isDark, toggle, setTheme };
 }
