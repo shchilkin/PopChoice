@@ -90,7 +90,7 @@ export default function AvailableMoviesPage() {
       <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20">
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--pc-cta)] mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--pc-t3)] mx-auto mb-4"></div>
             <p className="text-lg text-[var(--pc-t3)]">Loading movies...</p>
           </div>
         </main>
