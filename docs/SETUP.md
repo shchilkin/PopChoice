@@ -91,6 +91,30 @@ The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10
    - On the first request to `/api/movie-recommendation`, the app logs `Rate limiter initialized with Redis` when the connection succeeds
    - On the first request to `/api/movie-recommendation`, when `REDIS_URL` is not set, it logs `REDIS_URL not set. Rate limiting disabled.`
 
+## Local Docker PostgreSQL Setup
+
+You can run a fully-configured local PostgreSQL instance with pgvector using Docker Compose — no external provider needed.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
+
+### Steps:
+
+1. **Run the setup script**
+   ```bash
+   npm run setup:local-db
+   ```
+   This generates a random `POSTGRES_PASSWORD`, writes all database credentials to your `.env` file, and starts the Docker container. Docker automatically runs `db/init/01_schema.sql` and `db/init/02_match_movies.sql` on first start, enabling the `vector` extension, creating the `movies` table, and installing the `match_movies` function.
+
+2. **Populate the database**
+   ```bash
+   npm run populate-db
+   ```
+
+> **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
+> To reset the database from scratch, run `docker compose down -v` (removes the volume) then `npm run setup:local-db` again.
+
 ## Railway PostgreSQL Setup
 
 You can host your PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider).
