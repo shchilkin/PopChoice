@@ -5,7 +5,7 @@
 This project uses two GitHub Actions workflow files for pull request validation:
 
 - `.github/workflows/pr.yml` – main application checks (lint, type-check, tests, build, dependency review)
-- `.github/workflows/movie-sync-ci.yml` – TypeScript compilation for the `services/movie-sync` service, triggered **only** when files under `services/movie-sync/` change
+- `.github/workflows/movie-sync-ci.yml` – TypeScript compilation for the `services/movie-sync` service, triggered when files under `services/movie-sync/` change or when `.github/workflows/movie-sync-ci.yml` itself changes
 
 ## Workflow Overview
 
@@ -47,7 +47,7 @@ The `build` job sets `NEXT_FONT_GOOGLE_DISABLE=1` to prevent flaky failures caus
 
 ### Movie Sync CI
 
-The `movie-sync-ci` job lives in its own workflow (`movie-sync-ci.yml`) and is triggered only when files inside `services/movie-sync/` change. It installs dependencies and runs `tsc` (`npm run build`) to ensure the service always compiles correctly.
+The `movie-sync-ci` job lives in its own workflow (`movie-sync-ci.yml`) and is triggered when files inside `services/movie-sync/` change or when `.github/workflows/movie-sync-ci.yml` itself changes. It installs dependencies and runs `tsc` (`npm run build`) to ensure the service always compiles correctly.
 
 ### Dependency Review
 
@@ -102,6 +102,7 @@ on:
     branches: ['development']
     paths:
       - 'services/movie-sync/**'
+      - '.github/workflows/movie-sync-ci.yml'
 ```
 
 ### Best Practices
@@ -129,7 +130,7 @@ Both workflows are triggered on:
 - Both opening PRs and pushing new commits to existing PRs targeting development
 
 `pr.yml` additionally **skips** when all changed files match `docs/**` or `*.md` (documentation-only PRs).
-`movie-sync-ci.yml` additionally **only runs** when at least one file under `services/movie-sync/**` changes.
+`movie-sync-ci.yml` additionally **only runs** when at least one file under `services/movie-sync/**` changes or when `.github/workflows/movie-sync-ci.yml` itself changes.
 
 ## Dependabot
 
