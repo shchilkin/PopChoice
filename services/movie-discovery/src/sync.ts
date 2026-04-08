@@ -12,6 +12,9 @@ import {
 import type { Config } from './config.js';
 import type { MovieRecord } from './database.js';
 
+/** Maximum concurrent TMDB detail requests per batch to avoid rate limiting. */
+const DETAIL_BATCH_SIZE = 5;
+
 export async function runSync(config: Config): Promise<void> {
   const startTime = Date.now();
   logger.info('Discovery sync started', {
@@ -115,7 +118,6 @@ export async function runSync(config: Config): Promise<void> {
 
   // 6. Fetch full details (runtime + real age rating) for each movie in small batches
   // to avoid hitting TMDB rate limits (default: 40 req/10 s on v4 API).
-  const DETAIL_BATCH_SIZE = 5;
   logger.info('Fetching movie details', {
     count: moviesToProcess.length,
     batchSize: DETAIL_BATCH_SIZE,
