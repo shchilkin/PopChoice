@@ -88,18 +88,18 @@ A movie passes if **all** conditions are met:
 
 ### Environment Variables
 
-| Variable               | Required | Default     | Description                                               |
-| ---------------------- | -------- | ----------- | --------------------------------------------------------- |
-| `TMDB_API_KEY`         | ✅       | —           | TMDB v4 Bearer read access token                          |
-| `OPENAI_API_KEY`       | ✅       | —           | OpenAI API key for embeddings                             |
-| `DATABASE_URL`         | ✅       | —           | PostgreSQL connection string                              |
-| `TMDB_SOURCES`         | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular` |
-| `MAX_PAGES_PER_SOURCE` | ❌       | `3`         | TMDB pages to fetch per source                            |
-| `MIN_VOTE_COUNT`       | ❌       | `500`       | Minimum vote count                                        |
-| `MIN_VOTE_AVERAGE`     | ❌       | `6.5`       | Minimum TMDB vote average                                 |
-| `MAX_MOVIES_PER_RUN`   | ❌       | `50`        | Cap on movies embedded per run                            |
-| `SYNC_SCHEDULE`        | ❌       | `0 0 * * 0` | Cron expression (UTC). Set to `""` for one-shot mode.     |
-| `DRY_RUN`              | ❌       | `false`     | `"true"` to skip embeddings/inserts                       |
+| Variable                 | Required | Default     | Description                                               |
+| ------------------------ | -------- | ----------- | --------------------------------------------------------- |
+| `TMDB_READ_ACCESS_TOKEN` | ✅       | —           | TMDB v4 Bearer read access token                          |
+| `OPENAI_API_KEY`         | ✅       | —           | OpenAI API key for embeddings                             |
+| `DATABASE_URL`           | ✅       | —           | PostgreSQL connection string                              |
+| `TMDB_SOURCES`           | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular` |
+| `MAX_PAGES_PER_SOURCE`   | ❌       | `3`         | TMDB pages to fetch per source                            |
+| `MIN_VOTE_COUNT`         | ❌       | `500`       | Minimum vote count                                        |
+| `MIN_VOTE_AVERAGE`       | ❌       | `6.5`       | Minimum TMDB vote average                                 |
+| `MAX_MOVIES_PER_RUN`     | ❌       | `50`        | Cap on movies embedded per run                            |
+| `SYNC_SCHEDULE`          | ❌       | `0 0 * * 0` | Cron expression (UTC). Set to `""` for one-shot mode.     |
+| `DRY_RUN`                | ❌       | `false`     | `"true"` to skip embeddings/inserts                       |
 
 ### Running
 
@@ -122,4 +122,4 @@ Both services share the same PostgreSQL schema managed by `ensureSchema()` in `d
 - **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, and a 3072-dimension embedding vector
 - **Function:** `match_movies(query_embedding, match_threshold, match_count)` — returns movies ordered by cosine similarity
 
-The schema is idempotent (`CREATE IF NOT EXISTS`) and safe to call on startup.
+The schema setup uses `CREATE IF NOT EXISTS` for the extension and table (additive/idempotent), but the `match_movies` function is always dropped and recreated on startup to keep its definition current.

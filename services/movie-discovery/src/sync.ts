@@ -26,7 +26,7 @@ export async function runSync(config: Config): Promise<void> {
 
   // 1. Fetch from all sources
   const candidates = await fetchFromSources(
-    config.tmdbApiKey,
+    config.tmdbReadAccessToken,
     config.sources,
     config.maxPagesPerSource,
   );
@@ -50,8 +50,24 @@ export async function runSync(config: Config): Promise<void> {
     return;
   }
 
-  // 3. Deduplicate against database using partial records (no embedding yet)
-  const partialRecords: MovieRecord[] = qualified.map((m) => ({
+  // 3. Filter out movies with missing or invalid release year before deduplication
+  const validYearCandidates = qualified.filter((m) => {
+    const year = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+    return Number.isFinite(year) && year > 1800;
+  });
+  if (validYearCandidates.length < qualified.length) {
+    logger.warn('Skipped movies with missing or invalid release year', {
+      skipped: qualified.length - validYearCandidates.length,
+    });
+  }
+
+  if (validYearCandidates.length === 0) {
+    logger.info('No candidates with valid release year');
+    return;
+  }
+
+  // 4. Deduplicate against database using partial records (no embedding yet)
+  const partialRecords: MovieRecord[] = validYearCandidates.map((m) => ({
     name: m.title,
     year: m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0,
     age_rating: 'NR', // placeholder; real value fetched below
@@ -63,9 +79,9 @@ export async function runSync(config: Config): Promise<void> {
 
   const newIndices = await filterNewMovies(partialRecords);
   logger.info('Duplicate check complete', {
-    qualified: qualified.length,
+    qualified: validYearCandidates.length,
     new: newIndices.length,
-    duplicates: qualified.length - newIndices.length,
+    duplicates: validYearCandidates.length - newIndices.length,
   });
 
   if (newIndices.length === 0) {
@@ -73,7 +89,7 @@ export async function runSync(config: Config): Promise<void> {
     return;
   }
 
-  // 4. Cap at maxMoviesPerRun
+  // 5. Cap at maxMoviesPerRun
   const cappedIndices = newIndices.slice(0, config.maxMoviesPerRun);
   if (cappedIndices.length < newIndices.length) {
     logger.info('Capped new movies to maxMoviesPerRun', {
@@ -83,7 +99,7 @@ export async function runSync(config: Config): Promise<void> {
     });
   }
 
-  const moviesToProcess = cappedIndices.map((i) => qualified[i]);
+  const moviesToProcess = cappedIndices.map((i) => validYearCandidates[i]);
 
   // 5. Dry run — stop before details/embeddings/inserts
   if (config.dryRun) {
@@ -97,23 +113,34 @@ export async function runSync(config: Config): Promise<void> {
     return;
   }
 
-  // 6. Fetch full details (runtime + real age rating) for each movie
-  logger.info('Fetching movie details', { count: moviesToProcess.length });
-  const detailedMovies = await Promise.all(
-    moviesToProcess.map(async (m) => {
-      try {
-        const details = await fetchMovieDetails(config.tmdbApiKey, m.id);
-        return details;
-      } catch (err) {
-        logger.warn('Failed to fetch movie details, using basic data', {
-          movieId: m.id,
-          title: m.title,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        return null;
-      }
-    }),
-  );
+  // 6. Fetch full details (runtime + real age rating) for each movie in small batches
+  // to avoid hitting TMDB rate limits (default: 40 req/10 s on v4 API).
+  const DETAIL_BATCH_SIZE = 5;
+  logger.info('Fetching movie details', {
+    count: moviesToProcess.length,
+    batchSize: DETAIL_BATCH_SIZE,
+  });
+  const detailedMovies: (Awaited<ReturnType<typeof fetchMovieDetails>> | null)[] = [];
+
+  for (let batchStart = 0; batchStart < moviesToProcess.length; batchStart += DETAIL_BATCH_SIZE) {
+    const batch = moviesToProcess.slice(batchStart, batchStart + DETAIL_BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(async (m) => {
+        try {
+          const details = await fetchMovieDetails(config.tmdbReadAccessToken, m.id);
+          return details;
+        } catch (err) {
+          logger.warn('Failed to fetch movie details, using basic data', {
+            movieId: m.id,
+            title: m.title,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          return null;
+        }
+      }),
+    );
+    detailedMovies.push(...batchResults);
+  }
 
   // 7. Build records and embedding texts
   const finalPartialRecords: Omit<MovieRecord, 'embedding'>[] = [];
