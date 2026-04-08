@@ -25,7 +25,8 @@ export const Button = ({
 }: BaseButtonProps) => {
   const baseClass =
     'mt-4 w-full px-4 py-4 font-bold text-xl rounded-lg transition-all duration-200 ' +
-    (disabled ? 'cursor-not-allowed opacity-50' : VARIANT_STYLES[variant]);
+    VARIANT_STYLES[variant] +
+    (disabled ? ' cursor-not-allowed opacity-50' : '');
 
   const ctaStyle =
     variant === 'cta' && !disabled ? { background: 'var(--pc-cta)', ...style } : style;

@@ -52,12 +52,12 @@ export default function ResultsPage() {
     });
   }, []);
 
-  function handleScroll() {
+  const handleScroll = useCallback(() => {
     if (!carouselRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
     setCanScrollLeft(scrollLeft > 8);
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 8);
-  }
+  }, []);
 
   function toggleSuggestion(id: number) {
     setActiveSuggestion((prev) => (prev === id ? null : id));
@@ -111,6 +111,18 @@ export default function ResultsPage() {
       setIsLoading(false);
     }
   }, [router]);
+
+  useEffect(() => {
+    if (movies.length === 0 || isLoading) return;
+    // Recalculate after movies render
+    const raf = requestAnimationFrame(handleScroll);
+    const onResize = () => handleScroll();
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [movies, isLoading, handleScroll]);
 
   const mainMovie = movies.find((m) => m.isMainRecommendation) || movies[0];
   const otherMovies = movies.filter((m) => m !== mainMovie);
