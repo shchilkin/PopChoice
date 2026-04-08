@@ -9,10 +9,8 @@ export type BaseButtonProps = {
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
-  default:
-    'bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90',
-  cta:
-    'text-[#09090F] font-bold hover:opacity-90 active:scale-95',
+  default: 'bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-90',
+  cta: 'text-[#09090F] font-bold hover:opacity-90 active:scale-95',
   ghost:
     'bg-transparent text-[var(--pc-t2)] border border-[var(--pc-bd2)] hover:text-[var(--pc-t1)] hover:border-[var(--pc-bd4)]',
 };
@@ -27,14 +25,10 @@ export const Button = ({
 }: BaseButtonProps) => {
   const baseClass =
     'mt-4 w-full px-4 py-4 font-bold text-xl rounded-lg transition-all duration-200 ' +
-    (disabled
-      ? 'cursor-not-allowed opacity-50'
-      : VARIANT_STYLES[variant]);
+    (disabled ? 'cursor-not-allowed opacity-50' : VARIANT_STYLES[variant]);
 
   const ctaStyle =
-    variant === 'cta' && !disabled
-      ? { background: 'var(--pc-cta)', ...style }
-      : style;
+    variant === 'cta' && !disabled ? { background: 'var(--pc-cta)', ...style } : style;
 
   return (
     <button

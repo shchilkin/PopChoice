@@ -2,7 +2,6 @@ import { PCLayout } from './PCLayout';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-
 const meta: Meta<typeof PCLayout> = {
   title: 'Components/PCLayout',
   component: PCLayout,

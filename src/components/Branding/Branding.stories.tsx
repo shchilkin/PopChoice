@@ -2,7 +2,6 @@ import { Branding } from './Branding';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-
 const meta: Meta<typeof Branding> = {
   title: 'Components/Branding',
   component: Branding,
@@ -19,7 +18,10 @@ const meta: Meta<typeof Branding> = {
   argTypes: {
     firstStripeColor: { control: 'color', description: 'First stripe colour on the mascot cup' },
     secondStripeColor: { control: 'color', description: 'Second stripe colour on the mascot cup' },
-    mascotSize: { control: { type: 'range', min: 60, max: 300, step: 10 }, description: 'Mascot size in px' },
+    mascotSize: {
+      control: { type: 'range', min: 60, max: 300, step: 10 },
+      description: 'Mascot size in px',
+    },
   },
 };
 

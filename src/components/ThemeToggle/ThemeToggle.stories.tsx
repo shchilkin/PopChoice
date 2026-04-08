@@ -2,7 +2,6 @@ import { ThemeToggle } from './ThemeToggle';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-
 const meta: Meta<typeof ThemeToggle> = {
   title: 'Components/ThemeToggle',
   component: ThemeToggle,

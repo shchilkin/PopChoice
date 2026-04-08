@@ -2,7 +2,6 @@ import { TopNavigation } from './TopNavigation';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-
 const meta: Meta<typeof TopNavigation> = {
   title: 'Components/TopNavigation',
   component: TopNavigation,
@@ -82,4 +81,3 @@ export const MobileView: Story = {
   ),
   args: { firstStripeColor: '#f20000', secondStripeColor: '#fff', logoSize: 60 },
 };
-

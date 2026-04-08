@@ -11,8 +11,8 @@ const HOW_IT_WORKS = [
   {
     step: '01',
     icon: ListChecks,
-    title: 'You answer 4 quick questions',
-    desc: 'Tell us your favorite film, whether you prefer classics or new releases, your current mood (pick multiple genres!), and the tone you&apos;re after. It takes about 60 seconds.',
+    title: 'You answer 5 quick questions',
+    desc: 'Tell us your favorite film (and why!), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you&apos;re after, and your favorite actor. It takes about 60 seconds.',
     color: '#F5C518',
   },
   {
@@ -25,7 +25,8 @@ const HOW_IT_WORKS = [
   {
     step: '03',
     icon: Database,
-    title: 'AI searches 10,000+ films',
+    // TODO: replace hardcoded film count with live value fetched from the DB
+    title: 'AI searches our film database',
     desc: 'Using vector similarity search, we find the films in our database that are closest to your taste profile. Every film has been pre-analyzed for tone, pacing, themes, and emotional resonance.',
     color: '#14B8A6',
   },

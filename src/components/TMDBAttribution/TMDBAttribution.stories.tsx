@@ -2,7 +2,6 @@ import { TMDBAttribution } from './TMDBAttribution';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-
 const meta: Meta<typeof TMDBAttribution> = {
   title: 'Components/TMDBAttribution',
   component: TMDBAttribution,

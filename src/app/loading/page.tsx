@@ -1,8 +1,11 @@
 'use client';
 
+import axios from 'axios';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+const MAX_RETRIES = 3;
 
 import { usePCTheme } from '@/hooks/usePCTheme';
 
@@ -87,38 +90,60 @@ export default function LoadingPage() {
   const { isDark } = usePCTheme();
   const [tipIndex, setTipIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const [errorState, setErrorState] = useState<'retryable' | 'fatal' | null>(null);
+  const retryCount = useRef(0);
+  const intervalsRef = useRef<{
+    tip?: ReturnType<typeof setInterval>;
+    prog?: ReturnType<typeof setInterval>;
+  }>({});
 
-  useEffect(() => {
-    // Check that we have recommendation data; if not, redirect to quiz
-    const data = localStorage.getItem('popchoice_recommendation');
-    if (!data) {
+  const callApi = useCallback(() => {
+    const quizDataStr = localStorage.getItem('popchoice_quiz_data');
+    if (!quizDataStr) {
       router.replace('/quiz');
       return;
     }
 
-    const tipInterval = setInterval(() => {
+    setErrorState(null);
+    setProgress(0);
+
+    intervalsRef.current.tip = setInterval(() => {
       setTipIndex((i) => (i + 1) % TIPS.length);
     }, 1400);
 
-    const totalDuration = 3200;
-    const progressInterval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return p + 2;
+    intervalsRef.current.prog = setInterval(() => {
+      setProgress((p) => (p >= 85 ? 85 : p + 1));
+    }, 60);
+
+    axios
+      .post('/api/movie-recommendation', JSON.parse(quizDataStr))
+      .then((response) => {
+        clearInterval(intervalsRef.current.tip);
+        clearInterval(intervalsRef.current.prog);
+        localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
+        localStorage.removeItem('popchoice_quiz_data');
+        setProgress(100);
+        setTimeout(() => router.push('/results'), 400);
+      })
+      .catch((err) => {
+        clearInterval(intervalsRef.current.tip);
+        clearInterval(intervalsRef.current.prog);
+        // eslint-disable-next-line no-console
+        console.error('API error:', err);
+        retryCount.current += 1;
+        setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });
-    }, totalDuration / 50);
-
-    const timer = setTimeout(() => router.push('/results'), totalDuration);
-
-    return () => {
-      clearInterval(tipInterval);
-      clearInterval(progressInterval);
-      clearTimeout(timer);
-    };
   }, [router]);
+
+  useEffect(() => {
+    callApi();
+    const intervals = intervalsRef.current;
+    return () => {
+      clearInterval(intervals.tip);
+      clearInterval(intervals.prog);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
@@ -138,7 +163,10 @@ export default function LoadingPage() {
         transition={{ duration: 0.6 }}
         className="flex flex-col items-center text-center max-w-sm w-full"
       >
-        <div className="mb-10">
+        <div
+          className="mb-10"
+          style={{ opacity: errorState ? 0.35 : 1, transition: 'opacity 0.4s' }}
+        >
           <FilmReel />
         </div>
 
@@ -151,43 +179,98 @@ export default function LoadingPage() {
             color: 'var(--pc-t1)',
           }}
         >
-          Finding your perfect pick
+          {errorState ? 'Oops…' : 'Finding your perfect pick'}
         </h2>
 
         <div className="h-12 mb-8 flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={tipIndex}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.4 }}
-              style={{ color: 'var(--pc-t2)', fontSize: '0.88rem', lineHeight: 1.6 }}
-            >
-              {TIPS[tipIndex]}
-            </motion.p>
-          </AnimatePresence>
+          {!errorState && (
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={tipIndex}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.4 }}
+                style={{ color: 'var(--pc-t2)', fontSize: '0.88rem', lineHeight: 1.6 }}
+              >
+                {TIPS[tipIndex]}
+              </motion.p>
+            </AnimatePresence>
+          )}
         </div>
 
         {/* Progress bar */}
-        <div className="w-full max-w-xs">
-          <div
-            className="w-full h-1.5 rounded-full overflow-hidden"
-            style={{ background: 'var(--pc-bd2)' }}
-          >
-            <motion.div
-              className="h-full rounded-full"
-              style={{
-                background: 'linear-gradient(90deg, #F5C518, #FF9F1C)',
-                width: `${progress}%`,
-              }}
-              transition={{ duration: 0.3 }}
-            />
+        {!errorState && (
+          <div className="w-full max-w-xs">
+            <div
+              className="w-full h-1.5 rounded-full overflow-hidden"
+              style={{ background: 'var(--pc-bd2)' }}
+            >
+              <motion.div
+                className="h-full rounded-full"
+                style={{
+                  background: 'linear-gradient(90deg, #F5C518, #FF9F1C)',
+                  width: `${progress}%`,
+                }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+            <p className="mt-2 text-right" style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>
+              {progress}%
+            </p>
           </div>
-          <p className="mt-2 text-right" style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>
-            {progress}%
-          </p>
-        </div>
+        )}
+
+        {/* Retryable error */}
+        {errorState === 'retryable' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-4 w-full max-w-xs"
+          >
+            <p style={{ color: '#EF4444', fontSize: '0.88rem', lineHeight: 1.6 }}>
+              Something went wrong. Attempt {retryCount.current} of {MAX_RETRIES}.
+            </p>
+            <button
+              onClick={callApi}
+              className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
+              style={{ background: 'var(--pc-cta)', color: '#09090F', fontWeight: 700 }}
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => router.push('/quiz')}
+              className="text-sm"
+              style={{ color: 'var(--pc-t3)' }}
+            >
+              Back to quiz
+            </button>
+          </motion.div>
+        )}
+
+        {/* Fatal error */}
+        {errorState === 'fatal' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-4 w-full max-w-xs"
+          >
+            <p style={{ color: '#EF4444', fontSize: '0.88rem', lineHeight: 1.6 }}>
+              The service is not available right now. Please try again later.
+            </p>
+            <p style={{ color: 'var(--pc-t3)', fontSize: '0.8rem', lineHeight: 1.6 }}>
+              Your answers are saved in your browser — come back and we&apos;ll pick up where you
+              left off.
+            </p>
+            <button
+              onClick={() => router.push('/')}
+              className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
+              style={{ background: 'var(--pc-cta)', color: '#09090F', fontWeight: 700 }}
+            >
+              Go to home
+            </button>
+          </motion.div>
+        )}
 
         {/* Fun fact */}
         <motion.div

@@ -1,27 +1,26 @@
 'use client';
 
-import axios from 'axios';
 import {
-    ChevronLeft,
-    ChevronRight,
-    Clapperboard,
-    Clock,
-    CloudSun,
-    Film,
-    FlaskConical,
-    Ghost,
-    Globe,
-    Heart,
-    Moon,
-    Plus,
-    Skull,
-    Smile,
-    Star,
-    Sun,
-    Trash2,
-    User,
-    Users,
-    Zap,
+  ChevronLeft,
+  ChevronRight,
+  Clapperboard,
+  Clock,
+  CloudSun,
+  Film,
+  FlaskConical,
+  Ghost,
+  Globe,
+  Heart,
+  Moon,
+  Plus,
+  Skull,
+  Smile,
+  Star,
+  Sun,
+  Trash2,
+  User,
+  Users,
+  Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
@@ -99,10 +98,24 @@ const TONES: {
   },
 ];
 
-const QUESTION_LABELS = ['Favorite film', 'Old or new?', 'Your mood', 'Pick a tone', 'Favorite actor'];
+const QUESTION_LABELS = [
+  'Favorite film',
+  'Old or new?',
+  'Your mood',
+  'Pick a tone',
+  'Favorite actor',
+];
 
 function emptyPerson(name = ''): PersonAnswers {
-  return { name, favoriteMovie: '', favoriteMovieWhy: '', era: '', moods: [], tone: '', favoriteActor: '' };
+  return {
+    name,
+    favoriteMovie: '',
+    favoriteMovieWhy: '',
+    era: '',
+    moods: [],
+    tone: '',
+    favoriteActor: '',
+  };
 }
 
 function ProgressDots({ current, total }: { current: number; total: number }) {
@@ -169,7 +182,6 @@ export default function QuizPage() {
   const [dir, setDir] = useState(1);
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const currentPerson = people[currentPersonIdx];
 
@@ -181,22 +193,12 @@ export default function QuizPage() {
     setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
   }
 
-  async function submitToApi() {
+  function submitToApi() {
     setIsSubmitting(true);
-    setError(null);
-    try {
-      const apiData = people.map(toApiFormat);
-      const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
-
-      const response = await axios.post('/api/movie-recommendation', dataToSend);
-      localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
-      router.push('/loading');
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('API error:', err);
-      setError('Something went wrong. Please try again.');
-      setIsSubmitting(false);
-    }
+    const apiData = people.map(toApiFormat);
+    const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
+    localStorage.setItem('popchoice_quiz_data', JSON.stringify(dataToSend));
+    router.push('/loading');
   }
 
   function goNext() {
@@ -773,8 +775,7 @@ export default function QuizPage() {
                       marginBottom: 8,
                     }}
                   >
-                    WHY?{' '}
-                    <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>(optional)</span>
+                    WHY? <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>(optional)</span>
                   </p>
                   <textarea
                     value={currentPerson.favoriteMovieWhy}
@@ -1205,16 +1206,6 @@ export default function QuizPage() {
           </motion.div>
         </AnimatePresence>
       </div>
-
-      {/* Error message */}
-      {error && (
-        <div
-          className="px-5 max-w-xl mx-auto w-full text-center"
-          style={{ color: '#EF4444', fontSize: '0.85rem' }}
-        >
-          {error}
-        </div>
-      )}
 
       {/* Nav buttons */}
       <div className="px-5 py-6 max-w-xl mx-auto w-full flex gap-3">
