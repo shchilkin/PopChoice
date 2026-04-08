@@ -41,8 +41,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
   }, []);
 
+  const currentTranslations =
+    locale === 'ru' ? translations.ru : locale === 'fi' ? translations.fi : translations.en;
+
   return (
-    <LanguageContext.Provider value={{ locale, setLocale, t: translations[locale] }}>
+    <LanguageContext.Provider value={{ locale, setLocale, t: currentTranslations }}>
       {children}
     </LanguageContext.Provider>
   );
