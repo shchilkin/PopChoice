@@ -10,7 +10,7 @@ This service fetches movies from multiple TMDB endpoints (`now_playing`, `upcomi
 
 | Variable                 | Required | Default     | Description                                                        |
 | ------------------------ | -------- | ----------- | ------------------------------------------------------------------ |
-| `TMDB_READ_ACCESS_TOKEN` | ✅       | —           | TMDB v4 Bearer read access token                                   |
+| `TMDB_API_KEY`           | ✅       | —           | TMDB API key                                                       |
 | `OPENAI_API_KEY`         | ✅       | —           | OpenAI API key for generating embeddings                           |
 | `DATABASE_URL`           | ✅       | —           | PostgreSQL connection string (with pgvector extension)             |
 | `TMDB_SOURCES`           | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular`          |

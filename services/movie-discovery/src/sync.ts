@@ -29,7 +29,7 @@ export async function runSync(config: Config): Promise<void> {
 
   // 1. Fetch from all sources
   const candidates = await fetchFromSources(
-    config.tmdbReadAccessToken,
+    config.tmdbApiKey,
     config.sources,
     config.maxPagesPerSource,
     config.language,
@@ -131,7 +131,7 @@ export async function runSync(config: Config): Promise<void> {
       batch.map(async (m) => {
         try {
           const details = await fetchMovieDetails(
-            config.tmdbReadAccessToken,
+            config.tmdbApiKey,
             m.id,
             config.language,
           );

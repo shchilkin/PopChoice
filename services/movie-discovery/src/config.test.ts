@@ -8,7 +8,7 @@ import { loadConfig } from './config.js';
 
 /** Required env vars for a minimal valid config. */
 const REQUIRED_ENV = {
-  TMDB_READ_ACCESS_TOKEN: 'token123',
+  TMDB_API_KEY: 'token123',
   OPENAI_API_KEY: 'sk-test',
   DATABASE_URL: 'postgresql://localhost/test',
 };
@@ -20,7 +20,7 @@ const REQUIRED_ENV = {
 describe('loadConfig', () => {
   beforeEach(() => {
     // Start each test with the minimal required vars in place
-    vi.stubEnv('TMDB_READ_ACCESS_TOKEN', REQUIRED_ENV.TMDB_READ_ACCESS_TOKEN);
+    vi.stubEnv('TMDB_API_KEY', REQUIRED_ENV.TMDB_API_KEY);
     vi.stubEnv('OPENAI_API_KEY', REQUIRED_ENV.OPENAI_API_KEY);
     vi.stubEnv('DATABASE_URL', REQUIRED_ENV.DATABASE_URL);
   });
@@ -33,14 +33,14 @@ describe('loadConfig', () => {
 
   it('returns config with correct values from required env vars', () => {
     const config = loadConfig();
-    expect(config.tmdbReadAccessToken).toBe(REQUIRED_ENV.TMDB_READ_ACCESS_TOKEN);
+    expect(config.tmdbApiKey).toBe(REQUIRED_ENV.TMDB_API_KEY);
     expect(config.openaiApiKey).toBe(REQUIRED_ENV.OPENAI_API_KEY);
     expect(config.databaseUrl).toBe(REQUIRED_ENV.DATABASE_URL);
   });
 
-  it('throws when TMDB_READ_ACCESS_TOKEN is missing', () => {
-    vi.stubEnv('TMDB_READ_ACCESS_TOKEN', '');
-    expect(() => loadConfig()).toThrow('TMDB_READ_ACCESS_TOKEN');
+  it('throws when TMDB_API_KEY is missing', () => {
+    vi.stubEnv('TMDB_API_KEY', '');
+    expect(() => loadConfig()).toThrow('TMDB_API_KEY');
   });
 
   it('throws when OPENAI_API_KEY is missing', () => {
@@ -54,7 +54,7 @@ describe('loadConfig', () => {
   });
 
   it('throws listing all missing required vars at once', () => {
-    vi.stubEnv('TMDB_READ_ACCESS_TOKEN', '');
+    vi.stubEnv('TMDB_API_KEY', '');
     vi.stubEnv('OPENAI_API_KEY', '');
     vi.stubEnv('DATABASE_URL', '');
     expect(() => loadConfig()).toThrow('Missing required environment variables');
