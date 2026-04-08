@@ -3,6 +3,9 @@ name: PR
 on:
   pull_request:
     branches: ['development']
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -147,31 +150,6 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           NEXT_FONT_GOOGLE_DISABLE: 1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-  movie-sync-ci:
-    name: Movie Sync CI
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    defaults:
-      run:
-        working-directory: services/movie-sync
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: services/movie-sync/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type check
-        run: npm run build
 
   dependency-review:
     name: Dependency Review

@@ -2,23 +2,26 @@
 
 ## GitHub Actions Workflow
 
-This project includes a comprehensive GitHub Actions workflow for pull request validation located at `.github/workflows/pr.yml`.
+This project uses two GitHub Actions workflow files for pull request validation:
+
+- `.github/workflows/pr.yml` – main application checks (lint, type-check, tests, build, dependency review)
+- `.github/workflows/movie-sync-ci.yml` – TypeScript compilation for the `services/movie-sync` service, triggered **only** when files under `services/movie-sync/` change
 
 ## Workflow Overview
 
-The workflow runs automatically on pull requests targeting the `development` branch. Jobs run **in parallel** to minimise feedback time, with each job focused on a single concern.
+Both workflows run automatically on pull requests targeting the `development` branch. Jobs run **in parallel** to minimise feedback time, with each job focused on a single concern.
 
 ### Jobs
 
-| Job                 | Purpose                                                          |
-| ------------------- | ---------------------------------------------------------------- |
-| `lint`              | ESLint code quality + Prettier formatting                        |
-| `type-check`        | TypeScript type safety (`tsc --noEmit`)                          |
-| `server-tests`      | Vitest server tests with coverage collection and artifact upload |
-| `storybook-tests`   | Playwright browser install + Storybook component tests           |
-| `build`             | Next.js production build verification                            |
-| `movie-sync-ci`     | TypeScript compilation for `services/movie-sync`                 |
-| `dependency-review` | Blocks PRs introducing vulnerable dependencies                   |
+| Workflow            | Job                 | Purpose                                                          |
+| ------------------- | ------------------- | ---------------------------------------------------------------- |
+| `pr.yml`            | `lint`              | ESLint code quality + Prettier formatting                        |
+| `pr.yml`            | `type-check`        | TypeScript type safety (`tsc --noEmit`)                          |
+| `pr.yml`            | `server-tests`      | Vitest server tests with coverage collection and artifact upload |
+| `pr.yml`            | `storybook-tests`   | Playwright browser install + Storybook component tests           |
+| `pr.yml`            | `build`             | Next.js production build verification                            |
+| `pr.yml`            | `dependency-review` | Blocks PRs introducing vulnerable dependencies                   |
+| `movie-sync-ci.yml` | `movie-sync-ci`     | TypeScript compilation for `services/movie-sync`                 |
 
 ## Workflow Features
 
@@ -44,18 +47,89 @@ The `build` job sets `NEXT_FONT_GOOGLE_DISABLE=1` to prevent flaky failures caus
 
 ### Movie Sync CI
 
-The `movie-sync-ci` job installs dependencies and runs `tsc` (`npm run build`) inside `services/movie-sync` to ensure the service always compiles correctly.
+The `movie-sync-ci` job lives in its own workflow (`movie-sync-ci.yml`) and is triggered only when files inside `services/movie-sync/` change. It installs dependencies and runs `tsc` (`npm run build`) to ensure the service always compiles correctly.
 
 ### Dependency Review
 
 The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability. It does this by failing the GitHub Actions check, which can then prevent merging when that check is required. The workflow only grants `contents: read` for this job; it does not require `pull-requests: write`.
 
+## Workflow Triggers and Path Filtering
+
+### How Path Filtering Works
+
+GitHub Actions supports two path-related filters on workflow triggers:
+
+- **`paths`** – the workflow runs **only** when at least one changed file matches a listed pattern.
+- **`paths-ignore`** – the workflow is **skipped** when **all** changed files match the listed patterns.
+
+Both filters accept [glob patterns](https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet) such as `src/**` or `**/*.md`.
+
+```yaml
+on:
+  push:
+    branches: ['main']
+    # Only trigger when source files change
+    paths:
+      - 'src/**'
+      - 'package*.json'
+
+  pull_request:
+    branches: ['main']
+    # Skip when only documentation changes
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+```
+
+### Path Filtering in This Repository
+
+**`pr.yml`** uses `paths-ignore` to skip the main CI suite when a PR touches only documentation or root-level markdown files:
+
+```yaml
+on:
+  pull_request:
+    branches: ['development']
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+```
+
+**`movie-sync-ci.yml`** uses `paths` so that the service CI only runs when the service source actually changes:
+
+```yaml
+on:
+  pull_request:
+    branches: ['development']
+    paths:
+      - 'services/movie-sync/**'
+```
+
+### Best Practices
+
+| Practice | Details |
+| --- | --- |
+| Prefer `paths-ignore` for broad exclusions | Use `paths-ignore` when you want to skip a workflow for doc-only changes. It is simpler to maintain than an exhaustive `paths` allowlist. |
+| Prefer `paths` for isolated services | Use `paths` when a job is only relevant to a single subdirectory (e.g., a microservice). |
+| Do not mix `paths` and `paths-ignore` | GitHub does not allow both filters on the same event. |
+| Account for required status checks | If a workflow with path filtering is a **required** status check, GitHub will report the check as "skipped" (not "passed") when the workflow does not run. Skipped checks do not satisfy branch protection rules. Work around this by making skipped checks pass via [re-usable workflows or the `pull_request_target` event](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks). |
+| `schedule` events ignore path filters | Scheduled (`cron`) workflows always run regardless of any `paths` or `paths-ignore` configuration. |
+
+### Reference Links
+
+- [Workflow syntax – `on.<event>.paths`](https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#onpushpull_requestpull_request_targetpathspaths-ignore)
+- [Filter pattern cheat sheet](https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet)
+- [Triggering a workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+- [Troubleshooting required status checks](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks)
+
 ## Workflow Trigger
 
-The workflow is triggered on:
+Both workflows are triggered on:
 
 - Pull request events targeting the `development` branch (`branches: ['development']`)
 - Both opening PRs and pushing new commits to existing PRs targeting development
+
+`pr.yml` additionally **skips** when all changed files match `docs/**` or `*.md` (documentation-only PRs).
+`movie-sync-ci.yml` additionally **only runs** when at least one file under `services/movie-sync/**` changes.
 
 ## Dependabot
 
