@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 import { palette } from '@/styles/designTokens';
 
-import { GenrePill } from './GenrePill';
+import { AgeRatingPill } from './AgeRatingPill';
 import { SimilarityBadge } from './SimilarityBadge';
 import { StarRating } from './StarRating';
 
@@ -175,7 +175,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               {movie.year} · {pct}% match
             </span>
           </div>
-          {movie.age_rating && <GenrePill label={movie.age_rating} />}
+          {movie.age_rating && <AgeRatingPill label={movie.age_rating} />}
         </div>
 
         {score > 0 && (

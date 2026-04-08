@@ -1,4 +1,4 @@
-export function GenrePill({ label }: { label: string }) {
+export function AgeRatingPill({ label }: { label: string }) {
   return (
     <span
       className="px-2.5 py-1 rounded-full text-xs"

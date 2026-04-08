@@ -1,10 +1,10 @@
-import { GenrePill } from './GenrePill';
+import { AgeRatingPill } from './AgeRatingPill';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-const meta: Meta<typeof GenrePill> = {
-  title: 'Results/GenrePill',
-  component: GenrePill,
+const meta: Meta<typeof AgeRatingPill> = {
+  title: 'Results/AgeRatingPill',
+  component: AgeRatingPill,
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
@@ -23,7 +23,7 @@ const meta: Meta<typeof GenrePill> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof GenrePill>;
+type Story = StoryObj<typeof AgeRatingPill>;
 
 export const AgeRating: Story = {
   args: { label: 'PG-13' },
