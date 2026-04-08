@@ -1,10 +1,11 @@
-import { Rubik_Gemstones } from 'next/font/google';
+import { Bebas_Neue } from 'next/font/google';
 
 import { Mascot } from '../Mascot/Maskot';
 
-const rubik_Gemstones = Rubik_Gemstones({
-  subsets: ['latin', 'cyrillic'],
+const bebasNeue = Bebas_Neue({
+  subsets: ['latin'],
   weight: '400',
+  variable: '--font-bebas-neue-branding',
 });
 
 interface BrandingProps {
@@ -20,7 +21,7 @@ export const Branding = ({
 }: BrandingProps) => {
   return (
     <section id="branding" className="flex flex-col gap-4 mt-8 mb-4 sm:mb-8 items-center">
-      <div className={`w-[${mascotSize}px] h-[${mascotSize}px] flex items-center justify-center`}>
+      <div className={`flex items-center justify-center`} style={{ width: mascotSize, height: mascotSize }}>
         <Mascot
           firstStripeColor={firstStripeColor}
           secondStripeColor={secondStripeColor}
@@ -28,7 +29,12 @@ export const Branding = ({
           height={mascotSize}
         />
       </div>
-      <h1 className={`${rubik_Gemstones.className} font-bold text-5xl text-center`}>PopChoice</h1>
+      <h1
+        className={`${bebasNeue.className} pc-gradient-text text-center`}
+        style={{ fontSize: '3rem', letterSpacing: '0.08em' }}
+      >
+        PopChoice
+      </h1>
     </section>
   );
 };

@@ -1,10 +1,20 @@
 import { TopNavigation } from './TopNavigation';
 
-export default {
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+
+
+const meta: Meta<typeof TopNavigation> = {
   title: 'Components/TopNavigation',
   component: TopNavigation,
+  tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
+    docs: {
+      description: {
+        component:
+          '**Legacy navigation bar** used on `/movie-questionnaire`, `/movie-suggestion`, and `/available-movies`. New pages (`/`, `/quiz`, `/results`, `/about`) use `PCLayout` instead. Still maintained for the legacy routes.',
+      },
+    },
   },
   argTypes: {
     minimizeMode: {
@@ -17,69 +27,59 @@ export default {
     },
     firstStripeColor: {
       control: 'color',
-      description: 'Primary color for the mascot stripes',
+      description: 'Primary colour for the mascot cup stripes',
     },
     secondStripeColor: {
       control: 'color',
-      description: 'Secondary color for the mascot stripes',
+      description: 'Secondary colour for the mascot cup stripes',
     },
   },
 };
 
-export const Default = () => (
-  <div className="p-4">
-    <TopNavigation firstStripeColor="#f20000" secondStripeColor="#fff" logoSize={60} />
-  </div>
-);
+export default meta;
+type Story = StoryObj<typeof TopNavigation>;
 
-export const WithNavigation = () => (
-  <div className="p-4">
-    <TopNavigation
-      firstStripeColor="#f20000"
-      secondStripeColor="#fff"
-      logoSize={60}
-      minimizeMode={false}
-    />
-  </div>
-);
+export const Default: Story = {
+  args: { firstStripeColor: '#f20000', secondStripeColor: '#fff', logoSize: 60 },
+};
 
-export const MinimizeMode = () => (
-  <div className="p-4">
-    <TopNavigation
-      firstStripeColor="#f20000"
-      secondStripeColor="#fff"
-      logoSize={60}
-      minimizeMode={true}
-    />
-  </div>
-);
+export const WithNavigation: Story = {
+  args: {
+    firstStripeColor: '#f20000',
+    secondStripeColor: '#fff',
+    logoSize: 60,
+    minimizeMode: false,
+  },
+};
 
-export const Blue = () => (
-  <div className="p-4">
-    <TopNavigation firstStripeColor="#0066cc" secondStripeColor="#ffeb3b" logoSize={60} />
-  </div>
-);
+export const MinimizeMode: Story = {
+  args: {
+    firstStripeColor: '#f20000',
+    secondStripeColor: '#fff',
+    logoSize: 60,
+    minimizeMode: true,
+  },
+  parameters: {
+    docs: {
+      description: { story: 'Used on the `/movie-suggestion` results page — hides nav links.' },
+    },
+  },
+};
 
-export const Green = () => (
-  <div className="p-4">
-    <TopNavigation firstStripeColor="#4caf50" secondStripeColor="#e91e63" logoSize={60} />
-  </div>
-);
+export const LargeLogoSize: Story = {
+  args: { firstStripeColor: '#f20000', secondStripeColor: '#fff', logoSize: 80 },
+};
 
-export const Large = () => (
-  <div className="p-4">
-    <TopNavigation firstStripeColor="#f20000" secondStripeColor="#fff" logoSize={80} />
-  </div>
-);
+export const SmallLogoSize: Story = {
+  args: { firstStripeColor: '#f20000', secondStripeColor: '#fff', logoSize: 40 },
+};
 
-export const Small = () => (
-  <div className="p-4">
-    <TopNavigation firstStripeColor="#f20000" secondStripeColor="#fff" logoSize={40} />
-  </div>
-);
+export const MobileView: Story = {
+  render: (args) => (
+    <div className="max-w-sm">
+      <TopNavigation {...args} />
+    </div>
+  ),
+  args: { firstStripeColor: '#f20000', secondStripeColor: '#fff', logoSize: 60 },
+};
 
-export const MobileView = () => (
-  <div className="p-4 max-w-sm">
-    <TopNavigation firstStripeColor="#f20000" secondStripeColor="#fff" logoSize={60} />
-  </div>
-);

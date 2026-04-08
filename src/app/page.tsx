@@ -22,7 +22,7 @@ const features = [
   },
   {
     icon: Play,
-    title: '4 Quick Questions',
+    title: '5 Quick Questions',
     desc: 'No endless forms — just a 60-second taste quiz',
     color: '#FF9F1C',
   },
@@ -178,7 +178,7 @@ export default function LandingPage() {
             className="mb-10 max-w-lg"
             style={{ color: 'var(--pc-t2)', fontSize: '1.1rem', lineHeight: 1.7 }}
           >
-            Stop endlessly scrolling. Answer 4 quick questions and let AI find the{' '}
+            Stop endlessly scrolling. Answer 5 quick questions and let AI find the{' '}
             <span style={{ color: 'var(--pc-gold)' }}>perfect movie</span> for your mood, your
             night, your vibe.
           </motion.p>

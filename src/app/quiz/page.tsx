@@ -2,26 +2,26 @@
 
 import axios from 'axios';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Clapperboard,
-  Clock,
-  CloudSun,
-  Film,
-  FlaskConical,
-  Ghost,
-  Globe,
-  Heart,
-  Moon,
-  Plus,
-  Skull,
-  Smile,
-  Star,
-  Sun,
-  Trash2,
-  User,
-  Users,
-  Zap,
+    ChevronLeft,
+    ChevronRight,
+    Clapperboard,
+    Clock,
+    CloudSun,
+    Film,
+    FlaskConical,
+    Ghost,
+    Globe,
+    Heart,
+    Moon,
+    Plus,
+    Skull,
+    Smile,
+    Star,
+    Sun,
+    Trash2,
+    User,
+    Users,
+    Zap,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
@@ -35,9 +35,11 @@ type Tone = 'light' | 'balanced' | 'serious' | 'dark';
 interface PersonAnswers {
   name: string;
   favoriteMovie: string;
+  favoriteMovieWhy: string;
   era: Era | '';
   moods: string[];
   tone: Tone | '';
+  favoriteActor: string;
 }
 
 type Phase = 'intro' | 'group-setup' | 'questions' | 'between-persons';
@@ -97,10 +99,10 @@ const TONES: {
   },
 ];
 
-const QUESTION_LABELS = ['Favorite film', 'Old or new?', 'Your mood', 'Pick a tone'];
+const QUESTION_LABELS = ['Favorite film', 'Old or new?', 'Your mood', 'Pick a tone', 'Favorite actor'];
 
 function emptyPerson(name = ''): PersonAnswers {
-  return { name, favoriteMovie: '', era: '', moods: [], tone: '' };
+  return { name, favoriteMovie: '', favoriteMovieWhy: '', era: '', moods: [], tone: '', favoriteActor: '' };
 }
 
 function ProgressDots({ current, total }: { current: number; total: number }) {
@@ -147,9 +149,11 @@ function toApiFormat(person: PersonAnswers) {
   };
   return {
     favoriteMovie: person.favoriteMovie,
+    ...(person.favoriteMovieWhy.trim() && { favoriteMovieWhy: person.favoriteMovieWhy.trim() }),
     newVsClassic: eraMap[person.era] || person.era,
     moodPreference: person.moods.map((m) => GENRES.find((g) => g.id === m)?.label || m),
     tonePreference: toneMap[person.tone] || person.tone,
+    ...(person.favoriteActor.trim() && { favoriteActor: person.favoriteActor.trim() }),
   };
 }
 
@@ -197,7 +201,7 @@ export default function QuizPage() {
 
   function goNext() {
     setDir(1);
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep((s) => s + 1);
     } else {
       if (currentPersonIdx < people.length - 1) {
@@ -215,7 +219,7 @@ export default function QuizPage() {
     } else {
       if (mode === 'group' && currentPersonIdx > 0) {
         setCurrentPersonIdx((i) => i - 1);
-        setCurrentStep(3);
+        setCurrentStep(4);
       } else if (mode === 'group') {
         setPhase('group-setup');
       } else {
@@ -230,6 +234,7 @@ export default function QuizPage() {
     if (currentStep === 1) return currentPerson.era !== '';
     if (currentStep === 2) return currentPerson.moods.length >= 1;
     if (currentStep === 3) return currentPerson.tone !== '';
+    if (currentStep === 4) return true; // actor is optional
     return false;
   }
 
@@ -614,9 +619,9 @@ export default function QuizPage() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ProgressDots current={currentStep} total={4} />
+            <ProgressDots current={currentStep} total={5} />
             <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
-              {currentStep + 1} of 4
+              {currentStep + 1} of 5
             </span>
           </div>
           {personLabel && (
@@ -757,6 +762,55 @@ export default function QuizPage() {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Optional Why? */}
+                <div>
+                  <p
+                    style={{
+                      color: 'var(--pc-t4)',
+                      fontSize: '0.78rem',
+                      marginBottom: 8,
+                    }}
+                  >
+                    WHY?{' '}
+                    <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>(optional)</span>
+                  </p>
+                  <textarea
+                    value={currentPerson.favoriteMovieWhy}
+                    onChange={(e) =>
+                      updateCurrentPerson({ favoriteMovieWhy: e.target.value.slice(0, 300) })
+                    }
+                    placeholder="Share your thoughts — plot, characters, what made it special…"
+                    rows={3}
+                    className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200 resize-none"
+                    style={{
+                      background: 'var(--pc-surface)',
+                      border: '1px solid var(--pc-bd2)',
+                      color: 'var(--pc-t1)',
+                      fontSize: '0.9rem',
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = isDark
+                        ? 'rgba(245,197,24,0.4)'
+                        : 'rgba(196,149,10,0.5)';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,197,24,0.06)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--pc-bd2)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                  <p
+                    style={{
+                      color: 'var(--pc-t4)',
+                      fontSize: '0.75rem',
+                      textAlign: 'right',
+                      marginTop: 4,
+                    }}
+                  >
+                    {currentPerson.favoriteMovieWhy.length}/300
+                  </p>
                 </div>
               </div>
             )}
@@ -1037,6 +1091,117 @@ export default function QuizPage() {
                 </div>
               </div>
             )}
+            {/* Q5: Favorite Actor */}
+            {currentStep === 4 && (
+              <div className="flex flex-col gap-6 pt-2">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{
+                      background: 'rgba(245,197,24,0.15)',
+                      color: 'var(--pc-gold)',
+                    }}
+                  >
+                    <User size={20} />
+                  </div>
+                  <h2
+                    style={{
+                      fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                      fontSize: '1.8rem',
+                      letterSpacing: '0.04em',
+                      color: 'var(--pc-t1)',
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    Who&apos;s your favorite actor?
+                  </h2>
+                </div>
+                <p
+                  style={{
+                    color: 'var(--pc-t3)',
+                    fontSize: '0.88rem',
+                    marginTop: -8,
+                  }}
+                >
+                  Optional — helps us find films featuring people you already love.
+                </p>
+
+                <div className="relative">
+                  <input
+                    autoFocus
+                    value={currentPerson.favoriteActor}
+                    onChange={(e) => updateCurrentPerson({ favoriteActor: e.target.value })}
+                    onKeyDown={(e) => e.key === 'Enter' && goNext()}
+                    placeholder="e.g. Tom Hanks, Meryl Streep, Cillian Murphy…"
+                    className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
+                    style={{
+                      background: 'var(--pc-surface)',
+                      border: '1px solid var(--pc-bd2)',
+                      color: 'var(--pc-t1)',
+                      fontSize: '1rem',
+                    }}
+                    onFocus={(e) => {
+                      (e.currentTarget as HTMLInputElement).style.borderColor = isDark
+                        ? 'rgba(245,197,24,0.4)'
+                        : 'rgba(196,149,10,0.5)';
+                      (e.currentTarget as HTMLInputElement).style.boxShadow =
+                        '0 0 0 3px rgba(245,197,24,0.06)';
+                    }}
+                    onBlur={(e) => {
+                      (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
+                      (e.currentTarget as HTMLInputElement).style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+
+                {/* Quick suggestions */}
+                <div>
+                  <p
+                    style={{
+                      color: 'var(--pc-t4)',
+                      fontSize: '0.78rem',
+                      marginBottom: 10,
+                    }}
+                  >
+                    POPULAR PICKS
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      'Tom Hanks',
+                      'Meryl Streep',
+                      'Leonardo DiCaprio',
+                      'Cate Blanchett',
+                      'Denzel Washington',
+                      'Scarlett Johansson',
+                    ].map((actor) => (
+                      <button
+                        key={actor}
+                        onClick={() => updateCurrentPerson({ favoriteActor: actor })}
+                        className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
+                        style={{
+                          background:
+                            currentPerson.favoriteActor === actor
+                              ? isDark
+                                ? 'rgba(245,197,24,0.2)'
+                                : 'rgba(196,149,10,0.12)'
+                              : chipUnselectedBg,
+                          border:
+                            currentPerson.favoriteActor === actor
+                              ? '1px solid rgba(245,197,24,0.4)'
+                              : '1px solid var(--pc-bd1)',
+                          color:
+                            currentPerson.favoriteActor === actor
+                              ? 'var(--pc-gold)'
+                              : 'var(--pc-t2)',
+                        }}
+                      >
+                        {actor}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1078,9 +1243,9 @@ export default function QuizPage() {
         >
           {isSubmitting ? (
             <>Submitting…</>
-          ) : currentStep === 3 && currentPersonIdx === people.length - 1 ? (
+          ) : currentStep === 4 && currentPersonIdx === people.length - 1 ? (
             <>Find My Movie ✨</>
-          ) : currentStep === 3 ? (
+          ) : currentStep === 4 ? (
             <>
               Next Person <ChevronRight size={16} />
             </>
