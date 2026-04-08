@@ -2,6 +2,7 @@
 
 import { Clock } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 import type { Era, PersonAnswers } from '../../types';
@@ -11,31 +12,33 @@ interface EraStepProps {
   onUpdate: (updates: Partial<PersonAnswers>) => void;
 }
 
-const ERA_OPTIONS = [
-  {
-    id: 'new' as Era,
-    emoji: '✨',
-    title: 'New Releases',
-    desc: 'Recent films from the last 5 years',
-    color: palette.teal,
-  },
-  {
-    id: 'classic' as Era,
-    emoji: '🎞️',
-    title: 'Timeless Classics',
-    desc: 'Golden films that stood the test of time',
-    color: palette.gold,
-  },
-  {
-    id: 'both' as Era,
-    emoji: '🎬',
-    title: "I'm open to both",
-    desc: "Surprise me — old or new, as long as it's great",
-    color: palette.purple,
-  },
-];
-
 export function EraStep({ person, onUpdate }: EraStepProps) {
+  const { t } = useLanguage();
+
+  const ERA_OPTIONS = [
+    {
+      id: 'new' as Era,
+      emoji: '✨',
+      title: t.quiz.era.new.title,
+      desc: t.quiz.era.new.desc,
+      color: palette.teal,
+    },
+    {
+      id: 'classic' as Era,
+      emoji: '🎞️',
+      title: t.quiz.era.classic.title,
+      desc: t.quiz.era.classic.desc,
+      color: palette.gold,
+    },
+    {
+      id: 'both' as Era,
+      emoji: '🎬',
+      title: t.quiz.era.both.title,
+      desc: t.quiz.era.both.desc,
+      color: palette.purple,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6 pt-2">
       <div className="flex items-center gap-3">
@@ -57,7 +60,7 @@ export function EraStep({ person, onUpdate }: EraStepProps) {
             lineHeight: 1.1,
           }}
         >
-          New releases or timeless classics?
+          {t.quiz.era.title}
         </h2>
       </div>
 

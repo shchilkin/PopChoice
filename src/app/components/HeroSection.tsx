@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Mascot } from '@/components/Mascot';
+import { useLanguage } from '@/i18n';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { palette } from '@/styles/designTokens';
 
@@ -70,6 +71,7 @@ function FilmParticles() {
 export function HeroSection() {
   const router = useRouter();
   const { isDark } = usePCTheme();
+  const { t } = useLanguage();
 
   const heroOverlay = isDark
     ? 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245,197,24,0.06) 0%, transparent 70%), linear-gradient(180deg, #09090F 0%, rgba(9,9,15,0.4) 30%, rgba(9,9,15,0.6) 70%, #09090F 100%)'
@@ -118,7 +120,7 @@ export function HeroSection() {
           }}
         >
           <Sparkles size={11} />
-          AI-Powered Movie Finder
+          {t.hero.badge}
         </motion.div>
 
         {/* Mascot */}
@@ -158,9 +160,9 @@ export function HeroSection() {
           className="mb-10 max-w-lg"
           style={{ color: 'var(--pc-t2)', fontSize: '1.1rem', lineHeight: 1.7 }}
         >
-          Stop endlessly scrolling. Answer 5 quick questions and let AI find the{' '}
-          <span style={{ color: 'var(--pc-gold)' }}>perfect movie</span> for your mood, your night,
-          your vibe.
+          {t.hero.descriptionPre}{' '}
+          <span style={{ color: 'var(--pc-gold)' }}>{t.hero.perfectMovie}</span>{' '}
+          {t.hero.descriptionPost}
         </motion.p>
 
         {/* CTA */}
@@ -189,7 +191,7 @@ export function HeroSection() {
             }}
           >
             <Play size={18} className="fill-current" />
-            <span style={{ fontWeight: 700 }}>Find My Movie</span>
+            <span style={{ fontWeight: 700 }}>{t.hero.findMyMovie}</span>
           </button>
 
           <button
@@ -209,7 +211,7 @@ export function HeroSection() {
               (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pc-bd2)';
             }}
           >
-            How it works
+            {t.hero.howItWorks}
           </button>
         </motion.div>
 
@@ -221,7 +223,7 @@ export function HeroSection() {
           className="mt-8 text-xs"
           style={{ color: 'var(--pc-t4)' }}
         >
-          ✨ No sign-up required · Takes ~60 seconds · Works on mobile
+          {t.hero.noSignup}
         </motion.p>
       </div>
 

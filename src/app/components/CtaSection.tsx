@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
+import { useLanguage } from '@/i18n';
 import { usePCTheme } from '@/hooks/usePCTheme';
 
 const POPCORN_IMG =
@@ -13,6 +14,7 @@ const POPCORN_IMG =
 export function CtaSection() {
   const router = useRouter();
   const { isDark } = usePCTheme();
+  const { t } = useLanguage();
 
   const sectionFadeGrad =
     'linear-gradient(180deg, var(--pc-bg) 0%, transparent 30%, transparent 70%, var(--pc-bg) 100%)';
@@ -53,11 +55,10 @@ export function CtaSection() {
             color: 'var(--pc-t1)',
           }}
         >
-          Your next favorite film is one quiz away
+          {t.cta.headline}
         </h2>
         <p className="mb-8" style={{ color: 'var(--pc-t2)', lineHeight: 1.7 }}>
-          Whether it&apos;s a cozy solo night or a rowdy group screening, PopChoice reads the room
-          and delivers a pick everyone will love.
+          {t.cta.description}
         </p>
         <button
           onClick={() => router.push('/quiz')}
@@ -70,7 +71,7 @@ export function CtaSection() {
           }}
         >
           <Play size={16} className="fill-current" />
-          Start the Quiz
+          {t.cta.button}
         </button>
       </motion.div>
       <style>{`@keyframes mascot-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }`}</style>

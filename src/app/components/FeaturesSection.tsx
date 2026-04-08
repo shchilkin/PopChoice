@@ -3,36 +3,38 @@
 import { Play, Sparkles, Users, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
-const features = [
-  {
-    icon: Sparkles,
-    title: 'AI-Powered',
-    desc: 'Vector search finds films that truly match your vibe',
-    color: palette.gold,
-  },
-  {
-    icon: Play,
-    title: '5 Quick Questions',
-    desc: 'No endless forms — just a 60-second taste quiz',
-    color: palette.amber,
-  },
-  {
-    icon: Users,
-    title: 'Group Mode',
-    desc: 'Find a film everyone at movie night will enjoy',
-    color: palette.purple,
-  },
-  {
-    icon: Zap,
-    title: 'Instant Results',
-    desc: 'Get 6 curated recommendations in seconds',
-    color: palette.teal,
-  },
-];
-
 export function FeaturesSection() {
+  const { t } = useLanguage();
+
+  const features = [
+    {
+      icon: Sparkles,
+      title: t.features.aiPowered.title,
+      desc: t.features.aiPowered.desc,
+      color: palette.gold,
+    },
+    {
+      icon: Play,
+      title: t.features.fiveQuestions.title,
+      desc: t.features.fiveQuestions.desc,
+      color: palette.amber,
+    },
+    {
+      icon: Users,
+      title: t.features.groupMode.title,
+      desc: t.features.groupMode.desc,
+      color: palette.purple,
+    },
+    {
+      icon: Zap,
+      title: t.features.instantResults.title,
+      desc: t.features.instantResults.desc,
+      color: palette.teal,
+    },
+  ];
   return (
     <section className="px-5 py-20 max-w-5xl mx-auto w-full">
       <motion.div
@@ -51,10 +53,10 @@ export function FeaturesSection() {
             color: 'var(--pc-t1)',
           }}
         >
-          Movie night, sorted.
+          {t.features.headline}
         </h2>
         <p style={{ color: 'var(--pc-t2)', fontSize: '1rem' }}>
-          No algorithms, no endless scrolling — just perfect picks.
+          {t.features.subheadline}
         </p>
       </motion.div>
 

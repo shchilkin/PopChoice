@@ -2,6 +2,8 @@
 
 import { motion } from 'motion/react';
 
+import { useLanguage } from '@/i18n';
+
 interface BetweenPersonsProps {
   currentPersonName: string;
   nextPersonName: string;
@@ -9,6 +11,8 @@ interface BetweenPersonsProps {
 }
 
 export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: BetweenPersonsProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
       <motion.div
@@ -27,12 +31,19 @@ export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: Be
             color: 'var(--pc-t1)',
           }}
         >
-          {currentPersonName}&apos;s turn is done!
+          {t.quiz.between.turnDone.replace('{name}', currentPersonName)}
         </h2>
         <p className="mb-8" style={{ color: 'var(--pc-t2)' }}>
-          Now it&apos;s{' '}
-          <span style={{ color: 'var(--pc-gold)', fontWeight: 600 }}>{nextPersonName}</span>
-          &apos;s turn. Hand over the phone!
+          {t.quiz.between.nowIts.split('{name}').map((part, i, arr) =>
+            i < arr.length - 1 ? (
+              <span key={i}>
+                {part}
+                <span style={{ color: 'var(--pc-gold)', fontWeight: 600 }}>{nextPersonName}</span>
+              </span>
+            ) : (
+              <span key={i}>{part}</span>
+            ),
+          )}
         </p>
         <button
           onClick={onNext}
@@ -44,7 +55,7 @@ export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: Be
             fontSize: '1rem',
           }}
         >
-          I&apos;m ready, {nextPersonName}! →
+          {t.quiz.between.ready.replace('{name}', nextPersonName)}
         </button>
       </motion.div>
     </div>

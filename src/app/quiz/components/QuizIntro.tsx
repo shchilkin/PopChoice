@@ -3,6 +3,7 @@
 import { ChevronRight, User, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 interface QuizIntroProps {
@@ -11,6 +12,8 @@ interface QuizIntroProps {
 }
 
 export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
       <motion.div
@@ -30,10 +33,10 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
               color: 'var(--pc-t1)',
             }}
           >
-            Let&apos;s find your movie
+            {t.quiz.intro.title}
           </h1>
           <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
-            Are you watching solo or with others?
+            {t.quiz.intro.subtitle}
           </p>
         </div>
 
@@ -72,10 +75,10 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
                   fontSize: '1rem',
                 }}
               >
-                Just me
+                {t.quiz.intro.soloTitle}
               </div>
               <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                Solo movie night — personalized just for you
+                {t.quiz.intro.soloDesc}
               </div>
             </div>
             <ChevronRight
@@ -110,10 +113,10 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
             </div>
             <div>
               <div style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '1rem' }}>
-                Group mode 🎉
+                {t.quiz.intro.groupTitle}
               </div>
               <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                Find the perfect film for 2–6 people
+                {t.quiz.intro.groupDesc}
               </div>
             </div>
             <ChevronRight

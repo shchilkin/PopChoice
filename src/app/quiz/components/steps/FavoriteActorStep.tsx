@@ -2,6 +2,8 @@
 
 import { User } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteActorStepProps {
@@ -11,6 +13,8 @@ interface FavoriteActorStepProps {
 }
 
 export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorStepProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex flex-col gap-6 pt-2">
       <div className="flex items-center gap-3">
@@ -32,7 +36,7 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
             lineHeight: 1.1,
           }}
         >
-          Who&apos;s your favorite actor?
+          {t.quiz.actor.title}
         </h2>
       </div>
       <p
@@ -42,7 +46,7 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
           marginTop: -8,
         }}
       >
-        Optional — helps us find films featuring people you already love.
+        {t.quiz.actor.hint}
       </p>
 
       <div className="relative">
@@ -51,7 +55,7 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
           value={person.favoriteActor}
           onChange={(e) => onUpdate({ favoriteActor: e.target.value })}
           onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-          placeholder="e.g. Tom Hanks, Meryl Streep, Cillian Murphy…"
+          placeholder={t.quiz.actor.placeholder}
           className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
           style={{
             background: 'var(--pc-surface)',
@@ -79,7 +83,7 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
             marginBottom: 10,
           }}
         >
-          POPULAR PICKS
+          {t.quiz.actor.popularPicks}
         </p>
         <div className="flex flex-wrap gap-2">
           {[

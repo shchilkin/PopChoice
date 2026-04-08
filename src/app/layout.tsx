@@ -3,6 +3,7 @@ import { Bebas_Neue, DM_Sans } from 'next/font/google';
 
 import { PCLayout } from '../components/PCLayout';
 import { ThemeProvider } from '../components/ThemeProvider';
+import { LanguageProvider } from '../i18n';
 
 import type { Metadata } from 'next';
 import './globals.css';
@@ -93,7 +94,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <PCLayout>{children}</PCLayout>
+          <LanguageProvider>
+            <PCLayout>{children}</PCLayout>
+          </LanguageProvider>
           <Analytics />
         </ThemeProvider>
       </body>

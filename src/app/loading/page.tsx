@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useLanguage } from '@/i18n';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { palette } from '@/styles/designTokens';
 
@@ -12,19 +13,10 @@ import { FilmReel } from './components/FilmReel';
 
 const MAX_RETRIES = 3;
 
-const TIPS = [
-  'Analyzing your taste profile with vector embeddings… 🧠',
-  'Cross-referencing 10,000+ films in our database… 🎬',
-  'Matching vibes, not just genres… ✨',
-  'Filtering out movies your friends already spoiled… 🤫',
-  'Calculating the perfect runtime for your evening… ⏱️',
-  'Consulting the AI film sommelier… 🍷',
-  'Almost there — your perfect pick is loading… 🍿',
-];
-
 export default function LoadingPage() {
   const router = useRouter();
   const { isDark } = usePCTheme();
+  const { t } = useLanguage();
   const [tipIndex, setTipIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [errorState, setErrorState] = useState<'retryable' | 'fatal' | null>(null);
@@ -45,7 +37,7 @@ export default function LoadingPage() {
     setProgress(0);
 
     intervalsRef.current.tip = setInterval(() => {
-      setTipIndex((i) => (i + 1) % TIPS.length);
+      setTipIndex((i) => (i + 1) % t.loading.tips.length);
     }, 1400);
 
     intervalsRef.current.prog = setInterval(() => {
@@ -70,7 +62,7 @@ export default function LoadingPage() {
         retryCount.current += 1;
         setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });
-  }, [router]);
+  }, [router, t.loading.tips.length]);
 
   useEffect(() => {
     callApi();
@@ -116,7 +108,7 @@ export default function LoadingPage() {
             color: 'var(--pc-t1)',
           }}
         >
-          {errorState ? 'Oops…' : 'Finding your perfect pick'}
+          {errorState ? t.loading.errorTitle : t.loading.title}
         </h2>
 
         <div className="h-12 mb-8 flex items-center justify-center">
@@ -130,7 +122,7 @@ export default function LoadingPage() {
                 transition={{ duration: 0.4 }}
                 style={{ color: 'var(--pc-t2)', fontSize: '0.88rem', lineHeight: 1.6 }}
               >
-                {TIPS[tipIndex]}
+                {t.loading.tips[tipIndex]}
               </motion.p>
             </AnimatePresence>
           )}
@@ -166,21 +158,21 @@ export default function LoadingPage() {
             className="flex flex-col items-center gap-4 w-full max-w-xs"
           >
             <p style={{ color: palette.red, fontSize: '0.88rem', lineHeight: 1.6 }}>
-              Something went wrong. Please try again.
+              {t.loading.retryableError}
             </p>
             <button
               onClick={callApi}
               className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
               style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)', fontWeight: 700 }}
             >
-              Try again
+              {t.loading.tryAgain}
             </button>
             <button
               onClick={() => router.push('/quiz')}
               className="text-sm"
               style={{ color: 'var(--pc-t3)' }}
             >
-              Back to quiz
+              {t.loading.backToQuiz}
             </button>
           </motion.div>
         )}
@@ -193,18 +185,17 @@ export default function LoadingPage() {
             className="flex flex-col items-center gap-4 w-full max-w-xs"
           >
             <p style={{ color: palette.red, fontSize: '0.88rem', lineHeight: 1.6 }}>
-              The service is not available right now. Please try again later.
+              {t.loading.fatalError}
             </p>
             <p style={{ color: 'var(--pc-t3)', fontSize: '0.8rem', lineHeight: 1.6 }}>
-              Your answers are saved in your browser — come back and we&apos;ll pick up where you
-              left off.
+              {t.loading.savedAnswers}
             </p>
             <button
               onClick={() => router.push('/')}
               className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
               style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)', fontWeight: 700 }}
             >
-              Go to home
+              {t.loading.goHome}
             </button>
           </motion.div>
         )}
@@ -228,9 +219,17 @@ export default function LoadingPage() {
               lineHeight: 1.6,
             }}
           >
-            <span style={{ color: 'var(--pc-gold)' }}>🍿 Did you know?</span> The average person
-            spends <span style={{ color: 'var(--pc-t1)' }}>18 minutes</span> deciding what to watch
-            — PopChoice does it in seconds.
+            <span style={{ color: 'var(--pc-gold)' }}>{t.loading.funFact}</span>{' '}
+            {t.loading.funFactText.split('{time}').map((part, i, arr) =>
+              i < arr.length - 1 ? (
+                <span key={i}>
+                  {part}
+                  <span style={{ color: 'var(--pc-t1)' }}>{t.loading.funFactTime}</span>
+                </span>
+              ) : (
+                <span key={i}>{part}</span>
+              ),
+            )}
           </p>
         </motion.div>
       </motion.div>
