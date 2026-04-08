@@ -230,7 +230,7 @@ export default function LoadingPage() {
             className="flex flex-col items-center gap-4 w-full max-w-xs"
           >
             <p style={{ color: palette.red, fontSize: '0.88rem', lineHeight: 1.6 }}>
-              Something went wrong. Attempt {retryCount.current} of {MAX_RETRIES}.
+              Something went wrong. Please try again.
             </p>
             <button
               onClick={callApi}

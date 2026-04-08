@@ -113,7 +113,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
                 Group mode 🎉
               </div>
               <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                Find a film everyone will enjoy · up to 6 people
+                Find the perfect film for 2–6 people
               </div>
             </div>
             <ChevronRight

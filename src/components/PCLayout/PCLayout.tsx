@@ -111,8 +111,16 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           borderTop: '1px solid var(--pc-footer-bd)',
         }}
       >
-        Made with <span style={{ color: 'var(--pc-gold)' }}>🍿</span> by PopChoice — AI Movie
-        Recommendations
+        <span style={{ color: 'var(--pc-gold)' }}>🍿</span> Built by{' '}
+        <a
+          href="https://github.com/shchilkin"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--pc-gold)' }}
+        >
+          Aleksandr Shchilkin
+        </a>{' '}
+        — a course project that got out of hand
       </footer>
     </div>
   );

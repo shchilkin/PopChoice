@@ -61,7 +61,7 @@ const TECH_STACK = [
   },
   {
     name: 'Real-time Processing',
-    desc: 'Results in under 4 seconds from submission to screen',
+    desc: 'Fast results — from submission to recommendations in seconds',
     icon: Zap,
     color: palette.amber,
   },
@@ -74,7 +74,7 @@ const FAQ = [
   },
   {
     q: 'How does group mode work?',
-    a: "Each person in the group fills out the 4-question quiz on the same device. PopChoice then finds films that score highly across everyone's taste profiles — a true compromise, but a good one.",
+    a: "Each person in the group fills out the 5-question quiz on the same device. PopChoice then finds films that score highly across everyone's taste profiles — a true compromise, but a good one.",
   },
   {
     q: 'How accurate are the recommendations?',
@@ -353,7 +353,7 @@ export default function AboutPage() {
           Ready to find tonight&apos;s film?
         </h3>
         <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
-          60 seconds. 4 questions. The perfect movie.
+          60 seconds. 5 questions. The perfect movie.
         </p>
         <Link
           href="/quiz"
