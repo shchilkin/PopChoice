@@ -88,19 +88,19 @@ A movie passes if **all** conditions are met:
 
 ### Environment Variables
 
-| Variable                 | Required | Default     | Description                                               |
-| ------------------------ | -------- | ----------- | --------------------------------------------------------- |
-| `TMDB_API_KEY`           | ✅       | —           | TMDB API key                                              |
-| `OPENAI_API_KEY`         | ✅       | —           | OpenAI API key for embeddings                             |
-| `DATABASE_URL`           | ✅       | —           | PostgreSQL connection string                              |
-| `TMDB_SOURCES`           | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular` |
-| `MAX_PAGES_PER_SOURCE`   | ❌       | `3`         | TMDB pages to fetch per source                            |
-| `MIN_VOTE_COUNT`         | ❌       | `500`       | Minimum vote count                                        |
-| `MIN_VOTE_AVERAGE`       | ❌       | `6.5`       | Minimum TMDB vote average                                 |
-| `MAX_MOVIES_PER_RUN`     | ❌       | `50`        | Cap on movies embedded per run                            |
-| `TMDB_LANGUAGE`          | ❌       | `en-US`     | TMDB API language/locale tag (e.g. `fi-FI`, `ru-RU`)      |
-| `SYNC_SCHEDULE`          | ❌       | `0 0 * * 0` | Cron expression (UTC). Set to `""` for one-shot mode.     |
-| `DRY_RUN`                | ❌       | `false`     | `"true"` to skip embeddings/inserts                       |
+| Variable               | Required | Default     | Description                                               |
+| ---------------------- | -------- | ----------- | --------------------------------------------------------- |
+| `TMDB_API_KEY`         | ✅       | —           | TMDB API key                                              |
+| `OPENAI_API_KEY`       | ✅       | —           | OpenAI API key for embeddings                             |
+| `DATABASE_URL`         | ✅       | —           | PostgreSQL connection string                              |
+| `TMDB_SOURCES`         | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular` |
+| `MAX_PAGES_PER_SOURCE` | ❌       | `3`         | TMDB pages to fetch per source                            |
+| `MIN_VOTE_COUNT`       | ❌       | `500`       | Minimum vote count                                        |
+| `MIN_VOTE_AVERAGE`     | ❌       | `6.5`       | Minimum TMDB vote average                                 |
+| `MAX_MOVIES_PER_RUN`   | ❌       | `50`        | Cap on movies embedded per run                            |
+| `TMDB_LANGUAGE`        | ❌       | `en-US`     | TMDB API language/locale tag (e.g. `fi-FI`, `ru-RU`)      |
+| `SYNC_SCHEDULE`        | ❌       | `0 0 * * 0` | Cron expression (UTC). Set to `""` for one-shot mode.     |
+| `DRY_RUN`              | ❌       | `false`     | `"true"` to skip embeddings/inserts                       |
 
 ### Running
 
