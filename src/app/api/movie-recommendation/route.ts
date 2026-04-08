@@ -4,6 +4,7 @@ import z from 'zod';
 
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
+import logger from '@/lib/logger';
 import { MovieService } from '@/services';
 
 const prompt = `
@@ -140,12 +141,12 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
   });
 
   if (error) {
-    console.error('Error finding nearest match:', error);
+    logger.error({ err: error }, 'Error finding nearest match');
     return null;
   }
 
   if (!data || data.length === 0) {
-    console.warn('No movies found matching the criteria');
+    logger.warn('No movies found matching the criteria');
     return null;
   }
 
@@ -176,7 +177,7 @@ async function getSimilarMovies(embedding: number[]) {
       throw new Error('No similar movies found.');
     }
 
-    console.log('similar movies', similarMovies);
+    logger.info({ count: similarMovies.length }, 'Similar movies found');
     return similarMovies;
   } catch (error) {
     throw new Error(`Failed to search for similar movies: ${error}`);
@@ -214,7 +215,7 @@ async function generateMovieDescriptions(
   movies: (EnhancedMovieMatch & { posterURL?: string })[],
   userPreferences: PersonFormData[],
 ): Promise<(EnhancedMovieMatch & { posterURL?: string; aiDescription?: string })[]> {
-  console.log(`Generating AI descriptions for ${movies.length} movies...`);
+  logger.info({ count: movies.length }, 'Generating AI descriptions for movies');
 
   // Create a prompt specifically for individual movie descriptions
   const descriptionPrompt = `
@@ -259,7 +260,7 @@ Match Score: ${Math.round(movie.similarity * 100)}%
           aiDescription,
         };
       } catch (error) {
-        console.warn(`Failed to generate description for ${movie.name}:`, error);
+        logger.warn({ err: error, movieTitle: movie.name }, 'Failed to generate description for movie');
         // Fallback to a basic description
         return {
           ...movie,
@@ -277,12 +278,12 @@ async function getPosterURL(movieTitle: string) {
   try {
     const movieDetails = await movieService.getMovieByTitle(movieTitle);
     if (!movieDetails) {
-      console.warn(`No movie found with title: ${movieTitle}`);
+      logger.warn({ movieTitle }, 'No movie found with title');
       return undefined;
     }
     return movieService.getPosterURL(movieDetails.poster_path, 'w500');
   } catch (error) {
-    console.error('Error fetching movie by title:', error);
+    logger.error({ err: error }, 'Error fetching movie by title');
     return undefined;
   }
 }
@@ -303,7 +304,7 @@ async function enhanceSimilarMoviesWithPosters(
         const posterURL = await getPosterURL(movie.name);
         return { ...movie, posterURL };
       } catch (error) {
-        console.warn(`Failed to fetch poster for movie: ${movie.name}`, error);
+        logger.warn({ err: error, movieTitle: movie.name }, 'Failed to fetch poster for movie');
         return { ...movie, posterURL: undefined };
       }
     });
@@ -335,26 +336,28 @@ export async function POST(req: NextRequest) {
       ? validatedBody
       : [validatedBody];
 
-    console.log(`Processing recommendation request for ${allPeopleData.length} person(s)`);
+    logger.info({ personCount: allPeopleData.length }, 'Processing recommendation request');
 
     // Step 1: Create embedding from all people's data
     const embedding = await createEmbedding(allPeopleData);
+    logger.info('Embedding created');
 
     // Step 2: Find similar movies
     const similarMovies = await getSimilarMovies(embedding);
 
     // Step 3: Get recommendation from OpenAI
     const responseMessage = await getRecommendation(similarMovies);
+    logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
 
     // Step 4: Get poster URL for main recommendation
     const posterURL = await getPosterURL(responseMessage.title);
 
     // Step 5: Enhance similar movies with poster URLs (in batches)
-    console.log('Enhancing similar movies with posters...');
+    logger.info('Enhancing similar movies with posters');
     const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies);
 
     // Step 6: Generate AI descriptions for each movie
-    console.log('Generating personalized AI descriptions for each movie...');
+    logger.info('Generating personalized AI descriptions for each movie');
     const moviesWithDescriptions = await generateMovieDescriptions(
       enhancedSimilarMovies,
       allPeopleData,
@@ -369,7 +372,7 @@ export async function POST(req: NextRequest) {
 
     // Don't filter out any movies - include all movies in the response
     // The main recommendation info is still provided for context, but UI will show all movies together
-    console.log(`Returning all ${moviesWithDescriptions.length} movies in unified list`);
+    logger.info({ movieCount: moviesWithDescriptions.length }, 'Returning all movies in unified list');
 
     // Validate and return response with enhanced data
     const response: ApiResponse = {
@@ -401,14 +404,15 @@ export async function POST(req: NextRequest) {
     };
 
     const duration = Date.now() - startTime;
-    console.log(`Recommendation request completed in ${duration}ms`);
+    logger.info({ durationMs: duration, movieCount: moviesWithDescriptions.length }, 'Recommendation request completed');
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
-    console.error('Error in movie recommendation API:', error);
+    logger.error({ err: error }, 'Error in movie recommendation API');
 
     // Handle validation errors specifically
     if (error instanceof z.ZodError) {
+      logger.warn({ err: error, issues: error.errors }, 'Zod validation error');
       return NextResponse.json(
         {
           error: 'Invalid request data',
@@ -420,8 +424,6 @@ export async function POST(req: NextRequest) {
 
     // Handle other known errors
     if (error instanceof Error) {
-      console.error('Error stack:', error.stack);
-
       // Return more specific error messages based on error content
       if (error.message.includes('embedding')) {
         return NextResponse.json({ error: 'Failed to process preferences' }, { status: 500 });

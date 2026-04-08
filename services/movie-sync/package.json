@@ -11,7 +11,8 @@
   "dependencies": {
     "node-cron": "^3.0.3",
     "openai": "^6.33.0",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "pino": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.17.57",
