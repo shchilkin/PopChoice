@@ -77,9 +77,6 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  verification: {
-    google: 'verification-token', // Add actual Google Search Console verification token if available
-  },
 };
 
 export default function RootLayout({

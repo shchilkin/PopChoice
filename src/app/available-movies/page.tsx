@@ -87,11 +87,11 @@ export default function AvailableMoviesPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20">
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
-            <p className="text-lg text-[var(--muted-foreground)]">Loading movies...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--pc-cta)] mx-auto mb-4"></div>
+            <p className="text-lg text-[var(--pc-t3)]">Loading movies...</p>
           </div>
         </main>
       </div>
@@ -100,13 +100,13 @@ export default function AvailableMoviesPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20">
         <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
           <div className="text-center py-8">
             <p className="text-lg text-[var(--rating-mature-text)] mb-4">Error: {error}</p>
             <button
               onClick={() => fetchMovies(currentPage)}
-              className="px-4 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:bg-[var(--primary)]/90 transition-colors"
+              className="px-4 py-2 bg-[var(--pc-cta)] text-[var(--pc-cta-text)] rounded-lg transition-colors"
             >
               Try Again
             </button>
@@ -117,14 +117,14 @@ export default function AvailableMoviesPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-8 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-8 sm:p-20">
       <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
         {/* Header */}
         <div className="w-full mb-8">
-          <h1 className="text-3xl font-bold text-center mb-4 text-[var(--foreground)]">
+          <h1 className="text-3xl font-bold text-center mb-4 text-[var(--pc-t1)]">
             Available Movies
           </h1>
-          <p className="text-center text-[var(--muted-foreground)]">
+          <p className="text-center text-[var(--pc-t3)]">
             Showing {(currentPage - 1) * pageSize + 1} to{' '}
             {Math.min(currentPage * pageSize, totalCount)} of {totalCount} movies
           </p>
@@ -140,7 +140,7 @@ export default function AvailableMoviesPage() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-2 text-sm bg-[var(--card)] border border-[var(--border)] rounded-md text-[var(--foreground)] hover:bg-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm bg-[var(--pc-surface)] border border-[var(--pc-bd2)] rounded-md text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
@@ -153,10 +153,10 @@ export default function AvailableMoviesPage() {
                     disabled={page === '...'}
                     className={`px-3 py-2 text-sm rounded-md ${
                       page === currentPage
-                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
+                        ? 'bg-[var(--pc-cta)] text-[var(--pc-cta-text)]'
                         : page === '...'
-                          ? 'text-[var(--muted-foreground)] cursor-default'
-                          : 'bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] hover:bg-[var(--muted)]'
+                          ? 'text-[var(--pc-t3)] cursor-default'
+                          : 'bg-[var(--pc-surface)] border border-[var(--pc-bd2)] text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)]'
                     }`}
                   >
                     {page}
@@ -167,13 +167,13 @@ export default function AvailableMoviesPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm bg-[var(--card)] border border-[var(--border)] rounded-md text-[var(--foreground)] hover:bg-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-2 text-sm bg-[var(--pc-surface)] border border-[var(--pc-bd2)] rounded-md text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
               </button>
             </div>
 
-            <div className="text-sm text-[var(--muted-foreground)]">
+            <div className="text-sm text-[var(--pc-t3)]">
               Page {currentPage} of {totalPages}
             </div>
           </div>

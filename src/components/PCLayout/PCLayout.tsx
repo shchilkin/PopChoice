@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
 
 export function PCLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -41,7 +42,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
               fontSize: '1.4rem',
               letterSpacing: '0.12em',
-              background: 'linear-gradient(90deg, #F5C518, #FF9F1C)',
+              background: `linear-gradient(90deg, ${palette.gold}, ${palette.amber})`,
               WebkitBackgroundClip: 'text',
               backgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
@@ -57,12 +58,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
             className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
             style={{
               color: pathname === '/about' ? 'var(--pc-gold)' : 'var(--pc-t3)',
-              background:
-                pathname === '/about'
-                  ? isDark
-                    ? 'rgba(245,197,24,0.1)'
-                    : 'rgba(196,149,10,0.1)'
-                  : 'transparent',
+              background: pathname === '/about' ? 'var(--pc-gold-subtle)' : 'transparent',
             }}
           >
             How it works
