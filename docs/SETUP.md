@@ -92,6 +92,7 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
      ```env
      DATABASE_URL=postgresql://postgres:postgres@localhost:5432/popchoice
      ```
+   - To use custom database credentials, set `POSTGRES_USER`, `POSTGRES_PASSWORD`, and/or `POSTGRES_DB` in your `.env` file before running `docker compose up`. Update `DATABASE_URL` accordingly.
 
 3. **Populate the database**
    - Run `npm run populate-db`
