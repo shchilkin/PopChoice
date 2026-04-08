@@ -173,6 +173,7 @@ export async function runSync(config: Config): Promise<void> {
             `${basic.title} (${year})`,
             `Rating: ${ageRating}`,
             `Score: ${basic.vote_average.toFixed(1)}/10`,
+            'Duration: unknown',
             `Description: ${basic.overview || 'No description available.'}`,
           ].join('\n'),
     );

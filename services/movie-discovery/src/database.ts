@@ -151,8 +151,6 @@ export async function ensureSchema(): Promise<void> {
     );
   `);
 
-  await getPool().query('DROP FUNCTION IF EXISTS match_movies(vector, float, int);');
-
   await getPool().query(`
     CREATE OR REPLACE FUNCTION match_movies (
       query_embedding vector(3072),

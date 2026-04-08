@@ -15,20 +15,20 @@ export interface Config {
 
 function parsePositiveInt(value: string | undefined, defaultValue: number, name: string): number {
   if (value === undefined || value === '') return defaultValue;
-  const parsed = parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  const num = Number(value);
+  if (!Number.isInteger(num) || num <= 0) {
     throw new Error(`${name} must be a positive integer, got: ${JSON.stringify(value)}`);
   }
-  return parsed;
+  return num;
 }
 
 function parsePositiveFloat(value: string | undefined, defaultValue: number, name: string): number {
   if (value === undefined || value === '') return defaultValue;
-  const parsed = parseFloat(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) {
     throw new Error(`${name} must be a positive number, got: ${JSON.stringify(value)}`);
   }
-  return parsed;
+  return num;
 }
 
 export function loadConfig(): Config {

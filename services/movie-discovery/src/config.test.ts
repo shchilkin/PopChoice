@@ -13,16 +13,6 @@ const REQUIRED_ENV = {
   DATABASE_URL: 'postgresql://localhost/test',
 };
 
-function setEnv(vars: Record<string, string | undefined>) {
-  for (const [key, value] of Object.entries(vars)) {
-    if (value === undefined) {
-      vi.unstubAllEnvs(); // reset individual key not supported; handled via beforeEach
-    } else {
-      vi.stubEnv(key, value);
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
