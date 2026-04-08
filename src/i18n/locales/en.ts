@@ -3,6 +3,7 @@ export const en = {
     howItWorks: 'How it works',
     findAMovie: 'Find a movie',
     toggleTheme: 'Toggle theme',
+    switchLanguage: 'Switch language',
   },
   footer: {
     builtBy: 'Built by',

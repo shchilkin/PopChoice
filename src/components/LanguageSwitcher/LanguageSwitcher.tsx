@@ -17,7 +17,7 @@ export function LanguageSwitcher() {
         <button
           key={code}
           onClick={() => setLocale(code)}
-          aria-label={`${t.nav.toggleTheme} — ${label}`}
+          aria-label={`${t.nav.switchLanguage}: ${label}`}
           aria-pressed={locale === code}
           className="px-2 py-1 rounded-lg text-xs font-semibold transition-colors duration-150"
           style={{

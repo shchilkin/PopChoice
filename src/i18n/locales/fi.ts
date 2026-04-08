@@ -5,6 +5,7 @@ export const fi: Translations = {
     howItWorks: 'Miten se toimii',
     findAMovie: 'Etsi elokuva',
     toggleTheme: 'Vaihda teema',
+    switchLanguage: 'Vaihda kieli',
   },
   footer: {
     builtBy: 'Rakentanut',
@@ -98,7 +99,7 @@ export const fi: Translations = {
       title: 'Uudet elokuvat vai ajattomat klassikot?',
       new: { title: 'Uudet julkaisut', desc: 'Viimeisen 5 vuoden aikana ilmestyneet elokuvat' },
       classic: {
-        title: 'Ajalliset klassikot',
+        title: 'Ajattomat klassikot',
         desc: 'Kultaiset elokuvat, jotka ovat kestäneet aikaa',
       },
       both: {

@@ -5,6 +5,7 @@ export const ru: Translations = {
     howItWorks: 'Как это работает',
     findAMovie: 'Найти фильм',
     toggleTheme: 'Переключить тему',
+    switchLanguage: 'Переключить язык',
   },
   footer: {
     builtBy: 'Создано',
