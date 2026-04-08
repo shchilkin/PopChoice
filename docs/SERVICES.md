@@ -90,7 +90,7 @@ A movie passes if **all** conditions are met:
 
 | Variable                 | Required | Default     | Description                                               |
 | ------------------------ | -------- | ----------- | --------------------------------------------------------- |
-| `TMDB_READ_ACCESS_TOKEN` | ✅       | —           | TMDB v4 Bearer read access token                          |
+| `TMDB_API_KEY`           | ✅       | —           | TMDB API key                                              |
 | `OPENAI_API_KEY`         | ✅       | —           | OpenAI API key for embeddings                             |
 | `DATABASE_URL`           | ✅       | —           | PostgreSQL connection string                              |
 | `TMDB_SOURCES`           | ❌       | all four    | Comma-separated: `now_playing,upcoming,top_rated,popular` |

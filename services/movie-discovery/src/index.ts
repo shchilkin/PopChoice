@@ -7,7 +7,7 @@
  *   - Scheduled: runs on a cron schedule (default: weekly Sunday midnight UTC).
  *
  * Environment variables:
- *   TMDB_READ_ACCESS_TOKEN — TMDB v4 read access token (required)
+ *   TMDB_API_KEY          — TMDB API key (required)
  *   OPENAI_API_KEY        — OpenAI API key (required)
  *   DATABASE_URL          — PostgreSQL connection string (required)
  *   TMDB_SOURCES          — Comma-separated sources (default: all four)

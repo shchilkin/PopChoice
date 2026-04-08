@@ -1,7 +1,7 @@
 export type TMDBSource = 'now_playing' | 'upcoming' | 'top_rated' | 'popular';
 
 export interface Config {
-  tmdbReadAccessToken: string;
+  tmdbApiKey: string;
   openaiApiKey: string;
   databaseUrl: string;
   sources: TMDBSource[];
@@ -35,10 +35,8 @@ function parsePositiveFloat(value: string | undefined, defaultValue: number, nam
 export function loadConfig(): Config {
   const missing: string[] = [];
 
-  // TMDB_READ_ACCESS_TOKEN is a TMDB v4 Bearer read access token, distinct from the
-  // v3 TMDB_API_KEY (query-param auth) used by the main application.
-  const tmdbReadAccessToken = process.env.TMDB_READ_ACCESS_TOKEN;
-  if (!tmdbReadAccessToken) missing.push('TMDB_READ_ACCESS_TOKEN');
+  const tmdbApiKey = process.env.TMDB_API_KEY;
+  if (!tmdbApiKey) missing.push('TMDB_API_KEY');
 
   const openaiApiKey = process.env.OPENAI_API_KEY;
   if (!openaiApiKey) missing.push('OPENAI_API_KEY');
@@ -65,7 +63,7 @@ export function loadConfig(): Config {
   const sources: TMDBSource[] = rawSources.length > 0 ? filteredSources : validSources;
 
   return {
-    tmdbReadAccessToken: tmdbReadAccessToken!,
+    tmdbApiKey: tmdbApiKey!,
     openaiApiKey: openaiApiKey!,
     databaseUrl: databaseUrl!,
     sources,
