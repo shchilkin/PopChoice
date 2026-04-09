@@ -3,46 +3,66 @@ import { createClient } from 'redis';
 type RedisClient = ReturnType<typeof createClient>;
 
 let redisClient: RedisClient | null = null;
-let initialized = false;
+// Stores the in-flight init attempt so concurrent calls share one connection attempt.
+// Reset to null on failure so the next request can retry.
+let initPromise: Promise<RedisClient | null> | null = null;
 
-async function initializeRedisClient(): Promise<RedisClient | null> {
-  if (initialized) return redisClient;
-  initialized = true;
-
-  try {
+function doInitialize(): Promise<RedisClient | null> {
+  return (async () => {
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
       console.warn('REDIS_URL not set. Rate limiting disabled.');
       return null;
     }
 
-    redisClient = createClient({ url: redisUrl });
-    await redisClient.connect();
+    try {
+      const client = createClient({ url: redisUrl });
+      await client.connect();
+      redisClient = client;
+      console.log('Rate limiter initialized with Redis');
+      return client;
+    } catch (error) {
+      console.error('Failed to initialize Redis client:', error);
+      // Reset so the next request can attempt reconnection
+      initPromise = null;
+      return null;
+    }
+  })();
+}
 
-    console.log('Rate limiter initialized with Redis');
-    return redisClient;
-  } catch (error) {
-    console.error('Failed to initialize rate limiter:', error);
-    return null;
-  }
+function getRedisClient(): Promise<RedisClient | null> {
+  if (redisClient) return Promise.resolve(redisClient);
+  if (!initPromise) initPromise = doInitialize();
+  return initPromise;
 }
 
 export async function applyRateLimit(req: Request): Promise<Response | null> {
-  const client = await initializeRedisClient();
+  const client = await getRedisClient();
   if (!client) return null;
 
   const forwardedFor = req.headers.get('x-forwarded-for');
   const ip =
     (forwardedFor ? forwardedFor.split(',')[0].trim() : null) ||
-    req.headers.get('x-real-ip') ||
-    'unknown';
+    req.headers.get('x-real-ip')?.trim() ||
+    null;
+
+  // Skip rate limiting when the client IP cannot be determined to avoid
+  // accidentally throttling all traffic into a shared 'unknown' bucket.
+  if (!ip) return null;
 
   try {
     const key = `rl:movie-recommendation:${ip}`;
 
-    // Use a pipeline (MULTI/EXEC) to atomically increment and set expiry
-    const results = await client.multi().incr(key).expire(key, 60).exec();
-    const count = results[0] as number;
+    // Use an atomic INCR then conditionally EXPIRE to implement a fixed window.
+    // INCR is atomic in Redis so exactly one request will ever see count === 1.
+    const count = await client.incr(key);
+
+    // Set the 60-second window only on the very first request; subsequent
+    // requests in the same window leave the existing TTL untouched so the
+    // window stays fixed rather than rolling on every call.
+    if (count === 1) {
+      await client.expire(key, 60);
+    }
 
     if (count > 10) {
       return new Response(
@@ -66,7 +86,7 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
 export async function closeRateLimiter(): Promise<void> {
   if (redisClient) {
     await redisClient.quit();
-    redisClient = null;
-    initialized = false;
   }
+  redisClient = null;
+  initPromise = null;
 }
