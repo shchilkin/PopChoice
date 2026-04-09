@@ -116,7 +116,7 @@ export function HeroSection() {
             background: 'var(--pc-gold-subtle)',
             border: '1px solid',
             borderColor: 'var(--pc-gold-bd-subtle)',
-            color: 'var(--pc-gold)',
+            color: 'var(--pc-gold-text)',
           }}
         >
           <Sparkles size={11} />
@@ -163,7 +163,7 @@ export function HeroSection() {
           style={{ color: 'var(--pc-t2)', fontSize: '1.1rem', lineHeight: 1.7 }}
         >
           {t.hero.descriptionPre}{' '}
-          <span style={{ color: 'var(--pc-gold)' }}>{t.hero.perfectMovie}</span>{' '}
+          <span style={{ color: 'var(--pc-gold-text)' }}>{t.hero.perfectMovie}</span>{' '}
           {t.hero.descriptionPost}
         </motion.p>
 

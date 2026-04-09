@@ -22,7 +22,7 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{
             background: 'rgba(245,197,24,0.15)',
-            color: 'var(--pc-gold)',
+            color: 'var(--pc-gold-text)',
           }}
         >
           <User size={20} />
@@ -107,7 +107,7 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
                   person.favoriteActor === actor
                     ? '1px solid var(--pc-gold-bd-strong)'
                     : '1px solid var(--pc-bd1)',
-                color: person.favoriteActor === actor ? 'var(--pc-gold)' : 'var(--pc-t2)',
+                color: person.favoriteActor === actor ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
               }}
             >
               {actor}
