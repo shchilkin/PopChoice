@@ -130,11 +130,7 @@ export async function runSync(config: Config): Promise<void> {
     const batchResults = await Promise.all(
       batch.map(async (m) => {
         try {
-          const details = await fetchMovieDetails(
-            config.tmdbApiKey,
-            m.id,
-            config.language,
-          );
+          const details = await fetchMovieDetails(config.tmdbApiKey, m.id, config.language);
           return details;
         } catch (err) {
           logger.warn('Failed to fetch movie details, using basic data', {
