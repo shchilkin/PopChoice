@@ -262,4 +262,20 @@ export const fi: Translations = {
       ],
     },
   },
+  moviesPage: {
+    title: 'Saatavilla olevat elokuvat',
+    loading: 'Ladataan elokuvia…',
+    tryAgain: 'Yritä uudelleen',
+    showing: 'Näytetään {start}–{end} / {total} elokuvaa',
+    noMoviesFound: 'Elokuvia ei löydy',
+    prev: 'Edell.',
+    next: 'Seur.',
+    pageOf: 'Sivu {current} / {total}',
+    columns: {
+      name: 'Nimi',
+      ageRating: 'Ikäraja',
+      duration: 'Kesto',
+      score: 'Pisteet',
+    },
+  },
 };

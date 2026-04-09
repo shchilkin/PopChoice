@@ -264,4 +264,20 @@ export const ru: Translations = {
       ],
     },
   },
+  moviesPage: {
+    title: 'Доступные фильмы',
+    loading: 'Загрузка фильмов…',
+    tryAgain: 'Попробовать снова',
+    showing: 'Показано {start}–{end} из {total} фильмов',
+    noMoviesFound: 'Фильмы не найдены',
+    prev: 'Назад',
+    next: 'Вперёд',
+    pageOf: 'Страница {current} из {total}',
+    columns: {
+      name: 'Название',
+      ageRating: 'Возраст',
+      duration: 'Длительность',
+      score: 'Оценка',
+    },
+  },
 };

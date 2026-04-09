@@ -253,6 +253,22 @@ export const en = {
       ],
     },
   },
+  moviesPage: {
+    title: 'Available Movies',
+    loading: 'Loading movies…',
+    tryAgain: 'Try Again',
+    showing: 'Showing {start}–{end} of {total} movies',
+    noMoviesFound: 'No movies found',
+    prev: 'Prev',
+    next: 'Next',
+    pageOf: 'Page {current} of {total}',
+    columns: {
+      name: 'Name',
+      ageRating: 'Age Rating',
+      duration: 'Duration',
+      score: 'Score',
+    },
+  },
 };
 
 export type Translations = typeof en;

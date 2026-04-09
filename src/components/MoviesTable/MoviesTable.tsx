@@ -1,5 +1,8 @@
+'use client';
+
 import { z } from 'zod';
 
+import { useLanguage } from '@/i18n';
 import { ageRatings } from '@/utils/schemas/movieSchemas';
 
 import { AgeRatingChip } from '../AgeRatingChip';
@@ -25,6 +28,7 @@ export interface MoviesTableProps {
 }
 
 export function MoviesTable({ movies }: MoviesTableProps) {
+  const { t } = useLanguage();
   return (
     <div className="w-full">
       {/* Desktop table view */}
@@ -42,25 +46,25 @@ export function MoviesTable({ movies }: MoviesTableProps) {
                 className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--pc-t4)' }}
               >
-                Name
+                {t.moviesPage.columns.name}
               </th>
               <th
                 className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--pc-t4)' }}
               >
-                Age Rating
+                {t.moviesPage.columns.ageRating}
               </th>
               <th
                 className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--pc-t4)' }}
               >
-                Duration
+                {t.moviesPage.columns.duration}
               </th>
               <th
                 className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
                 style={{ color: 'var(--pc-t4)' }}
               >
-                Score
+                {t.moviesPage.columns.score}
               </th>
             </tr>
           </thead>

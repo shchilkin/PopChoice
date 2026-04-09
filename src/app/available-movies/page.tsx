@@ -4,10 +4,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { MoviesTable } from '@/components';
+import { useLanguage } from '@/i18n';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
 export default function AvailableMoviesPage() {
+  const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export default function AvailableMoviesPage() {
           style={{ borderColor: 'var(--pc-gold)' }}
         />
         <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
-          Loading movies…
+          {t.moviesPage.loading}
         </p>
       </section>
     );
@@ -102,7 +104,7 @@ export default function AvailableMoviesPage() {
           className="px-5 py-2.5 rounded-xl text-sm font-semibold"
           style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
         >
-          Try Again
+          {t.moviesPage.tryAgain}
         </button>
       </section>
     );
@@ -119,12 +121,15 @@ export default function AvailableMoviesPage() {
             color: 'var(--pc-t1)',
           }}
         >
-          Available Movies
+          {t.moviesPage.title}
         </h1>
         <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
           {totalCount > 0
-            ? `Showing ${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalCount)} of ${totalCount} movies`
-            : 'No movies found'}
+            ? t.moviesPage.showing
+                .replace('{start}', String((currentPage - 1) * pageSize + 1))
+                .replace('{end}', String(Math.min(currentPage * pageSize, totalCount)))
+                .replace('{total}', String(totalCount))
+            : t.moviesPage.noMoviesFound}
         </p>
       </div>
 
@@ -145,7 +150,7 @@ export default function AvailableMoviesPage() {
                 color: 'var(--pc-t2)',
               }}
             >
-              <ChevronLeft size={14} /> Prev
+              <ChevronLeft size={14} /> {t.moviesPage.prev}
             </button>
 
             {generatePageNumbers().map((page, index) =>
@@ -187,12 +192,14 @@ export default function AvailableMoviesPage() {
                 color: 'var(--pc-t2)',
               }}
             >
-              Next <ChevronRight size={14} />
+              {t.moviesPage.next} <ChevronRight size={14} />
             </button>
           </div>
 
           <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
-            Page {currentPage} of {totalPages}
+            {t.moviesPage.pageOf
+              .replace('{current}', String(currentPage))
+              .replace('{total}', String(totalPages))}
           </span>
         </div>
       )}
