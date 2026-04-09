@@ -31,7 +31,11 @@ export function TechStackSection() {
         {t.about.techStack.items.map((tech, i) => {
           const Icon = TECH_ICONS[i];
           const color = TECH_COLORS[i];
-          if (!Icon || !color) return null;
+          if (!Icon || !color) {
+            if (process.env.NODE_ENV === 'development')
+              console.warn('Missing icon or color for tech item:', tech.name);
+            return null;
+          }
           return (
             <motion.div
               key={tech.name}

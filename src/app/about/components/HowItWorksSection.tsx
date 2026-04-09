@@ -39,7 +39,11 @@ export function HowItWorksSection() {
           {t.about.howItWorks.steps.map((step, i) => {
             const Icon = STEP_ICONS[i];
             const color = STEP_COLORS[i];
-            if (!Icon || !color) return null;
+            if (!Icon || !color) {
+              if (process.env.NODE_ENV === 'development')
+                console.warn('Missing icon or color for step:', step.title);
+              return null;
+            }
             const stepNum = String(i + 1).padStart(2, '0');
             return (
               <motion.div
