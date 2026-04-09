@@ -41,6 +41,7 @@ export function HowItWorksSection() {
             const color = STEP_COLORS[i];
             if (!Icon || !color) {
               if (process.env.NODE_ENV === 'development')
+                // eslint-disable-next-line no-console
                 console.warn('Missing icon or color for step:', step.title);
               return null;
             }

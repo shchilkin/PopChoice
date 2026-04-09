@@ -33,6 +33,7 @@ export function TechStackSection() {
           const color = TECH_COLORS[i];
           if (!Icon || !color) {
             if (process.env.NODE_ENV === 'development')
+              // eslint-disable-next-line no-console
               console.warn('Missing icon or color for tech item:', tech.name);
             return null;
           }
