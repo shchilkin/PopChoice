@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
 
 import { type Locale, useLanguage } from '@/i18n';
 
@@ -28,7 +28,7 @@ export function LanguageSwitcher() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  function handleKeyDown(e: KeyboardEvent) {
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === 'Escape') setOpen(false);
   }
 
