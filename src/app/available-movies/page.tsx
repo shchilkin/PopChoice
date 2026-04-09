@@ -1,12 +1,61 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MoviesTable } from '@/components';
 import { useLanguage } from '@/i18n';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
+
+// Skeleton table shown while the first page of data is loading.
+function MoviesTableSkeleton() {
+  return (
+    <div
+      className="w-full overflow-x-auto rounded-2xl"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <table className="min-w-full">
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
+            {['40%', '12%', '12%', '12%'].map((w, i) => (
+              <th key={i} className="px-5 py-3">
+                <div
+                  className="h-3 rounded animate-pulse"
+                  style={{ width: w, background: 'var(--pc-bd2)' }}
+                />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid var(--pc-bd1)' }}>
+              <td className="px-5 py-3.5">
+                <div
+                  className="h-3.5 rounded animate-pulse mb-1.5"
+                  style={{ width: '55%', background: 'var(--pc-bd2)' }}
+                />
+                <div
+                  className="h-2.5 rounded animate-pulse"
+                  style={{ width: '20%', background: 'var(--pc-bd1)' }}
+                />
+              </td>
+              {[1, 2, 3].map((j) => (
+                <td key={j} className="px-5 py-3.5">
+                  <div
+                    className="h-3.5 rounded animate-pulse mx-auto"
+                    style={{ width: '60%', background: 'var(--pc-bd2)' }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export default function AvailableMoviesPage() {
   const { t } = useLanguage();
@@ -18,24 +67,50 @@ export default function AvailableMoviesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 50;
 
+  // Client-side cache: page number → response data. Avoids redundant fetches
+  // when navigating back to a previously loaded page.
+  const cache = useRef<Map<number, MoviesResponse>>(new Map());
+  // AbortController for the in-flight fetch – cancelled when a newer page is requested.
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchMovies = useCallback(
     async (page: number) => {
+      // Serve from cache when available.
+      const cached = cache.current.get(page);
+      if (cached) {
+        setMovies(cached.movies);
+        setTotalPages(cached.totalPages);
+        setTotalCount(cached.totalCount);
+        setCurrentPage(cached.page);
+        setLoading(false);
+        return;
+      }
+
+      // Cancel any in-flight request for a different page.
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`);
+        const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`, {
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch movies: ${response.statusText}`);
         }
 
         const data: MoviesResponse = await response.json();
+        cache.current.set(page, data);
         setMovies(data.movies);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
         setCurrentPage(data.page);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -79,20 +154,6 @@ export default function AvailableMoviesPage() {
     return rangeWithDots;
   };
 
-  if (loading) {
-    return (
-      <section className="flex-1 flex flex-col items-center justify-center px-5 py-16">
-        <div
-          className="animate-spin rounded-full h-10 w-10 border-b-2 mb-4"
-          style={{ borderColor: 'var(--pc-gold)' }}
-        />
-        <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
-          {t.moviesPage.loading}
-        </p>
-      </section>
-    );
-  }
-
   if (error) {
     return (
       <section className="flex-1 flex flex-col items-center justify-center px-5 py-16 text-center">
@@ -134,7 +195,7 @@ export default function AvailableMoviesPage() {
       </div>
 
       {/* Table / Cards */}
-      <MoviesTable movies={movies} />
+      {loading ? <MoviesTableSkeleton /> : <MoviesTable movies={movies} />}
 
       {/* Pagination */}
       {totalPages > 1 && (

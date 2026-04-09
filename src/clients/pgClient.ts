@@ -25,6 +25,11 @@
 
 import pg from 'pg';
 
+// Register int8 (bigint/bigserial, OID 20) parser so that bigint columns are
+// returned as JS numbers rather than strings. Safe for IDs that fit in Number.MAX_SAFE_INTEGER.
+// Optional chaining guards against environments where pg is mocked without the types object.
+pg.types?.setTypeParser(20, (val: string) => parseInt(val, 10));
+
 import type {
   DbClient,
   QueryDelete,
@@ -105,6 +110,7 @@ function defaultState(table: string): QueryState {
 function buildSelectSQL(state: QueryState): {
   text: string;
   values: unknown[];
+  useWindowCount: boolean;
   countText?: string;
   countValues?: unknown[];
 } {
@@ -114,7 +120,12 @@ function buildSelectSQL(state: QueryState): {
   // Column list
   const cols = state.headOnly ? '1' : state.columns;
 
-  let sql = `SELECT ${cols} FROM "${state.table}"`;
+  // When both data rows and a total count are needed, embed the count as a
+  // window function column to avoid a second round-trip to the database.
+  const needsWindowCount = state.countMode === 'exact' && !state.headOnly;
+  const selectCols = needsWindowCount ? `${cols}, COUNT(*) OVER() AS _total_count` : cols;
+
+  let sql = `SELECT ${selectCols} FROM "${state.table}"`;
 
   // WHERE clauses
   if (state.wheres.length > 0) {
@@ -140,10 +151,11 @@ function buildSelectSQL(state: QueryState): {
     sql += ` LIMIT ${safeNonNegativeInt(state.limitVal)}`;
   }
 
-  // Build count query if needed
+  // For head-only count queries, build a separate COUNT(*) query.
+  // When the window function is used (needsWindowCount), no separate query is needed.
   let countText: string | undefined;
   let countValues: unknown[] | undefined;
-  if (state.countMode === 'exact') {
+  if (state.countMode === 'exact' && state.headOnly) {
     let countSQL = `SELECT COUNT(*) as count FROM "${state.table}"`;
     const cValues: unknown[] = [];
     let cIdx = 1;
@@ -159,7 +171,7 @@ function buildSelectSQL(state: QueryState): {
     countValues = cValues;
   }
 
-  return { text: sql, values, countText, countValues };
+  return { text: sql, values, useWindowCount: needsWindowCount, countText, countValues };
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +180,7 @@ function buildSelectSQL(state: QueryState): {
 
 async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryResult<T>> {
   try {
-    const { text, values, countText, countValues } = buildSelectSQL(state);
+    const { text, values, useWindowCount, countText, countValues } = buildSelectSQL(state);
 
     if (state.headOnly) {
       // For head-only queries, we only need the count
@@ -185,16 +197,18 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
 
     const result = await pool.query(text, values);
 
-    let count: number | null = null;
-    if (countText && countValues) {
-      const countResult = await pool.query(countText, countValues);
-      count = parseInt(countResult.rows[0]?.count ?? '0', 10);
+    if (useWindowCount) {
+      // Extract the injected _total_count window column and strip it from rows.
+      type RowWithCount = T & { _total_count?: string | number };
+      const rows = result.rows as RowWithCount[];
+      const count = rows.length > 0 ? parseInt(String(rows[0]._total_count ?? '0'), 10) : 0;
+      const data = rows.map(({ _total_count: _, ...rest }) => rest as T);
+      return { data, error: null, count };
     }
 
     return {
       data: result.rows as T[],
       error: null,
-      ...(count !== null ? { count } : {}),
     };
   } catch (err) {
     return {
