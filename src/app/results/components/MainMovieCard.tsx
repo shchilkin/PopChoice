@@ -93,7 +93,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 textShadow: 'var(--pc-overlay-shadow)',
               }}
             >
-              {movie.name}
+              {movie.localizedName ?? movie.name}
             </h2>
             <div
               className="flex items-center gap-3 flex-wrap"
@@ -151,7 +151,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 color: 'var(--pc-t1)',
               }}
             >
-              {movie.name}
+              {movie.localizedName ?? movie.name}
             </h2>
             <div
               className="flex items-center gap-3 flex-wrap mt-1"

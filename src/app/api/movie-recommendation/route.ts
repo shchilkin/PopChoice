@@ -12,6 +12,12 @@ const LOCALE_LANGUAGE: Record<string, string> = {
   fi: 'Finnish',
 };
 
+const TMDB_LOCALE: Record<string, string> = {
+  en: 'en-US',
+  ru: 'ru-RU',
+  fi: 'fi-FI',
+};
+
 const buildPrompt = (locale: string) => {
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   return `You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
@@ -88,6 +94,7 @@ const apiResponseSchema = z.object({
         score_rating: z.number(),
         posterURL: z.string().url().optional(), // Added poster URL support
         aiDescription: z.string().optional(), // Added AI-generated description
+        localizedName: z.string().optional(), // Localized title from TMDB
         isMainRecommendation: z.boolean().optional(), // Mark main recommendation
       }),
     )
@@ -220,10 +227,12 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: st
 
 // Helper: Generate AI descriptions for individual movies
 async function generateMovieDescriptions(
-  movies: (EnhancedMovieMatch & { posterURL?: string })[],
+  movies: (EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[],
   userPreferences: PersonFormData[],
   locale: string,
-): Promise<(EnhancedMovieMatch & { posterURL?: string; aiDescription?: string })[]> {
+): Promise<
+  (EnhancedMovieMatch & { posterURL?: string; localizedName?: string; aiDescription?: string })[]
+> {
   console.log(`Generating AI descriptions for ${movies.length} movies...`);
 
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
@@ -284,27 +293,46 @@ Match Score: ${Math.round(movie.similarity * 100)}%
   return enhancedMovies;
 }
 
-// Helper: Get poster URL for recommended movie
-async function getPosterURL(movieTitle: string) {
+// Helper: Get poster URL and optional localized name for a movie
+async function getMovieInfo(
+  movieTitle: string,
+  locale: string,
+): Promise<{ posterURL?: string; localizedName?: string }> {
   try {
-    const movieDetails = await movieService.getMovieByTitle(movieTitle);
-    if (!movieDetails) {
+    const enDetails = await movieService.getMovieByTitle(movieTitle);
+    if (!enDetails) {
       console.warn(`No movie found with title: ${movieTitle}`);
-      return undefined;
+      return {};
     }
-    return movieService.getPosterURL(movieDetails.poster_path, 'w500');
+    const enPosterURL = movieService.getPosterURL(enDetails.poster_path, 'w500');
+
+    if (locale === 'en') return { posterURL: enPosterURL };
+
+    const tmdbLocale = TMDB_LOCALE[locale] ?? 'en-US';
+    const localized = await movieService.getLocalizedMovieInfo(enDetails.id, tmdbLocale);
+
+    const posterURL = localized?.poster_path
+      ? movieService.getPosterURL(localized.poster_path, 'w500')
+      : enPosterURL;
+    // Only surface a localized name when TMDB actually has a different translation
+    const localizedName =
+      localized?.title && localized.title !== enDetails.title ? localized.title : undefined;
+
+    return { posterURL, localizedName };
   } catch (error) {
-    console.error('Error fetching movie by title:', error);
-    return undefined;
+    console.error('Error fetching movie info:', error);
+    return {};
   }
 }
 
-// Helper: Enhanced poster fetching for similar movies with batching
+// Helper: Enhanced poster + localized info fetching for similar movies with batching
 async function enhanceSimilarMoviesWithPosters(
   similarMovies: EnhancedMovieMatch[],
+  locale: string,
   batchSize: number = 3,
-): Promise<(EnhancedMovieMatch & { posterURL?: string })[]> {
-  const enhancedMovies: (EnhancedMovieMatch & { posterURL?: string })[] = [];
+): Promise<(EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[]> {
+  const enhancedMovies: (EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[] =
+    [];
 
   // Process movies in batches to avoid overwhelming the TMDB API
   for (let i = 0; i < similarMovies.length; i += batchSize) {
@@ -312,11 +340,11 @@ async function enhanceSimilarMoviesWithPosters(
 
     const batchPromises = batch.map(async (movie) => {
       try {
-        const posterURL = await getPosterURL(movie.name);
-        return { ...movie, posterURL };
+        const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
+        return { ...movie, posterURL, localizedName };
       } catch (error) {
-        console.warn(`Failed to fetch poster for movie: ${movie.name}`, error);
-        return { ...movie, posterURL: undefined };
+        console.warn(`Failed to fetch info for movie: ${movie.name}`, error);
+        return { ...movie, posterURL: undefined, localizedName: undefined };
       }
     });
 
@@ -364,12 +392,15 @@ export async function POST(req: NextRequest) {
     // Step 3: Get recommendation from OpenAI
     const responseMessage = await getRecommendation(similarMovies, locale);
 
-    // Step 4: Get poster URL for main recommendation
-    const posterURL = await getPosterURL(responseMessage.title);
+    // Step 4: Get localized poster + name for main recommendation
+    const { posterURL, localizedName: mainLocalizedName } = await getMovieInfo(
+      responseMessage.title,
+      locale,
+    );
 
-    // Step 5: Enhance similar movies with poster URLs (in batches)
+    // Step 5: Enhance similar movies with poster URLs and localized names (in batches)
     console.log('Enhancing similar movies with posters...');
-    const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies);
+    const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies, locale);
 
     // Step 6: Generate AI descriptions for each movie
     console.log('Generating personalized AI descriptions for each movie...');
@@ -414,6 +445,7 @@ export async function POST(req: NextRequest) {
         score_rating: movie.score_rating,
         posterURL: movie.posterURL,
         aiDescription: movie.aiDescription,
+        localizedName: movie.localizedName,
         // Mark the main recommendation for potential UI highlighting (optional)
         isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
       })),

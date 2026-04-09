@@ -57,7 +57,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                     color: 'var(--pc-t1)',
                   }}
                 >
-                  {movie.name}
+                  {movie.localizedName ?? movie.name}
                 </h3>
                 <div
                   className="flex items-center gap-2"

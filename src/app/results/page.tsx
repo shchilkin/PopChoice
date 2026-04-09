@@ -32,6 +32,7 @@ interface ApiResponse {
     score_rating?: number;
     posterURL?: string;
     aiDescription?: string;
+    localizedName?: string;
     isMainRecommendation?: boolean;
   }[];
 }
@@ -97,6 +98,7 @@ export default function ResultsPage() {
           score_rating: m.score_rating,
           posterURL: m.posterURL,
           description: m.aiDescription,
+          localizedName: m.localizedName,
           isMainRecommendation: m.isMainRecommendation,
         }));
 

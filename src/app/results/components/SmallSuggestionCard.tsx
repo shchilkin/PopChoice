@@ -100,7 +100,7 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
           className="mb-1 truncate"
           style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '0.9rem' }}
         >
-          {movie.name}
+          {movie.localizedName ?? movie.name}
         </h4>
         <div
           className="flex items-center gap-2 mb-2 flex-wrap"
