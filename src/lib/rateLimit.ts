@@ -39,28 +39,23 @@ function getRedisClient(): Promise<RedisClient | null> {
 }
 
 export async function applyRateLimit(req: Request): Promise<Response | null> {
-  const client = await getRedisClient();
-  if (!client) return null;
-
   const forwardedFor = req.headers.get('x-forwarded-for');
-  const forwardedForLastHop = forwardedFor
-    ? forwardedFor
+  const forwardedForClientIp = forwardedFor
+    ? (forwardedFor
         .split(',')
         .map((value) => value.trim())
-        .filter(Boolean)
-        .at(-1) ?? null
+        .find((value) => value !== '' && isIP(value) !== 0) ?? null)
     : null;
   const realIp = req.headers.get('x-real-ip')?.trim() || null;
-  const ip =
-    (forwardedForLastHop && isIP(forwardedForLastHop) !== 0
-      ? forwardedForLastHop
-      : null) ||
-    (realIp && isIP(realIp) !== 0 ? realIp : null);
+  const ip = forwardedForClientIp || (realIp && isIP(realIp) !== 0 ? realIp : null);
 
   // Skip rate limiting when the client IP cannot be determined or is not a
   // valid IP address, to avoid unbounded key cardinality from malformed headers
   // and to avoid throttling all traffic into a shared bucket.
-  if (!ip || isIP(ip) === 0) return null;
+  if (!ip) return null;
+
+  const client = await getRedisClient();
+  if (!client) return null;
 
   try {
     const key = `rl:movie-recommendation:${ip}`;

@@ -15,7 +15,7 @@ This document outlines the security measures and vulnerability management for th
   - [ ] Implement input length limits (favoriteMovie: 500 chars, preferences: 200 chars)
 
 - [x] **Rate Limiting**
-  - [x] Implement middleware for API rate limiting (Redis-backed, per-IP; see `src/lib/rateLimit.ts`)
+  - [x] Implement a route-level rate-limit guard in `/api/movie-recommendation` using the helper in `src/lib/rateLimit.ts` (Redis-backed, per-IP)
   - [x] Set limits per IP address (10 requests per minute; enforced via atomic Lua INCR+EXPIRE)
   - [x] Add rate limiting for expensive operations (OpenAI API calls via `/api/movie-recommendation`)
   - [x] Configure appropriate 429 responses (returns `Retry-After: 60`)

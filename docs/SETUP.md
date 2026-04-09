@@ -88,8 +88,8 @@ The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10
    - Add `REDIS_URL=redis://user:password@host:6379` to your `.env` file (or set it as an environment secret in production)
 
 3. **Verify**
-   - On startup the app logs `Rate limiter initialized with Redis` when the connection succeeds
-   - When `REDIS_URL` is not set it logs `REDIS_URL not set. Rate limiting disabled.`
+   - On the first request to `/api/movie-recommendation`, the app logs `Rate limiter initialized with Redis` when the connection succeeds
+   - On the first request to `/api/movie-recommendation`, when `REDIS_URL` is not set, it logs `REDIS_URL not set. Rate limiting disabled.`
 
 ## Railway PostgreSQL Setup
 
