@@ -3,7 +3,7 @@
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Mascot } from '@/components/Mascot';
@@ -17,6 +17,11 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
   const { isDark, toggle } = usePCTheme();
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close the drawer whenever the route changes (logo tap, browser back/forward, etc.)
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const navLinks = [
     { href: '/about', label: t.nav.howItWorks },
@@ -144,6 +149,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
             }}
             aria-label={mobileMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
             aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-drawer"
           >
             {mobileMenuOpen ? (
               <X size={16} style={{ color: 'var(--pc-t2)' }} />
@@ -156,7 +162,8 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile menu drawer */}
       {mobileMenuOpen && (
-        <div
+        <nav
+          id="mobile-nav-drawer"
           className="md:hidden sticky top-[52px] z-40 flex flex-col gap-1 px-4 py-3"
           style={{
             background: 'var(--pc-header-bg)',
@@ -196,7 +203,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               </Link>
             )}
           </div>
-        </div>
+        </nav>
       )}
 
       <main className="flex-1 flex flex-col">{children}</main>
