@@ -28,10 +28,10 @@ export const fi: Translations = {
   },
   features: {
     headline: 'Elokuvailta, hoidettu.',
-    subheadline: 'Ei algoritmeja, ei loputonta selaamista — vain täydellisiä valintoja.',
+    subheadline: 'Ei loputonta selaamista, ei arvausta — vain sopivat elokuvat.',
     aiPowered: {
       title: 'Tekoälypohjainen',
-      desc: 'Vektorihaku löytää elokuvia, jotka todella sopivat tunnelmaasi',
+      desc: 'Löytää elokuvia, jotka todella sopivat tunnelmaasi',
     },
     fiveQuestions: {
       title: '5 nopeaa kysymystä',
@@ -39,7 +39,7 @@ export const fi: Translations = {
     },
     groupMode: {
       title: 'Ryhmätila',
-      desc: 'Löydä elokuva, josta kaikki elokuvailtaan osallistujat nauttivat',
+      desc: 'Valinta, josta kaikki tosiaan innostuvat. Ei väittelyiä.',
     },
     instantResults: {
       title: 'Välittömät tulokset',
@@ -59,12 +59,12 @@ export const fi: Translations = {
       soloTitle: 'Vain minä',
       soloDesc: 'Sooloelokuvailta — personoitu juuri sinulle',
       groupTitle: 'Ryhmätila 🎉',
-      groupDesc: 'Löydä täydellinen elokuva 2–6 hengelle',
+      groupDesc: 'Jokainen vastaa itse — yksi laite, 2–6 henkilöä',
       youLabel: 'Sinä',
     },
     groupSetup: {
       title: 'Kuka katsoo?',
-      subtitle: 'Lisää kaikkien nimet, jotta voimme räätälöidä testin',
+      subtitle: 'Lisää kaikkien nimet, jotta voimme personoida tuloksesi',
       personPlaceholder: 'Henkilön {n} nimi',
       addPerson: 'Lisää henkilö',
       back: 'Takaisin',
@@ -144,8 +144,8 @@ export const fi: Translations = {
     title: 'Etsitään täydellistä valintaasi',
     errorTitle: 'Oho…',
     tips: [
-      'Analysoidaan makuprofiiliasi vektoriupotusten avulla… 🧠',
-      'Vertaillaan yli 10 000 elokuvaa tietokannassamme… 🎬',
+      'Puretaan elokuvallinen DNA:si… 🧠',
+      'Käydään läpi 10 000+ elokuvaa täydellisen osuman löytämiseksi… 🎬',
       'Sovitetaan tunnelmia, ei vain genrejä… ✨',
       'Suodatetaan pois elokuvat, jotka ystäväsi ovat jo spoilanneet… 🤫',
       'Lasketaan täydellinen kesto illallesi… ⏱️',
@@ -167,15 +167,15 @@ export const fi: Translations = {
   results: {
     badge: 'Henkilökohtaiset suosituksesi',
     title: 'Löysimme täydellisen elokuvasi',
-    subtitle: 'Sovitettu yli 10 000 elokuvasta makuprofiilisi perusteella',
+    subtitle: 'Sovitettu yli 10 000 elokuvasta juuri sinulle',
     topPick: 'Paras valinta',
     moreSuggestions: 'Lisää ehdotuksia',
     loading: 'Ladataan suosituksiasi…',
-    noResultsTitle: 'Suosituksia ei löydy',
-    noResultsHint: 'Yritä testiä uudelleen erilaisilla vastauksilla.',
+    noResultsTitle: 'Ei osumia…',
+    noResultsHint: 'Kokeile eri tunnelmalla.',
     tryAgain: 'Yritä uudelleen',
     tryWithFriends: 'Kokeile kavereiden kanssa',
-    disclaimer: 'Suositukset ovat tekoälyn luomia makuprofiilisi perusteella.',
+    disclaimer: 'Tekoälyn valitsemat juuri sinulle. Varoitus: saattaa aiheuttaa leffamaratonin.',
     scrollLeft: 'Vieritä vasemmalle',
     scrollRight: 'Vieritä oikealle',
     showDetails: 'Näytä tiedot elokuvalle {name}',
@@ -184,7 +184,7 @@ export const fi: Translations = {
     badge: 'Miten PopChoice toimii',
     title: 'Tekoäly, joka ymmärtää makuasi',
     descriptionPre:
-      'PopChoice ei ole pelkkä genresuodatin. Se käyttää vektoriupotuksia ja tekoälyä ymmärtääkseen, mikä tekee elokuvasta oikean juuri',
+      'PopChoice ei ole pelkkä genresuodatin. Se tunnistaa, mikä tekee elokuvasta oikean juuri',
     you: 'sinulle',
     descriptionPost: '— ja löytää elokuvia, jotka aidosti vastaavat tätä tunnetta.',
     ctaTitle: 'Valmis löytämään tämän illan elokuvan?',
@@ -199,11 +199,11 @@ export const fi: Translations = {
         },
         {
           title: 'Rakennamme makuprofiilisi',
-          desc: 'Vastauksesi muunnetaan moniulotteiseksi vektoriksi, joka tallentaa mieltymystesi vivahteet — ei vain genrejä, vaan myös elokuvallista tyyliä, kerronnan monimutkaisuutta ja tunnesävyä.',
+          desc: 'Vastauksistasi muodostuu rikas makuprofiili, joka tallentaa mieltymystesi vivahteet — ei vain genrejä, vaan myös elokuvallista tyyliä, kerronnan syyyttä ja tunnosävyä.',
         },
         {
           title: 'Tekoäly etsii elokuvatietokannastamme',
-          desc: 'Vektorin samankaltaisuushaun avulla löydämme tietokannastamme elokuvat, jotka ovat lähinnä makuprofiiliasi. Jokainen elokuva on ennalta analysoitu sävyn, vauhdin, teemojen ja tunnelatauksen osalta.',
+          desc: 'Tekoälyn avulla löydämme tietokannastamme elokuvat, jotka vastaavat parhaiten makuprofiiliasi. Jokainen elokuva on ennalta analysoitu sävyn, vauhdin, teemojen ja tunnelatauksen osalta.',
         },
         {
           title: 'Saat harkitut tulokset',
@@ -245,7 +245,7 @@ export const fi: Translations = {
         },
         {
           q: 'Kuinka tarkkoja suositukset ovat?',
-          a: 'Tekoäly käyttää vektorisamankaltaisuutta useiden elokuvan ominaisuuksien perusteella (ei vain genren), mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Tietenkin elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa!',
+          a: 'Tekoäly analysoi elokuvan useita ominaisuuksia — ei vain genreä — mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Tietenkin elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa!',
         },
         {
           q: 'Mistä elokuvatiedot tulevat?',

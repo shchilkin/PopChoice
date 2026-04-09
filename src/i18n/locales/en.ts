@@ -28,7 +28,7 @@ export const en = {
     subheadline: 'No endless scrolling, no guesswork — just picks that fit.',
     aiPowered: {
       title: 'AI-Powered',
-      desc: 'Vector search finds films that truly match your vibe',
+      desc: 'Finds films that truly match your vibe',
     },
     fiveQuestions: {
       title: '5 Quick Questions',
@@ -36,7 +36,7 @@ export const en = {
     },
     groupMode: {
       title: 'Group Mode',
-      desc: 'Find a film everyone at movie night will enjoy',
+      desc: 'A pick everyone in the room will actually agree on. No arguing required.',
     },
     instantResults: {
       title: 'Instant Results',
@@ -56,13 +56,13 @@ export const en = {
       soloTitle: 'Just me',
       soloDesc: 'Personalized picks — just for you',
       groupTitle: 'Group mode 🎉',
-      groupDesc: 'Everyone answers, one device — 2 to 6 people',
+      groupDesc: 'Everyone answers on the same device — 2 to 6 people',
       youLabel: 'You',
     },
     groupSetup: {
       title: "Who's watching?",
       subtitle: "Add everyone's name so we can personalize your results",
-      personPlaceholder: "Person {n}'s name",
+      personPlaceholder: "{name}'s name",
       addPerson: 'Add another person',
       back: 'Back',
       letsGo: "Let's go!",
@@ -139,8 +139,8 @@ export const en = {
     title: 'Finding your perfect pick',
     errorTitle: 'Oops…',
     tips: [
-      'Analyzing your taste profile with vector embeddings… 🧠',
-      'Cross-referencing 10,000+ films in our database… 🎬',
+      'Decoding your cinematic DNA… 🧠',
+      'Scanning 10,000+ films for the perfect match… 🎬',
       'Matching vibes, not just genres… ✨',
       'Filtering out movies your friends already spoiled… 🤫',
       'Calculating the perfect runtime for your evening… ⏱️',
@@ -162,15 +162,15 @@ export const en = {
   results: {
     badge: 'Your personalized picks',
     title: 'We found your perfect film',
-    subtitle: 'Matched from 10,000+ films using AI taste analysis',
+    subtitle: 'Matched from 10,000+ films based on your vibe',
     topPick: 'Top Pick',
     moreSuggestions: 'More suggestions',
     loading: 'Loading your picks…',
-    noResultsTitle: 'No recommendations found',
-    noResultsHint: 'Try the quiz again with different answers.',
+    noResultsTitle: 'Nothing matched…',
+    noResultsHint: 'Try again with a different vibe.',
     tryAgain: 'Try Again',
     tryWithFriends: 'Try with friends',
-    disclaimer: 'Recommendations are AI-generated based on your taste profile.',
+    disclaimer: 'AI-picked for you. Results may spark a movie marathon.',
     scrollLeft: 'Scroll left',
     scrollRight: 'Scroll right',
     showDetails: 'Show details for {name}',
@@ -178,8 +178,7 @@ export const en = {
   about: {
     badge: 'How PopChoice works',
     title: 'AI that gets your taste',
-    descriptionPre:
-      "PopChoice isn't just a genre filter. It uses vector embeddings and AI to understand what makes a film feel right to",
+    descriptionPre: "PopChoice isn't just a genre filter. It reads what makes a film feel right to",
     you: 'you',
     descriptionPost: '— then finds movies that genuinely match that feeling.',
     ctaTitle: "Ready to find tonight's film?",
@@ -194,11 +193,11 @@ export const en = {
         },
         {
           title: 'We build your taste profile',
-          desc: 'Your answers are transformed into a high-dimensional vector that captures the nuances of your preferences — not just genres, but cinematographic style, narrative complexity, and emotional tone.',
+          desc: 'Your answers are transformed into a rich taste profile that captures the nuances of your preferences — not just genres, but cinematographic style, narrative complexity, and emotional tone.',
         },
         {
           title: 'AI searches our film database',
-          desc: 'Using vector similarity search, we find the films in our database that are closest to your taste profile. Every film has been pre-analyzed for tone, pacing, themes, and emotional resonance.',
+          desc: 'Using AI, we find the films in our database closest to your taste profile. Every film has been pre-analyzed for tone, pacing, themes, and emotional resonance.',
         },
         {
           title: 'You get curated results',
@@ -237,7 +236,7 @@ export const en = {
         },
         {
           q: 'How accurate are the recommendations?',
-          a: "The AI uses vector similarity across multiple film attributes (not just genre), which leads to surprisingly accurate taste matching. Of course, movie taste is subjective — that's why we give you 6 options!",
+          a: "The AI analyzes multiple film attributes — not just genre — which leads to surprisingly accurate taste matching. Of course, movie taste is subjective — that's why we give you 6 options!",
         },
         {
           q: 'Where does the film data come from?',

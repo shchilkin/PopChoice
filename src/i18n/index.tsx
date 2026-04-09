@@ -33,6 +33,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
     if (saved && (LOCALES as string[]).includes(saved)) {
       setLocaleState(saved as Locale);
+      return;
+    }
+    // Detect browser language on first visit
+    const browserLangs = navigator.languages ?? [navigator.language];
+    const detected = browserLangs
+      .map((l) => l.split('-')[0].toLowerCase())
+      .find((l) => (LOCALES as string[]).includes(l));
+    if (detected) {
+      setLocaleState(detected as Locale);
     }
   }, []);
 
