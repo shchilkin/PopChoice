@@ -97,10 +97,10 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
             }}
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles size={11} style={{ color: 'var(--pc-gold)' }} />
+              <Sparkles size={11} style={{ color: 'var(--pc-gold-text)' }} />
               <span
                 className="uppercase tracking-widest"
-                style={{ color: 'var(--pc-gold)', fontSize: '0.62rem' }}
+                style={{ color: 'var(--pc-gold-text)', fontSize: '0.62rem' }}
               >
                 {t.results.whyThisFilm}
               </span>

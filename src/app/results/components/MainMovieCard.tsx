@@ -69,7 +69,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               style={{
                 background: 'var(--pc-overlay-bg)',
                 border: `1px solid ${palette.gold}40`,
-                color: 'var(--pc-gold)',
+                color: 'var(--pc-gold-text)',
                 backdropFilter: 'blur(8px)',
               }}
             >
@@ -128,7 +128,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                   <span>·</span>
                   <span className="flex items-center gap-1">
                     <Star size={11} fill={palette.gold} stroke="none" />
-                    <span style={{ color: 'var(--pc-gold)' }}>{score}</span>/10
+                    <span style={{ color: 'var(--pc-gold-text)' }}>{score}</span>/10
                   </span>
                 </>
               )}
@@ -204,10 +204,10 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
             }}
           >
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles size={12} style={{ color: 'var(--pc-gold)' }} />
+              <Sparkles size={12} style={{ color: 'var(--pc-gold-text)' }} />
               <span
                 className="uppercase tracking-widest"
-                style={{ color: 'var(--pc-gold)', fontSize: '0.65rem' }}
+                style={{ color: 'var(--pc-gold-text)', fontSize: '0.65rem' }}
               >
                 {t.results.whyThisFilmForYou}
               </span>

@@ -42,7 +42,7 @@ export function LanguageSwitcher() {
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150"
         style={{
           background: open ? 'var(--pc-gold-subtle)' : 'transparent',
-          color: open ? 'var(--pc-gold)' : 'var(--pc-t3)',
+          color: open ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
           border: open ? '1px solid var(--pc-gold-bd-subtle)' : '1px solid var(--pc-bd1)',
         }}
       >
@@ -81,14 +81,14 @@ export function LanguageSwitcher() {
                 className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs transition-colors duration-100"
                 style={{
                   background: isActive ? 'var(--pc-gold-subtle)' : 'transparent',
-                  color: isActive ? 'var(--pc-gold)' : 'var(--pc-t2)',
+                  color: isActive ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
                   fontWeight: isActive ? 600 : 400,
                 }}
               >
                 <span
                   className="w-6 text-center font-semibold"
                   style={{
-                    color: isActive ? 'var(--pc-gold)' : 'var(--pc-t4)',
+                    color: isActive ? 'var(--pc-gold-text)' : 'var(--pc-t4)',
                     fontSize: '0.7rem',
                   }}
                 >

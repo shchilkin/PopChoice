@@ -78,53 +78,53 @@ export default function ResultsPage() {
   }
 
   useEffect(() => {
-    const raw = localStorage.getItem('popchoice_recommendation');
-    if (!raw) {
-      router.replace('/quiz');
-      return;
-    }
+    async function init() {
+      const raw = localStorage.getItem('popchoice_recommendation');
+      if (!raw) {
+        router.replace('/quiz');
+        return;
+      }
 
-    try {
-      const parsed: ApiResponse = JSON.parse(raw);
+      try {
+        const parsed: ApiResponse = JSON.parse(raw);
 
-      if (parsed.similarMovies && parsed.similarMovies.length > 0) {
-        const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
-          id: m.id,
-          name: m.name,
-          year: m.year,
-          similarity: m.similarity,
-          age_rating: m.age_rating,
-          duration: m.duration,
-          score_rating: m.score_rating,
-          posterURL: m.posterURL,
-          description: m.aiDescription,
-          localizedName: m.localizedName,
-          isMainRecommendation: m.isMainRecommendation,
-        }));
+        if (parsed.similarMovies && parsed.similarMovies.length > 0) {
+          const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
+            id: m.id,
+            name: m.name,
+            year: m.year,
+            similarity: m.similarity,
+            age_rating: m.age_rating,
+            duration: m.duration,
+            score_rating: m.score_rating,
+            posterURL: m.posterURL,
+            description: m.aiDescription,
+            localizedName: m.localizedName,
+            isMainRecommendation: m.isMainRecommendation,
+          }));
 
-        const needPosters = mapped.filter((m) => !m.posterURL);
-        if (needPosters.length > 0) {
-          const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-          enhanceMoviesWithPosters(needPosters, tmdbApiKey)
-            .then((enhanced) => {
-              const final = mapped.map((m) => {
-                const e = enhanced.find((em) => em.id === m.id);
-                return e || m;
-              });
+          const needPosters = mapped.filter((m) => !m.posterURL);
+          if (needPosters.length > 0) {
+            const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+            try {
+              const enhanced = await enhanceMoviesWithPosters(needPosters, tmdbApiKey);
+              const final = mapped.map((m) => enhanced.find((em) => em.id === m.id) || m);
               setMovies(final);
-            })
-            .catch(() => setMovies(mapped))
-            .finally(() => setIsLoading(false));
-        } else {
-          setMovies(mapped);
-          setIsLoading(false);
+            } catch {
+              setMovies(mapped);
+            }
+          } else {
+            setMovies(mapped);
+          }
         }
-      } else {
+      } catch {
+        // JSON parse error — leave movies empty, isLoading will be cleared below
+      } finally {
         setIsLoading(false);
       }
-    } catch {
-      setIsLoading(false);
     }
+
+    void init();
   }, [router]);
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function ResultsPage() {
             background: 'var(--pc-gold-subtle)',
             border: '1px solid',
             borderColor: 'var(--pc-gold-bd-subtle)',
-            color: 'var(--pc-gold)',
+            color: 'var(--pc-gold-text)',
           }}
         >
           <Sparkles size={11} /> {t.results.badge}
@@ -234,7 +234,10 @@ export default function ResultsPage() {
               background: 'linear-gradient(180deg, var(--pc-gold), var(--pc-amber))',
             }}
           />
-          <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-gold)' }}>
+          <span
+            className="uppercase tracking-widest text-xs"
+            style={{ color: 'var(--pc-gold-text)' }}
+          >
             {t.results.topPick}
           </span>
         </div>

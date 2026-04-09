@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -38,13 +38,7 @@ export default function QuizPage() {
   const currentPerson = people[currentPersonIdx];
 
   // Keep solo person's name in sync with the current locale
-  useEffect(() => {
-    if (mode === 'solo') {
-      setPeople((prev) =>
-        prev.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p)),
-      );
-    }
-  }, [t.quiz.intro.youLabel, mode]);
+  // Derived at submit time rather than synced via effect — see submitToApi below.
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
@@ -52,7 +46,13 @@ export default function QuizPage() {
 
   function submitToApi() {
     setIsSubmitting(true);
-    const apiData = people.map(toApiFormat);
+    // For solo mode always use the current locale label so the name stays correct
+    // even if the user switched languages during the quiz.
+    const resolved =
+      mode === 'solo'
+        ? people.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p))
+        : people;
+    const apiData = resolved.map(toApiFormat);
     const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
     localStorage.setItem('popchoice_quiz_data', JSON.stringify(dataToSend));
     router.push('/loading');
@@ -174,9 +174,9 @@ export default function QuizPage() {
                   background: i === currentPersonIdx ? 'var(--pc-gold-wash)' : 'var(--pc-ghost)',
                   color:
                     i === currentPersonIdx
-                      ? 'var(--pc-gold)'
+                      ? 'var(--pc-gold-text)'
                       : i < currentPersonIdx
-                        ? 'var(--pc-gold-focus)'
+                        ? 'var(--pc-gold-text)'
                         : 'var(--pc-t4)',
                   border:
                     i === currentPersonIdx

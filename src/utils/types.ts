@@ -11,7 +11,7 @@ import {
   rawMovieEntrySchema,
 } from './schemas';
 
-import type { Document } from 'langchain/document';
+import type { Document } from '@langchain/core/documents';
 import type { z } from 'zod';
 
 // Inferred types from schemas
