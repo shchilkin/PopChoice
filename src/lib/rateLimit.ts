@@ -96,9 +96,14 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
 }
 
 export async function closeRateLimiter(): Promise<void> {
-  if (redisClient) {
-    await redisClient.quit();
+  const client = redisClient;
+
+  try {
+    if (client) {
+      await client.quit();
+    }
+  } finally {
+    redisClient = null;
+    initPromise = null;
   }
-  redisClient = null;
-  initPromise = null;
 }
