@@ -3,7 +3,7 @@
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Mascot } from '@/components/Mascot';
@@ -20,7 +20,9 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
 
   // Close the drawer whenever the route changes (logo tap, browser back/forward, etc.)
   useEffect(() => {
-    setMobileMenuOpen(false);
+    startTransition(() => {
+      setMobileMenuOpen(false);
+    });
   }, [pathname]);
 
   const navLinks = [
