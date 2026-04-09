@@ -17,7 +17,7 @@ export const ru: Translations = {
     visitLink: 'Перейти на сайт The Movie Database',
   },
   hero: {
-    badge: '✨ Умный подбор кино',
+    badge: 'Умный подбор кино',
     descriptionPre:
       'Хватит скроллить впустую. Ответьте на 5 быстрых вопросов, и нейросеть подберёт',
     perfectMovie: 'идеальное кино',
@@ -188,7 +188,7 @@ export const ru: Translations = {
     whyThisFilmForYou: 'Почему этот фильм вам',
   },
   about: {
-    badge: '⚙️ Как это работает',
+    badge: 'Как это работает',
     title: 'Нейросеть, которая чувствует ваш вайб.',
     descriptionPre:
       'Забудьте про банальные фильтры по жанрам. PopChoice использует магию ИИ, чтобы понять, какое кино нужно именно',
