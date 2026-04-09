@@ -2,9 +2,10 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
+import { useLanguage } from '@/i18n';
 
 import {
   BetweenPersons,
@@ -17,16 +18,17 @@ import {
   QuizNavigation,
   ToneStep,
 } from './components';
-import { emptyPerson, QUESTION_LABELS, slideVariants, toApiFormat } from './constants';
+import { emptyPerson, slideVariants, toApiFormat } from './constants';
 
 import type { PersonAnswers, Phase } from './types';
 
 export default function QuizPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [mode, setMode] = useState<'solo' | 'group'>('solo');
-  const [people, setPeople] = useState<PersonAnswers[]>([emptyPerson('You')]);
+  const [people, setPeople] = useState<PersonAnswers[]>([emptyPerson(t.quiz.intro.youLabel)]);
   const [currentPersonIdx, setCurrentPersonIdx] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -34,6 +36,15 @@ export default function QuizPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentPerson = people[currentPersonIdx];
+
+  // Keep solo person's name in sync with the current locale
+  useEffect(() => {
+    if (mode === 'solo') {
+      setPeople((prev) =>
+        prev.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p)),
+      );
+    }
+  }, [t.quiz.intro.youLabel, mode]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
@@ -88,7 +99,7 @@ export default function QuizPage() {
 
   function startSolo() {
     setMode('solo');
-    setPeople([emptyPerson('You')]);
+    setPeople([emptyPerson(t.quiz.intro.youLabel)]);
     setCurrentPersonIdx(0);
     setCurrentStep(0);
     setPhase('questions');
@@ -146,7 +157,8 @@ export default function QuizPage() {
 
   // ── QUESTIONS ──
   const totalPeople = people.length;
-  const personLabel = totalPeople > 1 ? `${currentPerson.name}'s turn` : null;
+  const personLabel =
+    totalPeople > 1 ? t.quiz.nav.personTurn.replace('{name}', currentPerson.name) : null;
 
   return (
     <div className="flex-1 flex flex-col min-h-[80vh]">
@@ -182,7 +194,9 @@ export default function QuizPage() {
           <div className="flex items-center gap-3">
             <ProgressDots current={currentStep} total={5} />
             <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
-              {currentStep + 1} of 5
+              {t.quiz.nav.ofTotal
+                .replace('{current}', String(currentStep + 1))
+                .replace('{total}', '5')}
             </span>
           </div>
           {personLabel && (
@@ -198,7 +212,7 @@ export default function QuizPage() {
             textTransform: 'uppercase',
           }}
         >
-          {QUESTION_LABELS[currentStep]}
+          {t.quiz.labels[currentStep]}
         </div>
       </div>
 

@@ -4,14 +4,17 @@ import { Moon, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 export function PCLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLanding = pathname === '/';
   const { isDark, toggle } = usePCTheme();
+  const { t } = useLanguage();
 
   return (
     <div
@@ -19,7 +22,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
       style={{
         background: 'var(--pc-bg)',
         color: 'var(--pc-t1)',
-        fontFamily: "var(--font-dm-sans), 'DM Sans', 'Inter', sans-serif",
+        fontFamily: "var(--font-manrope), 'Manrope', 'Inter', sans-serif",
         transition: 'background 0.3s, color 0.3s',
       }}
     >
@@ -39,7 +42,9 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           <span
             className="tracking-widest uppercase"
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '1.4rem',
               letterSpacing: '0.12em',
               background: `linear-gradient(90deg, ${palette.gold}, ${palette.amber})`,
@@ -61,8 +66,10 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               background: pathname === '/about' ? 'var(--pc-gold-subtle)' : 'transparent',
             }}
           >
-            How it works
+            {t.nav.howItWorks}
           </Link>
+
+          <LanguageSwitcher />
 
           {/* Theme toggle */}
           <button
@@ -72,7 +79,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
               border: '1px solid var(--pc-bd2)',
             }}
-            aria-label="Toggle theme"
+            aria-label={t.nav.toggleTheme}
           >
             {isDark ? (
               <Sun size={15} style={{ color: 'var(--pc-t2)' }} />
@@ -92,7 +99,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
                 fontWeight: 600,
               }}
             >
-              Find a movie
+              {t.nav.findAMovie}
             </Link>
           )}
         </nav>
@@ -107,16 +114,16 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           borderTop: '1px solid var(--pc-footer-bd)',
         }}
       >
-        <span style={{ color: 'var(--pc-gold)' }}>🍿</span> Built by{' '}
+        <span style={{ color: 'var(--pc-gold)' }}>🍿</span> {t.footer.builtBy}{' '}
         <a
           href="https://github.com/shchilkin"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'var(--pc-gold)' }}
         >
-          Aleksandr Shchilkin
+          {t.footer.authorName}
         </a>{' '}
-        — a course project that got out of hand
+        — {t.footer.tagline}
       </footer>
     </div>
   );

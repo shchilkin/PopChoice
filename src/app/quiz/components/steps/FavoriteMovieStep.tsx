@@ -2,6 +2,8 @@
 
 import { Clapperboard } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteMovieStepProps {
@@ -17,6 +19,8 @@ export function FavoriteMovieStep({
   onSubmit,
   canProceed,
 }: FavoriteMovieStepProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex flex-col gap-6 pt-2">
       <div className="flex items-center gap-3">
@@ -31,14 +35,16 @@ export function FavoriteMovieStep({
         </div>
         <h2
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '1.8rem',
             letterSpacing: '0.04em',
             color: 'var(--pc-t1)',
             lineHeight: 1.1,
           }}
         >
-          What&apos;s your favorite movie?
+          {t.quiz.favoriteMovie.title}
         </h2>
       </div>
       <p
@@ -48,7 +54,7 @@ export function FavoriteMovieStep({
           marginTop: -8,
         }}
       >
-        This helps us understand your taste. Any film that made an impression on you.
+        {t.quiz.favoriteMovie.hint}
       </p>
 
       <div className="relative">
@@ -57,7 +63,7 @@ export function FavoriteMovieStep({
           value={person.favoriteMovie}
           onChange={(e) => onUpdate({ favoriteMovie: e.target.value })}
           onKeyDown={(e) => e.key === 'Enter' && canProceed && onSubmit()}
-          placeholder="e.g. The Dark Knight, Parasite, Coco…"
+          placeholder={t.quiz.favoriteMovie.placeholder}
           className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
           style={{
             background: 'var(--pc-surface)',
@@ -85,7 +91,7 @@ export function FavoriteMovieStep({
             marginBottom: 10,
           }}
         >
-          POPULAR PICKS
+          {t.quiz.favoriteMovie.popularPicks}
         </p>
         <div className="flex flex-wrap gap-2">
           {['The Dark Knight', 'Inception', 'Parasite', 'Pulp Fiction', 'The Matrix', 'Coco'].map(
@@ -120,12 +126,15 @@ export function FavoriteMovieStep({
             marginBottom: 8,
           }}
         >
-          WHY? <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>(optional)</span>
+          {t.quiz.favoriteMovie.why}{' '}
+          <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>
+            {t.quiz.favoriteMovie.whyOptional}
+          </span>
         </p>
         <textarea
           value={person.favoriteMovieWhy}
           onChange={(e) => onUpdate({ favoriteMovieWhy: e.target.value.slice(0, 300) })}
-          placeholder="Share your thoughts — plot, characters, what made it special…"
+          placeholder={t.quiz.favoriteMovie.whyPlaceholder}
           rows={3}
           className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200 resize-none"
           style={{

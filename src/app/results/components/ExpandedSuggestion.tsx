@@ -4,6 +4,7 @@ import { Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 import { SimilarityBadge } from './SimilarityBadge';
@@ -12,6 +13,7 @@ import { StarRating } from './StarRating';
 import type { MovieRecommendation } from '@/utils/client';
 
 export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
+  const { t } = useLanguage();
   const score = movie.score_rating ?? 0;
 
   return (
@@ -47,13 +49,15 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
               <div>
                 <h3
                   style={{
-                    fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                    fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
                     fontSize: '1.3rem',
                     letterSpacing: '0.03em',
                     color: 'var(--pc-t1)',
                   }}
                 >
-                  {movie.name}
+                  {movie.localizedName ?? movie.name}
                 </h3>
                 <div
                   className="flex items-center gap-2"
@@ -98,7 +102,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                 className="uppercase tracking-widest"
                 style={{ color: 'var(--pc-gold)', fontSize: '0.62rem' }}
               >
-                Why this film
+                {t.results.whyThisFilm}
               </span>
             </div>
             <p

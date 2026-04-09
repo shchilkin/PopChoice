@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 import { AgeRatingPill } from './AgeRatingPill';
@@ -14,6 +15,7 @@ import { StarRating } from './StarRating';
 import type { MovieRecommendation } from '@/utils/client';
 
 export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
+  const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);
   const score = movie.score_rating ?? 0;
   const pct = Math.round(movie.similarity * 100);
@@ -72,7 +74,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               }}
             >
               <Sparkles size={10} />
-              AI Pick
+              {t.results.aiPick}
             </div>
           </div>
 
@@ -81,7 +83,9 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
             <h2
               className="mb-1"
               style={{
-                fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                fontWeight: '600',
+                textTransform: 'uppercase',
                 fontSize: 'clamp(1.8rem, 5vw, 3rem)',
                 letterSpacing: '0.04em',
                 color: 'var(--pc-overlay-text)',
@@ -89,7 +93,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 textShadow: 'var(--pc-overlay-shadow)',
               }}
             >
-              {movie.name}
+              {movie.localizedName ?? movie.name}
             </h2>
             <div
               className="flex items-center gap-3 flex-wrap"
@@ -115,7 +119,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                   <span>·</span>
                   <span className="flex items-center gap-1">
                     <Clock size={11} />
-                    {movie.duration} min
+                    {movie.duration} {t.results.minUnit}
                   </span>
                 </>
               )}
@@ -139,13 +143,15 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
           <div className="mb-4">
             <h2
               style={{
-                fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                fontWeight: '600',
+                textTransform: 'uppercase',
                 fontSize: '2rem',
                 letterSpacing: '0.04em',
                 color: 'var(--pc-t1)',
               }}
             >
-              {movie.name}
+              {movie.localizedName ?? movie.name}
             </h2>
             <div
               className="flex items-center gap-3 flex-wrap mt-1"
@@ -161,7 +167,9 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               {movie.duration && (
                 <>
                   <span>·</span>
-                  <span>{movie.duration} min</span>
+                  <span>
+                    {movie.duration} {t.results.minUnit}
+                  </span>
                 </>
               )}
             </div>
@@ -172,7 +180,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
           <div className="flex items-center gap-2">
             <Clapperboard size={13} style={{ color: 'var(--pc-t3)' }} />
             <span style={{ color: 'var(--pc-t3)', fontSize: '0.82rem' }}>
-              {movie.year} · {pct}% match
+              {movie.year} · {pct}% {t.results.match}
             </span>
           </div>
           {movie.age_rating && <AgeRatingPill label={movie.age_rating} />}
@@ -201,7 +209,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 className="uppercase tracking-widest"
                 style={{ color: 'var(--pc-gold)', fontSize: '0.65rem' }}
               >
-                Why this film for you
+                {t.results.whyThisFilmForYou}
               </span>
             </div>
             <p

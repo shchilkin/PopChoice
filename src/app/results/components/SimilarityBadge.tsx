@@ -1,8 +1,12 @@
+'use client';
+
 import { Sparkles } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 export function SimilarityBadge({ similarity }: { similarity: number }) {
+  const { t } = useLanguage();
   const pct = Math.round(similarity * 100);
   const color =
     pct >= 95
@@ -22,7 +26,7 @@ export function SimilarityBadge({ similarity }: { similarity: number }) {
       }}
     >
       <Sparkles size={10} />
-      {pct}% match
+      {pct}% {t.results.match}
     </div>
   );
 }

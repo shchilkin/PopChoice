@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 import { TMDBAttribution } from '@/components';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 import { FAQSection } from './components/FAQSection';
@@ -14,6 +15,7 @@ import { TechStackSection } from './components/TechStackSection';
 
 export default function AboutPage() {
   const { isDark } = usePCTheme();
+  const { t } = useLanguage();
 
   return (
     <div className="px-5 py-12 max-w-3xl mx-auto w-full">
@@ -33,27 +35,28 @@ export default function AboutPage() {
           }}
         >
           <Brain size={11} />
-          How PopChoice works
+          {t.about.badge}
         </div>
         <h1
           className="mb-4"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: 'clamp(2rem, 6vw, 3.5rem)',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',
             lineHeight: 1.1,
           }}
         >
-          AI that gets your taste
+          {t.about.title}
         </h1>
         <p
           className="max-w-lg mx-auto"
           style={{ color: 'var(--pc-t2)', lineHeight: 1.75, fontSize: '0.95rem' }}
         >
-          PopChoice isn&apos;t just a genre filter. It uses vector embeddings and AI to understand
-          what makes a film feel right to <span style={{ color: 'var(--pc-t1)' }}>you</span> — then
-          finds movies that genuinely match that feeling.
+          {t.about.descriptionPre} <span style={{ color: 'var(--pc-t1)' }}>{t.about.you}</span>{' '}
+          {t.about.descriptionPost}
         </p>
       </motion.div>
 
@@ -80,16 +83,18 @@ export default function AboutPage() {
         <h3
           className="mb-2"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '1.8rem',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',
           }}
         >
-          Ready to find tonight&apos;s film?
+          {t.about.ctaTitle}
         </h3>
         <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
-          60 seconds. 5 questions. The perfect movie.
+          {t.about.ctaSubtitle}
         </p>
         <Link
           href="/quiz"
@@ -102,7 +107,7 @@ export default function AboutPage() {
           }}
         >
           <Play size={16} className="fill-current" />
-          Start the Quiz
+          {t.about.ctaButton}
         </Link>
       </motion.div>
 

@@ -8,12 +8,11 @@ Design system reference extracted from the PopChoice UI prototype. Use these tok
 
 ### Personality
 
-| Trait            | Description                |
-| ---------------- | -------------------------- |
-| **Playful**      | Fun, popcorn energy        |
-| **Confident**    | AI-powered, curated picks  |
-| **Cinematic**    | Dark theatre aesthetic     |
-| **Mobile-first** | Thumb-friendly, responsive |
+| Trait         | Description               |
+| ------------- | ------------------------- |
+| **Playful**   | Fun, popcorn energy       |
+| **Confident** | AI-powered, curated picks |
+| **Cinematic** | Dark theatre aesthetic    |
 
 ### Mascot
 
@@ -27,9 +26,25 @@ The PopcornMascot is an inline SVG of a smiling popcorn bucket with animated pop
 
 ### Wordmark
 
-- **Font:** Bebas Neue, uppercase, wide letter-spacing (`0.12em` nav, `0.04–0.07em` hero)
+- **Font:** Oswald, uppercase, wide letter-spacing (`0.12em` nav, `0.04–0.07em` hero)
 - **Fill:** Gold-to-amber gradient (`linear-gradient(90deg, #F5C518, #FF9F1C)`) applied via `background-clip: text`
 - Hero variant uses a white-to-gold-to-amber gradient that adapts to the active theme
+
+### Voice & Copy Guidelines
+
+PopChoice speaks like **the Cinematic Concierge** — a confident, culturally-sharp friend who always knows what to watch. Every word should feel like it belongs in a dark theatre, not a SaaS dashboard.
+
+| Category                  | Guideline                                                                                        | ✅ Do                                                                        | ❌ Don't                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **Role & Identity**       | You are the voice of PopChoice. Confident, cinema-obsessed, here to end the scrolling nightmare. | "Grab your popcorn. I've found the perfect match for your night."            | "I am an AI assistant programmed to query the movie database."                |
+| **Tone of Voice**         | Playful, bold, modern. Like that one friend who always knows what to watch.                      | "Stop scrolling in vain. Let's find a film that actually matches your vibe." | "Please input your preferences so the algorithm can process your request."    |
+| **Pacing & Flow**         | Short, punchy, action-oriented. Cut the fluff. Get to the point.                                 | "5 questions. 60 seconds. Your perfect movie."                               | "By answering these five comprehensive questions, you will allow our system…" |
+| **Vocabulary**            | Cinematic magic words. Avoid tech jargon and corporate speak.                                    | vibe, match, masterpiece, magic, perfect pick, cinematic, mood               | algorithm, vector search, process, output, user input, system                 |
+| **Aesthetic Translation** | Mirror the dark-theatre UI — sleek but energetic. Use emojis strategically, not overwhelmingly.  | "Lights out. Your next favorite film is waiting. ✨🎬"                       | "Here are the results of your search query:"                                  |
+| **Group Dynamics**        | Frame Group Mode around solving the argument, not the tech.                                      | "A pick everyone in the room will actually agree on. No arguing required."   | "This mode allows multiple users to find a statistical middle ground."        |
+| **CTAs**                  | Action-first. Make users want to click. Focus on the result or the fun.                          | "Find My Movie", "Start the Quiz", "Let's Go"                                | "Submit", "Search", "Next Page"                                               |
+
+> **Translation note:** When localising, preserve the _energy_ of the English copy — not just the meaning. A natural-sounding phrase in the target language beats a literal translation every time.
 
 ---
 
@@ -126,35 +141,35 @@ All visual values are driven by CSS custom properties prefixed with `--pc-*`, de
 
 | Role               | Family                                      | Import       |
 | ------------------ | ------------------------------------------- | ------------ |
-| Display / Headings | **Bebas Neue**                              | Google Fonts |
-| Body / UI          | **DM Sans** (primary), **Inter** (fallback) | Google Fonts |
+| Display / Headings | **Oswald** (semibold, uppercase)            | Google Fonts |
+| Body / UI          | **Manrope** (primary), **Inter** (fallback) | Google Fonts |
 
 ```css
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 ```
 
 ### Type Scale
 
-| Name           | Size                        | Font       | Usage                        |
-| -------------- | --------------------------- | ---------- | ---------------------------- |
-| Hero           | `clamp(3.5rem, 10vw, 6rem)` | Bebas Neue | Landing page title           |
-| Page H1        | `2.2rem`                    | Bebas Neue | Quiz / section headings      |
-| Subhead        | `2rem`                      | Bebas Neue | Loading page, between-person |
-| Section H2     | `1.6rem`                    | Bebas Neue | About page sections          |
-| Nav Wordmark   | `1.4rem`                    | Bebas Neue | Header logo text             |
-| Movie Title    | `clamp(1.8rem, 5vw, 3rem)`  | Bebas Neue | Result card main title       |
-| Expanded Title | `1.3rem`                    | Bebas Neue | Suggestion expanded view     |
-| Hero Body      | `1.1rem`                    | DM Sans    | Landing page subtitle        |
-| Body           | `1rem` / `0.95rem`          | DM Sans    | Standard paragraphs          |
-| Description    | `0.88rem`                   | DM Sans    | AI descriptions, tips        |
-| Meta           | `0.82rem`                   | DM Sans    | Card meta, captions          |
-| Small          | `0.78rem`                   | DM Sans    | Star ratings, sub-labels     |
-| Nano           | `0.72rem`                   | DM Sans    | Section labels, token labels |
-| Eyebrow        | `0.65rem`                   | DM Sans    | Uppercase eyebrow labels     |
+| Name           | Size                        | Font    | Usage                        |
+| -------------- | --------------------------- | ------- | ---------------------------- |
+| Hero           | `clamp(3.5rem, 10vw, 6rem)` | Oswald  | Landing page title           |
+| Page H1        | `2.2rem`                    | Oswald  | Quiz / section headings      |
+| Subhead        | `2rem`                      | Oswald  | Loading page, between-person |
+| Section H2     | `1.6rem`                    | Oswald  | About page sections          |
+| Nav Wordmark   | `1.4rem`                    | Oswald  | Header logo text             |
+| Movie Title    | `clamp(1.8rem, 5vw, 3rem)`  | Oswald  | Result card main title       |
+| Expanded Title | `1.3rem`                    | Oswald  | Suggestion expanded view     |
+| Hero Body      | `1.1rem`                    | Manrope | Landing page subtitle        |
+| Body           | `1rem` / `0.95rem`          | Manrope | Standard paragraphs          |
+| Description    | `0.88rem`                   | Manrope | AI descriptions, tips        |
+| Meta           | `0.82rem`                   | Manrope | Card meta, captions          |
+| Small          | `0.78rem`                   | Manrope | Star ratings, sub-labels     |
+| Nano           | `0.72rem`                   | Manrope | Section labels, token labels |
+| Eyebrow        | `0.65rem`                   | Manrope | Uppercase eyebrow labels     |
 
 ### Typography Conventions
 
-- **Bebas Neue** is always uppercase with wide letter-spacing (`0.04em`–`0.12em`).
+- **Oswald** is always uppercase, semibold (`600`), with wide letter-spacing (`0.04em`–`0.12em`).
 - Body text uses `font-weight: 400` (normal) or `500` (medium). Bold labels use `600`–`700`.
 - Line height: `1` for display headings, `1.1`–`1.2` for subheads, `1.5`–`1.75` for body copy.
 - Base font size is `16px` (`var(--font-size)`).

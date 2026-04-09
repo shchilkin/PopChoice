@@ -6,8 +6,21 @@ import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import { MovieService } from '@/services';
 
-const prompt = `
-You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
+const LOCALE_LANGUAGE: Record<string, string> = {
+  en: 'English',
+  ru: 'Russian',
+  fi: 'Finnish',
+};
+
+const TMDB_LOCALE: Record<string, string> = {
+  en: 'en-US',
+  ru: 'ru-RU',
+  fi: 'fi-FI',
+};
+
+const buildPrompt = (locale: string) => {
+  const language = LOCALE_LANGUAGE[locale] ?? 'English';
+  return `You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
 1. Context about available movies (including their plots, ratings, and vibes).
 2. User preferences (either from a single person or a group of people).
@@ -29,7 +42,10 @@ For multiple people:
 - If you're unsure, say "Sorry, I don't know the answer," and encourage them to try again.
 
 Keep your tone upbeat, conversational, and helpful. Avoid making up facts or recommending movies not in the context.
+IMPORTANT: Write all description and explanation text in ${language}. Do not use any other language.
+IMPORTANT: The "title" field must be returned exactly as it appears in the provided movie context. Do not translate, transliterate, rephrase, or normalize the title.
 `;
+};
 
 const movieService = new MovieService();
 
@@ -79,6 +95,7 @@ const apiResponseSchema = z.object({
         score_rating: z.number(),
         posterURL: z.string().url().optional(), // Added poster URL support
         aiDescription: z.string().optional(), // Added AI-generated description
+        localizedName: z.string().optional(), // Localized title from TMDB
         isMainRecommendation: z.boolean().optional(), // Mark main recommendation
       }),
     )
@@ -184,7 +201,7 @@ async function getSimilarMovies(embedding: number[]) {
 }
 
 // Helper: Get recommendation from OpenAI using enhanced movie data
-async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
+async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: string) {
   try {
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
@@ -192,7 +209,7 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
     const recommendation = await openAIClient.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: prompt },
+        { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
       ],
       response_format: zodResponseFormat(
@@ -211,11 +228,15 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
 
 // Helper: Generate AI descriptions for individual movies
 async function generateMovieDescriptions(
-  movies: (EnhancedMovieMatch & { posterURL?: string })[],
+  movies: (EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[],
   userPreferences: PersonFormData[],
-): Promise<(EnhancedMovieMatch & { posterURL?: string; aiDescription?: string })[]> {
+  locale: string,
+): Promise<
+  (EnhancedMovieMatch & { posterURL?: string; localizedName?: string; aiDescription?: string })[]
+> {
   console.log(`Generating AI descriptions for ${movies.length} movies...`);
 
+  const language = LOCALE_LANGUAGE[locale] ?? 'English';
   // Create a prompt specifically for individual movie descriptions
   const descriptionPrompt = `
 You are PopChoice, a movie expert creating personalized movie descriptions. For each movie provided, write a brief, engaging description (2-3 sentences) that:
@@ -228,6 +249,7 @@ You are PopChoice, a movie expert creating personalized movie descriptions. For 
 User preferences context: ${combineAllPeopleDataToString(userPreferences)}
 
 For each movie, return a description that makes the user excited to watch it.
+IMPORTANT: You must respond entirely in ${language}. Do not use any other language.
 `;
 
   const enhancedMovies = await Promise.all(
@@ -272,27 +294,46 @@ Match Score: ${Math.round(movie.similarity * 100)}%
   return enhancedMovies;
 }
 
-// Helper: Get poster URL for recommended movie
-async function getPosterURL(movieTitle: string) {
+// Helper: Get poster URL and optional localized name for a movie
+async function getMovieInfo(
+  movieTitle: string,
+  locale: string,
+): Promise<{ posterURL?: string; localizedName?: string }> {
   try {
-    const movieDetails = await movieService.getMovieByTitle(movieTitle);
-    if (!movieDetails) {
+    const enDetails = await movieService.getMovieByTitle(movieTitle);
+    if (!enDetails) {
       console.warn(`No movie found with title: ${movieTitle}`);
-      return undefined;
+      return {};
     }
-    return movieService.getPosterURL(movieDetails.poster_path, 'w500');
+    const enPosterURL = movieService.getPosterURL(enDetails.poster_path, 'w500');
+
+    if (locale === 'en') return { posterURL: enPosterURL };
+
+    const tmdbLocale = TMDB_LOCALE[locale] ?? 'en-US';
+    const localized = await movieService.getLocalizedMovieInfo(enDetails.id, tmdbLocale);
+
+    const posterURL = localized?.poster_path
+      ? movieService.getPosterURL(localized.poster_path, 'w500')
+      : enPosterURL;
+    // Only surface a localized name when TMDB actually has a different translation
+    const localizedName =
+      localized?.title && localized.title !== enDetails.title ? localized.title : undefined;
+
+    return { posterURL, localizedName };
   } catch (error) {
-    console.error('Error fetching movie by title:', error);
-    return undefined;
+    console.error('Error fetching movie info:', error);
+    return {};
   }
 }
 
-// Helper: Enhanced poster fetching for similar movies with batching
+// Helper: Enhanced poster + localized info fetching for similar movies with batching
 async function enhanceSimilarMoviesWithPosters(
   similarMovies: EnhancedMovieMatch[],
+  locale: string,
   batchSize: number = 3,
-): Promise<(EnhancedMovieMatch & { posterURL?: string })[]> {
-  const enhancedMovies: (EnhancedMovieMatch & { posterURL?: string })[] = [];
+): Promise<(EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[]> {
+  const enhancedMovies: (EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[] =
+    [];
 
   // Process movies in batches to avoid overwhelming the TMDB API
   for (let i = 0; i < similarMovies.length; i += batchSize) {
@@ -300,11 +341,11 @@ async function enhanceSimilarMoviesWithPosters(
 
     const batchPromises = batch.map(async (movie) => {
       try {
-        const posterURL = await getPosterURL(movie.name);
-        return { ...movie, posterURL };
+        const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
+        return { ...movie, posterURL, localizedName };
       } catch (error) {
-        console.warn(`Failed to fetch poster for movie: ${movie.name}`, error);
-        return { ...movie, posterURL: undefined };
+        console.warn(`Failed to fetch info for movie: ${movie.name}`, error);
+        return { ...movie, posterURL: undefined, localizedName: undefined };
       }
     });
 
@@ -330,12 +371,20 @@ export async function POST(req: NextRequest) {
     // Validate request body
     const validatedBody = requestBodySchema.parse(body);
 
+    // Read locale from Accept-Language header, default to English
+    // Parse real-world values like "ru-RU,ru;q=0.9,en-US;q=0.8" by taking the first language tag
+    const acceptLanguage = req.headers.get('accept-language') ?? 'en';
+    const primaryLang = acceptLanguage.split(',')[0].split(';')[0].split('-')[0].toLowerCase();
+    const locale = ['en', 'ru', 'fi'].includes(primaryLang) ? primaryLang : 'en';
+
     // Normalize to array format for consistent processing
     const allPeopleData: PersonFormData[] = Array.isArray(validatedBody)
       ? validatedBody
       : [validatedBody];
 
-    console.log(`Processing recommendation request for ${allPeopleData.length} person(s)`);
+    console.log(
+      `Processing recommendation request for ${allPeopleData.length} person(s), locale: ${locale}`,
+    );
 
     // Step 1: Create embedding from all people's data
     const embedding = await createEmbedding(allPeopleData);
@@ -344,20 +393,21 @@ export async function POST(req: NextRequest) {
     const similarMovies = await getSimilarMovies(embedding);
 
     // Step 3: Get recommendation from OpenAI
-    const responseMessage = await getRecommendation(similarMovies);
+    const responseMessage = await getRecommendation(similarMovies, locale);
 
-    // Step 4: Get poster URL for main recommendation
-    const posterURL = await getPosterURL(responseMessage.title);
+    // Step 4: Get localized poster + name for main recommendation
+    const { posterURL } = await getMovieInfo(responseMessage.title, locale);
 
-    // Step 5: Enhance similar movies with poster URLs (in batches)
+    // Step 5: Enhance similar movies with poster URLs and localized names (in batches)
     console.log('Enhancing similar movies with posters...');
-    const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies);
+    const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies, locale);
 
     // Step 6: Generate AI descriptions for each movie
     console.log('Generating personalized AI descriptions for each movie...');
     const moviesWithDescriptions = await generateMovieDescriptions(
       enhancedSimilarMovies,
       allPeopleData,
+      locale,
     );
 
     // Find the recommended movie in our similar movies to get its details
@@ -395,6 +445,7 @@ export async function POST(req: NextRequest) {
         score_rating: movie.score_rating,
         posterURL: movie.posterURL,
         aiDescription: movie.aiDescription,
+        localizedName: movie.localizedName,
         // Mark the main recommendation for potential UI highlighting (optional)
         isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
       })),

@@ -80,6 +80,28 @@ export class MovieService {
     return response;
   }
 
+  async getLocalizedMovieInfo(
+    movieId: number,
+    language: string,
+  ): Promise<{ title: string; poster_path: string | null } | undefined> {
+    try {
+      const response = await this.axiosClient({
+        method: 'GET',
+        url: `${this.apiURLBase}/movie/${movieId}`,
+        responseType: 'json',
+        headers: {
+          Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        },
+        params: { language },
+      });
+      return { title: response.data.title, poster_path: response.data.poster_path };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn(`Failed to fetch localized movie info for id ${movieId}:`, error);
+      return undefined;
+    }
+  }
+
   getPosterURL(posterPath: string, size: PosterSize): string {
     const { success, data: parsedSize } = posterSize.safeParse(size);
     if (!success) {
