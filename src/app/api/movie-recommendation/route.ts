@@ -393,10 +393,7 @@ export async function POST(req: NextRequest) {
     const responseMessage = await getRecommendation(similarMovies, locale);
 
     // Step 4: Get localized poster + name for main recommendation
-    const { posterURL, localizedName: mainLocalizedName } = await getMovieInfo(
-      responseMessage.title,
-      locale,
-    );
+    const { posterURL } = await getMovieInfo(responseMessage.title, locale);
 
     // Step 5: Enhance similar movies with poster URLs and localized names (in batches)
     console.log('Enhancing similar movies with posters...');

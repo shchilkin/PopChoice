@@ -64,7 +64,7 @@ export default function LoadingPage() {
         retryCount.current += 1;
         setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });
-  }, [router, t.loading.tips.length]);
+  }, [router, t.loading.tips.length, locale]);
 
   useEffect(() => {
     callApi();

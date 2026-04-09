@@ -96,6 +96,7 @@ export class MovieService {
       });
       return { title: response.data.title, poster_path: response.data.poster_path };
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn(`Failed to fetch localized movie info for id ${movieId}:`, error);
       return undefined;
     }
