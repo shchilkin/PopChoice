@@ -14,11 +14,11 @@ This document outlines the security measures and vulnerability management for th
   - [ ] Sanitize form data before processing
   - [ ] Implement input length limits (favoriteMovie: 500 chars, preferences: 200 chars)
 
-- [ ] **Rate Limiting**
-  - [ ] Implement middleware for API rate limiting
-  - [ ] Set limits per IP address (e.g., 10 requests per minute)
-  - [ ] Add rate limiting for expensive operations (OpenAI API calls)
-  - [ ] Configure appropriate 429 responses
+- [x] **Rate Limiting**
+  - [x] Implement middleware for API rate limiting (Redis-backed, per-IP; see `src/lib/rateLimit.ts`)
+  - [x] Set limits per IP address (10 requests per minute; enforced via atomic Lua INCR+EXPIRE)
+  - [x] Add rate limiting for expensive operations (OpenAI API calls via `/api/movie-recommendation`)
+  - [x] Configure appropriate 429 responses (returns `Retry-After: 60`)
 
 - [ ] **Authentication & Authorization**
   - [ ] Add CSRF protection for state-changing operations
@@ -105,7 +105,7 @@ This document outlines the security measures and vulnerability management for th
 ### `/api/movie-recommendation`
 
 - [ ] Input validation
-- [ ] Rate limiting
+- [x] Rate limiting (Redis-backed, 10 req/min per IP; requires `REDIS_URL`)
 - [ ] Error sanitization
 - [ ] Request size limits
 - [ ] Timeout configuration
@@ -117,6 +117,7 @@ Ensure these environment variables are properly secured:
 - `OPENAI_API_KEY` - OpenAI API access
 - `DATABASE_URL` - PostgreSQL database connection string
 - `TMDB_API_KEY` - The Movie Database API key
+- `REDIS_URL` - Redis connection string for rate limiting (optional; may contain credentials — store as a secret, never commit to source control)
 
 ## Reporting Security Vulnerabilities
 
