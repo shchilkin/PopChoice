@@ -5,7 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
@@ -21,6 +21,25 @@ const LOCALES: Locale[] = ['en', 'ru', 'fi'];
 
 const translations: Record<Locale, Translations> = { en, ru, fi };
 
+// ── Locale store ──────────────────────────────────────────────────────────────
+// Module-level store starts at 'en' so both the server snapshot and the initial
+// client snapshot agree — no hydration mismatch. After the component mounts,
+// detectLocale() reads localStorage/navigator and calls notifyLocaleChange(),
+// which triggers useSyncExternalStore to re-render with the real locale.
+let localeStore: Locale = 'en';
+const localeListeners = new Set<() => void>();
+
+function subscribeLocale(callback: () => void): () => void {
+  localeListeners.add(callback);
+  return () => {
+    localeListeners.delete(callback);
+  };
+}
+
+function getLocaleSnapshot(): Locale {
+  return localeStore;
+}
+
 function detectLocale(): Locale {
   const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
   if (saved && (LOCALES as string[]).includes(saved)) return saved as Locale;
@@ -29,6 +48,10 @@ function detectLocale(): Locale {
     .map((l) => l.split('-')[0].toLowerCase())
     .find((l) => (LOCALES as string[]).includes(l));
   return (detected as Locale) ?? 'en';
+}
+
+function notifyLocaleChange(): void {
+  localeListeners.forEach((cb) => cb());
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -46,30 +69,37 @@ const LanguageContext = createContext<LanguageContextValue>({
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  // Start with 'en' to match the server snapshot and avoid hydration mismatches.
-  // After mount, read from localStorage / navigator and apply the real locale.
-  const [locale, setLocaleState] = useState<Locale>('en');
-
-  useEffect(() => {
-    setLocaleState(detectLocale());
-
-    function handleStorage(e: StorageEvent) {
-      if (e.key === LOCALE_STORAGE_KEY) {
-        setLocaleState(detectLocale());
-      }
-    }
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  // Both server and initial client snapshot return 'en' — no hydration mismatch.
+  const locale = useSyncExternalStore(subscribeLocale, getLocaleSnapshot, getLocaleSnapshot);
 
   const setLocale = useCallback((newLocale: Locale) => {
-    setLocaleState(newLocale);
-
+    localeStore = newLocale;
     try {
       localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
     } catch {
       // Ignore storage persistence failures so the UI locale still updates.
     }
+    notifyLocaleChange();
+  }, []);
+
+  useEffect(() => {
+    // After hydration, apply the real locale from localStorage/navigator.
+    // Mutates the module-level store and notifies useSyncExternalStore —
+    // this is not a React setState call, so it satisfies react-hooks/set-state-in-effect.
+    const detected = detectLocale();
+    if (detected !== localeStore) {
+      localeStore = detected;
+      notifyLocaleChange();
+    }
+
+    function handleStorage(e: StorageEvent) {
+      if (e.key === LOCALE_STORAGE_KEY) {
+        localeStore = detectLocale();
+        notifyLocaleChange();
+      }
+    }
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   useEffect(() => {
