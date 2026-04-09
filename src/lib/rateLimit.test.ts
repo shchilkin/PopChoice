@@ -69,12 +69,12 @@ describe('applyRateLimit', () => {
       expect(mockEval).not.toHaveBeenCalled();
     });
 
-    it('extracts client IP from x-forwarded-for (first entry only)', async () => {
+    it('extracts client IP from x-forwarded-for (last hop)', async () => {
       mockEval.mockResolvedValue(1);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '10.0.0.1, 10.0.0.2, 10.0.0.3' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:10.0.0.1'] }),
+        expect.objectContaining({ keys: ['rl:movie-recommendation:10.0.0.3'] }),
       );
     });
 
