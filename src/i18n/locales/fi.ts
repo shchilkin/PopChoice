@@ -39,7 +39,7 @@ export const fi: Translations = {
     },
     groupMode: {
       title: 'Ryhmätila',
-      desc: 'Valinta, josta kaikki tosiaan innostuvat. Ei väittelyiä.',
+      desc: 'Valinta, josta kaikki tosiaan innostuvat. Ei väittelyä.',
     },
     instantResults: {
       title: 'Välittömät tulokset',
@@ -204,7 +204,7 @@ export const fi: Translations = {
         },
         {
           title: 'Rakennamme makuprofiilisi',
-          desc: 'Vastauksistasi muodostuu rikas makuprofiili, joka tallentaa mieltymystesi vivahteet — ei vain genrejä, vaan myös elokuvallista tyyliä, kerronnan syyyttä ja tunnosävyä.',
+          desc: 'Vastauksistasi muodostuu rikas makuprofiili, joka tallentaa mieltymystesi vivahteet — ei vain genrejä, vaan myös elokuvallista tyyliä, kerronnan syvyyttä ja tunnosävyä.',
         },
         {
           title: 'Tekoäly etsii elokuvatietokannastamme',

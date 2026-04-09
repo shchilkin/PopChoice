@@ -50,6 +50,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
   }, []);
 
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+
   const currentTranslations =
     locale === 'ru' ? translations.ru : locale === 'fi' ? translations.fi : translations.en;
 

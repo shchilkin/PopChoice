@@ -36,7 +36,7 @@ export function LanguageSwitcher() {
     <div ref={ref} className="relative" onKeyDown={handleKeyDown}>
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
+        aria-haspopup="menu"
         aria-expanded={open}
         aria-label={t.nav.switchLanguage}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150"
@@ -58,7 +58,7 @@ export function LanguageSwitcher() {
 
       {open && (
         <div
-          role="listbox"
+          role="menu"
           aria-label={t.nav.switchLanguage}
           className="absolute right-0 mt-1.5 min-w-[120px] rounded-xl overflow-hidden z-50"
           style={{
@@ -72,8 +72,8 @@ export function LanguageSwitcher() {
             return (
               <button
                 key={code}
-                role="option"
-                aria-selected={isActive}
+                role="menuitemradio"
+                aria-checked={isActive}
                 onClick={() => {
                   setLocale(code);
                   setOpen(false);

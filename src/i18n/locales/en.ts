@@ -62,7 +62,7 @@ export const en = {
     groupSetup: {
       title: "Who's watching?",
       subtitle: "Add everyone's name so we can personalize your results",
-      personPlaceholder: "{name}'s name",
+      personPlaceholder: "Person {n}'s name",
       addPerson: 'Add another person',
       back: 'Back',
       letsGo: "Let's go!",

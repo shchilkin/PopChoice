@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -36,6 +36,15 @@ export default function QuizPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentPerson = people[currentPersonIdx];
+
+  // Keep solo person's name in sync with the current locale
+  useEffect(() => {
+    if (mode === 'solo') {
+      setPeople((prev) =>
+        prev.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p)),
+      );
+    }
+  }, [t.quiz.intro.youLabel, mode]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
