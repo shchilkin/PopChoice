@@ -2,71 +2,19 @@
 
 import { Play, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
-import { palette } from '@/styles/designTokens';
 
 const CINEMA_BG =
   'https://images.unsplash.com/photo-1759230766134-e3ff1c27d20e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkYXJrJTIwY2luZW1hJTIwdGhlYXRlciUyMHNlYXRzJTIwZHJhbWF0aWN8ZW58MXx8fHwxNzc0ODk0MzUxfDA&ixlib=rb-4.1.0&q=80&w=1080';
 
-interface ParticleConfig {
-  x: number;
-  delay: number;
-  dur: number;
-  size: number;
-  opacity: number;
-}
-
-function FilmParticles() {
-  const [particles, setParticles] = useState<ParticleConfig[]>([]);
-
-  useEffect(() => {
-    setParticles(
-      Array.from({ length: 14 }, () => ({
-        x: Math.random() * 100,
-        delay: Math.random() * 6,
-        dur: 8 + Math.random() * 10,
-        size: 4 + Math.random() * 6,
-        opacity: 0.15 + Math.random() * 0.25,
-      })),
-    );
-  }, []);
-
-  if (particles.length === 0) return null;
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {particles.map((p, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full"
-          style={{
-            left: `${p.x}%`,
-            bottom: '-20px',
-            width: p.size,
-            height: p.size,
-            background: i % 3 === 0 ? palette.gold : i % 3 === 1 ? palette.amber : palette.purple,
-            opacity: p.opacity,
-            animation: `float-up ${p.dur}s ${p.delay}s linear infinite`,
-          }}
-        />
-      ))}
-      <style>{`
-        @keyframes float-up {
-          0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 0.3; }
-          100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-}
+// Loaded client-side only so Math.random() does not cause hydration mismatches
+const FilmParticles = dynamic(() => import('./FilmParticles'), { ssr: false });
 
 export function HeroSection() {
   const router = useRouter();
