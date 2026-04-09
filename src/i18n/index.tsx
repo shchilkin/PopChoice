@@ -63,8 +63,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
-    localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
     setLocaleState(newLocale);
+
+    try {
+      localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
+    } catch {
+      // Ignore storage persistence failures so the UI locale still updates.
+    }
   }, []);
 
   useEffect(() => {
