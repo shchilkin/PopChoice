@@ -5,7 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useSyncExternalStore,
+  useState,
   type ReactNode,
 } from 'react';
 
@@ -21,21 +21,7 @@ const LOCALES: Locale[] = ['en', 'ru', 'fi'];
 
 const translations: Record<Locale, Translations> = { en, ru, fi };
 
-// ── Locale store ──────────────────────────────────────────────────────────────
-// Module-level set keeps references stable across renders so useSyncExternalStore
-// does not re-subscribe on every render.
-const localeListeners = new Set<() => void>();
-
-function subscribeLocale(callback: () => void): () => void {
-  localeListeners.add(callback);
-  window.addEventListener('storage', callback); // cross-tab sync
-  return () => {
-    localeListeners.delete(callback);
-    window.removeEventListener('storage', callback);
-  };
-}
-
-function getClientLocale(): Locale {
+function detectLocale(): Locale {
   const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
   if (saved && (LOCALES as string[]).includes(saved)) return saved as Locale;
   const browserLangs = navigator.languages ?? [navigator.language];
@@ -43,10 +29,6 @@ function getClientLocale(): Locale {
     .map((l) => l.split('-')[0].toLowerCase())
     .find((l) => (LOCALES as string[]).includes(l));
   return (detected as Locale) ?? 'en';
-}
-
-function getServerLocale(): Locale {
-  return 'en';
 }
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -64,11 +46,25 @@ const LanguageContext = createContext<LanguageContextValue>({
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const locale = useSyncExternalStore(subscribeLocale, getClientLocale, getServerLocale);
+  // Start with 'en' to match the server snapshot and avoid hydration mismatches.
+  // After mount, read from localStorage / navigator and apply the real locale.
+  const [locale, setLocaleState] = useState<Locale>('en');
+
+  useEffect(() => {
+    setLocaleState(detectLocale());
+
+    function handleStorage(e: StorageEvent) {
+      if (e.key === LOCALE_STORAGE_KEY) {
+        setLocaleState(detectLocale());
+      }
+    }
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
     localStorage.setItem(LOCALE_STORAGE_KEY, newLocale);
-    localeListeners.forEach((cb) => cb());
+    setLocaleState(newLocale);
   }, []);
 
   useEffect(() => {
