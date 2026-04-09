@@ -59,7 +59,7 @@ export function MoviesTable({ movies }: MoviesTableProps) {
               <span className="text-xs" style={{ color: 'var(--pc-t3)' }}>
                 {formatDuration(movie.duration)}
               </span>
-              <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold)' }}>
+              <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
                 ★ {movie.score_rating.toFixed(1)}
                 <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>/10</span>
               </span>
