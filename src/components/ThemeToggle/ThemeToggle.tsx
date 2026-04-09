@@ -1,32 +1,37 @@
 'use client';
 
-import { useTheme } from 'next-themes';
+import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+import { usePCTheme } from '@/hooks/usePCTheme';
 
 export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { isDark, toggle } = usePCTheme();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    return null;
+    return <div className="w-9 h-9" />;
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm font-medium text-foreground">Theme:</span>
-      <select
-        value={theme}
-        onChange={(e) => setTheme(e.target.value)}
-        className="bg-background text-foreground border border-border rounded px-2 py-1 text-sm transition-colors"
-      >
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-        <option value="system">System</option>
-      </select>
-    </div>
+    <button
+      onClick={toggle}
+      className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
+      style={{
+        background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+        border: '1px solid var(--pc-bd2)',
+      }}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {isDark ? (
+        <Sun size={15} style={{ color: 'var(--pc-t2)' }} />
+      ) : (
+        <Moon size={15} style={{ color: 'var(--pc-t2)' }} />
+      )}
+    </button>
   );
 }

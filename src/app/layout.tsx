@@ -1,19 +1,22 @@
 import { Analytics } from '@vercel/analytics/next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Bebas_Neue, DM_Sans } from 'next/font/google';
 
+import { PCLayout } from '../components/PCLayout';
 import { ThemeProvider } from '../components/ThemeProvider';
 
 import type { Metadata } from 'next';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const bebasNeue = Bebas_Neue({
+  variable: '--font-bebas-neue',
   subsets: ['latin'],
+  weight: '400',
 });
 export const metadata: Metadata = {
   title: 'PopChoice - AI Movie Recommendations',
@@ -74,9 +77,6 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  verification: {
-    google: 'verification-token', // Add actual Google Search Console verification token if available
-  },
 };
 
 export default function RootLayout({
@@ -86,14 +86,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${dmSans.variable} ${bebasNeue.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange={false}
         >
-          {children}
+          <PCLayout>{children}</PCLayout>
           <Analytics />
         </ThemeProvider>
       </body>

@@ -1,101 +1,113 @@
-import { TMDBAttribution, TopNavigation } from '@/components';
+'use client';
+
+import { Brain, Play } from 'lucide-react';
+import { motion } from 'motion/react';
+import Link from 'next/link';
+
+import { TMDBAttribution } from '@/components';
+import { usePCTheme } from '@/hooks/usePCTheme';
+import { palette } from '@/styles/designTokens';
+
+import { FAQSection } from './components/FAQSection';
+import { HowItWorksSection } from './components/HowItWorksSection';
+import { TechStackSection } from './components/TechStackSection';
 
 export default function AboutPage() {
+  const { isDark } = usePCTheme();
+
   return (
-    <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col w-full items-center max-w-6xl mx-auto">
-        <TopNavigation logoSize={60} />
-
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold mb-4 text-[var(--foreground)]">About PopChoice</h1>
-          <div className="max-w-4xl mx-auto space-y-6 text-lg text-[var(--muted-foreground)]">
-            <p className="text-xl leading-relaxed">
-              PopChoice is an intelligent movie recommendation platform that combines AI technology
-              with personalized questionnaires to help you discover your next favorite film.
-            </p>
-
-            <div className="grid md:grid-cols-2 gap-8 mt-8">
-              <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
-                  🎯 Smart Recommendations
-                </h2>
-                <p className="text-base">
-                  Our AI-powered system uses OpenAI embeddings and vector database technology to
-                  analyze your preferences and match you with movies that perfectly align with your
-                  taste, mood, and viewing time.
-                </p>
-              </div>
-
-              <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
-                  📝 Personalized Questionnaires
-                </h2>
-                <p className="text-base">
-                  Answer thoughtful questions about your movie preferences, group size, and
-                  available time to receive tailored recommendations that fit your specific
-                  situation.
-                </p>
-              </div>
-
-              <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
-                  🤖 AI Technology
-                </h2>
-                <p className="text-base">
-                  Powered by cutting-edge machine learning, including OpenAI&apos;s embedding models
-                  and Supabase vector databases, to provide accurate and relevant movie suggestions.
-                </p>
-              </div>
-
-              <div className="text-left">
-                <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">
-                  🎬 Comprehensive Movie Database
-                </h2>
-                <p className="text-base">
-                  Access detailed information from our curated movie database including ratings,
-                  genres, cast, and plot summaries to make informed viewing decisions. TMDB is used
-                  only for movie posters.
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-[var(--muted)] rounded-lg p-6 mt-8">
-              <h2 className="text-xl font-semibold mb-3 text-[var(--foreground)]">How It Works</h2>
-              <div className="text-left space-y-3 text-base">
-                <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
-                    1
-                  </span>
-                  <p>
-                    Answer questions about your group size, available time, and movie preferences
-                  </p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
-                    2
-                  </span>
-                  <p>Our AI analyzes your responses using embedding technology</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
-                    3
-                  </span>
-                  <p>Receive personalized movie recommendations with detailed information</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-6 h-6 bg-[var(--accent)] text-[var(--accent-foreground)] rounded-full flex items-center justify-center text-sm font-bold">
-                    4
-                  </span>
-                  <p>Discover your next favorite movie and enjoy your viewing experience</p>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="px-5 py-12 max-w-3xl mx-auto w-full">
+      {/* Hero */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-16"
+      >
+        <div
+          className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs mb-5 uppercase tracking-widest"
+          style={{
+            background: `${palette.purple}1f`,
+            border: `1px solid ${palette.purple}40`,
+            color: palette.purpleLight,
+          }}
+        >
+          <Brain size={11} />
+          How PopChoice works
         </div>
+        <h1
+          className="mb-4"
+          style={{
+            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontSize: 'clamp(2rem, 6vw, 3.5rem)',
+            letterSpacing: '0.05em',
+            color: 'var(--pc-t1)',
+            lineHeight: 1.1,
+          }}
+        >
+          AI that gets your taste
+        </h1>
+        <p
+          className="max-w-lg mx-auto"
+          style={{ color: 'var(--pc-t2)', lineHeight: 1.75, fontSize: '0.95rem' }}
+        >
+          PopChoice isn&apos;t just a genre filter. It uses vector embeddings and AI to understand
+          what makes a film feel right to <span style={{ color: 'var(--pc-t1)' }}>you</span> — then
+          finds movies that genuinely match that feeling.
+        </p>
+      </motion.div>
 
-        {/* TMDB Attribution - Required for API usage */}
-        <TMDBAttribution />
-      </main>
+      <HowItWorksSection />
+      <TechStackSection />
+      <FAQSection />
+
+      {/* CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="text-center p-8 rounded-3xl mb-8"
+        style={{
+          background: isDark
+            ? `linear-gradient(135deg, ${palette.gold}14 0%, ${palette.purple}14 100%)`
+            : `linear-gradient(135deg, rgba(196,149,10,0.07) 0%, ${palette.purple}12 100%)`,
+          border: '1px solid',
+          borderColor: 'var(--pc-ai-bd)',
+        }}
+      >
+        <div className="text-4xl mb-4">🍿</div>
+        <h3
+          className="mb-2"
+          style={{
+            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontSize: '1.8rem',
+            letterSpacing: '0.05em',
+            color: 'var(--pc-t1)',
+          }}
+        >
+          Ready to find tonight&apos;s film?
+        </h3>
+        <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
+          60 seconds. 5 questions. The perfect movie.
+        </p>
+        <Link
+          href="/quiz"
+          className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl transition-all duration-200 active:scale-95"
+          style={{
+            background: 'var(--pc-cta)',
+            color: 'var(--pc-cta-text)',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+          }}
+        >
+          <Play size={16} className="fill-current" />
+          Start the Quiz
+        </Link>
+      </motion.div>
+
+      {/* TMDB Attribution */}
+      <TMDBAttribution />
     </div>
   );
 }

@@ -1,0 +1,25 @@
+{
+  "name": "movie-discovery",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "node-cron": "^4.2.1",
+    "openai": "^6.33.0",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.57",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}
