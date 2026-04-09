@@ -367,12 +367,7 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
-    let rateLimitResponse: Response | null = null;
-    try {
-      rateLimitResponse = await applyRateLimit(req);
-    } catch (error) {
-      console.warn('Rate limiter unavailable; continuing without rate limiting.', error);
-    }
+    const rateLimitResponse = await applyRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
     const body = await req.json();
