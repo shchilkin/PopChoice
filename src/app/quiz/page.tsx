@@ -149,9 +149,7 @@ export default function QuizPage() {
   // ── QUESTIONS ──
   const totalPeople = people.length;
   const personLabel =
-    totalPeople > 1
-      ? t.quiz.nav.personTurn.replace('{name}', currentPerson.name)
-      : null;
+    totalPeople > 1 ? t.quiz.nav.personTurn.replace('{name}', currentPerson.name) : null;
 
   return (
     <div className="flex-1 flex flex-col min-h-[80vh]">
