@@ -1,21 +1,11 @@
 'use client';
 
 import { Moon, Sun } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 import { usePCTheme } from '@/hooks/usePCTheme';
 
 export function ThemeToggle() {
-  const [mounted, setMounted] = useState(false);
   const { isDark, toggle } = usePCTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="w-9 h-9" />;
-  }
 
   return (
     <button
