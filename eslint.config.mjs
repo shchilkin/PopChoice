@@ -66,7 +66,12 @@ const eslintConfig = [
 
   // Allow console logs in server-side utils
   {
-    files: ['src/utils/**/*.{ts,js}', 'src/app/api/**/*.{ts,js}', 'scripts/**/*.{ts,js}'],
+    files: [
+      'src/utils/**/*.{ts,js}',
+      'src/app/api/**/*.{ts,js}',
+      'src/lib/**/*.{ts,js}',
+      'scripts/**/*.{ts,js}',
+    ],
     rules: {
       'no-console': 'off',
     },
