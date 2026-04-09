@@ -4,6 +4,7 @@ import z from 'zod';
 
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
+import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { MovieService } from '@/services';
 
@@ -158,12 +159,12 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
   });
 
   if (error) {
-    console.error('Error finding nearest match:', error);
+    logger.error({ err: error }, 'Error finding nearest match');
     return null;
   }
 
   if (!data || data.length === 0) {
-    console.warn('No movies found matching the criteria');
+    logger.warn('No movies found matching the criteria');
     return null;
   }
 
@@ -194,7 +195,7 @@ async function getSimilarMovies(embedding: number[]) {
       throw new Error('No similar movies found.');
     }
 
-    console.log('similar movies', similarMovies);
+    logger.info({ count: similarMovies.length }, 'Similar movies found');
     return similarMovies;
   } catch (error) {
     throw new Error(`Failed to search for similar movies: ${error}`);
@@ -235,7 +236,7 @@ async function generateMovieDescriptions(
 ): Promise<
   (EnhancedMovieMatch & { posterURL?: string; localizedName?: string; aiDescription?: string })[]
 > {
-  console.log(`Generating AI descriptions for ${movies.length} movies...`);
+  logger.info({ count: movies.length }, 'Generating AI descriptions for movies');
 
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   // Create a prompt specifically for individual movie descriptions
@@ -282,7 +283,7 @@ Match Score: ${Math.round(movie.similarity * 100)}%
           aiDescription,
         };
       } catch (error) {
-        console.warn(`Failed to generate description for ${movie.name}:`, error);
+        logger.warn({ err: error, movieTitle: movie.name }, 'Failed to generate description for movie');
         // Fallback to a basic description
         return {
           ...movie,
@@ -303,7 +304,7 @@ async function getMovieInfo(
   try {
     const enDetails = await movieService.getMovieByTitle(movieTitle);
     if (!enDetails) {
-      console.warn(`No movie found with title: ${movieTitle}`);
+      logger.warn({ movieTitle }, 'No movie found with title');
       return {};
     }
     const enPosterURL = movieService.getPosterURL(enDetails.poster_path, 'w500');
@@ -322,7 +323,7 @@ async function getMovieInfo(
 
     return { posterURL, localizedName };
   } catch (error) {
-    console.error('Error fetching movie info:', error);
+    logger.error({ err: error }, 'Error fetching movie by title');
     return {};
   }
 }
@@ -345,7 +346,7 @@ async function enhanceSimilarMoviesWithPosters(
         const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
         return { ...movie, posterURL, localizedName };
       } catch (error) {
-        console.warn(`Failed to fetch info for movie: ${movie.name}`, error);
+        logger.warn({ err: error, movieTitle: movie.name }, 'Failed to fetch poster for movie');
         return { ...movie, posterURL: undefined, localizedName: undefined };
       }
     });
@@ -386,28 +387,28 @@ export async function POST(req: NextRequest) {
       ? validatedBody
       : [validatedBody];
 
-    console.log(
-      `Processing recommendation request for ${allPeopleData.length} person(s), locale: ${locale}`,
-    );
+    logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
 
     // Step 1: Create embedding from all people's data
     const embedding = await createEmbedding(allPeopleData);
+    logger.info('Embedding created');
 
     // Step 2: Find similar movies
     const similarMovies = await getSimilarMovies(embedding);
 
     // Step 3: Get recommendation from OpenAI
     const responseMessage = await getRecommendation(similarMovies, locale);
+    logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
 
     // Step 4: Get localized poster + name for main recommendation
     const { posterURL } = await getMovieInfo(responseMessage.title, locale);
 
     // Step 5: Enhance similar movies with poster URLs and localized names (in batches)
-    console.log('Enhancing similar movies with posters...');
+    logger.info('Enhancing similar movies with posters');
     const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies, locale);
 
     // Step 6: Generate AI descriptions for each movie
-    console.log('Generating personalized AI descriptions for each movie...');
+    logger.info('Generating personalized AI descriptions for each movie');
     const moviesWithDescriptions = await generateMovieDescriptions(
       enhancedSimilarMovies,
       allPeopleData,
@@ -423,7 +424,7 @@ export async function POST(req: NextRequest) {
 
     // Don't filter out any movies - include all movies in the response
     // The main recommendation info is still provided for context, but UI will show all movies together
-    console.log(`Returning all ${moviesWithDescriptions.length} movies in unified list`);
+    logger.info({ movieCount: moviesWithDescriptions.length }, 'Returning all movies in unified list');
 
     // Validate and return response with enhanced data
     const response: ApiResponse = {
@@ -456,14 +457,13 @@ export async function POST(req: NextRequest) {
     };
 
     const duration = Date.now() - startTime;
-    console.log(`Recommendation request completed in ${duration}ms`);
+    logger.info({ durationMs: duration, movieCount: moviesWithDescriptions.length }, 'Recommendation request completed');
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
-    console.error('Error in movie recommendation API:', error);
-
-    // Handle validation errors specifically
+    // Handle validation errors first — these are client errors (400), not server errors
     if (error instanceof z.ZodError) {
+      logger.warn({ err: error, issues: error.errors }, 'Invalid request body');
       return NextResponse.json(
         {
           error: 'Invalid request data',
@@ -473,10 +473,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    logger.error({ err: error }, 'Error in movie recommendation API');
+
     // Handle other known errors
     if (error instanceof Error) {
-      console.error('Error stack:', error.stack);
-
       // Return more specific error messages based on error content
       if (error.message.includes('embedding')) {
         return NextResponse.json({ error: 'Failed to process preferences' }, { status: 500 });
