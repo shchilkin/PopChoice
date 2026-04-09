@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 import { createClient } from 'redis';
 
 type RedisClient = ReturnType<typeof createClient>;
@@ -46,23 +48,33 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
     req.headers.get('x-real-ip')?.trim() ||
     null;
 
-  // Skip rate limiting when the client IP cannot be determined to avoid
-  // accidentally throttling all traffic into a shared 'unknown' bucket.
-  if (!ip) return null;
+  // Skip rate limiting when the client IP cannot be determined or is not a
+  // valid IP address, to avoid unbounded key cardinality from malformed headers
+  // and to avoid throttling all traffic into a shared bucket.
+  if (!ip || isIP(ip) === 0) return null;
 
   try {
     const key = `rl:movie-recommendation:${ip}`;
 
-    // Use an atomic INCR then conditionally EXPIRE to implement a fixed window.
-    // INCR is atomic in Redis so exactly one request will ever see count === 1.
-    const count = await client.incr(key);
-
-    // Set the 60-second window only on the very first request; subsequent
-    // requests in the same window leave the existing TTL untouched so the
-    // window stays fixed rather than rolling on every call.
-    if (count === 1) {
-      await client.expire(key, 60);
-    }
+    // Atomically increment the counter and, on the very first request in the
+    // window, set the 60-second TTL — all inside Redis via a Lua script.
+    // This prevents the key from being left without a TTL if the separate
+    // EXPIRE call were to fail after a successful INCR.
+    const count = Number(
+      await client.eval(
+        `
+          local current = redis.call('INCR', KEYS[1])
+          if current == 1 then
+            redis.call('EXPIRE', KEYS[1], ARGV[1])
+          end
+          return current
+        `,
+        {
+          keys: [key],
+          arguments: ['60'],
+        },
+      ),
+    );
 
     if (count > 10) {
       return new Response(
