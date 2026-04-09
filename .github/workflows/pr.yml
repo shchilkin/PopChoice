@@ -148,14 +148,14 @@ jobs:
           NEXT_FONT_GOOGLE_DISABLE: 1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-  movie-sync-ci:
-    name: Movie Sync CI
+  movie-seed-ci:
+    name: Movie Seed CI
     runs-on: ubuntu-latest
     permissions:
       contents: read
     defaults:
       run:
-        working-directory: services/movie-sync
+        working-directory: services/movie-seed
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -165,7 +165,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: services/movie-sync/package-lock.json
+          cache-dependency-path: services/movie-seed/package-lock.json
 
       - name: Install dependencies
         run: npm ci
