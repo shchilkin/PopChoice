@@ -3,9 +3,12 @@ import type { Translations } from './en';
 export const fi: Translations = {
   nav: {
     howItWorks: 'Miten se toimii',
+    availableMovies: 'Elokuvat',
     findAMovie: 'Etsi elokuva',
     toggleTheme: 'Vaihda teema',
     switchLanguage: 'Vaihda kieli',
+    openMenu: 'Avaa valikko',
+    closeMenu: 'Sulje valikko',
   },
   footer: {
     builtBy: 'Rakentanut',
@@ -257,6 +260,22 @@ export const fi: Translations = {
           a: 'Elokuvatietokantamme on koottu julkisista elokuvametadatoista, mukaan lukien arvostelut, kesto, ohjaaja, genretagit ja teemaanalyysi, jonka tekoälymme on suorittanut.',
         },
       ],
+    },
+  },
+  moviesPage: {
+    title: 'Saatavilla olevat elokuvat',
+    loading: 'Ladataan elokuvia…',
+    tryAgain: 'Yritä uudelleen',
+    showing: 'Näytetään {start}–{end} / {total} elokuvaa',
+    noMoviesFound: 'Elokuvia ei löydy',
+    prev: 'Edell.',
+    next: 'Seur.',
+    pageOf: 'Sivu {current} / {total}',
+    columns: {
+      name: 'Nimi',
+      ageRating: 'Ikäraja',
+      duration: 'Kesto',
+      score: 'Pisteet',
     },
   },
 };

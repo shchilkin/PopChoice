@@ -3,9 +3,12 @@ import type { Translations } from './en';
 export const ru: Translations = {
   nav: {
     howItWorks: 'Как это работает',
+    availableMovies: 'Фильмы',
     findAMovie: 'Найти фильм',
     toggleTheme: 'Переключить тему',
     switchLanguage: 'Переключить язык',
+    openMenu: 'Открыть меню',
+    closeMenu: 'Закрыть меню',
   },
   footer: {
     builtBy: 'Сделал',
@@ -259,6 +262,22 @@ export const ru: Translations = {
           a: 'Мы используем публичную базу TMDB (рейтинги, хронометраж, каст) и прогоняем её через наш ИИ для глубокого тематического анализа.',
         },
       ],
+    },
+  },
+  moviesPage: {
+    title: 'Доступные фильмы',
+    loading: 'Загрузка фильмов…',
+    tryAgain: 'Попробовать снова',
+    showing: 'Показано {start}–{end} из {total} фильмов',
+    noMoviesFound: 'Фильмы не найдены',
+    prev: 'Назад',
+    next: 'Вперёд',
+    pageOf: 'Страница {current} из {total}',
+    columns: {
+      name: 'Название',
+      ageRating: 'Возраст',
+      duration: 'Длительность',
+      score: 'Оценка',
     },
   },
 };

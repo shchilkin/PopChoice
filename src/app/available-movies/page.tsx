@@ -1,12 +1,15 @@
 'use client';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 
 import { MoviesTable } from '@/components';
+import { useLanguage } from '@/i18n';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
 export default function AvailableMoviesPage() {
+  const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,139 +51,158 @@ export default function AvailableMoviesPage() {
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const generatePageNumbers = () => {
-    const delta = 2; // Number of pages to show on each side of current page
-    const range = [];
-    const rangeWithDots = [];
+    const delta = 2;
+    const rangeWithDots: (number | '...')[] = [];
 
-    // Always include first page
-    range.push(1);
+    if (totalPages <= 1) return rangeWithDots;
 
-    // Calculate start and end of range around current page
     const start = Math.max(2, currentPage - delta);
     const end = Math.min(totalPages - 1, currentPage + delta);
 
-    if (start > 2) {
-      rangeWithDots.push(1, '...');
-    } else {
-      rangeWithDots.push(1);
-    }
+    rangeWithDots.push(1);
+
+    if (start > 2) rangeWithDots.push('...');
 
     for (let i = start; i <= end; i++) {
-      if (i !== 1 && i !== totalPages) {
-        rangeWithDots.push(i);
-      }
+      rangeWithDots.push(i);
     }
 
-    if (end < totalPages - 1) {
-      rangeWithDots.push('...', totalPages);
-    } else if (totalPages > 1) {
-      rangeWithDots.push(totalPages);
-    }
+    if (end < totalPages - 1) rangeWithDots.push('...');
 
-    // Remove duplicates
-    return rangeWithDots.filter((item, index, arr) => arr.indexOf(item) === index);
+    if (totalPages > 1) rangeWithDots.push(totalPages);
+
+    return rangeWithDots;
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20">
-        <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--pc-gold)] mx-auto mb-4"></div>
-            <p className="text-lg text-[var(--pc-t3)]">Loading movies...</p>
-          </div>
-        </main>
-      </div>
+      <section className="flex-1 flex flex-col items-center justify-center px-5 py-16">
+        <div
+          className="animate-spin rounded-full h-10 w-10 border-b-2 mb-4"
+          style={{ borderColor: 'var(--pc-gold)' }}
+        />
+        <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
+          {t.moviesPage.loading}
+        </p>
+      </section>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-16 sm:p-20">
-        <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
-          <div className="text-center py-8">
-            <p className="text-lg text-[var(--rating-mature-text)] mb-4">Error: {error}</p>
-            <button
-              onClick={() => fetchMovies(currentPage)}
-              className="px-4 py-2 text-[var(--pc-cta-text)] rounded-lg transition-colors"
-              style={{ background: 'var(--pc-cta)' }}
-            >
-              Try Again
-            </button>
-          </div>
-        </main>
-      </div>
+      <section className="flex-1 flex flex-col items-center justify-center px-5 py-16 text-center">
+        <p className="text-sm mb-4" style={{ color: 'var(--rating-mature-text)' }}>
+          {error}
+        </p>
+        <button
+          onClick={() => fetchMovies(currentPage)}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+        >
+          {t.moviesPage.tryAgain}
+        </button>
+      </section>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-items-center min-h-screen p-4 gap-8 sm:p-20">
-      <main className="flex flex-col w-full items-center max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="w-full mb-8">
-          <h1 className="text-3xl font-bold text-center mb-4 text-[var(--pc-t1)]">
-            Available Movies
-          </h1>
-          <p className="text-center text-[var(--pc-t3)]">
-            Showing {(currentPage - 1) * pageSize + 1} to{' '}
-            {Math.min(currentPage * pageSize, totalCount)} of {totalCount} movies
-          </p>
-        </div>
+    <section className="flex-1 flex flex-col px-4 md:px-8 py-10 max-w-5xl mx-auto w-full">
+      {/* Page header */}
+      <div className="mb-8">
+        <h1
+          className="text-3xl font-bold mb-2"
+          style={{
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            color: 'var(--pc-t1)',
+          }}
+        >
+          {t.moviesPage.title}
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
+          {totalCount > 0
+            ? t.moviesPage.showing
+                .replace('{start}', String((currentPage - 1) * pageSize + 1))
+                .replace('{end}', String(Math.min(currentPage * pageSize, totalCount)))
+                .replace('{total}', String(totalCount))
+            : t.moviesPage.noMoviesFound}
+        </p>
+      </div>
 
-        {/* Table */}
-        <MoviesTable movies={movies} />
+      {/* Table / Cards */}
+      <MoviesTable movies={movies} />
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between w-full mt-8">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="px-3 py-2 text-sm bg-[var(--pc-surface)] border border-[var(--pc-bd2)] rounded-md text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-8 gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t2)',
+              }}
+            >
+              <ChevronLeft size={14} /> {t.moviesPage.prev}
+            </button>
 
-              <div className="flex items-center space-x-1">
-                {generatePageNumbers().map((page, index) => (
-                  <button
-                    key={index}
-                    onClick={() => (typeof page === 'number' ? handlePageChange(page) : undefined)}
-                    disabled={page === '...'}
-                    className={`px-3 py-2 text-sm rounded-md ${
-                      page === currentPage
-                        ? 'text-[var(--pc-cta-text)]'
-                        : page === '...'
-                          ? 'text-[var(--pc-t3)] cursor-default'
-                          : 'bg-[var(--pc-surface)] border border-[var(--pc-bd2)] text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)]'
-                    }`}
-                    style={page === currentPage ? { background: 'var(--pc-cta)' } : undefined}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
+            {generatePageNumbers().map((page, index) =>
+              page === '...' ? (
+                <span
+                  key={`dots-${index}`}
+                  className="px-2 py-2 text-sm"
+                  style={{ color: 'var(--pc-t4)' }}
+                >
+                  …
+                </span>
+              ) : (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className="w-9 h-9 rounded-xl text-sm font-medium transition-colors duration-150"
+                  style={
+                    page === currentPage
+                      ? { background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }
+                      : {
+                          background: 'var(--pc-surface)',
+                          border: '1px solid var(--pc-bd2)',
+                          color: 'var(--pc-t2)',
+                        }
+                  }
+                >
+                  {page}
+                </button>
+              ),
+            )}
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm bg-[var(--pc-surface)] border border-[var(--pc-bd2)] rounded-md text-[var(--pc-t1)] hover:bg-[var(--pc-bd1)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-
-            <div className="text-sm text-[var(--pc-t3)]">
-              Page {currentPage} of {totalPages}
-            </div>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t2)',
+              }}
+            >
+              {t.moviesPage.next} <ChevronRight size={14} />
+            </button>
           </div>
-        )}
-      </main>
-    </div>
+
+          <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
+            {t.moviesPage.pageOf
+              .replace('{current}', String(currentPage))
+              .replace('{total}', String(totalPages))}
+          </span>
+        </div>
+      )}
+    </section>
   );
 }

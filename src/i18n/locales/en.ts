@@ -1,9 +1,12 @@
 export const en = {
   nav: {
     howItWorks: 'How it works',
+    availableMovies: 'Movies',
     findAMovie: 'Find a movie',
     toggleTheme: 'Toggle theme',
     switchLanguage: 'Switch language',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
   },
   footer: {
     builtBy: 'Built by',
@@ -248,6 +251,22 @@ export const en = {
           a: 'Our film database is curated from public film metadata, including ratings, runtime, director, genre tags, and thematic analysis performed by our AI pipeline.',
         },
       ],
+    },
+  },
+  moviesPage: {
+    title: 'Available Movies',
+    loading: 'Loading movies…',
+    tryAgain: 'Try Again',
+    showing: 'Showing {start}–{end} of {total} movies',
+    noMoviesFound: 'No movies found',
+    prev: 'Prev',
+    next: 'Next',
+    pageOf: 'Page {current} of {total}',
+    columns: {
+      name: 'Name',
+      ageRating: 'Age Rating',
+      duration: 'Duration',
+      score: 'Score',
     },
   },
 };
