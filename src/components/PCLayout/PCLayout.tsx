@@ -1,8 +1,9 @@
 'use client';
 
-import { Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Mascot } from '@/components/Mascot';
@@ -15,6 +16,12 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
   const isLanding = pathname === '/';
   const { isDark, toggle } = usePCTheme();
   const { t } = useLanguage();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    { href: '/about', label: t.nav.howItWorks },
+    { href: '/available-movies', label: t.nav.availableMovies },
+  ];
 
   return (
     <div
@@ -57,17 +64,21 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1">
-          <Link
-            href="/about"
-            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
-            style={{
-              color: pathname === '/about' ? 'var(--pc-gold)' : 'var(--pc-t3)',
-              background: pathname === '/about' ? 'var(--pc-gold-subtle)' : 'transparent',
-            }}
-          >
-            {t.nav.howItWorks}
-          </Link>
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
+              style={{
+                color: pathname === link.href ? 'var(--pc-gold)' : 'var(--pc-t3)',
+                background: pathname === link.href ? 'var(--pc-gold-subtle)' : 'transparent',
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
 
           <LanguageSwitcher />
 
@@ -103,7 +114,90 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
             </Link>
           )}
         </nav>
+
+        {/* Mobile: right-side controls */}
+        <div className="flex md:hidden items-center gap-1">
+          {/* Theme toggle */}
+          <button
+            onClick={toggle}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
+            style={{
+              background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+              border: '1px solid var(--pc-bd2)',
+            }}
+            aria-label={t.nav.toggleTheme}
+          >
+            {isDark ? (
+              <Sun size={15} style={{ color: 'var(--pc-t2)' }} />
+            ) : (
+              <Moon size={15} style={{ color: 'var(--pc-t2)' }} />
+            )}
+          </button>
+
+          {/* Hamburger toggle */}
+          <button
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
+            style={{
+              background: mobileMenuOpen ? 'var(--pc-gold-subtle)' : 'var(--pc-ghost)',
+              border: '1px solid var(--pc-bd2)',
+            }}
+            aria-label={mobileMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? (
+              <X size={16} style={{ color: 'var(--pc-t2)' }} />
+            ) : (
+              <Menu size={16} style={{ color: 'var(--pc-t2)' }} />
+            )}
+          </button>
+        </div>
       </header>
+
+      {/* Mobile menu drawer */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden sticky top-[52px] z-40 flex flex-col gap-1 px-4 py-3"
+          style={{
+            background: 'var(--pc-header-bg)',
+            backdropFilter: 'blur(16px)',
+            borderBottom: '1px solid var(--pc-bd1)',
+          }}
+        >
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2.5 rounded-xl text-sm transition-colors duration-200"
+              style={{
+                color: pathname === link.href ? 'var(--pc-gold)' : 'var(--pc-t2)',
+                background: pathname === link.href ? 'var(--pc-gold-subtle)' : 'transparent',
+                fontWeight: pathname === link.href ? 600 : 400,
+              }}
+            >
+              {link.label}
+            </Link>
+          ))}
+          <div className="flex items-center gap-2 pt-1">
+            <LanguageSwitcher />
+            {!isLanding && (
+              <Link
+                href="/quiz"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex-1 text-center px-3 py-2.5 rounded-xl text-sm"
+                style={{
+                  background: 'var(--pc-cta)',
+                  color: 'var(--pc-cta-text)',
+                  fontWeight: 600,
+                }}
+              >
+                {t.nav.findAMovie}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 flex flex-col">{children}</main>
 

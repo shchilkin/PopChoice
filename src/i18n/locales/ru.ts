@@ -3,9 +3,12 @@ import type { Translations } from './en';
 export const ru: Translations = {
   nav: {
     howItWorks: 'Как это работает',
+    availableMovies: 'Фильмы',
     findAMovie: 'Найти фильм',
     toggleTheme: 'Переключить тему',
     switchLanguage: 'Переключить язык',
+    openMenu: 'Открыть меню',
+    closeMenu: 'Закрыть меню',
   },
   footer: {
     builtBy: 'Сделал',

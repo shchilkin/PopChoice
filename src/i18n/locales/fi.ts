@@ -3,9 +3,12 @@ import type { Translations } from './en';
 export const fi: Translations = {
   nav: {
     howItWorks: 'Miten se toimii',
+    availableMovies: 'Elokuvat',
     findAMovie: 'Etsi elokuva',
     toggleTheme: 'Vaihda teema',
     switchLanguage: 'Vaihda kieli',
+    openMenu: 'Avaa valikko',
+    closeMenu: 'Sulje valikko',
   },
   footer: {
     builtBy: 'Rakentanut',

@@ -1,9 +1,12 @@
 export const en = {
   nav: {
     howItWorks: 'How it works',
+    availableMovies: 'Movies',
     findAMovie: 'Find a movie',
     toggleTheme: 'Toggle theme',
     switchLanguage: 'Switch language',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
   },
   footer: {
     builtBy: 'Built by',
