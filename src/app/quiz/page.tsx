@@ -174,9 +174,9 @@ export default function QuizPage() {
                   background: i === currentPersonIdx ? 'var(--pc-gold-wash)' : 'var(--pc-ghost)',
                   color:
                     i === currentPersonIdx
-                      ? 'var(--pc-gold)'
+                      ? 'var(--pc-gold-text)'
                       : i < currentPersonIdx
-                        ? 'var(--pc-gold-focus)'
+                        ? 'var(--pc-gold-text)'
                         : 'var(--pc-t4)',
                   border:
                     i === currentPersonIdx

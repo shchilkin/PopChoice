@@ -62,7 +62,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
             href="/about"
             className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
             style={{
-              color: pathname === '/about' ? 'var(--pc-gold)' : 'var(--pc-t3)',
+              color: pathname === '/about' ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
               background: pathname === '/about' ? 'var(--pc-gold-subtle)' : 'transparent',
             }}
           >
@@ -114,12 +114,12 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           borderTop: '1px solid var(--pc-footer-bd)',
         }}
       >
-        <span style={{ color: 'var(--pc-gold)' }}>🍿</span> {t.footer.builtBy}{' '}
+        <span style={{ color: 'var(--pc-gold-text)' }}>🍿</span> {t.footer.builtBy}{' '}
         <a
           href="https://github.com/shchilkin"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: 'var(--pc-gold)' }}
+          style={{ color: 'var(--pc-gold-text)' }}
         >
           {t.footer.authorName}
         </a>{' '}

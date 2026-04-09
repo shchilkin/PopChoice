@@ -223,7 +223,7 @@ export default function LoadingPage() {
               lineHeight: 1.6,
             }}
           >
-            <span style={{ color: 'var(--pc-gold)' }}>{t.loading.funFact}</span>{' '}
+            <span style={{ color: 'var(--pc-gold-text)' }}>{t.loading.funFact}</span>{' '}
             {t.loading.funFactText.split('{time}').map((part, i, arr) =>
               i < arr.length - 1 ? (
                 <span key={i}>
