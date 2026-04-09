@@ -77,7 +77,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               href={link.href}
               className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
               style={{
-                color: pathname === link.href ? 'var(--pc-gold)' : 'var(--pc-t3)',
+                color: pathname === link.href ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
                 background: pathname === link.href ? 'var(--pc-gold-subtle)' : 'transparent',
               }}
             >
@@ -178,7 +178,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2.5 rounded-xl text-sm transition-colors duration-200"
               style={{
-                color: pathname === link.href ? 'var(--pc-gold)' : 'var(--pc-t2)',
+                color: pathname === link.href ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
                 background: pathname === link.href ? 'var(--pc-gold-subtle)' : 'transparent',
                 fontWeight: pathname === link.href ? 600 : 400,
               }}
@@ -215,12 +215,12 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           borderTop: '1px solid var(--pc-footer-bd)',
         }}
       >
-        <span style={{ color: 'var(--pc-gold)' }}>🍿</span> {t.footer.builtBy}{' '}
+        <span style={{ color: 'var(--pc-gold-text)' }}>🍿</span> {t.footer.builtBy}{' '}
         <a
           href="https://github.com/shchilkin"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: 'var(--pc-gold)' }}
+          style={{ color: 'var(--pc-gold-text)' }}
         >
           {t.footer.authorName}
         </a>{' '}

@@ -202,7 +202,7 @@ export default function ResultsPage() {
             background: 'var(--pc-gold-subtle)',
             border: '1px solid',
             borderColor: 'var(--pc-gold-bd-subtle)',
-            color: 'var(--pc-gold)',
+            color: 'var(--pc-gold-text)',
           }}
         >
           <Sparkles size={11} /> {t.results.badge}
@@ -234,7 +234,10 @@ export default function ResultsPage() {
               background: 'linear-gradient(180deg, var(--pc-gold), var(--pc-amber))',
             }}
           />
-          <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-gold)' }}>
+          <span
+            className="uppercase tracking-widest text-xs"
+            style={{ color: 'var(--pc-gold-text)' }}
+          >
             {t.results.topPick}
           </span>
         </div>

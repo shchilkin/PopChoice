@@ -62,7 +62,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
               className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
               style={{
                 background: 'rgba(245,197,24,0.15)',
-                color: 'var(--pc-gold)',
+                color: 'var(--pc-gold-text)',
               }}
             >
               <User size={22} />

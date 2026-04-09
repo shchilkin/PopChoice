@@ -23,7 +23,7 @@ export function ToneStep({ person, onUpdate }: ToneStepProps) {
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{
             background: 'rgba(245,197,24,0.15)',
-            color: 'var(--pc-gold)',
+            color: 'var(--pc-gold-text)',
           }}
         >
           <Moon size={20} />

@@ -40,7 +40,9 @@ export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: Be
             i < arr.length - 1 ? (
               <span key={i}>
                 {part}
-                <span style={{ color: 'var(--pc-gold)', fontWeight: 600 }}>{nextPersonName}</span>
+                <span style={{ color: 'var(--pc-gold-text)', fontWeight: 600 }}>
+                  {nextPersonName}
+                </span>
               </span>
             ) : (
               <span key={i}>{part}</span>
