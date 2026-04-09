@@ -16,7 +16,7 @@ const MAX_RETRIES = 3;
 export default function LoadingPage() {
   const router = useRouter();
   const { isDark } = usePCTheme();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [tipIndex, setTipIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [errorState, setErrorState] = useState<'retryable' | 'fatal' | null>(null);
@@ -45,7 +45,9 @@ export default function LoadingPage() {
     }, 60);
 
     axios
-      .post('/api/movie-recommendation', JSON.parse(quizDataStr))
+      .post('/api/movie-recommendation', JSON.parse(quizDataStr), {
+        headers: { 'Accept-Language': locale },
+      })
       .then((response) => {
         clearInterval(intervalsRef.current.tip);
         clearInterval(intervalsRef.current.prog);

@@ -174,6 +174,11 @@ export const en = {
     scrollLeft: 'Scroll left',
     scrollRight: 'Scroll right',
     showDetails: 'Show details for {name}',
+    aiPick: 'AI Pick',
+    match: 'match',
+    minUnit: 'min',
+    whyThisFilm: 'Why this film',
+    whyThisFilmForYou: 'Why this film for you',
   },
   about: {
     badge: 'How PopChoice works',

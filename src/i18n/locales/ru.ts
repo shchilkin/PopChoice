@@ -181,6 +181,11 @@ export const ru: Translations = {
     scrollLeft: 'Прокрутить влево',
     scrollRight: 'Прокрутить вправо',
     showDetails: 'Показать подробности для {name}',
+    aiPick: 'Выбор ИИ',
+    match: 'совпадение',
+    minUnit: 'мин',
+    whyThisFilm: 'Почему этот фильм',
+    whyThisFilmForYou: 'Почему этот фильм вам',
   },
   about: {
     badge: '⚙️ Как это работает',

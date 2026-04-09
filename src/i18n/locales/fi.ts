@@ -179,6 +179,11 @@ export const fi: Translations = {
     scrollLeft: 'Vieritä vasemmalle',
     scrollRight: 'Vieritä oikealle',
     showDetails: 'Näytä tiedot elokuvalle {name}',
+    aiPick: 'Tekoälyn valinta',
+    match: 'osuma',
+    minUnit: 'min',
+    whyThisFilm: 'Miksi tämä elokuva',
+    whyThisFilmForYou: 'Miksi tämä elokuva sinulle',
   },
   about: {
     badge: 'Miten PopChoice toimii',

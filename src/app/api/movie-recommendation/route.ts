@@ -6,8 +6,15 @@ import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import { MovieService } from '@/services';
 
-const prompt = `
-You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
+const LOCALE_LANGUAGE: Record<string, string> = {
+  en: 'English',
+  ru: 'Russian',
+  fi: 'Finnish',
+};
+
+const buildPrompt = (locale: string) => {
+  const language = LOCALE_LANGUAGE[locale] ?? 'English';
+  return `You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
 1. Context about available movies (including their plots, ratings, and vibes).
 2. User preferences (either from a single person or a group of people).
@@ -29,7 +36,9 @@ For multiple people:
 - If you're unsure, say "Sorry, I don't know the answer," and encourage them to try again.
 
 Keep your tone upbeat, conversational, and helpful. Avoid making up facts or recommending movies not in the context.
+IMPORTANT: You must respond entirely in ${language}. Do not use any other language.
 `;
+};
 
 const movieService = new MovieService();
 
@@ -184,7 +193,7 @@ async function getSimilarMovies(embedding: number[]) {
 }
 
 // Helper: Get recommendation from OpenAI using enhanced movie data
-async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
+async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: string) {
   try {
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
@@ -192,7 +201,7 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
     const recommendation = await openAIClient.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: prompt },
+        { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
       ],
       response_format: zodResponseFormat(
@@ -213,9 +222,11 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[]) {
 async function generateMovieDescriptions(
   movies: (EnhancedMovieMatch & { posterURL?: string })[],
   userPreferences: PersonFormData[],
+  locale: string,
 ): Promise<(EnhancedMovieMatch & { posterURL?: string; aiDescription?: string })[]> {
   console.log(`Generating AI descriptions for ${movies.length} movies...`);
 
+  const language = LOCALE_LANGUAGE[locale] ?? 'English';
   // Create a prompt specifically for individual movie descriptions
   const descriptionPrompt = `
 You are PopChoice, a movie expert creating personalized movie descriptions. For each movie provided, write a brief, engaging description (2-3 sentences) that:
@@ -228,6 +239,7 @@ You are PopChoice, a movie expert creating personalized movie descriptions. For 
 User preferences context: ${combineAllPeopleDataToString(userPreferences)}
 
 For each movie, return a description that makes the user excited to watch it.
+IMPORTANT: You must respond entirely in ${language}. Do not use any other language.
 `;
 
   const enhancedMovies = await Promise.all(
@@ -330,12 +342,18 @@ export async function POST(req: NextRequest) {
     // Validate request body
     const validatedBody = requestBodySchema.parse(body);
 
+    // Read locale from Accept-Language header, default to English
+    const acceptLanguage = req.headers.get('accept-language') ?? 'en';
+    const locale = ['en', 'ru', 'fi'].includes(acceptLanguage) ? acceptLanguage : 'en';
+
     // Normalize to array format for consistent processing
     const allPeopleData: PersonFormData[] = Array.isArray(validatedBody)
       ? validatedBody
       : [validatedBody];
 
-    console.log(`Processing recommendation request for ${allPeopleData.length} person(s)`);
+    console.log(
+      `Processing recommendation request for ${allPeopleData.length} person(s), locale: ${locale}`,
+    );
 
     // Step 1: Create embedding from all people's data
     const embedding = await createEmbedding(allPeopleData);
@@ -344,7 +362,7 @@ export async function POST(req: NextRequest) {
     const similarMovies = await getSimilarMovies(embedding);
 
     // Step 3: Get recommendation from OpenAI
-    const responseMessage = await getRecommendation(similarMovies);
+    const responseMessage = await getRecommendation(similarMovies, locale);
 
     // Step 4: Get poster URL for main recommendation
     const posterURL = await getPosterURL(responseMessage.title);
@@ -358,6 +376,7 @@ export async function POST(req: NextRequest) {
     const moviesWithDescriptions = await generateMovieDescriptions(
       enhancedSimilarMovies,
       allPeopleData,
+      locale,
     );
 
     // Find the recommended movie in our similar movies to get its details
