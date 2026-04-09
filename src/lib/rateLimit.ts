@@ -43,10 +43,19 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
   if (!client) return null;
 
   const forwardedFor = req.headers.get('x-forwarded-for');
+  const forwardedForLastHop = forwardedFor
+    ? forwardedFor
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .at(-1) ?? null
+    : null;
+  const realIp = req.headers.get('x-real-ip')?.trim() || null;
   const ip =
-    (forwardedFor ? forwardedFor.split(',')[0].trim() : null) ||
-    req.headers.get('x-real-ip')?.trim() ||
-    null;
+    (forwardedForLastHop && isIP(forwardedForLastHop) !== 0
+      ? forwardedForLastHop
+      : null) ||
+    (realIp && isIP(realIp) !== 0 ? realIp : null);
 
   // Skip rate limiting when the client IP cannot be determined or is not a
   // valid IP address, to avoid unbounded key cardinality from malformed headers
