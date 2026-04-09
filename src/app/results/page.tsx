@@ -332,7 +332,10 @@ export default function ResultsPage() {
               <button
                 key={movie.id}
                 onClick={() => toggleSuggestion(movie.id)}
-                aria-label={t.results.showDetails.replace('{name}', movie.localizedName ?? movie.name)}
+                aria-label={t.results.showDetails.replace(
+                  '{name}',
+                  movie.localizedName ?? movie.name,
+                )}
                 aria-pressed={activeSuggestion === movie.id}
                 className="rounded-full transition-all duration-200"
                 style={{
