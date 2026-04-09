@@ -131,7 +131,7 @@ export function MoviesTable({ movies }: MoviesTableProps) {
                 {formatDuration(movie.duration)}
               </td>
               <td className="px-5 py-3.5 text-center">
-                <span className="text-sm font-semibold" style={{ color: 'var(--pc-gold)' }}>
+                <span className="text-sm font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
                   {movie.score_rating.toFixed(1)}
                 </span>
                 <span className="text-xs ml-0.5" style={{ color: 'var(--pc-t4)' }}>
