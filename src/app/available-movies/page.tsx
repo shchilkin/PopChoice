@@ -76,7 +76,7 @@ export default function AvailableMoviesPage() {
 
     if (totalPages > 1) rangeWithDots.push(totalPages);
 
-    return rangeWithDots.filter((item, index, arr) => arr.indexOf(item) === index);
+    return rangeWithDots;
   };
 
   if (loading) {
