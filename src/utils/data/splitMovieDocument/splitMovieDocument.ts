@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 
-import { Document } from 'langchain/document';
+import { Document } from '@langchain/core/documents';
 
 import { movieMetadataSchema } from '@/utils/schemas';
 

@@ -26,11 +26,18 @@
     "test:storybook": "vitest --project=storybook run",
     "type-check": "tsc --noEmit"
   },
+  "overrides": {
+    "glob": "^10.5.0",
+    "langsmith": "^0.4.6",
+    "minimatch": "^9.0.7",
+    "rollup": "^4.58.1",
+    "tar": "^7.5.11"
+  },
   "dependencies": {
+    "@langchain/core": "^0.3.58",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.15.0",
     "canvas-confetti": "^1.9.4",
-    "langchain": "^0.3.30",
     "lucide-react": "^1.7.0",
     "motion": "^12.38.0",
     "next": "^16",
