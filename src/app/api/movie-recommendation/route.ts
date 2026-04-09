@@ -4,6 +4,7 @@ import z from 'zod';
 
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
+import { applyRateLimit } from '@/lib/rateLimit';
 import { MovieService } from '@/services';
 
 const LOCALE_LANGUAGE: Record<string, string> = {
@@ -366,6 +367,9 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
+    const rateLimitResponse = await applyRateLimit(req);
+    if (rateLimitResponse) return rateLimitResponse;
+
     const body = await req.json();
 
     // Validate request body
