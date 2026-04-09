@@ -42,7 +42,14 @@
 The project includes scripts to help you set up and manage your movie recommendation database:
 
 1. **Analysis Phase** - Use `npm run analyze-movies` to understand your movie data structure
-2. **Population Phase** - Use `npm run populate-db` to import movies from `movies.txt` into your PostgreSQL database
+2. **Population Phase** - Use `npm run populate-db` to import movies into your PostgreSQL database
+
+The populate script reads `movies.txt` from the **project root**. The curated movie list lives at `services/movie-seed/movies.txt` — copy it to the project root before running:
+
+```bash
+cp services/movie-seed/movies.txt ./movies.txt
+npm run populate-db
+```
 
 The populate script automatically creates embeddings for new movies during the import process.
 

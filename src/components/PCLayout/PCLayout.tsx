@@ -164,7 +164,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
       {mobileMenuOpen && (
         <nav
           id="mobile-nav-drawer"
-          className="md:hidden sticky top-[52px] z-40 flex flex-col gap-1 px-4 py-3"
+          className="md:hidden z-40 flex flex-col gap-1 px-4 py-3"
           style={{
             background: 'var(--pc-header-bg)',
             backdropFilter: 'blur(16px)',
