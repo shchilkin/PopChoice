@@ -81,7 +81,9 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
             <h2
               className="mb-1"
               style={{
-                fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                fontWeight: '600',
+                textTransform: 'uppercase',
                 fontSize: 'clamp(1.8rem, 5vw, 3rem)',
                 letterSpacing: '0.04em',
                 color: 'var(--pc-overlay-text)',
@@ -139,7 +141,9 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
           <div className="mb-4">
             <h2
               style={{
-                fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                fontWeight: '600',
+                textTransform: 'uppercase',
                 fontSize: '2rem',
                 letterSpacing: '0.04em',
                 color: 'var(--pc-t1)',

@@ -47,7 +47,9 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
               <div>
                 <h3
                   style={{
-                    fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+                    fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
                     fontSize: '1.3rem',
                     letterSpacing: '0.03em',
                     color: 'var(--pc-t1)',

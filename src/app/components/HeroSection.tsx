@@ -7,8 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Mascot } from '@/components/Mascot';
-import { useLanguage } from '@/i18n';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 const CINEMA_BG =
@@ -143,7 +143,9 @@ export function HeroSection() {
           <span
             className="pc-gradient-text"
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: 'clamp(3.5rem, 10vw, 6rem)',
               lineHeight: 1,
               letterSpacing: '0.04em',

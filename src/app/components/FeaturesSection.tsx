@@ -47,7 +47,9 @@ export function FeaturesSection() {
         <h2
           className="mb-3"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: 'clamp(2rem, 5vw, 3rem)',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',
@@ -55,9 +57,7 @@ export function FeaturesSection() {
         >
           {t.features.headline}
         </h2>
-        <p style={{ color: 'var(--pc-t2)', fontSize: '1rem' }}>
-          {t.features.subheadline}
-        </p>
+        <p style={{ color: 'var(--pc-t2)', fontSize: '1rem' }}>{t.features.subheadline}</p>
       </motion.div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

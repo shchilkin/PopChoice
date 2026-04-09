@@ -29,7 +29,9 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
         </div>
         <h2
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '1.8rem',
             letterSpacing: '0.04em',
             color: 'var(--pc-t1)',

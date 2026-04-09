@@ -1,5 +1,5 @@
 import { Analytics } from '@vercel/analytics/next';
-import { Bebas_Neue, DM_Sans } from 'next/font/google';
+import { Manrope, Oswald } from 'next/font/google';
 
 import { PCLayout } from '../components/PCLayout';
 import { ThemeProvider } from '../components/ThemeProvider';
@@ -8,16 +8,16 @@ import { LanguageProvider } from '../i18n';
 import type { Metadata } from 'next';
 import './globals.css';
 
-const dmSans = DM_Sans({
-  variable: '--font-dm-sans',
+const manrope = Manrope({
+  variable: '--font-manrope',
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
 });
 
-const bebasNeue = Bebas_Neue({
-  variable: '--font-bebas-neue',
+const oswald = Oswald({
+  variable: '--font-oswald',
   subsets: ['latin'],
-  weight: '400',
+  weight: ['400', '500', '600', '700'],
 });
 export const metadata: Metadata = {
   title: 'PopChoice - AI Movie Recommendations',
@@ -87,7 +87,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${dmSans.variable} ${bebasNeue.variable} antialiased`}>
+      <body className={`${manrope.variable} ${oswald.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

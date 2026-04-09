@@ -28,7 +28,9 @@ const SampleContent = () => (
     <div className="text-5xl">🎬</div>
     <h1
       style={{
-        fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+        fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+        fontWeight: '600',
+        textTransform: 'uppercase',
         fontSize: '2.5rem',
         letterSpacing: '0.06em',
         color: 'var(--pc-t1)',
@@ -58,7 +60,9 @@ export const WithRichContent: Story = {
         >
           <h2
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '1.8rem',
               color: 'var(--pc-t1)',
               letterSpacing: '0.05em',

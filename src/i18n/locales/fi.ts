@@ -9,7 +9,12 @@ export const fi: Translations = {
   },
   footer: {
     builtBy: 'Rakentanut',
+    authorName: 'Aleksandr Shchilkin',
     tagline: 'kurssin harjoitustyö, joka meni käsistä',
+  },
+  tmdbAttribution: {
+    disclaimer: 'PopChoice käyttää TMDB API:a, mutta ei ole TMDB:n hyväksymä tai sertifioima.',
+    visitLink: 'Vieraile The Movie Database -sivustolla',
   },
   hero: {
     badge: 'Tekoälypohjainen elokuvahaku',
@@ -42,9 +47,9 @@ export const fi: Translations = {
     },
   },
   cta: {
-    headline: 'Seuraava lempifilmisi on yhden testin päässä',
+    headline: 'Seuraava lempifilmisi löytyy yhdellä testillä',
     description:
-      'Olipa kyse viihtyisästä iltapäivästä yksin tai meluisasta ryhmänäytöksestä, PopChoice lukee tilanteen ja löytää valinnan, josta kaikki pitävät.',
+      'Olipa kyse rauhallisesta yksinäisestä illasta tai isomman kaveriporukan leffatuokiosta — PopChoice tunnistaa tilanteen ja löytää valinnan, josta kaikki pitävät.',
     button: 'Aloita testi',
   },
   quiz: {
@@ -79,16 +84,10 @@ export const fi: Translations = {
       ofTotal: '{current} / {total}',
       personTurn: '{name}n vuoro',
     },
-    labels: [
-      'Lempifilmi',
-      'Vanha vai uusi?',
-      'Tunnelmasi',
-      'Valitse sävy',
-      'Lempinäyttelijä',
-    ],
+    labels: ['Lempifilmi', 'Vanha vai uusi?', 'Tunnelmasi', 'Valitse sävy', 'Lempinäyttelijä'],
     favoriteMovie: {
       title: 'Mikä on lempifilmisi?',
-      hint: 'Tämä auttaa meitä ymmärtämään makuasi. Mikä tahansa elokuva, joka teki vaikutuksen sinuun.',
+      hint: 'Tämä auttaa meitä ymmärtämään makuasi. Mikä tahansa elokuva, joka on jäänyt mieleen.',
       placeholder: 'esim. The Dark Knight, Loinen, Coco…',
       popularPicks: 'SUOSITUT VALINNAT',
       why: 'MIKSI?',
@@ -146,11 +145,11 @@ export const fi: Translations = {
     errorTitle: 'Oho…',
     tips: [
       'Analysoidaan makuprofiiliasi vektoriupotusten avulla… 🧠',
-      'Ristiinviitataan yli 10 000 elokuvaa tietokannassamme… 🎬',
+      'Vertaillaan yli 10 000 elokuvaa tietokannassamme… 🎬',
       'Sovitetaan tunnelmia, ei vain genrejä… ✨',
       'Suodatetaan pois elokuvat, jotka ystäväsi ovat jo spoilanneet… 🤫',
       'Lasketaan täydellinen kesto illallesi… ⏱️',
-      'Konsultoidaan tekoäly-elokuvasommelieria… 🍷',
+      'Kuullaan tekoälyn elokuvakriitikkoa… 🍷',
       'Melkein valmista — täydellinen valintasi latautuu… 🍿',
     ],
     retryableError: 'Jokin meni pieleen. Yritä uudelleen.',
@@ -168,7 +167,7 @@ export const fi: Translations = {
   results: {
     badge: 'Henkilökohtaiset suosituksesi',
     title: 'Löysimme täydellisen elokuvasi',
-    subtitle: 'Sovitettu yli 10 000 elokuvasta tekoälyn makuanalyysillä',
+    subtitle: 'Sovitettu yli 10 000 elokuvasta makuprofiilisi perusteella',
     topPick: 'Paras valinta',
     moreSuggestions: 'Lisää ehdotuksia',
     loading: 'Ladataan suosituksiasi…',
@@ -225,7 +224,7 @@ export const fi: Translations = {
         },
         {
           name: 'Elokuvatietokanta',
-          desc: 'Kuratoitua metatietoa, mukaan lukien sävy, teemat ja elokuvallisuus',
+          desc: 'Kuratoitua metatietoa, mukaan lukien sävy, teemat ja elokuvakerronnan tyyli',
         },
         {
           name: 'Reaaliaikainen käsittely',
@@ -238,11 +237,11 @@ export const fi: Translations = {
       items: [
         {
           q: 'Tarvitaanko PopChoiceen tiliä?',
-          a: 'Ei! PopChoice on täysin anonyymi eikä vaadi rekisteröitymistä. Vain vastaa testiin ja saat suosituksesi.',
+          a: 'Ei! PopChoice on täysin anonyymi eikä vaadi rekisteröitymistä. Vastaa vain testiin ja saat suosituksesi.',
         },
         {
           q: 'Miten ryhmätila toimii?',
-          a: 'Jokainen ryhmän jäsen täyttää 5 kysymyksen testin samalla laitteella. PopChoice löytää sitten elokuvia, jotka saavat korkeat pisteet kaikkien makuprofiilien perusteella — todellinen kompromissi, mutta hyvä sellainen.',
+          a: 'Jokainen ryhmän jäsen täyttää 5 kysymyksen testin samalla laitteella. PopChoice löytää sitten elokuvia, jotka sopivat kaikkien makuun — kompromissi, joka yllättävän hyvin toimii.',
         },
         {
           q: 'Kuinka tarkkoja suositukset ovat?',
@@ -250,7 +249,7 @@ export const fi: Translations = {
         },
         {
           q: 'Mistä elokuvatiedot tulevat?',
-          a: 'Elokuvatietokantamme on koottu julkisista elokuvametadatoista, mukaan lukien arvostelut, ajoaika, ohjaaja, genretagit ja teemaanalyysi, jonka suorittaa tekoälyputkistomme.',
+          a: 'Elokuvatietokantamme on koottu julkisista elokuvametadatoista, mukaan lukien arvostelut, kesto, ohjaaja, genretagit ja teemaanalyysi, jonka tekoälymme on suorittanut.',
         },
       ],
     },

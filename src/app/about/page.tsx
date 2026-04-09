@@ -5,8 +5,8 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 
 import { TMDBAttribution } from '@/components';
-import { useLanguage } from '@/i18n';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 import { FAQSection } from './components/FAQSection';
@@ -40,7 +40,9 @@ export default function AboutPage() {
         <h1
           className="mb-4"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: 'clamp(2rem, 6vw, 3.5rem)',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',
@@ -53,8 +55,7 @@ export default function AboutPage() {
           className="max-w-lg mx-auto"
           style={{ color: 'var(--pc-t2)', lineHeight: 1.75, fontSize: '0.95rem' }}
         >
-          {t.about.descriptionPre}{' '}
-          <span style={{ color: 'var(--pc-t1)' }}>{t.about.you}</span>{' '}
+          {t.about.descriptionPre} <span style={{ color: 'var(--pc-t1)' }}>{t.about.you}</span>{' '}
           {t.about.descriptionPost}
         </p>
       </motion.div>
@@ -82,7 +83,9 @@ export default function AboutPage() {
         <h3
           className="mb-2"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '1.8rem',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',

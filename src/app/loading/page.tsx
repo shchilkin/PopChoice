@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { useLanguage } from '@/i18n';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 import { FilmReel } from './components/FilmReel';
@@ -102,7 +102,9 @@ export default function LoadingPage() {
         <h2
           className="mb-2"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '2rem',
             letterSpacing: '0.06em',
             color: 'var(--pc-t1)',

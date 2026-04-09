@@ -4,10 +4,10 @@ import { Moon, Sun } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Mascot } from '@/components/Mascot';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { useLanguage } from '@/i18n';
+import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 export function PCLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
       style={{
         background: 'var(--pc-bg)',
         color: 'var(--pc-t1)',
-        fontFamily: "var(--font-dm-sans), 'DM Sans', 'Inter', sans-serif",
+        fontFamily: "var(--font-manrope), 'Manrope', 'Inter', sans-serif",
         transition: 'background 0.3s, color 0.3s',
       }}
     >
@@ -42,7 +42,9 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           <span
             className="tracking-widest uppercase"
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '1.4rem',
               letterSpacing: '0.12em',
               background: `linear-gradient(90deg, ${palette.gold}, ${palette.amber})`,
@@ -119,7 +121,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
           rel="noopener noreferrer"
           style={{ color: 'var(--pc-gold)' }}
         >
-          Aleksandr Shchilkin
+          {t.footer.authorName}
         </a>{' '}
         — {t.footer.tagline}
       </footer>

@@ -27,7 +27,9 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
           <h1
             className="mb-2"
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '2.2rem',
               letterSpacing: '0.05em',
               color: 'var(--pc-t1)',
@@ -35,9 +37,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
           >
             {t.quiz.intro.title}
           </h1>
-          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
-            {t.quiz.intro.subtitle}
-          </p>
+          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>{t.quiz.intro.subtitle}</p>
         </div>
 
         <div className="flex flex-col gap-4">

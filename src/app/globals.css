@@ -230,8 +230,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-dm-sans);
-  --font-mono: var(--font-bebas-neue);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-oswald);
 }
 
 html,
@@ -242,7 +242,7 @@ body {
 body {
   background: var(--pc-bg);
   color: var(--pc-t1);
-  font-family: 'DM Sans', 'Inter', Arial, Helvetica, sans-serif;
+  font-family: 'Manrope', 'Inter', Arial, Helvetica, sans-serif;
   transition:
     background 0.3s,
     color 0.3s;

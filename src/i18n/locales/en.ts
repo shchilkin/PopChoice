@@ -7,7 +7,12 @@ export const en = {
   },
   footer: {
     builtBy: 'Built by',
+    authorName: 'Aleksandr Shchilkin',
     tagline: 'a course project that got out of hand',
+  },
+  tmdbAttribution: {
+    disclaimer: 'PopChoice uses the TMDB API but is not endorsed or certified by TMDB.',
+    visitLink: 'Visit The Movie Database',
   },
   hero: {
     badge: 'AI-Powered Movie Finder',
@@ -20,8 +25,11 @@ export const en = {
   },
   features: {
     headline: 'Movie night, sorted.',
-    subheadline: 'No algorithms, no endless scrolling — just perfect picks.',
-    aiPowered: { title: 'AI-Powered', desc: 'Vector search finds films that truly match your vibe' },
+    subheadline: 'No endless scrolling, no guesswork — just picks that fit.',
+    aiPowered: {
+      title: 'AI-Powered',
+      desc: 'Vector search finds films that truly match your vibe',
+    },
     fiveQuestions: {
       title: '5 Quick Questions',
       desc: 'No endless forms — just a 60-second taste quiz',
@@ -38,7 +46,7 @@ export const en = {
   cta: {
     headline: 'Your next favorite film is one quiz away',
     description:
-      "Whether it's a cozy solo night or a rowdy group screening, PopChoice reads the room and delivers a pick everyone will love.",
+      "Whether it's a solo night in or movie night with friends, PopChoice finds a film that fits the mood — every time.",
     button: 'Start the Quiz',
   },
   quiz: {
@@ -46,14 +54,14 @@ export const en = {
       title: "Let's find your movie",
       subtitle: 'Are you watching solo or with others?',
       soloTitle: 'Just me',
-      soloDesc: 'Solo movie night — personalized just for you',
+      soloDesc: 'Personalized picks — just for you',
       groupTitle: 'Group mode 🎉',
-      groupDesc: 'Find the perfect film for 2–6 people',
+      groupDesc: 'Everyone answers, one device — 2 to 6 people',
       youLabel: 'You',
     },
     groupSetup: {
       title: "Who's watching?",
-      subtitle: "Add everyone's name so we can tailor the quiz",
+      subtitle: "Add everyone's name so we can personalize your results",
       personPlaceholder: "Person {n}'s name",
       addPerson: 'Add another person',
       back: 'Back',
@@ -103,7 +111,8 @@ export const en = {
     },
     actor: {
       title: "Who's your favorite actor?",
-      hint: 'Optional — helps us find films featuring people you already love.',
+      hint: 'Optional — adds another dimension to your taste profile.',
+
       placeholder: 'e.g. Tom Hanks, Meryl Streep, Cillian Murphy…',
       popularPicks: 'POPULAR PICKS',
     },
@@ -181,7 +190,7 @@ export const en = {
       steps: [
         {
           title: 'You answer 5 quick questions',
-          desc: "Tell us your favorite film (and why!), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you're after, and your favorite actor. It takes about 60 seconds.",
+          desc: "Tell us your favorite film (and optionally why you love it), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you're after, and your favorite actor. It takes about 60 seconds.",
         },
         {
           title: 'We build your taste profile',
@@ -193,7 +202,7 @@ export const en = {
         },
         {
           title: 'You get curated results',
-          desc: 'We surface your top match plus 5 additional great options, each with a personalized AI-written explanation of exactly why it fits your taste tonight.',
+          desc: 'We surface your top match plus 5 additional great options, each with a personalized AI-written explanation of why it fits your taste.',
         },
       ],
     },
@@ -224,7 +233,7 @@ export const en = {
         },
         {
           q: 'How does group mode work?',
-          a: "Each person in the group fills out the 5-question quiz on the same device. PopChoice then finds films that score highly across everyone's taste profiles — a true compromise, but a good one.",
+          a: "Each person answers the 5 questions on the same device — just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
         },
         {
           q: 'How accurate are the recommendations?',

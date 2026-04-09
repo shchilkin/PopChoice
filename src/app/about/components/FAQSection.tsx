@@ -12,7 +12,9 @@ export function FAQSection() {
       <h2
         className="mb-6"
         style={{
-          fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+          fontWeight: '600',
+          textTransform: 'uppercase',
           fontSize: '1.6rem',
           letterSpacing: '0.05em',
           color: 'var(--pc-t1)',

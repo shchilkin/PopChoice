@@ -28,7 +28,9 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           <div className="text-4xl mb-4">👥</div>
           <h2
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '2rem',
               letterSpacing: '0.05em',
               color: 'var(--pc-t1)',

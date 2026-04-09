@@ -158,7 +158,9 @@ export default function ResultsPage() {
         <h2
           className="mb-2"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '1.8rem',
             color: 'var(--pc-t1)',
           }}
@@ -205,7 +207,9 @@ export default function ResultsPage() {
         </div>
         <h1
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',
