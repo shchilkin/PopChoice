@@ -83,7 +83,7 @@ export class MovieService {
   async getLocalizedMovieInfo(
     movieId: number,
     language: string,
-  ): Promise<Pick<TMDB_MovieEntry, 'title' | 'poster_path'> | undefined> {
+  ): Promise<{ title: string; poster_path: string | null } | undefined> {
     try {
       const response = await this.axiosClient({
         method: 'GET',

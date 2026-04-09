@@ -28,7 +28,7 @@ export function LanguageSwitcher() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  function handleKeyDown(e: { key: string }) {
     if (e.key === 'Escape') setOpen(false);
   }
 

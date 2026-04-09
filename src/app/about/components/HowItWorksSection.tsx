@@ -39,6 +39,7 @@ export function HowItWorksSection() {
           {t.about.howItWorks.steps.map((step, i) => {
             const Icon = STEP_ICONS[i];
             const color = STEP_COLORS[i];
+            if (!Icon || !color) return null;
             const stepNum = String(i + 1).padStart(2, '0');
             return (
               <motion.div

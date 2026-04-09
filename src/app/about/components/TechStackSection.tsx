@@ -31,6 +31,7 @@ export function TechStackSection() {
         {t.about.techStack.items.map((tech, i) => {
           const Icon = TECH_ICONS[i];
           const color = TECH_COLORS[i];
+          if (!Icon || !color) return null;
           return (
             <motion.div
               key={tech.name}

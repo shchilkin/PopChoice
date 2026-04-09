@@ -42,7 +42,8 @@ For multiple people:
 - If you're unsure, say "Sorry, I don't know the answer," and encourage them to try again.
 
 Keep your tone upbeat, conversational, and helpful. Avoid making up facts or recommending movies not in the context.
-IMPORTANT: You must respond entirely in ${language}. Do not use any other language.
+IMPORTANT: Write all description and explanation text in ${language}. Do not use any other language.
+IMPORTANT: The "title" field must be returned exactly as it appears in the provided movie context. Do not translate, transliterate, rephrase, or normalize the title.
 `;
 };
 
