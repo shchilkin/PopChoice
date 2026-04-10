@@ -1,3 +1,6 @@
+-- Docker init script: runs automatically on first container start.
+-- Keep in sync with db/match_movies.sql.
+
 DROP FUNCTION IF EXISTS match_movies(vector, float, int);
 
 CREATE OR REPLACE FUNCTION match_movies (

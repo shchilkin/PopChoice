@@ -73,7 +73,7 @@ async function main() {
   console.log('=====================================\n');
 
   // Resolve path to movies.txt
-  const moviesPath = path.resolve(process.cwd(), 'services/movie-sync/movies.txt');
+  const moviesPath = path.resolve(process.cwd(), 'services/movie-seed/movies.txt');
 
   // Check if movies file exists
   try {
@@ -81,7 +81,7 @@ async function main() {
     await fs.access(moviesPath);
   } catch {
     console.error(`❌ Movies file not found: ${moviesPath}`);
-    console.error('Please ensure movies.txt exists at services/movie-sync/movies.txt.');
+    console.error('Please ensure movies.txt exists at services/movie-seed/movies.txt.');
     process.exit(1);
   }
 

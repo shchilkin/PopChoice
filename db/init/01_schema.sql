@@ -1,3 +1,6 @@
+-- Docker init script: runs automatically on first container start.
+-- Keep in sync with db/createDB.sql.
+
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS movies (

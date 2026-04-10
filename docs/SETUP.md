@@ -112,7 +112,9 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    npm run setup:local-db
    ```
 
-   This generates a random `POSTGRES_PASSWORD`, writes all database credentials to your `.env` file, and starts the Docker container. Docker automatically runs `db/init/01_schema.sql` and `db/init/02_match_movies.sql` on first start, enabling the `vector` extension, creating the `movies` table, and installing the `match_movies` function.
+   On first run, this generates a random `POSTGRES_PASSWORD`, writes all database credentials to your `.env` file, starts the Docker container, and waits until PostgreSQL passes its healthcheck. On subsequent runs it reuses the existing credentials from `.env` so the running database stays in sync.
+
+   Docker automatically runs `db/init/01_schema.sql` and `db/init/02_match_movies.sql` on first start, enabling the `vector` extension, creating the `movies` table, and installing the `match_movies` function.
 
 2. **Populate the database**
    ```bash
