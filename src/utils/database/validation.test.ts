@@ -21,6 +21,7 @@ function makeSelectMock(
       Promise.resolve(result).then(onfulfilled as never, onrejected),
     eq: () => filter,
     neq: () => Promise.resolve(result),
+    in: () => Promise.resolve(result),
     limit: () => Promise.resolve(result),
     range: () => ({
       then: (onfulfilled, onrejected) =>
@@ -35,6 +36,7 @@ function makeSelectMock(
       Promise.resolve(result).then(onfulfilled as never, onrejected),
     eq: () => filter,
     neq: () => Promise.resolve(result),
+    in: () => Promise.resolve(result),
     limit: () => Promise.resolve(result),
     range: () => ({
       then: (onfulfilled, onrejected) =>
@@ -59,9 +61,9 @@ function makeMockDbClient(existingRows: { name: string; year: number }[]): {
     rpc: () => Promise.resolve({ data: [], error: null }),
   };
 
-  fromSpy.mockImplementation((table: string) => {
+  fromSpy.mockImplementation((_table: string) => {
     return {
-      select: (columns?: string) => {
+      select: (_columns?: string) => {
         const selectMock = makeSelectMock([]);
 
         return {
@@ -83,6 +85,7 @@ function makeMockDbClient(existingRows: { name: string; year: number }[]): {
                 Promise.resolve(result).then(onfulfilled as never, onrejected),
               eq: () => filter,
               neq: () => Promise.resolve(result),
+              in: () => Promise.resolve(result),
               limit: () => Promise.resolve(result),
               range: () => ({
                 then: (onfulfilled, onrejected) =>
@@ -93,6 +96,14 @@ function makeMockDbClient(existingRows: { name: string; year: number }[]): {
             };
 
             return filter;
+          },
+          in: (column: string, values: unknown[]) => {
+            // Return rows whose name is in the provided values array
+            const matchingRows = existingRows.filter((row) => {
+              if (column === 'name') return (values as string[]).includes(row.name);
+              return true;
+            });
+            return Promise.resolve({ data: matchingRows, error: null });
           },
           delete: () => ({
             neq: () => Promise.resolve({ data: [], error: null }),
@@ -188,7 +199,7 @@ describe('filterExistingMovies', () => {
     expect(fromSpy).not.toHaveBeenCalled();
   });
 
-  it('makes O(unique names) queries, not O(records)', async () => {
+  it('makes a single DB query regardless of record count', async () => {
     const { client, fromSpy } = makeMockDbClient([]);
     setDbClient(client);
 
@@ -202,8 +213,8 @@ describe('filterExistingMovies', () => {
 
     await filterExistingMovies(records);
 
-    // Should only issue 2 DB queries (one per unique name), not 4
-    expect(fromSpy).toHaveBeenCalledTimes(2);
+    // Should issue exactly 1 DB query (single IN query), not one per record or per unique name
+    expect(fromSpy).toHaveBeenCalledTimes(1);
   });
 
   it('uses (name, year) to distinguish movies with same name but different years', async () => {
@@ -260,7 +271,7 @@ describe('clearAllMovies', () => {
   it('deletes all movies and returns 0 in non-production environment', async () => {
     vi.stubEnv('NODE_ENV', 'test');
 
-    const fromSpy = vi.fn().mockImplementation((table: string) => ({
+    const fromSpy = vi.fn().mockImplementation((_table: string) => ({
       select: () => ({
         then: (onfulfilled: (v: QueryResult<unknown>) => unknown) =>
           Promise.resolve({ data: [], error: null, count: 0 }).then(onfulfilled),

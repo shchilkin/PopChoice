@@ -144,6 +144,12 @@ function buildSelectSQL(state: QueryState): {
   // WHERE clauses
   if (state.wheres.length > 0) {
     const clauses = state.wheres.map((w) => {
+      if (w.op === 'IN') {
+        // Use = ANY($n) with a single array parameter for efficient IN queries.
+        const arr = w.value as unknown[];
+        values.push(arr);
+        return `"${w.column}" = ANY($${idx++})`;
+      }
       const placeholder = `$${idx++}`;
       values.push(w.value);
       return `"${w.column}" ${w.op} ${placeholder}`;
@@ -175,6 +181,11 @@ function buildSelectSQL(state: QueryState): {
     let cIdx = 1;
     if (state.wheres.length > 0) {
       const clauses = state.wheres.map((w) => {
+        if (w.op === 'IN') {
+          const arr = w.value as unknown[];
+          cValues.push(arr);
+          return `"${w.column}" = ANY($${cIdx++})`;
+        }
         const placeholder = `$${cIdx++}`;
         cValues.push(w.value);
         return `"${w.column}" ${w.op} ${placeholder}`;
@@ -283,6 +294,11 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
       state.wheres.push({ column, op: '!=', value });
       return lazyResult<T>(pool, state);
     },
+    in: (column: string, values: unknown[]) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: 'IN', value: values });
+      return lazyResult<T>(pool, state);
+    },
     limit: (count: number) => {
       state.limitVal = count;
       return lazyResult<T>(pool, state);
@@ -311,6 +327,11 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
     neq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '!=', value });
+      return lazyResult<T>(pool, state);
+    },
+    in: (column: string, values: unknown[]) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: 'IN', value: values });
       return lazyResult<T>(pool, state);
     },
     limit: (count: number) => {

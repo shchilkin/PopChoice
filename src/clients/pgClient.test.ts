@@ -99,6 +99,23 @@ describe('pgClient', () => {
     );
   });
 
+  it('from().select().in() adds a WHERE "col" = ANY($1) clause', async () => {
+    mockQuery.mockResolvedValue({ rows: [{ name: 'Casablanca', year: 1942 }] });
+
+    const client = createPgDbClient();
+    const result = await client
+      .from('movies')
+      .select('name, year')
+      .in('name', ['Casablanca', 'The Godfather']);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      'SELECT "name", "year" FROM "movies" WHERE "name" = ANY($1)',
+      [['Casablanca', 'The Godfather']],
+    );
+    expect(result.data).toEqual([{ name: 'Casablanca', year: 1942 }]);
+    expect(result.error).toBeNull();
+  });
+
   it('from().select().limit() adds LIMIT', async () => {
     mockQuery.mockResolvedValue({ rows: [{ id: 1 }] });
 

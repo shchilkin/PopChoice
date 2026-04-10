@@ -45,23 +45,24 @@ export async function filterExistingMovies(movieRecords: MovieRecord[]): Promise
   const db = getDbClient();
 
   // De-duplicate candidate names to minimise the number of DB round-trips.
-  // One query per unique movie name (vs one query per record in the old loop).
   const uniqueNames = [...new Set(movieRecords.map((m) => m.name))];
 
-  // Fetch existing rows matching any candidate name in parallel.
-  const fetchResults = await Promise.all(
-    uniqueNames.map((name) =>
-      db.from<{ name: string; year: number }>('movies').select('name, year').eq('name', name),
-    ),
-  );
+  // Fetch existing rows for all candidate names in a single query to avoid
+  // unbounded parallel requests against the DB connection pool.
+  const { data: existingRows, error } = await db
+    .from<{ name: string; year: number }>('movies')
+    .select('name, year')
+    .in('name', uniqueNames);
+
+  if (error) {
+    throw new Error(`Error fetching existing movies: ${error.message}`);
+  }
 
   // Build a Set of composite keys for O(1) lookups.
   const existingKeys = new Set<string>();
-  for (const result of fetchResults) {
-    if (result.data) {
-      for (const row of result.data) {
-        existingKeys.add(makeMovieKey(row.name, row.year));
-      }
+  if (existingRows) {
+    for (const row of existingRows) {
+      existingKeys.add(makeMovieKey(row.name, row.year));
     }
   }
 
