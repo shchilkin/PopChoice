@@ -156,6 +156,8 @@ export const fi: Translations = {
       'Melkein valmista — täydellinen valintasi latautuu… 🍿',
     ],
     retryableError: 'Jokin meni pieleen. Yritä uudelleen.',
+    moderatedError:
+      'Syötteesi sisältää sopimatonta sisältöä. Tarkista mieltymyksesi ja yritä uudelleen.',
     fatalError: 'Palvelu ei ole tällä hetkellä saatavilla. Yritä myöhemmin uudelleen.',
     savedAnswers:
       'Vastauksesi on tallennettu selaimeen — palaa takaisin ja jatkamme siitä mihin jäimme.',

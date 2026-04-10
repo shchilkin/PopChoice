@@ -7,6 +7,7 @@ import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { MovieService } from '@/services';
+import { moderateInput } from '@/utils/ai/moderation';
 
 const LOCALE_LANGUAGE: Record<string, string> = {
   en: 'English',
@@ -390,6 +391,25 @@ export async function POST(req: NextRequest) {
       : [validatedBody];
 
     logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
+
+    // Step 0: Moderate user input before processing
+    const textsToModerate = allPeopleData.flatMap((p) =>
+      [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(
+        (text): text is string => typeof text === 'string' && text.length > 0,
+      ),
+    );
+    const moderationResult = await moderateInput(textsToModerate);
+    if (moderationResult.flagged) {
+      logger.warn({ categories: moderationResult.categories }, 'User input flagged by moderation');
+      return NextResponse.json(
+        {
+          error:
+            'Your input contains content that cannot be processed. Please revise your preferences and try again.',
+          flaggedCategories: moderationResult.categories,
+        },
+        { status: 422 },
+      );
+    }
 
     // Step 1: Create embedding from all people's data
     const embedding = await createEmbedding(allPeopleData);
