@@ -1,2 +1,2 @@
-export { MoviesTable } from './MoviesTable';
+export { MoviesTable, MoviesTableSkeleton } from './MoviesTable';
 export type { MoviesTableProps } from './MoviesTable';

@@ -3,59 +3,10 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { MoviesTable } from '@/components';
+import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
-
-// Skeleton table shown while the first page of data is loading.
-function MoviesTableSkeleton() {
-  return (
-    <div
-      className="w-full overflow-x-auto rounded-2xl"
-      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
-    >
-      <table className="min-w-full">
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
-            {['40%', '12%', '12%', '12%'].map((w, i) => (
-              <th key={i} className="px-5 py-3">
-                <div
-                  className="h-3 rounded animate-pulse"
-                  style={{ width: w, background: 'var(--pc-bd2)' }}
-                />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid var(--pc-bd1)' }}>
-              <td className="px-5 py-3.5">
-                <div
-                  className="h-3.5 rounded animate-pulse mb-1.5"
-                  style={{ width: '55%', background: 'var(--pc-bd2)' }}
-                />
-                <div
-                  className="h-2.5 rounded animate-pulse"
-                  style={{ width: '20%', background: 'var(--pc-bd1)' }}
-                />
-              </td>
-              {[1, 2, 3].map((j) => (
-                <td key={j} className="px-5 py-3.5">
-                  <div
-                    className="h-3.5 rounded animate-pulse mx-auto"
-                    style={{ width: '60%', background: 'var(--pc-bd2)' }}
-                  />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 export default function AvailableMoviesPage() {
   const { t } = useLanguage();
@@ -127,6 +78,11 @@ export default function AvailableMoviesPage() {
 
   useEffect(() => {
     fetchMovies(currentPage);
+    // Abort any in-flight request when the component unmounts so that stale
+    // responses don't attempt to call setState on an unmounted component.
+    return () => {
+      abortRef.current?.abort();
+    };
   }, [fetchMovies, currentPage]);
 
   const handlePageChange = (newPage: number) => {

@@ -10,6 +10,60 @@ import { AgeRatingChip } from '../AgeRatingChip';
 
 import type { Movie } from '@/app/api/movies/route';
 
+/**
+ * Animated table skeleton shown while movie data is loading or while the
+ * responsive breakpoint is being measured.  Marked aria-hidden so screen
+ * readers skip the decorative placeholder structure.
+ */
+export function MoviesTableSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="w-full overflow-x-auto rounded-2xl"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <table className="min-w-full">
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
+            {['40%', '12%', '12%', '12%'].map((w, i) => (
+              <th key={i} className="px-5 py-3">
+                <div
+                  className="h-3 rounded animate-pulse"
+                  style={{ width: w, background: 'var(--pc-bd2)' }}
+                />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid var(--pc-bd1)' }}>
+              <td className="px-5 py-3.5">
+                <div
+                  className="h-3.5 rounded animate-pulse mb-1.5"
+                  style={{ width: '55%', background: 'var(--pc-bd2)' }}
+                />
+                <div
+                  className="h-2.5 rounded animate-pulse"
+                  style={{ width: '20%', background: 'var(--pc-bd1)' }}
+                />
+              </td>
+              {[1, 2, 3].map((j) => (
+                <td key={j} className="px-5 py-3.5">
+                  <div
+                    className="h-3.5 rounded animate-pulse mx-auto"
+                    style={{ width: '60%', background: 'var(--pc-bd2)' }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // Utility function to convert minutes to short hours and minutes format
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
@@ -32,8 +86,10 @@ export function MoviesTable({ movies }: MoviesTableProps) {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
 
-  // Render nothing until the breakpoint is known to avoid a layout flash.
-  if (isMobile === null) return null;
+  // Show the skeleton while the breakpoint is being measured to avoid a brief
+  // blank section between the loading skeleton disappearing and the correct
+  // layout being rendered.
+  if (isMobile === null) return <MoviesTableSkeleton />;
 
   if (isMobile) {
     return (

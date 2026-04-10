@@ -26,15 +26,19 @@
 import pg from 'pg';
 
 // Register int8 (bigint/bigserial, OID 20) parser so that bigint columns are
-// returned as JS numbers rather than strings.  A safety check guards against
-// precision loss: if a value exceeds Number.MAX_SAFE_INTEGER an error is thrown
-// so the problem surfaces immediately rather than silently corrupting data.
+// returned as JS numbers rather than strings.  Safety checks guard against
+// precision loss and non-numeric input: NaN is rejected immediately, and values
+// outside the safe-integer range throw so the problem surfaces clearly rather
+// than silently corrupting data.
 // Optional chaining guards against environments where pg is mocked without the types object.
 pg.types?.setTypeParser(20, (val: string) => {
   const n = parseInt(val, 10);
+  if (Number.isNaN(n)) {
+    throw new Error(`int8 value ${val} is not a valid integer`);
+  }
   if (n > Number.MAX_SAFE_INTEGER || n < Number.MIN_SAFE_INTEGER) {
     throw new Error(
-      `int8 value ${val} exceeds Number.MAX_SAFE_INTEGER and cannot be safely represented as a JS number`,
+      `int8 value ${val} is outside the safe integer range and cannot be safely represented as a JS number`,
     );
   }
   return n;
