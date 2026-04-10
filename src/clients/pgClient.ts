@@ -210,6 +210,8 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
 
       // The OFFSET is past the end of the result set — the window function cannot
       // return a count. Fall back to a separate COUNT(*) query.
+      // Any error thrown here is caught by the outer try/catch and returned as
+      // a QueryResult error, consistent with the rest of this function.
       const fallbackCount =
         countText != null
           ? parseInt((await pool.query(countText, countValues)).rows[0]?.count ?? '0', 10)

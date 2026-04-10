@@ -175,7 +175,7 @@ describe('pgClient', () => {
     ]);
   });
 
-  it('from().select() with count: exact falls back to COUNT query when result is empty', async () => {
+  it('from().select() with count: exact falls back to COUNT query when offset exceeds result set', async () => {
     // First call: main query returns no rows (OFFSET past end of result set).
     mockQuery
       .mockResolvedValueOnce({ rows: [] })
