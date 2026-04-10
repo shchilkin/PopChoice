@@ -297,6 +297,18 @@ describe('POST /api/movie-recommendation – input validation', () => {
       const res = await POST(req);
       expect(res.status).toBe(400);
     });
+
+    it('rejects newVsClassic that is only whitespace after trimming', async () => {
+      const req = makeRequest({ ...validPerson, newVsClassic: '   ' });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts newVsClassic with leading/trailing whitespace around a non-empty value', async () => {
+      const req = makeRequest({ ...validPerson, newVsClassic: '  new  ' });
+      const res = await POST(req);
+      expect(res.status).not.toBe(400);
+    });
   });
 
   describe('missing required fields', () => {
