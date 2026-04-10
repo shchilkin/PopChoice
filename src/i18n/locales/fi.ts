@@ -170,7 +170,7 @@ export const fi: Translations = {
   results: {
     badge: 'Henkilökohtaiset suosituksesi',
     title: 'Löysimme täydellisen elokuvasi',
-    subtitle: 'Sovitettu yli 10 000 elokuvasta juuri sinulle',
+    subtitle: 'Sovitettu {count} elokuvasta juuri sinulle',
     topPick: 'Paras valinta',
     moreSuggestions: 'Lisää ehdotuksia',
     loading: 'Ladataan suosituksiasi…',
@@ -188,6 +188,8 @@ export const fi: Translations = {
     whyThisFilm: 'Miksi tämä elokuva',
     whyThisFilmForYou: 'Miksi tämä elokuva sinulle',
     broaderSearch: 'Laajennettu haku — sisältää TMDB-tuloksia',
+    foundInDb: 'Löydetty kirjastostamme',
+    foundOnTmdb: 'Löydetty TMDB:stä',
   },
   about: {
     badge: 'Miten PopChoice toimii',

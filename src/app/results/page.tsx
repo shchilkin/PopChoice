@@ -34,8 +34,10 @@ interface ApiResponse {
     aiDescription?: string;
     localizedName?: string;
     isMainRecommendation?: boolean;
+    fromTMDB?: boolean;
   }[];
   usedBroaderSearch?: boolean;
+  dbMovieCount?: number;
 }
 
 export default function ResultsPage() {
@@ -44,6 +46,7 @@ export default function ResultsPage() {
   const [movies, setMovies] = useState<MovieRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [usedBroaderSearch, setUsedBroaderSearch] = useState(false);
+  const [dbMovieCount, setDbMovieCount] = useState<number | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -94,6 +97,10 @@ export default function ResultsPage() {
           setUsedBroaderSearch(true);
         }
 
+        if (typeof parsed.dbMovieCount === 'number') {
+          setDbMovieCount(parsed.dbMovieCount);
+        }
+
         if (parsed.similarMovies && parsed.similarMovies.length > 0) {
           const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
             id: m.id,
@@ -107,6 +114,7 @@ export default function ResultsPage() {
             description: m.aiDescription,
             localizedName: m.localizedName,
             isMainRecommendation: m.isMainRecommendation,
+            fromTMDB: m.fromTMDB,
           }));
 
           const needPosters = mapped.filter((m) => !m.posterURL);
@@ -147,6 +155,9 @@ export default function ResultsPage() {
 
   const mainMovie = movies.find((m) => m.isMainRecommendation) || movies[0];
   const otherMovies = movies.filter((m) => m !== mainMovie);
+  // Split other movies by source for separate sections
+  const localOtherMovies = otherMovies.filter((m) => !m.fromTMDB);
+  const tmdbOtherMovies = otherMovies.filter((m) => m.fromTMDB);
 
   if (isLoading) {
     return (
@@ -227,7 +238,10 @@ export default function ResultsPage() {
           {t.results.title}
         </h1>
         <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
-          {t.results.subtitle}
+          {t.results.subtitle.replace(
+            '{count}',
+            dbMovieCount !== null ? dbMovieCount.toLocaleString() : '…',
+          )}
         </p>
       </motion.div>
 
@@ -268,8 +282,8 @@ export default function ResultsPage() {
         <MainMovieCard movie={mainMovie} />
       </div>
 
-      {/* Additional suggestions */}
-      {otherMovies.length > 0 && (
+      {/* Additional suggestions — local DB */}
+      {localOtherMovies.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -284,7 +298,7 @@ export default function ResultsPage() {
                 }}
               />
               <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
-                {t.results.moreSuggestions}
+                {t.results.foundInDb}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -325,7 +339,7 @@ export default function ResultsPage() {
               onScroll={handleScroll}
               className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide"
             >
-              {otherMovies.map((movie) => (
+              {localOtherMovies.map((movie) => (
                 <SmallSuggestionCard
                   key={movie.id}
                   movie={movie}
@@ -355,7 +369,7 @@ export default function ResultsPage() {
 
           {/* Dots */}
           <div className="flex justify-center gap-1.5 mt-2">
-            {otherMovies.map((movie) => (
+            {localOtherMovies.map((movie) => (
               <button
                 key={movie.id}
                 onClick={() => toggleSuggestion(movie.id)}
@@ -378,12 +392,56 @@ export default function ResultsPage() {
           </div>
 
           <AnimatePresence>
-            {activeSuggestion !== null && (
-              <ExpandedSuggestion
-                key={activeSuggestion}
-                movie={otherMovies.find((m) => m.id === activeSuggestion)!}
+            {activeSuggestion !== null &&
+              localOtherMovies.some((m) => m.id === activeSuggestion) && (
+                <ExpandedSuggestion
+                  key={activeSuggestion}
+                  movie={localOtherMovies.find((m) => m.id === activeSuggestion)!}
+                />
+              )}
+          </AnimatePresence>
+        </motion.div>
+      )}
+
+      {/* Additional suggestions — from TMDB */}
+      {tmdbOtherMovies.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.45 }}
+          className="mt-8"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <div
+              className="w-1.5 h-5 rounded-full"
+              style={{
+                background: `linear-gradient(180deg, ${palette.teal}, ${palette.blue})`,
+              }}
+            />
+            <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
+              {t.results.foundOnTmdb}
+            </span>
+          </div>
+
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+            {tmdbOtherMovies.map((movie) => (
+              <SmallSuggestionCard
+                key={movie.id}
+                movie={movie}
+                active={activeSuggestion === movie.id}
+                onClick={() => toggleSuggestion(movie.id)}
               />
-            )}
+            ))}
+          </div>
+
+          <AnimatePresence>
+            {activeSuggestion !== null &&
+              tmdbOtherMovies.some((m) => m.id === activeSuggestion) && (
+                <ExpandedSuggestion
+                  key={activeSuggestion}
+                  movie={tmdbOtherMovies.find((m) => m.id === activeSuggestion)!}
+                />
+              )}
           </AnimatePresence>
         </motion.div>
       )}

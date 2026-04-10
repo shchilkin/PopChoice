@@ -18,8 +18,8 @@ const SIMILARITY_THRESHOLD = 0.7;
 /** Trigger TMDB fallback when fewer than this many high-quality local results are found. */
 const MIN_HIGH_QUALITY_LOCAL = 3;
 
-/** Maximum number of TMDB movies to merge into the results. */
-const MAX_TMDB_MOVIES = 6;
+/** Maximum movies in the final merged result set. */
+const MAX_TOTAL_MOVIES = 6;
 
 /** Maximum number of TMDB movies to JIT-seed per request. */
 const MAX_JIT_SEED_MOVIES = 5;
@@ -27,8 +27,12 @@ const MAX_JIT_SEED_MOVIES = 5;
 /** TMDB API base URL (v3). */
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 
-/** Mapping from quiz mood preferences to TMDB genre IDs. */
-const MOOD_TO_TMDB_GENRE: Record<string, number> = {
+/**
+ * Mapping from stable genre IDs to TMDB genre IDs.
+ * The quiz sends genre *labels* (e.g. "Sci-Fi") via toApiFormat. We normalize
+ * labels to IDs by stripping non-alpha chars and lowercasing before lookup.
+ */
+const GENRE_LABEL_TO_TMDB_ID: Record<string, number> = {
   action: 28,
   adventure: 12,
   animation: 16,
@@ -40,6 +44,14 @@ const MOOD_TO_TMDB_GENRE: Record<string, number> = {
   thriller: 53,
   documentary: 99,
 };
+
+/**
+ * Normalize a quiz mood label to a stable genre key.
+ * Strips non-alpha characters and lowercases so "Sci-Fi" → "scifi", "Action" → "action".
+ */
+function normalizeMoodLabel(label: string): string {
+  return label.toLowerCase().replace(/[^a-z]/g, '');
+}
 
 const LOCALE_LANGUAGE: Record<string, string> = {
   en: 'English',
@@ -132,11 +144,14 @@ const apiResponseSchema = z.object({
         aiDescription: z.string().optional(), // Added AI-generated description
         localizedName: z.string().optional(), // Localized title from TMDB
         isMainRecommendation: z.boolean().optional(), // Mark main recommendation
+        fromTMDB: z.boolean().optional(), // True for movies sourced from TMDB fallback
       }),
     )
     .optional(),
   // Flag indicating that TMDB fallback was used to broaden results
   usedBroaderSearch: z.boolean().optional(),
+  // Actual number of movies in the local database (for display)
+  dbMovieCount: z.number().optional(),
 });
 
 // Enhanced type for the full movie match result
@@ -181,6 +196,9 @@ interface TMDBDiscoverMovie {
 /**
  * Derive TMDB /discover/movie query parameters from user quiz preferences.
  * Uses a deterministic mapping to avoid an extra LLM call.
+ *
+ * The quiz sends human-readable labels (e.g. "Sci-Fi", "New", "Serious and thought-provoking")
+ * which we normalize to stable keys before mapping.
  */
 function extractTMDBParams(allPeopleData: PersonFormData[]): {
   genre_ids: number[];
@@ -188,11 +206,13 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
   primary_release_date_gte?: string;
   primary_release_date_lte?: string;
 } {
-  // Aggregate mood preferences across all people
+  // Aggregate mood preferences across all people.
+  // Normalize labels: "Sci-Fi" → "scifi", "Action" → "action", etc.
   const moodCounts: Record<string, number> = {};
   allPeopleData.forEach((p) => {
     p.moodPreference.forEach((mood) => {
-      moodCounts[mood.toLowerCase()] = (moodCounts[mood.toLowerCase()] ?? 0) + 1;
+      const key = normalizeMoodLabel(mood);
+      moodCounts[key] = (moodCounts[key] ?? 0) + 1;
     });
   });
 
@@ -200,13 +220,22 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
   const genre_ids = Object.entries(moodCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
-    .map(([mood]) => MOOD_TO_TMDB_GENRE[mood])
+    .map(([key]) => GENRE_LABEL_TO_TMDB_ID[key])
     .filter((id): id is number => id !== undefined);
 
-  // Era preference: pick the most common value
+  // Era preference: normalize to 'new' | 'classic' | 'both' by keyword matching.
+  // Quiz sends e.g. "New", "Classic", "Both new and classic".
   const eraCounts: Record<string, number> = {};
   allPeopleData.forEach((p) => {
-    eraCounts[p.newVsClassic] = (eraCounts[p.newVsClassic] ?? 0) + 1;
+    const era = p.newVsClassic.toLowerCase();
+    const key = era.includes('both')
+      ? 'both'
+      : era.includes('classic')
+        ? 'classic'
+        : era.includes('new')
+          ? 'new'
+          : 'both';
+    eraCounts[key] = (eraCounts[key] ?? 0) + 1;
   });
   const dominantEra = Object.entries(eraCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'both';
 
@@ -219,10 +248,19 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
     primary_release_date_lte = '2000-12-31';
   }
 
-  // Tone → sort order
+  // Tone → sort order. Quiz sends e.g. "Serious and thought-provoking", "Dark and intense".
+  // Normalize by keyword matching.
   const toneCounts: Record<string, number> = {};
   allPeopleData.forEach((p) => {
-    toneCounts[p.tonePreference] = (toneCounts[p.tonePreference] ?? 0) + 1;
+    const tone = p.tonePreference.toLowerCase();
+    const key = tone.includes('serious')
+      ? 'serious'
+      : tone.includes('dark')
+        ? 'dark'
+        : tone.includes('balanced')
+          ? 'balanced'
+          : 'light';
+    toneCounts[key] = (toneCounts[key] ?? 0) + 1;
   });
   const dominantTone = Object.entries(toneCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'light';
   const sort_by =
@@ -633,9 +671,21 @@ export async function POST(req: NextRequest) {
 
     logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
 
-    // Step 1: Create embedding from all people's data
-    const embedding = await createEmbedding(allPeopleData);
-    logger.info('Embedding created');
+    // Step 1: Create embedding and fetch DB count in parallel
+    const [embedding, dbMovieCountResult] = await Promise.all([
+      createEmbedding(allPeopleData),
+      (async () => {
+        try {
+          const db = getDbClient();
+          if (!db.isConfigured()) return null;
+          const countRes = await db.from('movies').select('id', { count: 'exact', head: true });
+          return countRes.count ?? null;
+        } catch {
+          return null;
+        }
+      })(),
+    ]);
+    logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
 
     // Step 2: Find similar movies (local vector search)
     let similarMovies = await getSimilarMovies(embedding);
@@ -656,20 +706,30 @@ export async function POST(req: NextRequest) {
         const tmdbMovies = await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey);
 
         if (tmdbMovies.length > 0) {
-          usedBroaderSearch = true;
+          // Keep only the high-quality local results, then fill remaining slots with TMDB.
+          const localResultsForMerge = highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
 
-          // Exclude TMDB movies whose titles are already covered by local results
-          const localTitles = new Set(similarMovies.map((m) => m.name.toLowerCase()));
-          const slotsRemaining = Math.max(0, MAX_TMDB_MOVIES - similarMovies.length);
+          // Exclude TMDB movies whose titles are already covered by selected local results.
+          const localTitles = new Set(localResultsForMerge.map((m) => m.name.toLowerCase()));
+          const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
           const newTMDBMatches = tmdbMovies
             .filter((m) => !localTitles.has(m.title.toLowerCase()))
             .slice(0, slotsRemaining)
             .map(tmdbMovieToEnhancedMatch);
 
-          similarMovies = [...similarMovies, ...newTMDBMatches].slice(0, MAX_TMDB_MOVIES);
+          similarMovies = [...localResultsForMerge, ...newTMDBMatches].slice(0, MAX_TOTAL_MOVIES);
+
+          // Only show the UI banner when TMDB movies are actually included
+          if (newTMDBMatches.length > 0) {
+            usedBroaderSearch = true;
+          }
 
           logger.info(
-            { localCount: highQualityLocal.length, tmdbCount: newTMDBMatches.length },
+            {
+              localCount: localResultsForMerge.length,
+              tmdbCount: newTMDBMatches.length,
+              finalCount: similarMovies.length,
+            },
             'Merged local and TMDB results',
           );
 
@@ -749,8 +809,11 @@ export async function POST(req: NextRequest) {
         localizedName: movie.localizedName,
         // Mark the main recommendation for potential UI highlighting (optional)
         isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
+        // Negative IDs indicate TMDB-sourced movies not yet persisted locally
+        fromTMDB: Number(movie.id) < 0,
       })),
       usedBroaderSearch,
+      dbMovieCount: dbMovieCountResult ?? undefined,
     };
 
     const duration = Date.now() - startTime;

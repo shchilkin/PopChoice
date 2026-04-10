@@ -165,7 +165,7 @@ export const en = {
   results: {
     badge: 'Your personalized picks',
     title: 'We found your perfect film',
-    subtitle: 'Matched from 10,000+ films based on your vibe',
+    subtitle: 'Matched from {count} films based on your vibe',
     topPick: 'Top Pick',
     moreSuggestions: 'More suggestions',
     loading: 'Loading your picks…',
@@ -183,6 +183,8 @@ export const en = {
     whyThisFilm: 'Why this film',
     whyThisFilmForYou: 'Why this film for you',
     broaderSearch: 'Expanded search — including results from TMDB',
+    foundInDb: 'Found in our library',
+    foundOnTmdb: 'Found on TMDB',
   },
   about: {
     badge: 'How PopChoice works',
