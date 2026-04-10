@@ -100,10 +100,24 @@ const movieService = new MovieService();
 
 // Request validation schemas
 const personFormDataSchema = z.object({
-  favoriteMovie: z.string().min(1, 'Favorite movie is required'),
-  newVsClassic: z.string().min(1, 'New vs Classic preference is required'),
-  moodPreference: z.array(z.string()).min(1, 'At least one mood preference is required'),
-  tonePreference: z.string().min(1, 'Tone preference is required'),
+  favoriteMovie: z
+    .string()
+    .trim()
+    .min(1, 'Favorite movie is required')
+    .max(500, 'Favorite movie must be 500 characters or fewer'),
+  newVsClassic: z
+    .string()
+    .trim()
+    .min(1, 'New vs Classic preference is required')
+    .max(200, 'New vs Classic preference must be 200 characters or fewer'),
+  moodPreference: z
+    .array(z.string().trim().max(200, 'Each mood preference must be 200 characters or fewer'))
+    .min(1, 'At least one mood preference is required'),
+  tonePreference: z
+    .string()
+    .trim()
+    .min(1, 'Tone preference is required')
+    .max(200, 'Tone preference must be 200 characters or fewer'),
 });
 
 const requestBodySchema = z.union([
