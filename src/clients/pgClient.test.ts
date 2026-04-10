@@ -315,7 +315,7 @@ describe('pgClient', () => {
     });
 
     expect(mockQuery).toHaveBeenCalledWith(
-      'SELECT * FROM match_movies(query_embedding := $1, match_threshold := $2, match_count := $3)',
+      'SELECT * FROM "match_movies"(query_embedding := $1, match_threshold := $2, match_count := $3)',
       ['[0.1,0.2,0.3]', 0.1, 6],
     );
     expect(result.data).toHaveLength(2);
@@ -338,7 +338,7 @@ describe('pgClient', () => {
     const client = createPgDbClient();
     await client.rpc('get_count');
 
-    expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM get_count()', []);
+    expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM "get_count"()', []);
   });
 
   // -----------------------------------------------------------------------

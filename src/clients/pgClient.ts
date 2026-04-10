@@ -517,7 +517,7 @@ export function createPgDbClient(): DbClient {
         });
 
         const callArgs = placeholders.length > 0 ? placeholders.join(', ') : '';
-        const sql = `SELECT * FROM ${fn}(${callArgs})`;
+        const sql = `SELECT * FROM "${fn}"(${callArgs})`;
 
         const result = await pool.query(sql, values);
         return { data: result.rows, error: null };
