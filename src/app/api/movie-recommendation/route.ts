@@ -326,7 +326,7 @@ async function getMovieInfo(
 
     return { posterURL, localizedName };
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching movie by title');
+    logger.error({ err: error, movieTitle, locale }, 'Error fetching movie by title');
     return {};
   }
 }
