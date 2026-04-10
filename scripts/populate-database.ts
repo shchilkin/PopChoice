@@ -72,8 +72,8 @@ async function main() {
   console.log('🎬 PopChoice Database Population Script');
   console.log('=====================================\n');
 
-  // Resolve path to movies.txt from project root
-  const moviesPath = path.resolve(process.cwd(), 'movies.txt');
+  // Resolve path to movies.txt
+  const moviesPath = path.resolve(process.cwd(), 'services/movie-seed/movies.txt');
 
   // Check if movies file exists
   try {
@@ -81,7 +81,7 @@ async function main() {
     await fs.access(moviesPath);
   } catch {
     console.error(`❌ Movies file not found: ${moviesPath}`);
-    console.error('Please ensure movies.txt exists in the project root.');
+    console.error('Please ensure movies.txt exists at services/movie-seed/movies.txt.');
     process.exit(1);
   }
 

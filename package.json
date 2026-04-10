@@ -15,8 +15,9 @@
     "lint": "eslint .",
     "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
-    "populate-db": "tsx scripts/populate-database.ts",
+    "populate-db": "tsx --env-file=.env scripts/populate-database.ts",
     "prepare": "husky",
+    "setup:local-db": "bash scripts/setup-local-db.sh",
     "start": "next start",
     "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
     "storybook": "storybook dev -p 6006",
@@ -34,7 +35,7 @@
     "tar": "^7.5.11"
   },
   "dependencies": {
-    "@langchain/core": "^0.3.58",
+    "@langchain/core": "^1.1.39",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.15.0",
     "canvas-confetti": "^1.9.4",

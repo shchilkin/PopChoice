@@ -12,15 +12,15 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
 - 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
 - 📊 **Interactive Questionnaire** - Collects user preferences through engaging questions
-- 🔍 **Vector Search** - Lightning-fast similarity search with Supabase pgvector
+- 🔍 **Vector Search** - Lightning-fast similarity search with pgvector
 - 📱 **Responsive Design** - Works seamlessly on desktop and mobile
 - 🧪 **Component Library** - Built with Storybook for consistent UI components
 
 ## 🛠 Tech Stack
 
-- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
 - **AI/ML:** OpenAI GPT & Embeddings API
-- **Database:** Supabase (PostgreSQL with pgvector extension)
+- **Database:** PostgreSQL with pgvector (local via Docker or any provider)
 - **Movie Data:** TMDB (The Movie Database) API
 - **Analytics:** Vercel Web Analytics
 - **Testing:** Vitest, Storybook, Playwright
@@ -40,18 +40,27 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
    ```bash
    cp .env.example .env
-   # Edit .env with your API keys
+   # Edit .env with your OpenAI and TMDB API keys
    ```
 
-   For detailed setup instructions, see the **[Setup Guide](./docs/SETUP.md)**.
+3. **Start local PostgreSQL** (requires Docker)
 
-3. **Start development server**
+   ```bash
+   npm run setup:local-db
+   # Generates a random password, writes DATABASE_URL to .env, and starts the container
+   npm run populate-db
+   # Seeds the database with movie embeddings
+   ```
+
+   For other database options, see the **[Setup Guide](./docs/SETUP.md)**.
+
+4. **Start development server**
 
    ```bash
    npm run dev
    ```
 
-4. **Open the application**
+5. **Open the application**
    - Navigate to [http://localhost:3000](http://localhost:3000)
    - Start the Storybook workshop at [http://localhost:6006](http://localhost:6006) with `npm run storybook`
 
@@ -100,6 +109,7 @@ npm run type-check      # TypeScript validation
 npm run fix             # Fix all issues automatically
 
 # Database & Data
+npm run setup:local-db  # Generate credentials, start Docker PostgreSQL
 npm run populate-db     # Populate database with movie data
 npm run analyze-movies  # Analyze movie data for embeddings
 ```
@@ -110,7 +120,7 @@ For detailed development workflows and project structure, see the **[Development
 
 - [Next.js Documentation](https://nextjs.org/docs) - Learn about Next.js features and API
 - [OpenAI Embeddings Guide](https://platform.openai.com/docs/guides/embeddings) - Understanding embeddings for recommendations
-- [Supabase Vector Documentation](https://supabase.com/docs/guides/ai/vector-columns) - Vector database setup
+- [pgvector Documentation](https://github.com/pgvector/pgvector) - Vector database setup
 - [TMDB API Documentation](https://developer.themoviedb.org/docs/getting-started) - The Movie Database API integration
 - [The AI Engineer Path](https://scrimba.com/the-ai-engineer-path-c02v) - Complete AI engineering course
 

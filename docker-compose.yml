@@ -1,0 +1,22 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: popchoice-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Run 'npm run setup:local-db' to initialize credentials}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run 'npm run setup:local-db' to initialize credentials}
+      POSTGRES_DB: ${POSTGRES_DB:?Run 'npm run setup:local-db' to initialize credentials}
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
