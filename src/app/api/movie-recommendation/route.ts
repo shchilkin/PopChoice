@@ -46,10 +46,10 @@ const GENRE_LABEL_TO_TMDB_ID: Record<string, number> = {
 };
 
 /**
- * Normalize a quiz mood label to a stable genre key.
+ * Normalize a quiz genre label to a stable genre key.
  * Strips non-alpha characters and lowercases so "Sci-Fi" → "scifi", "Action" → "action".
  */
-function normalizeMoodLabel(label: string): string {
+function normalizeGenreLabel(label: string): string {
   return label.toLowerCase().replace(/[^a-z]/g, '');
 }
 
@@ -211,7 +211,7 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
   const moodCounts: Record<string, number> = {};
   allPeopleData.forEach((p) => {
     p.moodPreference.forEach((mood) => {
-      const key = normalizeMoodLabel(mood);
+      const key = normalizeGenreLabel(mood);
       moodCounts[key] = (moodCounts[key] ?? 0) + 1;
     });
   });
@@ -228,13 +228,16 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
   const eraCounts: Record<string, number> = {};
   allPeopleData.forEach((p) => {
     const era = p.newVsClassic.toLowerCase();
-    const key = era.includes('both')
-      ? 'both'
-      : era.includes('classic')
-        ? 'classic'
-        : era.includes('new')
-          ? 'new'
-          : 'both';
+    let key: string;
+    if (era.includes('both')) {
+      key = 'both';
+    } else if (era.includes('classic')) {
+      key = 'classic';
+    } else if (era.includes('new')) {
+      key = 'new';
+    } else {
+      key = 'both';
+    }
     eraCounts[key] = (eraCounts[key] ?? 0) + 1;
   });
   const dominantEra = Object.entries(eraCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'both';
@@ -253,13 +256,16 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
   const toneCounts: Record<string, number> = {};
   allPeopleData.forEach((p) => {
     const tone = p.tonePreference.toLowerCase();
-    const key = tone.includes('serious')
-      ? 'serious'
-      : tone.includes('dark')
-        ? 'dark'
-        : tone.includes('balanced')
-          ? 'balanced'
-          : 'light';
+    let key: string;
+    if (tone.includes('serious')) {
+      key = 'serious';
+    } else if (tone.includes('dark')) {
+      key = 'dark';
+    } else if (tone.includes('balanced')) {
+      key = 'balanced';
+    } else {
+      key = 'light';
+    }
     toneCounts[key] = (toneCounts[key] ?? 0) + 1;
   });
   const dominantTone = Object.entries(toneCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'light';
