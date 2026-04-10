@@ -7,7 +7,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // inline hydration scripts. A nonce-based CSP (via middleware) can replace
 // 'unsafe-inline' for scripts in a future hardening pass.
 // In development, Next.js tooling also needs 'unsafe-eval' for source maps
-// and ws:/wss: connections for Hot Module Replacement.
+// and ws: wss: connections for Hot Module Replacement.
 const ContentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
