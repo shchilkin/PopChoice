@@ -195,6 +195,11 @@ interface TMDBDiscoverMovie {
   poster_path: string | null;
 }
 
+/** Extract a 4-digit year from a TMDB `release_date` string ("YYYY-MM-DD"), defaulting to 0. */
+function parseTMDBReleaseYear(releaseDate: string | null | undefined): number {
+  return releaseDate ? parseInt(releaseDate.substring(0, 4), 10) : 0;
+}
+
 /**
  * Derive TMDB /discover/movie query parameters from user quiz preferences.
  * Uses a deterministic mapping to avoid an extra LLM call.
@@ -328,7 +333,7 @@ async function fetchTMDBDiscoverMovies(
  * Uses a negative TMDB ID so it is distinct from positive local DB IDs.
  */
 function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch {
-  const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+  const year = parseTMDBReleaseYear(movie.release_date);
   const score = Number(movie.vote_average?.toFixed(1)) || 0;
 
   const content = [`${movie.title} (${year}) | TMDB Score: ${score}/10`, movie.overview || '']
@@ -391,7 +396,8 @@ function seedMoviesInBackground(
         logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
       } else {
         for (const row of existingMovies ?? []) {
-          existingMovieKeys.add(`${(row.name as string).toLowerCase()}|${row.year}`);
+          const dbYear = row.year != null ? Number(row.year) : 0;
+          existingMovieKeys.add(`${(row.name as string).toLowerCase()}|${dbYear}`);
         }
       }
     } catch (err) {
@@ -400,7 +406,7 @@ function seedMoviesInBackground(
 
     for (const movie of candidateMovies) {
       try {
-        const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+        const year = parseTMDBReleaseYear(movie.release_date);
         const movieKey = `${movie.title.toLowerCase()}|${year}`;
 
         if (existingMovieKeys.has(movieKey)) {
@@ -678,7 +684,7 @@ async function enhanceSimilarMoviesWithPosters(
       // TMDB-sourced movies already carry a poster URL — skip the redundant re-query.
       // localizedName is not applicable for TMDB-sourced movies (title is already the TMDB title).
       if (movie.posterURL) {
-        return { ...movie };
+        return movie;
       }
       try {
         const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
@@ -775,7 +781,7 @@ export async function POST(req: NextRequest) {
           const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
           const newTMDBMatches = tmdbMovies
             .filter((m) => {
-              const tmdbYear = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+              const tmdbYear = parseTMDBReleaseYear(m.release_date);
               return !localKeys.has(`${m.title.toLowerCase()}|${tmdbYear}`);
             })
             .slice(0, slotsRemaining)
