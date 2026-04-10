@@ -17,7 +17,7 @@ The workflow runs automatically on pull requests targeting the `development` bra
 | `server-tests`      | Vitest server tests with coverage collection and artifact upload |
 | `storybook-tests`   | Playwright browser install + Storybook component tests           |
 | `build`             | Next.js production build verification                            |
-| `movie-sync-ci`     | TypeScript compilation for `services/movie-sync`                 |
+| `movie-seed-ci`     | TypeScript compilation for `services/movie-seed`                 |
 | `dependency-review` | Blocks PRs introducing vulnerable dependencies                   |
 
 ## Workflow Features
@@ -42,9 +42,9 @@ Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (
 
 The `build` job sets `NEXT_FONT_GOOGLE_DISABLE=1` to prevent flaky failures caused by network access to Google Fonts in restricted CI environments.
 
-### Movie Sync CI
+### Movie Seed CI
 
-The `movie-sync-ci` job installs dependencies and runs `tsc` (`npm run build`) inside `services/movie-sync` to ensure the service always compiles correctly.
+The `movie-seed-ci` job installs dependencies and runs `tsc` (`npm run build`) inside `services/movie-seed` to ensure the service always compiles correctly.
 
 ### Dependency Review
 
@@ -62,7 +62,7 @@ The workflow is triggered on:
 Dependabot is configured in `.github/dependabot.yml` to monitor:
 
 - **npm (root)** – main application dependencies, grouped into `production-dependencies` and `development-dependencies`
-- **npm (services/movie-sync)** – movie-sync service dependencies, grouped as `movie-sync-dependencies`
+- **npm (services/movie-seed)** – movie-seed service dependencies, grouped as `movie-seed-dependencies`
 - **GitHub Actions** – workflow action versions
 
 All groups cover `minor` and `patch` updates. Major updates still require manual review.
@@ -87,8 +87,8 @@ npm run test:storybook
 # Verify build
 NEXT_FONT_GOOGLE_DISABLE=1 npm run build
 
-# Movie sync type check
-cd services/movie-sync && npm run build
+# Movie seed type check
+cd services/movie-seed && npm run build
 ```
 
 ## Troubleshooting
@@ -104,7 +104,7 @@ cd services/movie-sync && npm run build
 3. **Build Failures**
    - Verify all required environment variables are present as repository secrets (`OPENAI_API_KEY`).
 
-4. **Movie Sync Type Errors**
-   - Run `cd services/movie-sync && npm run build` locally to reproduce and fix TypeScript errors.
+4. **Movie Seed Type Errors**
+   - Run `cd services/movie-seed && npm run build` locally to reproduce and fix TypeScript errors.
 
 The workflow helps maintain code quality and functionality across all pull requests.

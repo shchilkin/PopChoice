@@ -2,6 +2,8 @@ import { isIP } from 'node:net';
 
 import { createClient } from 'redis';
 
+import logger from '@/lib/logger';
+
 type RedisClient = ReturnType<typeof createClient>;
 
 let redisClient: RedisClient | null = null;
@@ -13,7 +15,7 @@ function doInitialize(): Promise<RedisClient | null> {
   return (async () => {
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
-      console.warn('REDIS_URL not set. Rate limiting disabled.');
+      logger.warn('REDIS_URL not set. Rate limiting disabled.');
       return null;
     }
 
@@ -21,10 +23,10 @@ function doInitialize(): Promise<RedisClient | null> {
       const client = createClient({ url: redisUrl });
       await client.connect();
       redisClient = client;
-      console.log('Rate limiter initialized with Redis');
+      logger.info('Rate limiter initialized with Redis');
       return client;
     } catch (error) {
-      console.error('Failed to initialize Redis client:', error);
+      logger.error({ err: error }, 'Failed to initialize Redis client');
       // Reset so the next request can attempt reconnection
       initPromise = null;
       return null;
@@ -94,7 +96,7 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
 
     return null;
   } catch (error) {
-    console.error('Rate limit check failed:', error);
+    logger.error({ err: error }, 'Rate limit check failed');
     return null;
   }
 }

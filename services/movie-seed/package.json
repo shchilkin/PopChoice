@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "openai": "^6.33.0",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "pino": "^9.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",

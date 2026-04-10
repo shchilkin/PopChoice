@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getDbClient } from '@/clients/dbClient';
+import logger from '@/lib/logger';
 
 export interface Movie {
   id: number;
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       .order('id', { ascending: true });
 
     if (error) {
-      console.error('Error fetching movies:', error);
+      logger.error({ err: error }, 'Error fetching movies');
       return NextResponse.json({ error: 'Failed to fetch movies' }, { status: 500 });
     }
 
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Unexpected error in movies API:', error);
+    logger.error({ err: error }, 'Unexpected error in movies API');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
