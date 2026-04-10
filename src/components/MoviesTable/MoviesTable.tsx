@@ -10,6 +10,60 @@ import { AgeRatingChip } from '../AgeRatingChip';
 
 import type { Movie } from '@/app/api/movies/route';
 
+/**
+ * Animated table skeleton shown while movie data is loading or while the
+ * responsive breakpoint is being measured.  Marked aria-hidden so screen
+ * readers skip the decorative placeholder structure.
+ */
+export function MoviesTableSkeleton() {
+  return (
+    <div
+      aria-hidden="true"
+      className="w-full overflow-x-auto rounded-2xl"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <table className="min-w-full">
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
+            {['40%', '12%', '12%', '12%'].map((w, i) => (
+              <th key={i} className="px-5 py-3">
+                <div
+                  className="h-3 rounded animate-pulse"
+                  style={{ width: w, background: 'var(--pc-bd2)' }}
+                />
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <tr key={i} style={{ borderBottom: '1px solid var(--pc-bd1)' }}>
+              <td className="px-5 py-3.5">
+                <div
+                  className="h-3.5 rounded animate-pulse mb-1.5"
+                  style={{ width: '55%', background: 'var(--pc-bd2)' }}
+                />
+                <div
+                  className="h-2.5 rounded animate-pulse"
+                  style={{ width: '20%', background: 'var(--pc-bd1)' }}
+                />
+              </td>
+              {[1, 2, 3].map((j) => (
+                <td key={j} className="px-5 py-3.5">
+                  <div
+                    className="h-3.5 rounded animate-pulse mx-auto"
+                    style={{ width: '60%', background: 'var(--pc-bd2)' }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // Utility function to convert minutes to short hours and minutes format
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
@@ -32,40 +86,51 @@ export function MoviesTable({ movies }: MoviesTableProps) {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
 
+  // Show the skeleton while the breakpoint is being measured to avoid a brief
+  // blank section between the loading skeleton disappearing and the correct
+  // layout being rendered.
+  if (isMobile === null) return <MoviesTableSkeleton />;
+
   if (isMobile) {
     return (
       <div className="flex flex-col gap-3">
-        {movies.map((movie) => (
-          <div
-            key={movie.id}
-            className="rounded-2xl p-4"
-            style={{
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-            }}
-          >
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
-                  {movie.name}
+        {movies.length === 0 ? (
+          <p className="py-8 text-center text-sm" style={{ color: 'var(--pc-t4)' }}>
+            {t.moviesPage.noMoviesFound}
+          </p>
+        ) : (
+          movies.map((movie) => (
+            <div
+              key={movie.id}
+              className="rounded-2xl p-4"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+              }}
+            >
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
+                    {movie.name}
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
+                    {movie.year}
+                  </div>
                 </div>
-                <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
-                  {movie.year}
-                </div>
+                <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
               </div>
-              <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
+              <div className="flex items-center gap-4 mt-2">
+                <span className="text-xs" style={{ color: 'var(--pc-t3)' }}>
+                  {formatDuration(movie.duration)}
+                </span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
+                  ★ {movie.score_rating.toFixed(1)}
+                  <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>/10</span>
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-4 mt-2">
-              <span className="text-xs" style={{ color: 'var(--pc-t3)' }}>
-                {formatDuration(movie.duration)}
-              </span>
-              <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
-                ★ {movie.score_rating.toFixed(1)}
-                <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>/10</span>
-              </span>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     );
   }
@@ -108,38 +173,53 @@ export function MoviesTable({ movies }: MoviesTableProps) {
           </tr>
         </thead>
         <tbody>
-          {movies.map((movie, i) => (
-            <tr
-              key={movie.id}
-              className="transition-colors duration-150 hover:bg-[var(--pc-surface-hover)]"
-              style={{
-                borderBottom: i < movies.length - 1 ? '1px solid var(--pc-bd1)' : undefined,
-              }}
-            >
-              <td className="px-5 py-3.5">
-                <div className="text-sm font-medium" style={{ color: 'var(--pc-t1)' }}>
-                  {movie.name}
-                </div>
-                <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
-                  {movie.year}
-                </div>
-              </td>
-              <td className="px-5 py-3.5 text-center">
-                <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
-              </td>
-              <td className="px-5 py-3.5 text-sm" style={{ color: 'var(--pc-t2)' }}>
-                {formatDuration(movie.duration)}
-              </td>
-              <td className="px-5 py-3.5 text-center">
-                <span className="text-sm font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
-                  {movie.score_rating.toFixed(1)}
-                </span>
-                <span className="text-xs ml-0.5" style={{ color: 'var(--pc-t4)' }}>
-                  /10
-                </span>
+          {movies.length === 0 ? (
+            <tr>
+              <td
+                colSpan={4}
+                className="px-5 py-8 text-center text-sm"
+                style={{ color: 'var(--pc-t4)' }}
+              >
+                {t.moviesPage.noMoviesFound}
               </td>
             </tr>
-          ))}
+          ) : (
+            movies.map((movie, i) => (
+              <tr
+                key={movie.id}
+                className="transition-colors duration-150 hover:bg-[var(--pc-surface-hover)]"
+                style={{
+                  borderBottom: i < movies.length - 1 ? '1px solid var(--pc-bd1)' : undefined,
+                }}
+              >
+                <td className="px-5 py-3.5">
+                  <div className="text-sm font-medium" style={{ color: 'var(--pc-t1)' }}>
+                    {movie.name}
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
+                    {movie.year}
+                  </div>
+                </td>
+                <td className="px-5 py-3.5 text-center">
+                  <AgeRatingChip
+                    rating={movie.age_rating as z.infer<typeof ageRatings>}
+                    size="sm"
+                  />
+                </td>
+                <td className="px-5 py-3.5 text-sm" style={{ color: 'var(--pc-t2)' }}>
+                  {formatDuration(movie.duration)}
+                </td>
+                <td className="px-5 py-3.5 text-center">
+                  <span className="text-sm font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
+                    {movie.score_rating.toFixed(1)}
+                  </span>
+                  <span className="text-xs ml-0.5" style={{ color: 'var(--pc-t4)' }}>
+                    /10
+                  </span>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

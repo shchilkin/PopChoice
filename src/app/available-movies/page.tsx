@@ -1,9 +1,9 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { MoviesTable } from '@/components';
+import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
@@ -18,27 +18,62 @@ export default function AvailableMoviesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 50;
 
+  // Client-side cache: page number → response data. Avoids redundant fetches
+  // when navigating back to a previously loaded page.
+  const cache = useRef<Map<number, MoviesResponse>>(new Map());
+  // AbortController for the in-flight fetch – cancelled when a newer page is requested.
+  const abortRef = useRef<AbortController | null>(null);
+
   const fetchMovies = useCallback(
     async (page: number) => {
+      // Serve from cache when available.
+      const cached = cache.current.get(page);
+      if (cached) {
+        // Cancel any in-flight request before applying cached state.
+        abortRef.current?.abort();
+        abortRef.current = null;
+        setError(null);
+        setMovies(cached.movies);
+        setTotalPages(cached.totalPages);
+        setTotalCount(cached.totalCount);
+        setCurrentPage(cached.page);
+        setLoading(false);
+        return;
+      }
+
+      // Cancel any in-flight request for a different page.
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`);
+        const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`, {
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error(`Failed to fetch movies: ${response.statusText}`);
         }
 
         const data: MoviesResponse = await response.json();
+        if (controller.signal.aborted) return;
+        cache.current.set(page, data);
         setMovies(data.movies);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
         setCurrentPage(data.page);
       } catch (err) {
+        // fetch() rejects with a DOMException (not always an Error subclass) on abort.
+        // Guard on the signal instead of relying on instanceof Error.
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     },
     [pageSize],
@@ -46,6 +81,12 @@ export default function AvailableMoviesPage() {
 
   useEffect(() => {
     fetchMovies(currentPage);
+    // Abort any in-flight request when the effect re-runs (new page) or the
+    // component unmounts, so stale responses can't call setState.
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
   }, [fetchMovies, currentPage]);
 
   const handlePageChange = (newPage: number) => {
@@ -79,20 +120,6 @@ export default function AvailableMoviesPage() {
     return rangeWithDots;
   };
 
-  if (loading) {
-    return (
-      <section className="flex-1 flex flex-col items-center justify-center px-5 py-16">
-        <div
-          className="animate-spin rounded-full h-10 w-10 border-b-2 mb-4"
-          style={{ borderColor: 'var(--pc-gold)' }}
-        />
-        <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
-          {t.moviesPage.loading}
-        </p>
-      </section>
-    );
-  }
-
   if (error) {
     return (
       <section className="flex-1 flex flex-col items-center justify-center px-5 py-16 text-center">
@@ -124,17 +151,18 @@ export default function AvailableMoviesPage() {
           {t.moviesPage.title}
         </h1>
         <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
-          {totalCount > 0
-            ? t.moviesPage.showing
-                .replace('{start}', String((currentPage - 1) * pageSize + 1))
-                .replace('{end}', String(Math.min(currentPage * pageSize, totalCount)))
-                .replace('{total}', String(totalCount))
-            : t.moviesPage.noMoviesFound}
+          {!loading &&
+            (totalCount > 0
+              ? t.moviesPage.showing
+                  .replace('{start}', String((currentPage - 1) * pageSize + 1))
+                  .replace('{end}', String(Math.min(currentPage * pageSize, totalCount)))
+                  .replace('{total}', String(totalCount))
+              : t.moviesPage.noMoviesFound)}
         </p>
       </div>
 
       {/* Table / Cards */}
-      <MoviesTable movies={movies} />
+      {loading ? <MoviesTableSkeleton /> : <MoviesTable movies={movies} />}
 
       {/* Pagination */}
       {totalPages > 1 && (

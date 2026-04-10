@@ -6,7 +6,6 @@ export interface Movie {
   id: number;
   name: string;
   age_rating: string;
-  description: string;
   duration: number;
   score_rating: number;
   year: number;
@@ -55,21 +54,14 @@ export async function GET(request: NextRequest) {
 
     const offset = (page - 1) * pageSize;
 
-    // Get total count first
-    const countResult = await db.from('movies').select('*', { count: 'exact', head: true });
-
-    if (countResult.error) {
-      console.error('Error getting movie count:', countResult.error);
-      return NextResponse.json({ error: 'Failed to fetch movie count' }, { status: 500 });
-    }
-
-    const totalCount = countResult.count || 0;
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    // Get paginated movies
-    const { data: movies, error } = await db
+    // Fetch paginated movies and total count in a single query
+    const {
+      data: movies,
+      error,
+      count,
+    } = await db
       .from<Movie>('movies')
-      .select('id, name, age_rating, description, duration, score_rating, year')
+      .select('id, name, age_rating, duration, score_rating, year', { count: 'exact' })
       .range(offset, offset + pageSize - 1)
       .order('id', { ascending: true });
 
@@ -77,6 +69,9 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching movies:', error);
       return NextResponse.json({ error: 'Failed to fetch movies' }, { status: 500 });
     }
+
+    const totalCount = count ?? 0;
+    const totalPages = Math.ceil(totalCount / pageSize);
 
     const response: MoviesResponse = {
       movies: movies ?? [],
@@ -100,8 +95,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Casablanca',
       age_rating: 'PG',
-      description:
-        'In Vichy-controlled Morocco, cynical nightclub owner Rick Blaine uncovers letters of transit that could provide escape from the war-torn city.',
       duration: 102,
       score_rating: 8.5,
       year: 1942,
@@ -109,8 +102,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Seven Samurai',
       age_rating: 'NR',
-      description:
-        'When bandits threaten to raid a poor farming village, the desperate villagers seek help from wandering samurai.',
       duration: 207,
       score_rating: 8.6,
       year: 1954,
@@ -118,17 +109,13 @@ function generateMockMovies(): Movie[] {
     {
       name: 'The Godfather',
       age_rating: 'R',
-      description:
-        'As aging Don Vito Corleone navigates wartime and family politics, his reluctant son Michael is drawn into the family business.',
       duration: 175,
       score_rating: 9.2,
       year: 1972,
     },
     {
-      name: 'One Flew Over the Cuckoo&apos;s Nest',
+      name: "One Flew Over the Cuckoo's Nest",
       age_rating: '15',
-      description:
-        'Charming rogue Randle P. McMurphy feigns mental illness to serve his sentence in a psychiatric hospital instead of prison.',
       duration: 133,
       score_rating: 8.7,
       year: 1975,
@@ -136,8 +123,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Star Wars: Episode IV - A New Hope',
       age_rating: 'G',
-      description:
-        'Farm boy Luke Skywalker joins a rebellion against the evil Galactic Empire in this epic space opera.',
       duration: 121,
       score_rating: 8.6,
       year: 1977,
@@ -145,17 +130,13 @@ function generateMockMovies(): Movie[] {
     {
       name: 'The Avengers',
       age_rating: 'PG-13',
-      description:
-        'Earth&apos;s mightiest heroes must come together and learn to fight as a team to stop the mischievous Loki and his alien army.',
       duration: 143,
       score_rating: 8.0,
       year: 2012,
     },
     {
-      name: 'Harry Potter and the Philosopher&apos;s Stone',
+      name: "Harry Potter and the Philosopher's Stone",
       age_rating: '12+',
-      description:
-        'An orphaned boy enrolls in a school of wizardry, where he learns the truth about himself and his parents.',
       duration: 152,
       score_rating: 7.6,
       year: 2001,
@@ -163,8 +144,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Deadpool',
       age_rating: '16+',
-      description:
-        'A former Special Forces operative turned mercenary is subjected to a rogue experiment.',
       duration: 108,
       score_rating: 8.0,
       year: 2016,
@@ -172,8 +151,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'John Wick',
       age_rating: '18+',
-      description:
-        'An ex-hit-man comes out of retirement to track down the gangsters that took everything from him.',
       duration: 101,
       score_rating: 7.4,
       year: 2014,
@@ -188,7 +165,6 @@ function generateMockMovies(): Movie[] {
       name:
         i === 0 ? baseMovie.name : `${baseMovie.name} ${Math.floor(i / sampleMovies.length) + 1}`,
       age_rating: baseMovie.age_rating,
-      description: baseMovie.description,
       duration: baseMovie.duration + (i % 10),
       score_rating: Math.round((baseMovie.score_rating + (i % 20) * 0.1) * 10) / 10,
       year: baseMovie.year + (i % 40),

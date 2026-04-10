@@ -11,7 +11,6 @@ const mockMovies = [
     id: 1,
     name: 'Test Movie',
     age_rating: 'PG',
-    description: 'A test movie',
     duration: 120,
     score_rating: 8.5,
     year: 2023,
@@ -27,10 +26,14 @@ vi.mock('@/clients/dbClient', () => ({
         if (opts?.head && opts?.count) {
           return Promise.resolve({ data: null, error: null, count: mockMovies.length });
         }
-        // Data query: select('columns').range(...).order(...)
+        // Data query with optional count via window function:
+        // select('columns', { count: 'exact' }).range(...).order(...)
+        const resolvedCount = opts?.count === 'exact' ? mockMovies.length : undefined;
         return {
           range: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: mockMovies, error: null })),
+            order: vi.fn(() =>
+              Promise.resolve({ data: mockMovies, error: null, count: resolvedCount }),
+            ),
           })),
         };
       }),

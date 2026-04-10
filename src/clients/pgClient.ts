@@ -25,6 +25,25 @@
 
 import pg from 'pg';
 
+// Register int8 (bigint/bigserial, OID 20) parser so that bigint columns are
+// returned as JS numbers rather than strings.  Safety checks guard against
+// precision loss and non-numeric input: NaN is rejected immediately, and values
+// outside the safe-integer range throw so the problem surfaces clearly rather
+// than silently corrupting data.
+// Optional chaining guards against environments where pg is mocked without the types object.
+pg.types?.setTypeParser(20, (val: string) => {
+  const n = parseInt(val, 10);
+  if (Number.isNaN(n)) {
+    throw new Error(`int8 value ${val} is not a valid integer`);
+  }
+  if (n > Number.MAX_SAFE_INTEGER || n < Number.MIN_SAFE_INTEGER) {
+    throw new Error(
+      `int8 value ${val} is outside the safe integer range and cannot be safely represented as a JS number`,
+    );
+  }
+  return n;
+});
+
 import type {
   DbClient,
   QueryDelete,
@@ -105,6 +124,7 @@ function defaultState(table: string): QueryState {
 function buildSelectSQL(state: QueryState): {
   text: string;
   values: unknown[];
+  useWindowCount: boolean;
   countText?: string;
   countValues?: unknown[];
 } {
@@ -114,7 +134,12 @@ function buildSelectSQL(state: QueryState): {
   // Column list
   const cols = state.headOnly ? '1' : state.columns;
 
-  let sql = `SELECT ${cols} FROM "${state.table}"`;
+  // When both data rows and a total count are needed, embed the count as a
+  // window function column to avoid a second round-trip to the database.
+  const needsWindowCount = state.countMode === 'exact' && !state.headOnly;
+  const selectCols = needsWindowCount ? `${cols}, COUNT(*) OVER() AS _total_count` : cols;
+
+  let sql = `SELECT ${selectCols} FROM "${state.table}"`;
 
   // WHERE clauses
   if (state.wheres.length > 0) {
@@ -140,7 +165,8 @@ function buildSelectSQL(state: QueryState): {
     sql += ` LIMIT ${safeNonNegativeInt(state.limitVal)}`;
   }
 
-  // Build count query if needed
+  // Build a separate COUNT(*) query used as fallback when the window-function
+  // path returns zero rows (OFFSET past end of result set), or for head-only queries.
   let countText: string | undefined;
   let countValues: unknown[] | undefined;
   if (state.countMode === 'exact') {
@@ -159,7 +185,7 @@ function buildSelectSQL(state: QueryState): {
     countValues = cValues;
   }
 
-  return { text: sql, values, countText, countValues };
+  return { text: sql, values, useWindowCount: needsWindowCount, countText, countValues };
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +194,7 @@ function buildSelectSQL(state: QueryState): {
 
 async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryResult<T>> {
   try {
-    const { text, values, countText, countValues } = buildSelectSQL(state);
+    const { text, values, useWindowCount, countText, countValues } = buildSelectSQL(state);
 
     if (state.headOnly) {
       // For head-only queries, we only need the count
@@ -185,16 +211,31 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
 
     const result = await pool.query(text, values);
 
-    let count: number | null = null;
-    if (countText && countValues) {
-      const countResult = await pool.query(countText, countValues);
-      count = parseInt(countResult.rows[0]?.count ?? '0', 10);
+    if (useWindowCount) {
+      // Extract the injected _total_count window column and strip it from rows.
+      type RowWithCount = T & { _total_count?: string | number };
+      const rows = result.rows as RowWithCount[];
+
+      if (rows.length > 0) {
+        const count = parseInt(String(rows[0]._total_count ?? '0'), 10);
+        const data = rows.map(({ _total_count: _, ...rest }) => rest as T);
+        return { data, error: null, count };
+      }
+
+      // The OFFSET is past the end of the result set — the window function cannot
+      // return a count. Fall back to a separate COUNT(*) query.
+      // Any error thrown here is caught by the outer try/catch and returned as
+      // a QueryResult error, consistent with the rest of this function.
+      const fallbackCount =
+        countText != null
+          ? parseInt((await pool.query(countText, countValues)).rows[0]?.count ?? '0', 10)
+          : 0;
+      return { data: [], error: null, count: fallbackCount };
     }
 
     return {
       data: result.rows as T[],
       error: null,
-      ...(count !== null ? { count } : {}),
     };
   } catch (err) {
     return {
