@@ -398,8 +398,7 @@ function seedMoviesInBackground(
         logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
       } else {
         for (const row of existingMovies ?? []) {
-          const dbYear = row.year != null ? Number(row.year) : 0;
-          existingMovieKeys.add(`${row.name.toLowerCase()}|${dbYear}`);
+          existingMovieKeys.add(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`);
         }
       }
     } catch (err) {
@@ -773,13 +772,16 @@ export async function POST(req: NextRequest) {
           // Keep only the high-quality local results, then fill remaining slots with TMDB.
           const localResultsForMerge = highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
 
-          // Deduplicate by composite key (name|year) to correctly handle remakes and sequels
-          // that legitimately share a title but have different release years.
-          const localKeys = new Set(
-            localResultsForMerge.map((m) => `${m.name.toLowerCase()}|${m.year}`),
-          );
-          // Keep localTitles (title-only) as the exclusion set for seedMoviesInBackground.
-          const localTitles = new Set(localResultsForMerge.map((m) => m.name.toLowerCase()));
+          // Build both dedup sets in one pass:
+          // - localKeys: composite (name|year) key for correctly handling remakes/sequels
+          // - localTitles: title-only set passed to seedMoviesInBackground
+          const localKeys = new Set<string>();
+          const localTitles = new Set<string>();
+          for (const m of localResultsForMerge) {
+            const nameLower = m.name.toLowerCase();
+            localKeys.add(`${nameLower}|${m.year}`);
+            localTitles.add(nameLower);
+          }
           const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
           const newTMDBMatches = tmdbMovies
             .filter((m) => {
