@@ -3,6 +3,9 @@ name: PR
 on:
   pull_request:
     branches: ['development']
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
