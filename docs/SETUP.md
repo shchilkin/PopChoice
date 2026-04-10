@@ -11,6 +11,11 @@ OPENAI_API_KEY=your-openai-api-key-here
 # Database – PostgreSQL connection string
 DATABASE_URL=postgresql://user:password@host:5432/dbname
 
+# Local Docker PostgreSQL credentials (set automatically by npm run setup:local-db)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your-generated-password
+POSTGRES_DB=popchoice
+
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
 
@@ -102,9 +107,11 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 ### Steps:
 
 1. **Run the setup script**
+
    ```bash
    npm run setup:local-db
    ```
+
    This generates a random `POSTGRES_PASSWORD`, writes all database credentials to your `.env` file, and starts the Docker container. Docker automatically runs `db/init/01_schema.sql` and `db/init/02_match_movies.sql` on first start, enabling the `vector` extension, creating the `movies` table, and installing the `match_movies` function.
 
 2. **Populate the database**
