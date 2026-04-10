@@ -189,6 +189,7 @@ export const ru: Translations = {
     minUnit: 'мин',
     whyThisFilm: 'Почему этот фильм',
     whyThisFilmForYou: 'Почему этот фильм вам',
+    broaderSearch: 'Расширенный поиск — включает результаты из TMDB',
   },
   about: {
     badge: 'Как это работает',

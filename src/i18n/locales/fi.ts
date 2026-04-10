@@ -187,6 +187,7 @@ export const fi: Translations = {
     minUnit: 'min',
     whyThisFilm: 'Miksi tämä elokuva',
     whyThisFilmForYou: 'Miksi tämä elokuva sinulle',
+    broaderSearch: 'Laajennettu haku — sisältää TMDB-tuloksia',
   },
   about: {
     badge: 'Miten PopChoice toimii',

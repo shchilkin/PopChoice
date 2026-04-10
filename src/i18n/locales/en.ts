@@ -182,6 +182,7 @@ export const en = {
     minUnit: 'min',
     whyThisFilm: 'Why this film',
     whyThisFilmForYou: 'Why this film for you',
+    broaderSearch: 'Expanded search — including results from TMDB',
   },
   about: {
     badge: 'How PopChoice works',

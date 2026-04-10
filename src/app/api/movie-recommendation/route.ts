@@ -8,6 +8,36 @@ import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { MovieService } from '@/services';
 
+// ---------------------------------------------------------------------------
+// Hybrid search constants
+// ---------------------------------------------------------------------------
+
+/** Minimum cosine similarity for a local result to be considered "high quality". */
+const SIMILARITY_THRESHOLD = 0.7;
+
+/** Trigger TMDB fallback when fewer than this many high-quality local results are found. */
+const MIN_HIGH_QUALITY_LOCAL = 3;
+
+/** Maximum number of TMDB movies to merge into the results. */
+const MAX_TMDB_MOVIES = 6;
+
+/** TMDB API base URL (v3). */
+const TMDB_API_BASE = 'https://api.themoviedb.org/3';
+
+/** Mapping from quiz mood preferences to TMDB genre IDs. */
+const MOOD_TO_TMDB_GENRE: Record<string, number> = {
+  action: 28,
+  adventure: 12,
+  animation: 16,
+  comedy: 35,
+  drama: 18,
+  horror: 27,
+  romance: 10749,
+  scifi: 878,
+  thriller: 53,
+  documentary: 99,
+};
+
 const LOCALE_LANGUAGE: Record<string, string> = {
   en: 'English',
   ru: 'Russian',
@@ -102,6 +132,8 @@ const apiResponseSchema = z.object({
       }),
     )
     .optional(),
+  // Flag indicating that TMDB fallback was used to broaden results
+  usedBroaderSearch: z.boolean().optional(),
 });
 
 // Enhanced type for the full movie match result
@@ -126,6 +158,202 @@ export type MovieMatch = {
 
 type PersonFormData = z.infer<typeof personFormDataSchema>;
 type ApiResponse = z.infer<typeof apiResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// TMDB types & helpers (hybrid search)
+// ---------------------------------------------------------------------------
+
+interface TMDBDiscoverMovie {
+  id: number;
+  title: string;
+  overview: string;
+  release_date: string;
+  vote_average: number;
+  vote_count: number;
+  genre_ids: number[];
+  popularity: number;
+  poster_path: string | null;
+}
+
+/**
+ * Derive TMDB /discover/movie query parameters from user quiz preferences.
+ * Uses a deterministic mapping to avoid an extra LLM call.
+ */
+function extractTMDBParams(allPeopleData: PersonFormData[]): {
+  genre_ids: number[];
+  sort_by: string;
+  primary_release_date_gte?: string;
+  primary_release_date_lte?: string;
+} {
+  // Aggregate mood preferences across all people
+  const moodCounts: Record<string, number> = {};
+  allPeopleData.forEach((p) => {
+    p.moodPreference.forEach((mood) => {
+      moodCounts[mood.toLowerCase()] = (moodCounts[mood.toLowerCase()] ?? 0) + 1;
+    });
+  });
+
+  // Top genres (up to 3) mapped to TMDB IDs
+  const genre_ids = Object.entries(moodCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3)
+    .map(([mood]) => MOOD_TO_TMDB_GENRE[mood])
+    .filter((id): id is number => id !== undefined);
+
+  // Era preference: pick the most common value
+  const eraCounts: Record<string, number> = {};
+  allPeopleData.forEach((p) => {
+    eraCounts[p.newVsClassic] = (eraCounts[p.newVsClassic] ?? 0) + 1;
+  });
+  const dominantEra = Object.entries(eraCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'both';
+
+  const currentYear = new Date().getFullYear();
+  let primary_release_date_gte: string | undefined;
+  let primary_release_date_lte: string | undefined;
+  if (dominantEra === 'new') {
+    primary_release_date_gte = `${currentYear - 5}-01-01`;
+  } else if (dominantEra === 'classic') {
+    primary_release_date_lte = '2000-12-31';
+  }
+
+  // Tone → sort order
+  const toneCounts: Record<string, number> = {};
+  allPeopleData.forEach((p) => {
+    toneCounts[p.tonePreference] = (toneCounts[p.tonePreference] ?? 0) + 1;
+  });
+  const dominantTone = Object.entries(toneCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'light';
+  const sort_by =
+    dominantTone === 'serious' || dominantTone === 'dark' ? 'vote_average.desc' : 'popularity.desc';
+
+  return { genre_ids, sort_by, primary_release_date_gte, primary_release_date_lte };
+}
+
+/**
+ * Call TMDB /discover/movie and return up to MAX_TMDB_MOVIES results.
+ * Returns an empty array on any error so callers can treat failures gracefully.
+ */
+async function fetchTMDBDiscoverMovies(
+  allPeopleData: PersonFormData[],
+  tmdbApiKey: string,
+): Promise<TMDBDiscoverMovie[]> {
+  try {
+    const params = extractTMDBParams(allPeopleData);
+
+    const url = new URL(`${TMDB_API_BASE}/discover/movie`);
+    if (params.genre_ids.length > 0) {
+      url.searchParams.set('with_genres', params.genre_ids.join('|'));
+    }
+    url.searchParams.set('sort_by', params.sort_by);
+    url.searchParams.set('vote_count.gte', '100');
+    url.searchParams.set('include_adult', 'false');
+    url.searchParams.set('page', '1');
+    if (params.primary_release_date_gte) {
+      url.searchParams.set('primary_release_date.gte', params.primary_release_date_gte);
+    }
+    if (params.primary_release_date_lte) {
+      url.searchParams.set('primary_release_date.lte', params.primary_release_date_lte);
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${tmdbApiKey}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      logger.warn({ status: response.status }, 'TMDB discover request failed');
+      return [];
+    }
+
+    const data = (await response.json()) as { results?: TMDBDiscoverMovie[] };
+    return (data.results ?? []).slice(0, MAX_TMDB_MOVIES);
+  } catch (error) {
+    logger.warn({ err: error }, 'Error fetching movies from TMDB discover');
+    return [];
+  }
+}
+
+/**
+ * Convert a TMDB discover result to the EnhancedMovieMatch shape used by the rest of the route.
+ * Uses a negative TMDB ID so it is distinct from positive local DB IDs.
+ */
+function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch {
+  const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+  const score = Number(movie.vote_average?.toFixed(1)) || 0;
+
+  const content = [`${movie.title} (${year}) | TMDB Score: ${score}/10`, movie.overview || '']
+    .filter(Boolean)
+    .join('\n');
+
+  return {
+    id: -movie.id, // Negative to distinguish from local DB IDs
+    name: movie.title,
+    age_rating: 'NR',
+    description: movie.overview || '',
+    duration: 0,
+    score_rating: score,
+    year,
+    similarity: 0.6, // Below SIMILARITY_THRESHOLD — clearly a broadened result
+    content,
+  };
+}
+
+/**
+ * Fire-and-forget: generate embeddings for TMDB movies that are not already in the local DB
+ * and insert them so that future local searches can find them.
+ */
+function seedMoviesInBackground(
+  tmdbMovies: TMDBDiscoverMovie[],
+  existingLocalNames: Set<string>,
+): void {
+  const db = getDbClient();
+  if (!db.isConfigured()) return;
+
+  // Avoid re-seeding movies already present in the local results for this request
+  const toSeed = tmdbMovies.filter((m) => !existingLocalNames.has(m.title.toLowerCase()));
+  if (toSeed.length === 0) return;
+
+  // Process in the background — intentionally not awaited
+  void (async () => {
+    for (const movie of toSeed.slice(0, 5)) {
+      try {
+        const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+        const score = Number(movie.vote_average?.toFixed(1)) || 0;
+
+        const embeddingText = [
+          `${movie.title} (${year})`,
+          `Rating: NR`,
+          `Duration: 0 min`,
+          `Score: ${score}/10`,
+          `Description: ${movie.overview || ''}`,
+        ].join('\n');
+
+        const embeddingResponse = await openAIClient.embeddings.create({
+          model: 'text-embedding-3-large',
+          input: embeddingText,
+        });
+        const embedding = embeddingResponse.data[0]?.embedding;
+        if (!embedding) continue;
+
+        await db.from('movies').insert({
+          name: movie.title,
+          year,
+          age_rating: 'NR',
+          description: movie.overview || '',
+          duration: 0,
+          score_rating: score,
+          embedding,
+        });
+
+        logger.info({ movieTitle: movie.title, year }, 'JIT seeded TMDB movie into database');
+      } catch (err) {
+        // Constraint violation (already exists) or other error — log and continue
+        logger.debug({ err, movieTitle: movie.title }, 'JIT seeding skipped or failed for movie');
+      }
+    }
+  })();
+}
 
 const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string => {
   if (allPeopleData.length === 1) {
@@ -187,18 +415,16 @@ async function createEmbedding(allPeopleData: PersonFormData[]) {
   }
 }
 
-// Helper: Find similar movies in storage
-async function getSimilarMovies(embedding: number[]) {
+// Helper: Find similar movies in storage (returns empty array if none found or DB unavailable)
+async function getSimilarMovies(embedding: number[]): Promise<EnhancedMovieMatch[]> {
   try {
     const similarMovies = await findNearestMatch(embedding);
-    if (!similarMovies) {
-      throw new Error('No similar movies found.');
-    }
-
-    logger.info({ count: similarMovies.length }, 'Similar movies found');
-    return similarMovies;
+    const result = similarMovies ?? [];
+    logger.info({ count: result.length }, 'Local similar movies found');
+    return result;
   } catch (error) {
-    throw new Error(`Failed to search for similar movies: ${error}`);
+    logger.warn({ err: error }, 'Failed to search for similar movies in local DB');
+    return [];
   }
 }
 
@@ -395,21 +621,69 @@ export async function POST(req: NextRequest) {
     const embedding = await createEmbedding(allPeopleData);
     logger.info('Embedding created');
 
-    // Step 2: Find similar movies
-    const similarMovies = await getSimilarMovies(embedding);
+    // Step 2: Find similar movies (local vector search)
+    let similarMovies = await getSimilarMovies(embedding);
 
-    // Step 3: Get recommendation from OpenAI
+    // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
+    let usedBroaderSearch = false;
+    const highQualityLocal = similarMovies.filter((m) => m.similarity >= SIMILARITY_THRESHOLD);
+    const needsTMDBFallback = highQualityLocal.length < MIN_HIGH_QUALITY_LOCAL;
+
+    if (needsTMDBFallback) {
+      logger.info(
+        { highQualityLocal: highQualityLocal.length, threshold: SIMILARITY_THRESHOLD },
+        'Local results below quality threshold — trying TMDB fallback',
+      );
+
+      const tmdbApiKey = process.env.TMDB_API_KEY;
+      if (tmdbApiKey) {
+        const tmdbMovies = await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey);
+
+        if (tmdbMovies.length > 0) {
+          usedBroaderSearch = true;
+
+          // Exclude TMDB movies whose titles are already covered by local results
+          const localTitles = new Set(similarMovies.map((m) => m.name.toLowerCase()));
+          const newTMDBMatches = tmdbMovies
+            .filter((m) => !localTitles.has(m.title.toLowerCase()))
+            .slice(0, MAX_TMDB_MOVIES - similarMovies.length)
+            .map(tmdbMovieToEnhancedMatch);
+
+          similarMovies = [...similarMovies, ...newTMDBMatches].slice(0, MAX_TMDB_MOVIES);
+
+          logger.info(
+            { localCount: highQualityLocal.length, tmdbCount: newTMDBMatches.length },
+            'Merged local and TMDB results',
+          );
+
+          // JIT seeding in background — do not await so it never blocks the response
+          seedMoviesInBackground(
+            tmdbMovies,
+            new Set(similarMovies.map((m) => m.name.toLowerCase())),
+          );
+        }
+      } else {
+        logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
+      }
+    }
+
+    // If we still have no movies after all fallbacks, surface a clear error
+    if (similarMovies.length === 0) {
+      throw new Error('No similar movies found.');
+    }
+
+    // Step 4: Get recommendation from OpenAI
     const responseMessage = await getRecommendation(similarMovies, locale);
     logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
 
-    // Step 4: Get localized poster + name for main recommendation
+    // Step 5: Get localized poster + name for main recommendation
     const { posterURL } = await getMovieInfo(responseMessage.title, locale);
 
-    // Step 5: Enhance similar movies with poster URLs and localized names (in batches)
+    // Step 6: Enhance similar movies with poster URLs and localized names (in batches)
     logger.info('Enhancing similar movies with posters');
     const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies, locale);
 
-    // Step 6: Generate AI descriptions for each movie
+    // Step 7: Generate AI descriptions for each movie
     logger.info('Generating personalized AI descriptions for each movie');
     const moviesWithDescriptions = await generateMovieDescriptions(
       enhancedSimilarMovies,
@@ -459,6 +733,7 @@ export async function POST(req: NextRequest) {
         // Mark the main recommendation for potential UI highlighting (optional)
         isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
       })),
+      usedBroaderSearch,
     };
 
     const duration = Date.now() - startTime;

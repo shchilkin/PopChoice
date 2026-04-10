@@ -35,6 +35,7 @@ interface ApiResponse {
     localizedName?: string;
     isMainRecommendation?: boolean;
   }[];
+  usedBroaderSearch?: boolean;
 }
 
 export default function ResultsPage() {
@@ -42,6 +43,7 @@ export default function ResultsPage() {
   const { t } = useLanguage();
   const [movies, setMovies] = useState<MovieRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [usedBroaderSearch, setUsedBroaderSearch] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -87,6 +89,10 @@ export default function ResultsPage() {
 
       try {
         const parsed: ApiResponse = JSON.parse(raw);
+
+        if (parsed.usedBroaderSearch) {
+          setUsedBroaderSearch(true);
+        }
 
         if (parsed.similarMovies && parsed.similarMovies.length > 0) {
           const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
@@ -224,6 +230,24 @@ export default function ResultsPage() {
           {t.results.subtitle}
         </p>
       </motion.div>
+
+      {/* Broader search indicator */}
+      {usedBroaderSearch && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-6 flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs"
+          style={{
+            background: 'var(--pc-ghost)',
+            border: '1px solid var(--pc-bd2)',
+            color: 'var(--pc-t3)',
+          }}
+        >
+          <Sparkles size={11} />
+          {t.results.broaderSearch}
+        </motion.div>
+      )}
 
       {/* Main recommendation */}
       <div className="mb-10">
