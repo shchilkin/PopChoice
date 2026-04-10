@@ -1,0 +1,134 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Design System/Overview" />
+
+<div style={{ background: 'var(--pc-bg)', color: 'var(--pc-t1)', minHeight: '100vh', padding: '2rem', fontFamily: 'Manrope, Inter, sans-serif' }}>
+
+<h1
+  style={{
+    fontFamily: 'Oswald, sans-serif',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.07em',
+    fontSize: '2.5rem',
+    marginBottom: '0.25rem',
+    background: 'linear-gradient(90deg, #F5C518, #FF9F1C)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  }}
+>
+  PopChoice Design System
+</h1>
+
+<p style={{ color: 'var(--pc-t2)', fontSize: '1rem', marginBottom: '2rem', maxWidth: 640 }}>
+  A living reference for every visual decision in PopChoice — colours, typography, spacing, and
+  components — all theme-aware and sourced from{' '}
+  <code style={{ background: 'var(--pc-surface-deep)', padding: '1px 4px', borderRadius: 4 }}>
+    docs/design-guidelines.md
+  </code>
+  .
+</p>
+
+---
+
+## Brand Identity
+
+### Personality
+
+| Trait         | Description               |
+| ------------- | ------------------------- |
+| **Playful**   | Fun, popcorn energy       |
+| **Confident** | AI-powered, curated picks |
+| **Cinematic** | Dark theatre aesthetic    |
+
+### The Cinematic Concierge
+
+PopChoice speaks like a **Cinematic Concierge** — a confident, culturally-sharp friend who always
+knows what to watch. Every word should feel like it belongs in a dark theatre, not a SaaS dashboard.
+
+<div
+  style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '0.5rem 1.25rem',
+    borderRadius: 9999,
+    background: 'linear-gradient(90deg, #F5C518, #FF9F1C)',
+    color: '#09090f',
+    fontFamily: 'Oswald, sans-serif',
+    fontWeight: 600,
+    fontSize: '1rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    margin: '1rem 0',
+  }}
+>
+  🍿 POPCHOICE
+</div>
+
+---
+
+## Design Pillars
+
+| Pillar                  | Story                                                                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🎨 **Colors**           | [Design System/Colors](?path=/story/design-system-colors--all-colors) — All `--pc-*` color tokens, genre map, match badges, gradients           |
+| 🔤 **Typography**       | [Design System/Typography](?path=/story/design-system-typography--all-typography) — Oswald + Manrope type scale, conventions                    |
+| 📐 **Spacing & Layout** | [Design System/Spacing & Layout](?path=/story/design-system-spacing-layout--all-spacing) — Border radius, border styles, shadows, layout widths |
+| 🧩 **Components**       | [Design System/Components](?path=/story/design-system-components--all-components) — Buttons, badges, progress, input states                     |
+
+---
+
+## Voice & Copy
+
+| Category            | Guideline                                                                   | ✅ Do                                                                                       | ❌ Don&apos;t                                                                           |
+| ------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Role & Identity** | Confident, cinema-obsessed, here to end the scrolling nightmare.            | &quot;Grab your popcorn. I&apos;ve found the perfect match for your night.&quot;            | &quot;I am an AI assistant programmed to query the movie database.&quot;                |
+| **Tone of Voice**   | Playful, bold, modern. Like that one friend who always knows what to watch. | &quot;Stop scrolling in vain. Let&apos;s find a film that actually matches your vibe.&quot; | &quot;Please input your preferences so the algorithm can process your request.&quot;    |
+| **Pacing & Flow**   | Short, punchy, action-oriented. Cut the fluff. Get to the point.            | &quot;5 questions. 60 seconds. Your perfect movie.&quot;                                    | &quot;By answering these five comprehensive questions, you will allow our system…&quot; |
+| **Vocabulary**      | Cinematic magic words. Avoid tech jargon and corporate speak.               | vibe, match, masterpiece, magic, perfect pick                                               | algorithm, vector search, process, output, user input                                   |
+| **CTAs**            | Action-first. Make users want to click. Focus on the result or the fun.     | &quot;Find My Movie&quot;, &quot;Start the Quiz&quot;, &quot;Let&apos;s Go&quot;            | &quot;Submit&quot;, &quot;Search&quot;, &quot;Next Page&quot;                           |
+
+---
+
+## Theme Support
+
+PopChoice supports **dark** (default) and **light** modes via CSS custom properties prefixed with `--pc-*`.
+
+<div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', margin: '1rem 0' }}>
+  <div
+    style={{
+      background: '#09090f',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 10,
+      padding: '1rem 1.5rem',
+      color: '#f8f8ff',
+      fontFamily: 'Manrope, sans-serif',
+      fontSize: '0.85rem',
+    }}
+  >
+    <strong style={{ color: '#F5C518' }}>Dark mode</strong>
+    <br />
+    bg: <code>#09090F</code> · gold: <code>#F5C518</code>
+  </div>
+  <div
+    style={{
+      background: '#f7f5ee',
+      border: '1px solid rgba(0,0,0,0.09)',
+      borderRadius: 10,
+      padding: '1rem 1.5rem',
+      color: '#0d0d1a',
+      fontFamily: 'Manrope, sans-serif',
+      fontSize: '0.85rem',
+    }}
+  >
+    <strong style={{ color: '#C4950A' }}>Light mode</strong>
+    <br />
+    bg: <code>#F7F5EE</code> · gold: <code>#C4950A</code>
+  </div>
+</div>
+
+Use the **Themes** toolbar at the top of Storybook to toggle between dark and light.
+All design-system stories wrap their content in `var(--pc-bg)` so they respond automatically.
+
+</div>
