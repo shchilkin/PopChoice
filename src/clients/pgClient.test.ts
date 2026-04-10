@@ -99,6 +99,23 @@ describe('pgClient', () => {
     );
   });
 
+  it('from().select().in() adds a WHERE "col" = ANY($1) clause', async () => {
+    mockQuery.mockResolvedValue({ rows: [{ name: 'Casablanca', year: 1942 }] });
+
+    const client = createPgDbClient();
+    const result = await client
+      .from('movies')
+      .select('name, year')
+      .in('name', ['Casablanca', 'The Godfather']);
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      'SELECT "name", "year" FROM "movies" WHERE "name" = ANY($1)',
+      [['Casablanca', 'The Godfather']],
+    );
+    expect(result.data).toEqual([{ name: 'Casablanca', year: 1942 }]);
+    expect(result.error).toBeNull();
+  });
+
   it('from().select().limit() adds LIMIT', async () => {
     mockQuery.mockResolvedValue({ rows: [{ id: 1 }] });
 
@@ -315,7 +332,7 @@ describe('pgClient', () => {
     });
 
     expect(mockQuery).toHaveBeenCalledWith(
-      'SELECT * FROM match_movies(query_embedding := $1, match_threshold := $2, match_count := $3)',
+      'SELECT * FROM "match_movies"(query_embedding := $1, match_threshold := $2, match_count := $3)',
       ['[0.1,0.2,0.3]', 0.1, 6],
     );
     expect(result.data).toHaveLength(2);
@@ -338,7 +355,7 @@ describe('pgClient', () => {
     const client = createPgDbClient();
     await client.rpc('get_count');
 
-    expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM get_count()', []);
+    expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM "get_count"()', []);
   });
 
   // -----------------------------------------------------------------------
