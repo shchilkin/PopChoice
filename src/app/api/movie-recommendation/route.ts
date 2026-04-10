@@ -382,22 +382,24 @@ function seedMoviesInBackground(
     if (candidateMovies.length === 0) return;
 
     // Bulk DB existence check to avoid wasting OpenAI embedding tokens on rows that already exist.
-    // The DB uniqueness constraint is (name, year). We query by name only, then filter by year
-    // in-memory to build exact composite keys — avoids a Cartesian product from two .in() clauses.
+    // The DB uniqueness constraint is (name, year). We query by the movies.name column (matching
+    // the TMDB title) only, then filter by year in-memory to build exact composite keys —
+    // avoids a Cartesian product from two .in() clauses.
     const existingMovieKeys = new Set<string>();
     try {
-      const candidateTitles = candidateMovies.map((m) => m.title);
+      // TMDB movies use `title`; the DB column is `name` — same value, different field names.
+      const movieNames = candidateMovies.map((m) => m.title);
       const { data: existingMovies, error } = await db
-        .from('movies')
+        .from<{ name: string; year: number }>('movies')
         .select('name, year')
-        .in('name', candidateTitles);
+        .in('name', movieNames);
 
       if (error) {
         logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
       } else {
         for (const row of existingMovies ?? []) {
           const dbYear = row.year != null ? Number(row.year) : 0;
-          existingMovieKeys.add(`${(row.name as string).toLowerCase()}|${dbYear}`);
+          existingMovieKeys.add(`${row.name.toLowerCase()}|${dbYear}`);
         }
       }
     } catch (err) {
