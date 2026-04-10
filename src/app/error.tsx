@@ -21,7 +21,9 @@ export default function Error({
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[60vh]">
-      <div className="text-5xl mb-6">🎬</div>
+      <div aria-hidden="true" className="text-5xl mb-6">
+        🎬
+      </div>
       <h2
         className="mb-3 text-center"
         style={{

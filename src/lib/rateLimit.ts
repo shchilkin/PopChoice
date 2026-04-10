@@ -66,18 +66,21 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
     const key = `rl:movie-recommendation:${ip}`;
 
     // Atomically increment the counter and, on the very first request in the
-    // window, set the 60-second TTL — all inside Redis via a Lua script.
+    // window, set the TTL — all inside Redis via a Lua script.
     // This prevents the key from being left without a TTL if the separate
     // EXPIRE call were to fail after a successful INCR.
-    // The script returns {count, ttl} so Retry-After reflects the actual
-    // remaining window rather than always the full 60 s.
+    // The script also re-applies EXPIRE when TTL < 0 (key exists without an
+    // expiry, which can happen if a prior EXPIRE failed) to keep the window
+    // well-defined. It returns {count, remaining_ttl} so Retry-After reflects
+    // the actual remaining window rather than always the full window.
     const [count, ttl] = (await client.eval(
       `
         local current = redis.call('INCR', KEYS[1])
-        if current == 1 then
-          redis.call('EXPIRE', KEYS[1], ARGV[1])
-        end
         local remaining = redis.call('TTL', KEYS[1])
+        if remaining < 0 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+          remaining = tonumber(ARGV[1])
+        end
         return {current, remaining}
       `,
       {
@@ -89,13 +92,13 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
     if (count > RATE_LIMIT) {
       return new Response(
         JSON.stringify({
-          error: `Too many requests. Maximum ${RATE_LIMIT} requests per minute allowed.`,
+          error: `Too many requests. Maximum ${RATE_LIMIT} requests per ${RATE_LIMIT_WINDOW_SECONDS} seconds allowed.`,
         }),
         {
           status: 429,
           headers: {
             'Content-Type': 'application/json',
-            'Retry-After': String(Math.max(ttl, 0)),
+            'Retry-After': String(ttl),
             'X-RateLimit-Limit': String(RATE_LIMIT),
             'X-RateLimit-Remaining': '0',
           },

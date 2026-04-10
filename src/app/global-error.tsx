@@ -33,7 +33,9 @@ export default function GlobalError({
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>🎬</div>
+        <div aria-hidden="true" style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>
+          🎬
+        </div>
         <h1
           style={{
             fontSize: 'clamp(1.4rem, 4vw, 2rem)',
