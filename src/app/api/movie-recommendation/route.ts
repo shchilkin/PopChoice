@@ -377,22 +377,15 @@ function seedMoviesInBackground(
     if (candidateMovies.length === 0) return;
 
     // Bulk DB existence check to avoid wasting OpenAI embedding tokens on rows that already exist.
-    // The DB uniqueness constraint is (name, year), so we check on that composite key.
+    // The DB uniqueness constraint is (name, year). We query by name only, then filter by year
+    // in-memory to build exact composite keys — avoids a Cartesian product from two .in() clauses.
     const existingMovieKeys = new Set<string>();
     try {
-      const candidateTitles = [...new Set(candidateMovies.map((m) => m.title))];
-      const candidateYears = [
-        ...new Set(
-          candidateMovies.map((m) =>
-            m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0,
-          ),
-        ),
-      ];
+      const candidateTitles = candidateMovies.map((m) => m.title);
       const { data: existingMovies, error } = await db
         .from('movies')
         .select('name, year')
-        .in('name', candidateTitles)
-        .in('year', candidateYears);
+        .in('name', candidateTitles);
 
       if (error) {
         logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
@@ -682,9 +675,10 @@ async function enhanceSimilarMoviesWithPosters(
     const batch = similarMovies.slice(i, i + batchSize);
 
     const batchPromises = batch.map(async (movie) => {
-      // TMDB-sourced movies already carry a poster URL — skip the redundant re-query
+      // TMDB-sourced movies already carry a poster URL — skip the redundant re-query.
+      // localizedName is not applicable for TMDB-sourced movies (title is already the TMDB title).
       if (movie.posterURL) {
-        return { ...movie, localizedName: undefined };
+        return { ...movie };
       }
       try {
         const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
