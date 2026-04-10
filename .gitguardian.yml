@@ -1,0 +1,4 @@
+version: 2
+ignore-paths:
+  - docker-compose.yml
+  - docs/SETUP.md
