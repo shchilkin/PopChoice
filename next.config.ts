@@ -1,18 +1,22 @@
 import type { NextConfig } from 'next';
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 // Content-Security-Policy
 // 'unsafe-inline' for scripts is required because Next.js App Router injects
 // inline hydration scripts. A nonce-based CSP (via middleware) can replace
 // 'unsafe-inline' for scripts in a future hardening pass.
+// In development, Next.js tooling also needs 'unsafe-eval' for source maps
+// and ws:/wss: connections for Hot Module Replacement.
 const ContentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   // next/font self-hosts all font files under /_next/static/media/
   "font-src 'self'",
   "img-src 'self' data: blob: https://image.tmdb.org https://images.unsplash.com",
   // Vercel Analytics sends page-view pings to vitals.vercel-insights.com
-  "connect-src 'self' https://vitals.vercel-insights.com",
+  `connect-src 'self' https://vitals.vercel-insights.com${isDevelopment ? ' ws: wss:' : ''}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",

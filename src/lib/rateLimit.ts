@@ -69,21 +69,22 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
     // window, set the 60-second TTL — all inside Redis via a Lua script.
     // This prevents the key from being left without a TTL if the separate
     // EXPIRE call were to fail after a successful INCR.
-    const count = Number(
-      await client.eval(
-        `
-          local current = redis.call('INCR', KEYS[1])
-          if current == 1 then
-            redis.call('EXPIRE', KEYS[1], ARGV[1])
-          end
-          return current
-        `,
-        {
-          keys: [key],
-          arguments: [String(RATE_LIMIT_WINDOW_SECONDS)],
-        },
-      ),
-    );
+    // The script returns {count, ttl} so Retry-After reflects the actual
+    // remaining window rather than always the full 60 s.
+    const [count, ttl] = (await client.eval(
+      `
+        local current = redis.call('INCR', KEYS[1])
+        if current == 1 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+        end
+        local remaining = redis.call('TTL', KEYS[1])
+        return {current, remaining}
+      `,
+      {
+        keys: [key],
+        arguments: [String(RATE_LIMIT_WINDOW_SECONDS)],
+      },
+    )) as [number, number];
 
     if (count > RATE_LIMIT) {
       return new Response(
@@ -94,7 +95,7 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
           status: 429,
           headers: {
             'Content-Type': 'application/json',
-            'Retry-After': String(RATE_LIMIT_WINDOW_SECONDS),
+            'Retry-After': String(Math.max(ttl, 0)),
             'X-RateLimit-Limit': String(RATE_LIMIT),
             'X-RateLimit-Remaining': '0',
           },

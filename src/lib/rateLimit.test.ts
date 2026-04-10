@@ -70,7 +70,7 @@ describe('applyRateLimit', () => {
     });
 
     it('extracts client IP from x-forwarded-for (first valid)', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '10.0.0.1, 10.0.0.2, 10.0.0.3' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
@@ -79,7 +79,7 @@ describe('applyRateLimit', () => {
     });
 
     it('falls back to x-real-ip when x-forwarded-for is absent', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-real-ip': '192.168.1.5' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
@@ -88,7 +88,7 @@ describe('applyRateLimit', () => {
     });
 
     it('accepts a valid IPv6 address', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '2001:db8::1' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
@@ -97,7 +97,7 @@ describe('applyRateLimit', () => {
     });
 
     it('uses a Lua eval call with a 60-second TTL argument', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
@@ -106,22 +106,34 @@ describe('applyRateLimit', () => {
     });
 
     it('returns null for requests within the limit', async () => {
-      mockEval.mockResolvedValue(5);
+      mockEval.mockResolvedValue([5, 42]);
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(result).toBeNull();
     });
 
     it('returns 429 when the request count exceeds 10', async () => {
-      mockEval.mockResolvedValue(11);
+      mockEval.mockResolvedValue([11, 45]);
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(result).not.toBeNull();
       expect(result!.status).toBe(429);
     });
 
-    it('includes Retry-After: 60 header in the 429 response', async () => {
-      mockEval.mockResolvedValue(11);
+    it('includes Retry-After header reflecting remaining TTL in the 429 response', async () => {
+      mockEval.mockResolvedValue([11, 45]);
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
-      expect(result!.headers.get('Retry-After')).toBe('60');
+      expect(result!.headers.get('Retry-After')).toBe('45');
+    });
+
+    it('includes X-RateLimit-Limit header in the 429 response', async () => {
+      mockEval.mockResolvedValue([11, 45]);
+      const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
+      expect(result!.headers.get('X-RateLimit-Limit')).toBe('10');
+    });
+
+    it('includes X-RateLimit-Remaining: 0 header in the 429 response', async () => {
+      mockEval.mockResolvedValue([11, 45]);
+      const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
+      expect(result!.headers.get('X-RateLimit-Remaining')).toBe('0');
     });
 
     it('returns null (fail-open) when Redis eval throws', async () => {
