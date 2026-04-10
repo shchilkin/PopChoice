@@ -114,7 +114,9 @@ export default function AvailableMoviesPage() {
         setTotalCount(data.totalCount);
         setCurrentPage(data.page);
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
+        // fetch() rejects with a DOMException (not always an Error subclass) on abort.
+        // Guard on the signal instead of relying on instanceof Error.
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);

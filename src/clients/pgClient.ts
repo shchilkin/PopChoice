@@ -26,9 +26,19 @@
 import pg from 'pg';
 
 // Register int8 (bigint/bigserial, OID 20) parser so that bigint columns are
-// returned as JS numbers rather than strings. Safe for IDs that fit in Number.MAX_SAFE_INTEGER.
+// returned as JS numbers rather than strings.  A safety check guards against
+// precision loss: if a value exceeds Number.MAX_SAFE_INTEGER an error is thrown
+// so the problem surfaces immediately rather than silently corrupting data.
 // Optional chaining guards against environments where pg is mocked without the types object.
-pg.types?.setTypeParser(20, (val: string) => parseInt(val, 10));
+pg.types?.setTypeParser(20, (val: string) => {
+  const n = parseInt(val, 10);
+  if (n > Number.MAX_SAFE_INTEGER || n < Number.MIN_SAFE_INTEGER) {
+    throw new Error(
+      `int8 value ${val} exceeds Number.MAX_SAFE_INTEGER and cannot be safely represented as a JS number`,
+    );
+  }
+  return n;
+});
 
 import type {
   DbClient,
