@@ -40,6 +40,9 @@ function getRedisClient(): Promise<RedisClient | null> {
   return initPromise;
 }
 
+const RATE_LIMIT = 10;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+
 export async function applyRateLimit(req: Request): Promise<Response | null> {
   const forwardedFor = req.headers.get('x-forwarded-for');
   const forwardedForClientIp = forwardedFor
@@ -77,19 +80,24 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
         `,
         {
           keys: [key],
-          arguments: ['60'],
+          arguments: [String(RATE_LIMIT_WINDOW_SECONDS)],
         },
       ),
     );
 
-    if (count > 10) {
+    if (count > RATE_LIMIT) {
       return new Response(
         JSON.stringify({
-          error: 'Too many requests. Maximum 10 requests per minute allowed.',
+          error: `Too many requests. Maximum ${RATE_LIMIT} requests per minute allowed.`,
         }),
         {
           status: 429,
-          headers: { 'Content-Type': 'application/json', 'Retry-After': '60' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(RATE_LIMIT_WINDOW_SECONDS),
+            'X-RateLimit-Limit': String(RATE_LIMIT),
+            'X-RateLimit-Remaining': '0',
+          },
         },
       );
     }

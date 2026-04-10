@@ -18,7 +18,7 @@ export async function createEmbeddings(
 ): Promise<number[][]> {
   const { model = 'text-embedding-3-large', batchSize = 50 } = options;
 
-  const client = new OpenAI({ apiKey: openaiApiKey });
+  const client = new OpenAI({ apiKey: openaiApiKey, timeout: 60_000 });
   const allEmbeddings: number[][] = [];
 
   logger.info('Creating embeddings', { count: texts.length, model, batchSize });
