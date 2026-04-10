@@ -6,7 +6,7 @@ import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
-import { MovieService } from '@/services';
+import { IMAGE_BASE_URL, MovieService } from '@/services';
 
 // ---------------------------------------------------------------------------
 // Hybrid search constants
@@ -165,6 +165,8 @@ export type EnhancedMovieMatch = {
   year: number;
   similarity: number;
   content: string;
+  /** Pre-populated poster URL, e.g. from TMDB discover response — skips re-lookup if set. */
+  posterURL?: string;
 };
 
 // Keep the original type for backward compatibility
@@ -333,6 +335,9 @@ function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch 
     .filter(Boolean)
     .join('\n');
 
+  // Carry the TMDB poster path through so enhanceSimilarMoviesWithPosters can skip its re-query
+  const posterURL = movie.poster_path ? `${IMAGE_BASE_URL}/w500${movie.poster_path}` : undefined;
+
   return {
     id: -movie.id, // Negative ID distinguishes TMDB-sourced movies from local DB rows (positive bigserial IDs)
     name: movie.title,
@@ -343,12 +348,17 @@ function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch 
     year,
     similarity: 0.6, // Below SIMILARITY_THRESHOLD — clearly a broadened result
     content,
+    posterURL,
   };
 }
 
 /**
  * Fire-and-forget: generate embeddings for TMDB movies that are not already in the local DB
  * and insert them so that future local searches can find them.
+ *
+ * NOTE: This runs as a fire-and-forget async task. In serverless environments the runtime
+ * may freeze the process after the response is sent, so seeding is best-effort. For
+ * guaranteed background work consider a queue/cron worker or a platform `waitUntil` hook.
  */
 function seedMoviesInBackground(
   tmdbMovies: TMDBDiscoverMovie[],
@@ -363,9 +373,51 @@ function seedMoviesInBackground(
 
   // Process in the background — intentionally not awaited
   void (async () => {
-    for (const movie of toSeed.slice(0, MAX_JIT_SEED_MOVIES)) {
+    const candidateMovies = toSeed.slice(0, MAX_JIT_SEED_MOVIES);
+    if (candidateMovies.length === 0) return;
+
+    // Bulk DB existence check to avoid wasting OpenAI embedding tokens on rows that already exist.
+    // The DB uniqueness constraint is (name, year), so we check on that composite key.
+    const existingMovieKeys = new Set<string>();
+    try {
+      const candidateTitles = [...new Set(candidateMovies.map((m) => m.title))];
+      const candidateYears = [
+        ...new Set(
+          candidateMovies.map((m) =>
+            m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0,
+          ),
+        ),
+      ];
+      const { data: existingMovies, error } = await db
+        .from('movies')
+        .select('name, year')
+        .in('name', candidateTitles)
+        .in('year', candidateYears);
+
+      if (error) {
+        logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
+      } else {
+        for (const row of existingMovies ?? []) {
+          existingMovieKeys.add(`${(row.name as string).toLowerCase()}|${row.year}`);
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, 'JIT seeding existence pre-check failed with unexpected error');
+    }
+
+    for (const movie of candidateMovies) {
       try {
         const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+        const movieKey = `${movie.title.toLowerCase()}|${year}`;
+
+        if (existingMovieKeys.has(movieKey)) {
+          logger.debug(
+            { movieTitle: movie.title, year },
+            'JIT seeding skipped — movie already in database',
+          );
+          continue;
+        }
+
         const score = Number(movie.vote_average?.toFixed(1)) || 0;
 
         const embeddingText = [
@@ -630,6 +682,10 @@ async function enhanceSimilarMoviesWithPosters(
     const batch = similarMovies.slice(i, i + batchSize);
 
     const batchPromises = batch.map(async (movie) => {
+      // TMDB-sourced movies already carry a poster URL — skip the redundant re-query
+      if (movie.posterURL) {
+        return { ...movie, localizedName: undefined };
+      }
       try {
         const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
         return { ...movie, posterURL, localizedName };
@@ -715,11 +771,19 @@ export async function POST(req: NextRequest) {
           // Keep only the high-quality local results, then fill remaining slots with TMDB.
           const localResultsForMerge = highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
 
-          // Exclude TMDB movies whose titles are already covered by selected local results.
+          // Deduplicate by composite key (name|year) to correctly handle remakes and sequels
+          // that legitimately share a title but have different release years.
+          const localKeys = new Set(
+            localResultsForMerge.map((m) => `${m.name.toLowerCase()}|${m.year}`),
+          );
+          // Keep localTitles (title-only) as the exclusion set for seedMoviesInBackground.
           const localTitles = new Set(localResultsForMerge.map((m) => m.name.toLowerCase()));
           const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
           const newTMDBMatches = tmdbMovies
-            .filter((m) => !localTitles.has(m.title.toLowerCase()))
+            .filter((m) => {
+              const tmdbYear = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+              return !localKeys.has(`${m.title.toLowerCase()}|${tmdbYear}`);
+            })
             .slice(0, slotsRemaining)
             .map(tmdbMovieToEnhancedMatch);
 
