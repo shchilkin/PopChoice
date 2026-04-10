@@ -42,7 +42,7 @@ interface ApiResponse {
 
 export default function ResultsPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [movies, setMovies] = useState<MovieRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [usedBroaderSearch, setUsedBroaderSearch] = useState(false);
@@ -240,7 +240,7 @@ export default function ResultsPage() {
         <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
           {t.results.subtitle.replace(
             '{count}',
-            dbMovieCount !== null ? dbMovieCount.toLocaleString() : '…',
+            dbMovieCount !== null ? new Intl.NumberFormat(locale).format(dbMovieCount) : '…',
           )}
         </p>
       </motion.div>

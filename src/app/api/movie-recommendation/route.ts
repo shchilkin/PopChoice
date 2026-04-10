@@ -276,7 +276,7 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
 }
 
 /**
- * Call TMDB /discover/movie and return up to MAX_TMDB_MOVIES results.
+ * Call TMDB /discover/movie and return up to MAX_TOTAL_MOVIES results.
  * Returns an empty array on any error so callers can treat failures gracefully.
  */
 async function fetchTMDBDiscoverMovies(
@@ -314,7 +314,7 @@ async function fetchTMDBDiscoverMovies(
     }
 
     const data = (await response.json()) as { results?: TMDBDiscoverMovie[] };
-    return (data.results ?? []).slice(0, MAX_TMDB_MOVIES);
+    return (data.results ?? []).slice(0, MAX_TOTAL_MOVIES);
   } catch (error) {
     logger.warn({ err: error }, 'Error fetching movies from TMDB discover');
     return [];
@@ -739,11 +739,9 @@ export async function POST(req: NextRequest) {
             'Merged local and TMDB results',
           );
 
-          // JIT seeding in background — do not await so it never blocks the response
-          seedMoviesInBackground(
-            tmdbMovies,
-            new Set(similarMovies.map((m) => m.name.toLowerCase())),
-          );
+          // JIT seeding in background — do not await so it never blocks the response.
+          // Pass only local titles so the TMDB movies just returned to the user can be seeded.
+          seedMoviesInBackground(tmdbMovies, localTitles);
         }
       } else {
         logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
