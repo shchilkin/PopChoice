@@ -21,6 +21,9 @@ const MIN_HIGH_QUALITY_LOCAL = 3;
 /** Maximum number of TMDB movies to merge into the results. */
 const MAX_TMDB_MOVIES = 6;
 
+/** Maximum number of TMDB movies to JIT-seed per request. */
+const MAX_JIT_SEED_MOVIES = 5;
+
 /** TMDB API base URL (v3). */
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 
@@ -287,7 +290,7 @@ function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch 
     .join('\n');
 
   return {
-    id: -movie.id, // Negative to distinguish from local DB IDs
+    id: -movie.id, // Negative ID distinguishes TMDB-sourced movies from local DB rows (positive bigserial IDs)
     name: movie.title,
     age_rating: 'NR',
     description: movie.overview || '',
@@ -316,7 +319,7 @@ function seedMoviesInBackground(
 
   // Process in the background — intentionally not awaited
   void (async () => {
-    for (const movie of toSeed.slice(0, 5)) {
+    for (const movie of toSeed.slice(0, MAX_JIT_SEED_MOVIES)) {
       try {
         const year = movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
         const score = Number(movie.vote_average?.toFixed(1)) || 0;
@@ -348,8 +351,21 @@ function seedMoviesInBackground(
 
         logger.info({ movieTitle: movie.title, year }, 'JIT seeded TMDB movie into database');
       } catch (err) {
-        // Constraint violation (already exists) or other error — log and continue
-        logger.debug({ err, movieTitle: movie.title }, 'JIT seeding skipped or failed for movie');
+        // Distinguish expected constraint violations (movie already in DB) from unexpected errors
+        const errMsg = err instanceof Error ? err.message : String(err);
+        const isDuplicateEntry =
+          errMsg.toLowerCase().includes('unique') ||
+          errMsg.toLowerCase().includes('duplicate') ||
+          errMsg.toLowerCase().includes('already exists');
+
+        if (isDuplicateEntry) {
+          logger.debug(
+            { movieTitle: movie.title },
+            'JIT seeding skipped — movie already in database',
+          );
+        } else {
+          logger.warn({ err, movieTitle: movie.title }, 'JIT seeding failed with unexpected error');
+        }
       }
     }
   })();
@@ -646,7 +662,7 @@ export async function POST(req: NextRequest) {
           const localTitles = new Set(similarMovies.map((m) => m.name.toLowerCase()));
           const newTMDBMatches = tmdbMovies
             .filter((m) => !localTitles.has(m.title.toLowerCase()))
-            .slice(0, MAX_TMDB_MOVIES - similarMovies.length)
+            .slice(0, Math.max(0, MAX_TMDB_MOVIES - similarMovies.length))
             .map(tmdbMovieToEnhancedMatch);
 
           similarMovies = [...similarMovies, ...newTMDBMatches].slice(0, MAX_TMDB_MOVIES);
