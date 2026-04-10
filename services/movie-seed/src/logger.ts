@@ -51,4 +51,3 @@ export const logger = {
     logWithFields(boundFatal, message, extra);
   },
 };
-

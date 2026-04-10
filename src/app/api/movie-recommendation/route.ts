@@ -283,7 +283,10 @@ Match Score: ${Math.round(movie.similarity * 100)}%
           aiDescription,
         };
       } catch (error) {
-        logger.warn({ err: error, movieTitle: movie.name }, 'Failed to generate description for movie');
+        logger.warn(
+          { err: error, movieTitle: movie.name },
+          'Failed to generate description for movie',
+        );
         // Fallback to a basic description
         return {
           ...movie,
@@ -424,7 +427,10 @@ export async function POST(req: NextRequest) {
 
     // Don't filter out any movies - include all movies in the response
     // The main recommendation info is still provided for context, but UI will show all movies together
-    logger.info({ movieCount: moviesWithDescriptions.length }, 'Returning all movies in unified list');
+    logger.info(
+      { movieCount: moviesWithDescriptions.length },
+      'Returning all movies in unified list',
+    );
 
     // Validate and return response with enhanced data
     const response: ApiResponse = {
@@ -457,7 +463,10 @@ export async function POST(req: NextRequest) {
     };
 
     const duration = Date.now() - startTime;
-    logger.info({ durationMs: duration, movieCount: moviesWithDescriptions.length }, 'Recommendation request completed');
+    logger.info(
+      { durationMs: duration, movieCount: moviesWithDescriptions.length },
+      'Recommendation request completed',
+    );
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
