@@ -24,6 +24,13 @@ export default function AvailableMoviesPage() {
   // AbortController for the in-flight fetch – cancelled when a newer page is requested.
   const abortRef = useRef<AbortController | null>(null);
 
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      abortRef.current = null;
+    };
+  }, []);
+
   const fetchMovies = useCallback(
     async (page: number) => {
       // Serve from cache when available.
@@ -70,7 +77,9 @@ export default function AvailableMoviesPage() {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     },
     [pageSize],
