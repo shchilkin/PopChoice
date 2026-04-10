@@ -59,6 +59,7 @@ export default function AvailableMoviesPage() {
         }
 
         const data: MoviesResponse = await response.json();
+        if (controller.signal.aborted) return;
         cache.current.set(page, data);
         setMovies(data.movies);
         setTotalPages(data.totalPages);
