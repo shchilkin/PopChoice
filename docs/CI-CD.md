@@ -5,7 +5,7 @@
 This project uses two GitHub Actions workflow files for pull request validation:
 
 - `.github/workflows/pr.yml` – main application checks (lint, type-check, tests, build, dependency review)
-- `.github/workflows/movie-sync-ci.yml` – TypeScript compilation for the `services/movie-sync` service, triggered when files under `services/movie-sync/` change or when `.github/workflows/movie-sync-ci.yml` itself changes
+- `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 
 ## Workflow Overview
 
@@ -13,15 +13,16 @@ Both workflows run automatically on pull requests targeting the `development` br
 
 ### Jobs
 
-| Workflow            | Job                 | Purpose                                                          |
-| ------------------- | ------------------- | ---------------------------------------------------------------- |
-| `pr.yml`            | `lint`              | ESLint code quality + Prettier formatting                        |
-| `pr.yml`            | `type-check`        | TypeScript type safety (`tsc --noEmit`)                          |
-| `pr.yml`            | `server-tests`      | Vitest server tests with coverage collection and artifact upload |
-| `pr.yml`            | `storybook-tests`   | Playwright browser install + Storybook component tests           |
-| `pr.yml`            | `build`             | Next.js production build verification                            |
-| `pr.yml`            | `dependency-review` | Blocks PRs introducing vulnerable dependencies                   |
-| `movie-sync-ci.yml` | `movie-sync-ci`     | TypeScript compilation for `services/movie-sync`                 |
+| Workflow                 | Job                  | Purpose                                                          |
+| ------------------------ | -------------------- | ---------------------------------------------------------------- |
+| `pr.yml`                 | `lint`               | ESLint code quality + Prettier formatting                        |
+| `pr.yml`                 | `type-check`         | TypeScript type safety (`tsc --noEmit`)                          |
+| `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload |
+| `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests           |
+| `pr.yml`                 | `build`              | Next.js production build verification                            |
+| `pr.yml`                 | `movie-seed-ci`      | TypeScript compilation for `services/movie-seed`                 |
+| `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                   |
+| `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`  |
 
 ## Workflow Features
 
@@ -45,9 +46,9 @@ Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (
 
 The `build` job sets `NEXT_FONT_GOOGLE_DISABLE=1` to prevent flaky failures caused by network access to Google Fonts in restricted CI environments.
 
-### Movie Sync CI
+### Movie Discovery CI
 
-The `movie-sync-ci` job lives in its own workflow (`movie-sync-ci.yml`) and is triggered when files inside `services/movie-sync/` change or when `.github/workflows/movie-sync-ci.yml` itself changes. It installs dependencies and runs `tsc` (`npm run build`) to ensure the service always compiles correctly.
+The `movie-discovery-ci` job lives in its own workflow (`movie-discovery-ci.yml`) and is triggered when files inside `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes. It installs dependencies, runs `tsc` (`npm run build`) to ensure the service always compiles correctly, and runs the service's Vitest test suite.
 
 ### Dependency Review
 
@@ -94,15 +95,15 @@ on:
       - '*.md'
 ```
 
-**`movie-sync-ci.yml`** uses `paths` so that the service CI only runs when the service source actually changes:
+**`movie-discovery-ci.yml`** uses `paths` so that the service CI only runs when the service source actually changes:
 
 ```yaml
 on:
   pull_request:
     branches: ['development']
     paths:
-      - 'services/movie-sync/**'
-      - '.github/workflows/movie-sync-ci.yml'
+      - 'services/movie-discovery/**'
+      - '.github/workflows/movie-discovery-ci.yml'
 ```
 
 ### Best Practices
@@ -130,14 +131,15 @@ Both workflows are triggered on:
 - Both opening PRs and pushing new commits to existing PRs targeting development
 
 `pr.yml` additionally **skips** when all changed files match `docs/**` or `*.md` (documentation-only PRs).
-`movie-sync-ci.yml` additionally **only runs** when at least one file under `services/movie-sync/**` changes or when `.github/workflows/movie-sync-ci.yml` itself changes.
+`movie-discovery-ci.yml` additionally **only runs** when at least one file under `services/movie-discovery/**` changes or when `.github/workflows/movie-discovery-ci.yml` itself changes.
 
 ## Dependabot
 
 Dependabot is configured in `.github/dependabot.yml` to monitor:
 
 - **npm (root)** – main application dependencies, grouped into `production-dependencies` and `development-dependencies`
-- **npm (services/movie-sync)** – movie-sync service dependencies, grouped as `movie-sync-dependencies`
+- **npm (services/movie-seed)** – movie-seed service dependencies, grouped as `movie-seed-dependencies`
+- **npm (services/movie-discovery)** – movie-discovery service dependencies, grouped as `movie-discovery-dependencies`
 - **GitHub Actions** – workflow action versions
 
 All groups cover `minor` and `patch` updates. Major updates still require manual review.
@@ -162,8 +164,11 @@ npm run test:storybook
 # Verify build
 NEXT_FONT_GOOGLE_DISABLE=1 npm run build
 
-# Movie sync type check
-cd services/movie-sync && npm run build
+# Movie seed type check
+cd services/movie-seed && npm run build
+
+# Movie discovery type check and tests
+cd services/movie-discovery && npm run build && npm test
 ```
 
 ## Troubleshooting
@@ -179,7 +184,7 @@ cd services/movie-sync && npm run build
 3. **Build Failures**
    - Verify all required environment variables are present as repository secrets (`OPENAI_API_KEY`).
 
-4. **Movie Sync Type Errors**
-   - Run `cd services/movie-sync && npm run build` locally to reproduce and fix TypeScript errors.
+4. **Movie Discovery Type Errors**
+   - Run `cd services/movie-discovery && npm run build` locally to reproduce and fix TypeScript errors.
 
 The workflow helps maintain code quality and functionality across all pull requests.
