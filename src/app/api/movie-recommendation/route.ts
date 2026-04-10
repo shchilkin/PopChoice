@@ -270,7 +270,7 @@ Match Score: ${Math.round(movie.similarity * 100)}%
             { role: 'system', content: descriptionPrompt },
             { role: 'user', content: movieContext },
           ],
-          max_tokens: 150, // Keep descriptions concise
+          max_completion_tokens: 150, // Keep descriptions concise
           temperature: 0.7, // Add some creativity
         });
 
