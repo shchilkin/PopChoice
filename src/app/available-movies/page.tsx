@@ -78,6 +78,10 @@ export default function AvailableMoviesPage() {
       // Serve from cache when available.
       const cached = cache.current.get(page);
       if (cached) {
+        // Cancel any in-flight request before applying cached state.
+        abortRef.current?.abort();
+        abortRef.current = null;
+        setError(null);
         setMovies(cached.movies);
         setTotalPages(cached.totalPages);
         setTotalCount(cached.totalCount);
@@ -185,12 +189,13 @@ export default function AvailableMoviesPage() {
           {t.moviesPage.title}
         </h1>
         <p className="text-sm" style={{ color: 'var(--pc-t3)' }}>
-          {totalCount > 0
-            ? t.moviesPage.showing
-                .replace('{start}', String((currentPage - 1) * pageSize + 1))
-                .replace('{end}', String(Math.min(currentPage * pageSize, totalCount)))
-                .replace('{total}', String(totalCount))
-            : t.moviesPage.noMoviesFound}
+          {!loading &&
+            (totalCount > 0
+              ? t.moviesPage.showing
+                  .replace('{start}', String((currentPage - 1) * pageSize + 1))
+                  .replace('{end}', String(Math.min(currentPage * pageSize, totalCount)))
+                  .replace('{total}', String(totalCount))
+              : t.moviesPage.noMoviesFound)}
         </p>
       </div>
 

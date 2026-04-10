@@ -141,6 +141,63 @@ describe('pgClient', () => {
     expect(result.error).toBeNull();
   });
 
+  it('from().select() with count: exact on a data query uses window function', async () => {
+    mockQuery.mockResolvedValue({
+      rows: [
+        { id: 1, name: 'Test Movie', _total_count: '42' },
+        { id: 2, name: 'Another Movie', _total_count: '42' },
+      ],
+    });
+
+    const client = createPgDbClient();
+    const result = await client
+      .from('movies')
+      .select('id, name', { count: 'exact' })
+      .range(0, 49)
+      .order('id', { ascending: true });
+
+    // Only one query should be issued (the window-function query).
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toContain('COUNT(*) OVER() AS _total_count');
+    expect(sql).toContain('ORDER BY "id" ASC');
+    expect(sql).toContain('LIMIT 50 OFFSET 0');
+
+    // count is extracted from the first row; _total_count must not appear in data.
+    expect(result.count).toBe(42);
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(2);
+    expect(result.data?.[0]).not.toHaveProperty('_total_count');
+    expect(result.data?.[1]).not.toHaveProperty('_total_count');
+    expect(result.data).toEqual([
+      { id: 1, name: 'Test Movie' },
+      { id: 2, name: 'Another Movie' },
+    ]);
+  });
+
+  it('from().select() with count: exact falls back to COUNT query when result is empty', async () => {
+    // First call: main query returns no rows (OFFSET past end of result set).
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      // Second call: fallback COUNT(*) query.
+      .mockResolvedValueOnce({ rows: [{ count: '100' }] });
+
+    const client = createPgDbClient();
+    const result = await client
+      .from('movies')
+      .select('id, name', { count: 'exact' })
+      .range(1000, 1049)
+      .order('id', { ascending: true });
+
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    // Second query must be a plain COUNT.
+    const [secondSql] = mockQuery.mock.calls[1];
+    expect(secondSql).toBe('SELECT COUNT(*) as count FROM "movies"');
+    expect(result.data).toEqual([]);
+    expect(result.count).toBe(100);
+    expect(result.error).toBeNull();
+  });
+
   it('from().select() handles query errors gracefully', async () => {
     mockQuery.mockRejectedValue(new Error('connection refused'));
 

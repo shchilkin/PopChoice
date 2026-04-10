@@ -151,11 +151,11 @@ function buildSelectSQL(state: QueryState): {
     sql += ` LIMIT ${safeNonNegativeInt(state.limitVal)}`;
   }
 
-  // For head-only count queries, build a separate COUNT(*) query.
-  // When the window function is used (needsWindowCount), no separate query is needed.
+  // Build a separate COUNT(*) query used as fallback when the window-function
+  // path returns zero rows (OFFSET past end of result set), or for head-only queries.
   let countText: string | undefined;
   let countValues: unknown[] | undefined;
-  if (state.countMode === 'exact' && state.headOnly) {
+  if (state.countMode === 'exact') {
     let countSQL = `SELECT COUNT(*) as count FROM "${state.table}"`;
     const cValues: unknown[] = [];
     let cIdx = 1;
@@ -201,9 +201,20 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
       // Extract the injected _total_count window column and strip it from rows.
       type RowWithCount = T & { _total_count?: string | number };
       const rows = result.rows as RowWithCount[];
-      const count = rows.length > 0 ? parseInt(String(rows[0]._total_count ?? '0'), 10) : 0;
-      const data = rows.map(({ _total_count: _, ...rest }) => rest as T);
-      return { data, error: null, count };
+
+      if (rows.length > 0) {
+        const count = parseInt(String(rows[0]._total_count ?? '0'), 10);
+        const data = rows.map(({ _total_count: _, ...rest }) => rest as T);
+        return { data, error: null, count };
+      }
+
+      // The OFFSET is past the end of the result set — the window function cannot
+      // return a count. Fall back to a separate COUNT(*) query.
+      const fallbackCount =
+        countText != null
+          ? parseInt((await pool.query(countText, countValues)).rows[0]?.count ?? '0', 10)
+          : 0;
+      return { data: [], error: null, count: fallbackCount };
     }
 
     return {
