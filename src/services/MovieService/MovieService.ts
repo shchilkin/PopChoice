@@ -1,6 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import z from 'zod';
 
+import logger from '@/lib/logger';
+
 const POSTER_SIZES = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original'] as const;
 
 export const API_BASE_URL = 'https://api.themoviedb.org/3';
@@ -64,20 +66,37 @@ export class MovieService {
           return movie.title.toLowerCase() === movieTitle.toLowerCase();
         });
         if (filteredResults.length === 0) {
-          // TODO: Implement better way to log this
-          // eslint-disable-next-line no-console
-          console.warn(`No movie found with title: ${movieTitle}`);
+          logger.warn({ movieTitle }, 'No movie found with title');
           return undefined;
         }
         return filteredResults[0];
       })
       .catch((error) => {
-        // TODO: Implement better error handling
-        // eslint-disable-next-line no-console
-        console.error('Error fetching movie by title:', error);
+        logger.error({ err: error, movieTitle }, 'Error fetching movie by title');
         throw new Error(`Failed to fetch movie by title: ${movieTitle}`);
       });
     return response;
+  }
+
+  async getLocalizedMovieInfo(
+    movieId: number,
+    language: string,
+  ): Promise<{ title: string; poster_path: string | null } | undefined> {
+    try {
+      const response = await this.axiosClient({
+        method: 'GET',
+        url: `${this.apiURLBase}/movie/${movieId}`,
+        responseType: 'json',
+        headers: {
+          Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        },
+        params: { language },
+      });
+      return { title: response.data.title, poster_path: response.data.poster_path };
+    } catch (error) {
+      logger.warn({ movieId, err: error }, 'Failed to fetch localized movie info');
+      return undefined;
+    }
   }
 
   getPosterURL(posterPath: string, size: PosterSize): string {

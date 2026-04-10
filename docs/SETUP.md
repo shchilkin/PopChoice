@@ -13,6 +13,10 @@ DATABASE_URL=postgresql://user:password@host:5432/dbname
 
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
+
+# Redis (optional) – enables distributed rate limiting on /api/movie-recommendation
+# When unset, rate limiting is disabled and the API fails open
+REDIS_URL=redis://user:password@host:6379
 ```
 
 ## OpenAI Setup
@@ -70,6 +74,22 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
+
+## Redis Setup (Optional – Rate Limiting)
+
+The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10 requests per minute per IP). This requires a Redis instance and the `REDIS_URL` environment variable to be set. When `REDIS_URL` is absent the endpoint continues to work without rate limiting.
+
+> **Security note:** `REDIS_URL` may contain credentials (e.g. `redis://user:password@host:6379`). Store it as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+
+1. **Provision a Redis instance**
+   - Use any Redis provider, e.g. [Redis Cloud](https://redis.io/cloud/), [Railway](https://railway.app), or a self-hosted instance
+
+2. **Add to environment**
+   - Add `REDIS_URL=redis://user:password@host:6379` to your `.env` file (or set it as an environment secret in production)
+
+3. **Verify**
+   - On the first request to `/api/movie-recommendation`, the app logs `Rate limiter initialized with Redis` when the connection succeeds
+   - On the first request to `/api/movie-recommendation`, when `REDIS_URL` is not set, it logs `REDIS_URL not set. Rate limiting disabled.`
 
 ## Railway PostgreSQL Setup
 

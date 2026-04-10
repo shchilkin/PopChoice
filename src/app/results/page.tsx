@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
@@ -31,12 +32,14 @@ interface ApiResponse {
     score_rating?: number;
     posterURL?: string;
     aiDescription?: string;
+    localizedName?: string;
     isMainRecommendation?: boolean;
   }[];
 }
 
 export default function ResultsPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [movies, setMovies] = useState<MovieRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
@@ -75,52 +78,53 @@ export default function ResultsPage() {
   }
 
   useEffect(() => {
-    const raw = localStorage.getItem('popchoice_recommendation');
-    if (!raw) {
-      router.replace('/quiz');
-      return;
-    }
+    async function init() {
+      const raw = localStorage.getItem('popchoice_recommendation');
+      if (!raw) {
+        router.replace('/quiz');
+        return;
+      }
 
-    try {
-      const parsed: ApiResponse = JSON.parse(raw);
+      try {
+        const parsed: ApiResponse = JSON.parse(raw);
 
-      if (parsed.similarMovies && parsed.similarMovies.length > 0) {
-        const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
-          id: m.id,
-          name: m.name,
-          year: m.year,
-          similarity: m.similarity,
-          age_rating: m.age_rating,
-          duration: m.duration,
-          score_rating: m.score_rating,
-          posterURL: m.posterURL,
-          description: m.aiDescription,
-          isMainRecommendation: m.isMainRecommendation,
-        }));
+        if (parsed.similarMovies && parsed.similarMovies.length > 0) {
+          const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
+            id: m.id,
+            name: m.name,
+            year: m.year,
+            similarity: m.similarity,
+            age_rating: m.age_rating,
+            duration: m.duration,
+            score_rating: m.score_rating,
+            posterURL: m.posterURL,
+            description: m.aiDescription,
+            localizedName: m.localizedName,
+            isMainRecommendation: m.isMainRecommendation,
+          }));
 
-        const needPosters = mapped.filter((m) => !m.posterURL);
-        if (needPosters.length > 0) {
-          const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-          enhanceMoviesWithPosters(needPosters, tmdbApiKey)
-            .then((enhanced) => {
-              const final = mapped.map((m) => {
-                const e = enhanced.find((em) => em.id === m.id);
-                return e || m;
-              });
+          const needPosters = mapped.filter((m) => !m.posterURL);
+          if (needPosters.length > 0) {
+            const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+            try {
+              const enhanced = await enhanceMoviesWithPosters(needPosters, tmdbApiKey);
+              const final = mapped.map((m) => enhanced.find((em) => em.id === m.id) || m);
               setMovies(final);
-            })
-            .catch(() => setMovies(mapped))
-            .finally(() => setIsLoading(false));
-        } else {
-          setMovies(mapped);
-          setIsLoading(false);
+            } catch {
+              setMovies(mapped);
+            }
+          } else {
+            setMovies(mapped);
+          }
         }
-      } else {
+      } catch {
+        // JSON parse error — leave movies empty, isLoading will be cleared below
+      } finally {
         setIsLoading(false);
       }
-    } catch {
-      setIsLoading(false);
     }
+
+    void init();
   }, [router]);
 
   useEffect(() => {
@@ -143,7 +147,7 @@ export default function ResultsPage() {
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="text-4xl mb-4">🎬</div>
-          <p style={{ color: 'var(--pc-t2)' }}>Loading your picks…</p>
+          <p style={{ color: 'var(--pc-t2)' }}>{t.results.loading}</p>
         </div>
       </div>
     );
@@ -156,15 +160,17 @@ export default function ResultsPage() {
         <h2
           className="mb-2"
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: '1.8rem',
             color: 'var(--pc-t1)',
           }}
         >
-          No recommendations found
+          {t.results.noResultsTitle}
         </h2>
         <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
-          Try the quiz again with different answers.
+          {t.results.noResultsHint}
         </p>
         <button
           onClick={() => router.push('/quiz')}
@@ -175,7 +181,7 @@ export default function ResultsPage() {
             fontWeight: 700,
           }}
         >
-          Try Again
+          {t.results.tryAgain}
         </button>
       </div>
     );
@@ -196,24 +202,26 @@ export default function ResultsPage() {
             background: 'var(--pc-gold-subtle)',
             border: '1px solid',
             borderColor: 'var(--pc-gold-bd-subtle)',
-            color: 'var(--pc-gold)',
+            color: 'var(--pc-gold-text)',
           }}
         >
-          <Sparkles size={11} /> Your personalized picks
+          <Sparkles size={11} /> {t.results.badge}
         </div>
         <h1
           style={{
-            fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
             fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
             letterSpacing: '0.05em',
             color: 'var(--pc-t1)',
             lineHeight: 1.1,
           }}
         >
-          We found your perfect film
+          {t.results.title}
         </h1>
         <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
-          Matched from 10,000+ films using AI taste analysis
+          {t.results.subtitle}
         </p>
       </motion.div>
 
@@ -226,8 +234,11 @@ export default function ResultsPage() {
               background: 'linear-gradient(180deg, var(--pc-gold), var(--pc-amber))',
             }}
           />
-          <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-gold)' }}>
-            Top Pick
+          <span
+            className="uppercase tracking-widest text-xs"
+            style={{ color: 'var(--pc-gold-text)' }}
+          >
+            {t.results.topPick}
           </span>
         </div>
         <MainMovieCard movie={mainMovie} />
@@ -249,14 +260,14 @@ export default function ResultsPage() {
                 }}
               />
               <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
-                More suggestions
+                {t.results.moreSuggestions}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => scrollCarousel('left')}
                 disabled={!canScrollLeft}
-                aria-label="Scroll left"
+                aria-label={t.results.scrollLeft}
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                 style={{
                   background: canScrollLeft ? 'var(--pc-bd2)' : 'var(--pc-bd1)',
@@ -270,7 +281,7 @@ export default function ResultsPage() {
               <button
                 onClick={() => scrollCarousel('right')}
                 disabled={!canScrollRight}
-                aria-label="Scroll right"
+                aria-label={t.results.scrollRight}
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
                 style={{
                   background: canScrollRight ? 'var(--pc-bd2)' : 'var(--pc-bd1)',
@@ -324,7 +335,10 @@ export default function ResultsPage() {
               <button
                 key={movie.id}
                 onClick={() => toggleSuggestion(movie.id)}
-                aria-label={`Show details for ${movie.name}`}
+                aria-label={t.results.showDetails.replace(
+                  '{name}',
+                  movie.localizedName ?? movie.name,
+                )}
                 aria-pressed={activeSuggestion === movie.id}
                 className="rounded-full transition-all duration-200"
                 style={{
@@ -378,7 +392,7 @@ export default function ResultsPage() {
             (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';
           }}
         >
-          <RotateCcw size={15} /> Try again
+          <RotateCcw size={15} /> {t.results.tryAgain}
         </button>
 
         <button
@@ -394,12 +408,12 @@ export default function ResultsPage() {
             fontWeight: 600,
           }}
         >
-          <Users size={15} /> Try with friends
+          <Users size={15} /> {t.results.tryWithFriends}
         </button>
       </motion.div>
 
       <p className="mt-8 text-center" style={{ color: 'var(--pc-t5)', fontSize: '0.72rem' }}>
-        Recommendations are AI-generated based on your taste profile.
+        {t.results.disclaimer}
       </p>
     </div>
   );

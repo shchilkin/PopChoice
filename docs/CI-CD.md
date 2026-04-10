@@ -186,5 +186,7 @@ cd services/movie-discovery && npm run build && npm test
 
 4. **Movie Discovery Type Errors**
    - Run `cd services/movie-discovery && npm run build` locally to reproduce and fix TypeScript errors.
+4. **Movie Seed Type Errors**
+   - Run `cd services/movie-seed && npm run build` locally to reproduce and fix TypeScript errors.
 
 The workflow helps maintain code quality and functionality across all pull requests.

@@ -2,6 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 interface QuizNavigationProps {
   onBack: () => void;
   onNext: () => void;
@@ -19,6 +21,8 @@ export function QuizNavigation({
   isLastStep,
   isLastPerson,
 }: QuizNavigationProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="px-5 py-6 max-w-xl mx-auto w-full flex gap-3">
       <button
@@ -30,7 +34,7 @@ export function QuizNavigation({
           color: 'var(--pc-t3)',
         }}
       >
-        <ChevronLeft size={16} /> Back
+        <ChevronLeft size={16} /> {t.quiz.nav.back}
       </button>
 
       <button
@@ -45,16 +49,16 @@ export function QuizNavigation({
         }}
       >
         {isSubmitting ? (
-          <>Submitting…</>
+          <>{t.quiz.nav.submitting}</>
         ) : isLastStep && isLastPerson ? (
-          <>Find My Movie ✨</>
+          <>{t.quiz.nav.findMyMovie}</>
         ) : isLastStep ? (
           <>
-            Next Person <ChevronRight size={16} />
+            {t.quiz.nav.nextPerson} <ChevronRight size={16} />
           </>
         ) : (
           <>
-            Continue <ChevronRight size={16} />
+            {t.quiz.nav.continue} <ChevronRight size={16} />
           </>
         )}
       </button>

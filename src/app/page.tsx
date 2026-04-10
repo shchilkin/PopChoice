@@ -6,7 +6,7 @@ import { HeroSection } from './components/HeroSection';
 
 export default function LandingPage() {
   return (
-    <div style={{ fontFamily: "var(--font-dm-sans), 'DM Sans', 'Inter', sans-serif" }}>
+    <div style={{ fontFamily: "var(--font-manrope), 'Manrope', 'Inter', sans-serif" }}>
       <HeroSection />
       <FeaturesSection />
       <CtaSection />

@@ -1,4 +1,5 @@
 export * from './AgeRatingChip';
+export * from './LanguageSwitcher';
 export * from './Button';
 export * from './Mascot';
 export * from './MoviesTable';

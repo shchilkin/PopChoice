@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 interface GroupSetupProps {
@@ -13,6 +14,8 @@ interface GroupSetupProps {
 }
 
 export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: GroupSetupProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
       <motion.div
@@ -25,16 +28,18 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           <div className="text-4xl mb-4">👥</div>
           <h2
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '2rem',
               letterSpacing: '0.05em',
               color: 'var(--pc-t1)',
             }}
           >
-            Who&apos;s watching?
+            {t.quiz.groupSetup.title}
           </h2>
           <p style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', marginTop: 6 }}>
-            Add everyone&apos;s name so we can tailor the quiz
+            {t.quiz.groupSetup.subtitle}
           </p>
         </div>
 
@@ -56,7 +61,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
                 onChange={(e) =>
                   onGroupNamesChange(groupNames.map((n, j) => (j === i ? e.target.value : n)))
                 }
-                placeholder={`Person ${i + 1}'s name`}
+                placeholder={t.quiz.groupSetup.personPlaceholder.replace('{n}', String(i + 1))}
                 className="flex-1 px-4 py-3 rounded-xl outline-none transition-all duration-200"
                 style={{
                   background: 'var(--pc-surface)',
@@ -109,7 +114,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd4)';
             }}
           >
-            <Plus size={15} /> Add another person
+            <Plus size={15} /> {t.quiz.groupSetup.addPerson}
           </button>
         )}
 
@@ -123,7 +128,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               color: 'var(--pc-t2)',
             }}
           >
-            Back
+            {t.quiz.groupSetup.back}
           </button>
           <button
             onClick={onStart}
@@ -134,7 +139,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               fontWeight: 700,
             }}
           >
-            Let&apos;s go!
+            {t.quiz.groupSetup.letsGo}
           </button>
         </div>
       </motion.div>

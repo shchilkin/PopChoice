@@ -2,6 +2,8 @@
 
 import { Smile } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 import { GENRES } from '../../constants';
 
 import type { PersonAnswers } from '../../types';
@@ -12,6 +14,8 @@ interface MoodStepProps {
 }
 
 export function MoodStep({ person, onUpdate }: MoodStepProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex flex-col gap-5 pt-2">
       <div className="flex items-center gap-3">
@@ -27,14 +31,16 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
         <div>
           <h2
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '1.8rem',
               letterSpacing: '0.04em',
               color: 'var(--pc-t1)',
               lineHeight: 1.1,
             }}
           >
-            What&apos;s your mood tonight?
+            {t.quiz.mood.title}
           </h2>
           <p
             style={{
@@ -43,7 +49,7 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
               marginTop: 2,
             }}
           >
-            Pick one or more
+            {t.quiz.mood.pickOne}
           </p>
         </div>
       </div>
@@ -51,6 +57,7 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
       <div className="grid grid-cols-2 gap-3">
         {GENRES.map((g) => {
           const selected = person.moods.includes(g.id);
+          const label = t.genres[g.id as keyof typeof t.genres] ?? g.label;
           return (
             <button
               key={g.id}
@@ -82,7 +89,7 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
                   fontSize: '0.88rem',
                 }}
               >
-                {g.label}
+                {label}
               </span>
             </button>
           );
@@ -97,8 +104,9 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
             textAlign: 'center',
           }}
         >
-          ✓ {person.moods.length} genre
-          {person.moods.length > 1 ? 's' : ''} selected
+          {person.moods.length === 1
+            ? t.quiz.mood.selectedSingular.replace('{n}', String(person.moods.length))
+            : t.quiz.mood.selectedPlural.replace('{n}', String(person.moods.length))}
         </p>
       )}
     </div>

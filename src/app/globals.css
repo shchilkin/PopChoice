@@ -15,8 +15,9 @@
   --pc-t1: #0d0d1a;
   --pc-t2: #424260;
   --pc-t3: #6a6a88;
-  --pc-t4: #9090b0;
-  --pc-t5: #b0b0c8;
+  /* t4/t5 darkened from #9090b0/#b0b0c8 to meet WCAG AA 4.5:1 on light backgrounds */
+  --pc-t4: #696986;
+  --pc-t5: #696986;
 
   /* Borders */
   --pc-bd1: rgba(0, 0, 0, 0.06);
@@ -27,6 +28,9 @@
   /* Brand */
   --pc-gold: #c4950a;
   --pc-amber: #d4760c;
+  /* Accessible gold/amber for text — meets WCAG AA 4.5:1 on light backgrounds */
+  --pc-gold-text: #8c6300;
+  --pc-amber-text: #9c5500;
 
   /* CTA / decorative gradients */
   --pc-cta: linear-gradient(135deg, #f5c518, #ff9f1c);
@@ -35,7 +39,8 @@
   --pc-progress: linear-gradient(90deg, #f5c518, #ff9f1c);
 
   /* Footer */
-  --pc-footer: #9090b0;
+  /* Darkened from #9090b0 to meet WCAG AA 4.5:1 on light backgrounds */
+  --pc-footer: #696986;
   --pc-footer-bd: rgba(0, 0, 0, 0.06);
 
   /* Interactive surfaces */
@@ -84,7 +89,8 @@
   --secondary: #f0ece2;
   --secondary-foreground: #0d0d1a;
   --muted: #f0ece2;
-  --muted-foreground: #6a6a88;
+  /* muted-foreground darkened from #6a6a88 to meet WCAG AA on muted bg (was 4.4:1, now 4.8:1) */
+  --muted-foreground: #646480;
   --accent: #c4950a;
   --accent-foreground: #0d0d1a;
   --border: rgba(0, 0, 0, 0.09);
@@ -93,10 +99,12 @@
   --alert: hsla(54, 100%, 62%, 1);
 
   /* Age Rating Color Tokens - Light Mode (Solid Fill) */
-  --rating-safe-bg: hsla(141, 56%, 40%, 1);
+  /* safe-bg darkened from hsla(141,56%,40%) to meet WCAG AA (was 3.2:1, now 5.3:1) */
+  --rating-safe-bg: hsla(141, 56%, 30%, 1);
   --rating-safe-text: hsla(141, 100%, 95%, 1);
   --rating-safe-border: hsla(0, 0%, 100%, 0);
-  --rating-caution-bg: hsla(220, 100%, 61%, 1);
+  /* caution-bg darkened from hsla(220,100%,61%) to meet WCAG AA (was 3.6:1, now 5.4:1) */
+  --rating-caution-bg: hsla(220, 100%, 48%, 1);
   --rating-caution-text: hsla(220, 100%, 97%, 1);
   --rating-caution-border: hsla(0, 0%, 100%, 0);
   --rating-teen-bg: hsla(42, 100%, 59%, 1);
@@ -105,7 +113,8 @@
   --rating-mature-bg: hsla(0, 66%, 47%, 1);
   --rating-mature-text: hsla(0, 100%, 96%, 1);
   --rating-mature-border: hsla(0, 0%, 100%, 0);
-  --rating-unknown-bg: hsla(0, 0%, 50%, 1);
+  /* unknown-bg darkened from hsla(0,0%,50%) to meet WCAG AA (was 3.7:1, now 4.6:1) */
+  --rating-unknown-bg: hsla(0, 0%, 44%, 1);
   --rating-unknown-text: hsla(0, 0%, 97%, 1);
   --rating-unknown-border: hsla(0, 0%, 100%, 0);
   --rating-border-width: 0;
@@ -123,9 +132,10 @@
   /* Text */
   --pc-t1: #f8f8ff;
   --pc-t2: #8888aa;
-  --pc-t3: #5a5a78;
-  --pc-t4: #3d3d55;
-  --pc-t5: #2d2d45;
+  /* t3/t4/t5 lightened from #5a5a78/#3d3d55/#2d2d45 to meet WCAG AA 4.5:1 on dark surfaces */
+  --pc-t3: #7b7b9d;
+  --pc-t4: #7b7b9d;
+  --pc-t5: #7b7b9d;
 
   /* Borders */
   --pc-bd1: rgba(255, 255, 255, 0.06);
@@ -136,9 +146,13 @@
   /* Brand */
   --pc-gold: #f5c518;
   --pc-amber: #ff9f1c;
+  /* In dark mode gold/amber already meet WCAG AA; alias to the same value */
+  --pc-gold-text: #f5c518;
+  --pc-amber-text: #ff9f1c;
 
   /* Footer */
-  --pc-footer: #3d3d55;
+  /* Lightened from #3d3d55 to meet WCAG AA 4.5:1 on dark backgrounds */
+  --pc-footer: #7b7b9d;
   --pc-footer-bd: rgba(255, 255, 255, 0.04);
 
   /* Interactive surfaces */
@@ -206,8 +220,9 @@
   --rating-teen-text: hsla(42, 100%, 59%, 1);
   --rating-teen-border: hsla(42, 100%, 59%, 0.5);
   --rating-mature-bg: hsla(0, 100%, 15%, 1);
-  --rating-mature-text: hsla(0, 66%, 57%, 1);
-  --rating-mature-border: hsla(0, 66%, 57%, 0.5);
+  /* mature-text lightened from hsla(0,66%,57%) to meet WCAG AA (was 3.8:1, now 5.0:1) */
+  --rating-mature-text: hsla(0, 66%, 65%, 1);
+  --rating-mature-border: hsla(0, 66%, 65%, 0.5);
   --rating-unknown-bg: hsla(0, 0%, 15%, 1);
   --rating-unknown-text: hsla(0, 0%, 70%, 1);
   --rating-unknown-border: hsla(0, 0%, 70%, 0.5);
@@ -230,8 +245,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-sans: var(--font-dm-sans);
-  --font-mono: var(--font-bebas-neue);
+  --font-sans: var(--font-manrope);
+  --font-mono: var(--font-oswald);
 }
 
 html,
@@ -242,7 +257,7 @@ body {
 body {
   background: var(--pc-bg);
   color: var(--pc-t1);
-  font-family: 'DM Sans', 'Inter', Arial, Helvetica, sans-serif;
+  font-family: 'Manrope', 'Inter', Arial, Helvetica, sans-serif;
   transition:
     background 0.3s,
     color 0.3s;

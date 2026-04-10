@@ -3,6 +3,7 @@
 import { ChevronRight, User, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 interface QuizIntroProps {
@@ -11,6 +12,8 @@ interface QuizIntroProps {
 }
 
 export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
       <motion.div
@@ -24,17 +27,17 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
           <h1
             className="mb-2"
             style={{
-              fontFamily: "var(--font-bebas-neue), 'Bebas Neue', sans-serif",
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
               fontSize: '2.2rem',
               letterSpacing: '0.05em',
               color: 'var(--pc-t1)',
             }}
           >
-            Let&apos;s find your movie
+            {t.quiz.intro.title}
           </h1>
-          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
-            Are you watching solo or with others?
-          </p>
+          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>{t.quiz.intro.subtitle}</p>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -59,7 +62,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
               className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
               style={{
                 background: 'rgba(245,197,24,0.15)',
-                color: 'var(--pc-gold)',
+                color: 'var(--pc-gold-text)',
               }}
             >
               <User size={22} />
@@ -72,10 +75,10 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
                   fontSize: '1rem',
                 }}
               >
-                Just me
+                {t.quiz.intro.soloTitle}
               </div>
               <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                Solo movie night — personalized just for you
+                {t.quiz.intro.soloDesc}
               </div>
             </div>
             <ChevronRight
@@ -110,10 +113,10 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
             </div>
             <div>
               <div style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '1rem' }}>
-                Group mode 🎉
+                {t.quiz.intro.groupTitle}
               </div>
               <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                Find the perfect film for 2–6 people
+                {t.quiz.intro.groupDesc}
               </div>
             </div>
             <ChevronRight

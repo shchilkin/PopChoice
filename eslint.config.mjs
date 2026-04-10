@@ -1,21 +1,17 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-import { FlatCompat } from '@eslint/eslintrc';
+import nextConfig from 'eslint-config-next/core-web-vitals';
+import prettierConfig from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
 import storybook from 'eslint-plugin-storybook';
 import unusedImports from 'eslint-plugin-unused-imports';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
 const eslintConfig = [
-  ...compat.extends('next/core-web-vitals', 'next/typescript', 'prettier'),
+  // Ignore build output, public assets, and service sub-packages
+  {
+    ignores: ['storybook-static/**', 'public/**', 'services/**', '.next/**', 'node_modules/**'],
+  },
+  ...nextConfig,
+  prettierConfig,
   ...storybook.configs['flat/recommended'],
 
   // Import organization and cleanup
@@ -66,7 +62,12 @@ const eslintConfig = [
 
   // Allow console logs in server-side utils
   {
-    files: ['src/utils/**/*.{ts,js}', 'src/app/api/**/*.{ts,js}', 'scripts/**/*.{ts,js}'],
+    files: [
+      'src/utils/**/*.{ts,js}',
+      'src/app/api/**/*.{ts,js}',
+      'src/lib/**/*.{ts,js}',
+      'scripts/**/*.{ts,js}',
+    ],
     rules: {
       'no-console': 'off',
     },
