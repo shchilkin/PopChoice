@@ -24,13 +24,6 @@ export default function AvailableMoviesPage() {
   // AbortController for the in-flight fetch – cancelled when a newer page is requested.
   const abortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-    };
-  }, []);
-
   const fetchMovies = useCallback(
     async (page: number) => {
       // Serve from cache when available.
@@ -87,10 +80,11 @@ export default function AvailableMoviesPage() {
 
   useEffect(() => {
     fetchMovies(currentPage);
-    // Abort any in-flight request when the component unmounts so that stale
-    // responses don't attempt to call setState on an unmounted component.
+    // Abort any in-flight request when the effect re-runs (new page) or the
+    // component unmounts, so stale responses can't call setState.
     return () => {
       abortRef.current?.abort();
+      abortRef.current = null;
     };
   }, [fetchMovies, currentPage]);
 
