@@ -209,7 +209,7 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: st
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
 
     const recommendation = await openAIClient.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-5.4',
       messages: [
         { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
@@ -265,13 +265,12 @@ Match Score: ${Math.round(movie.similarity * 100)}%
 `;
 
         const descriptionResponse = await openAIClient.chat.completions.create({
-          model: 'gpt-5-mini', // Use mini model for cost efficiency on individual descriptions
+          model: 'gpt-5.4-mini', // Use mini model for cost efficiency on individual descriptions
           messages: [
             { role: 'system', content: descriptionPrompt },
             { role: 'user', content: movieContext },
           ],
           max_completion_tokens: 150, // Keep descriptions concise
-          temperature: 0.7, // Add some creativity
         });
 
         const aiDescription =
