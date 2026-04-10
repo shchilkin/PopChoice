@@ -291,6 +291,12 @@ describe('POST /api/movie-recommendation – input validation', () => {
       const res = await POST(req);
       expect(res.status).toBe(400);
     });
+
+    it('rejects moodPreference items that are only whitespace after trimming', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: ['   '] });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
   });
 
   describe('missing required fields', () => {

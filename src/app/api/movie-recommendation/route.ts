@@ -111,7 +111,13 @@ const personFormDataSchema = z.object({
     .min(1, 'New vs Classic preference is required')
     .max(200, 'New vs Classic preference must be 200 characters or fewer'),
   moodPreference: z
-    .array(z.string().trim().max(200, 'Each mood preference must be 200 characters or fewer'))
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1, 'Mood preference cannot be empty')
+        .max(200, 'Each mood preference must be 200 characters or fewer'),
+    )
     .min(1, 'At least one mood preference is required'),
   tonePreference: z
     .string()
