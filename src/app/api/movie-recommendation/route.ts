@@ -660,9 +660,10 @@ export async function POST(req: NextRequest) {
 
           // Exclude TMDB movies whose titles are already covered by local results
           const localTitles = new Set(similarMovies.map((m) => m.name.toLowerCase()));
+          const slotsRemaining = Math.max(0, MAX_TMDB_MOVIES - similarMovies.length);
           const newTMDBMatches = tmdbMovies
             .filter((m) => !localTitles.has(m.title.toLowerCase()))
-            .slice(0, Math.max(0, MAX_TMDB_MOVIES - similarMovies.length))
+            .slice(0, slotsRemaining)
             .map(tmdbMovieToEnhancedMatch);
 
           similarMovies = [...similarMovies, ...newTMDBMatches].slice(0, MAX_TMDB_MOVIES);
