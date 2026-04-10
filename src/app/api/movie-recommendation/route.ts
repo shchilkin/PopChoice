@@ -395,7 +395,9 @@ export async function POST(req: NextRequest) {
 
     // Step 0: Moderate user input before processing
     const textsToModerate = allPeopleData.flatMap((p) =>
-      [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(Boolean),
+      [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(
+        (text): text is string => typeof text === 'string' && text.length > 0,
+      ),
     );
     const moderationResult = await moderateInput(textsToModerate);
     if (moderationResult.flagged) {

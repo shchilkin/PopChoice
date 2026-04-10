@@ -19,9 +19,8 @@ export async function moderateInput(input: string | string[]): Promise<Moderatio
 
   for (const result of response.results) {
     if (result.flagged) {
-      const categories = result.categories as unknown as Record<string, boolean>;
-      for (const [category, isFlagged] of Object.entries(categories)) {
-        if (isFlagged) {
+      for (const [category, isFlagged] of Object.entries(result.categories)) {
+        if (typeof isFlagged === 'boolean' && isFlagged) {
           flaggedCategories.push(category);
         }
       }
