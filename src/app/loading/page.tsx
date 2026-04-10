@@ -19,7 +19,7 @@ export default function LoadingPage() {
   const { t, locale } = useLanguage();
   const [tipIndex, setTipIndex] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [errorState, setErrorState] = useState<'retryable' | 'fatal' | null>(null);
+  const [errorState, setErrorState] = useState<'retryable' | 'fatal' | 'moderated' | null>(null);
   const retryCount = useRef(0);
   const intervalsRef = useRef<{
     tip?: ReturnType<typeof setInterval>;
@@ -61,6 +61,10 @@ export default function LoadingPage() {
         clearInterval(intervalsRef.current.prog);
         // eslint-disable-next-line no-console
         console.error('API error:', err);
+        if (err.response?.status === 422) {
+          setErrorState('moderated');
+          return;
+        }
         retryCount.current += 1;
         setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });
@@ -175,6 +179,33 @@ export default function LoadingPage() {
               onClick={() => router.push('/quiz')}
               className="text-sm"
               style={{ color: 'var(--pc-t3)' }}
+            >
+              {t.loading.backToQuiz}
+            </button>
+          </motion.div>
+        )}
+
+        {/* Moderated error */}
+        {errorState === 'moderated' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-4 w-full max-w-xs"
+          >
+            <p
+              style={{
+                color: palette.red,
+                fontSize: '0.88rem',
+                lineHeight: 1.6,
+                textAlign: 'center',
+              }}
+            >
+              {t.loading.moderatedError}
+            </p>
+            <button
+              onClick={() => router.push('/quiz')}
+              className="w-full py-3 rounded-2xl text-sm transition-all duration-200 active:scale-[0.98]"
+              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)', fontWeight: 700 }}
             >
               {t.loading.backToQuiz}
             </button>

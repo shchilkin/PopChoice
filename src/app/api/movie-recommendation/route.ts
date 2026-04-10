@@ -406,6 +406,7 @@ export async function POST(req: NextRequest) {
         {
           error:
             'Your input contains content that cannot be processed. Please revise your preferences and try again.',
+          flaggedCategories: moderationResult.categories,
         },
         { status: 422 },
       );
