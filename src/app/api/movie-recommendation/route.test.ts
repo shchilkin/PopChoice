@@ -276,17 +276,22 @@ describe('POST /api/movie-recommendation – input validation', () => {
       const data = await res.json();
       expect(data).toHaveProperty('error');
     });
+
+    it('rejects a moodPreference array exceeding 10 items', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: Array(11).fill('Action') });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
   });
 
   describe('sanitization', () => {
-    it('trims leading/trailing whitespace from favoriteMovie before processing', async () => {
-      // The schema trims input — a string that is only whitespace should fail min(1) after trimming
+    it('rejects favoriteMovie that is only whitespace after trimming', async () => {
       const req = makeRequest({ ...validPerson, favoriteMovie: '   ' });
       const res = await POST(req);
       expect(res.status).toBe(400);
     });
 
-    it('trims leading/trailing whitespace from tonePreference before processing', async () => {
+    it('rejects tonePreference that is only whitespace after trimming', async () => {
       const req = makeRequest({ ...validPerson, tonePreference: '   ' });
       const res = await POST(req);
       expect(res.status).toBe(400);
@@ -335,6 +340,12 @@ describe('POST /api/movie-recommendation – input validation', () => {
 
     it('rejects an array where one person has an invalid favoriteMovie', async () => {
       const req = makeRequest([validPerson, { ...validPerson, favoriteMovie: 'b'.repeat(501) }]);
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a people array exceeding 10 entries', async () => {
+      const req = makeRequest(Array(11).fill(validPerson));
       const res = await POST(req);
       expect(res.status).toBe(400);
     });

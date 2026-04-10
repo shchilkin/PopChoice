@@ -118,7 +118,8 @@ const personFormDataSchema = z.object({
         .min(1, 'Mood preference cannot be empty')
         .max(200, 'Each mood preference must be 200 characters or fewer'),
     )
-    .min(1, 'At least one mood preference is required'),
+    .min(1, 'At least one mood preference is required')
+    .max(10, 'No more than 10 mood preferences allowed'),
   tonePreference: z
     .string()
     .trim()
@@ -128,7 +129,10 @@ const personFormDataSchema = z.object({
 
 const requestBodySchema = z.union([
   personFormDataSchema, // Single person
-  z.array(personFormDataSchema).min(1, 'At least one person is required'), // Multiple people
+  z
+    .array(personFormDataSchema)
+    .min(1, 'At least one person is required')
+    .max(10, 'No more than 10 people allowed'), // Multiple people
 ]);
 
 // Response schemas
