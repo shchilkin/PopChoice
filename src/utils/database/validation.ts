@@ -29,6 +29,11 @@ export async function movieExists(name: string, year: number): Promise<boolean> 
  * @param movieRecords - Array of movie records to check
  * @returns Object with new movies and existing movies
  */
+
+function makeMovieKey(name: string, year: number): string {
+  return JSON.stringify([name, year]);
+}
+
 export async function filterExistingMovies(movieRecords: MovieRecord[]): Promise<{
   newMovies: MovieRecord[];
   existingMovies: Array<{ name: string; year: number; index: number }>;
@@ -50,12 +55,12 @@ export async function filterExistingMovies(movieRecords: MovieRecord[]): Promise
     ),
   );
 
-  // Build a Set of "name\0year" keys for O(1) lookups.
+  // Build a Set of composite keys for O(1) lookups.
   const existingKeys = new Set<string>();
   for (const result of fetchResults) {
     if (result.data) {
       for (const row of result.data) {
-        existingKeys.add(`${row.name}\0${row.year}`);
+        existingKeys.add(makeMovieKey(row.name, row.year));
       }
     }
   }
@@ -65,7 +70,7 @@ export async function filterExistingMovies(movieRecords: MovieRecord[]): Promise
 
   for (let i = 0; i < movieRecords.length; i++) {
     const movie = movieRecords[i];
-    if (existingKeys.has(`${movie.name}\0${movie.year}`)) {
+    if (existingKeys.has(makeMovieKey(movie.name, movie.year))) {
       existingMovies.push({ name: movie.name, year: movie.year, index: i });
     } else {
       newMovies.push(movie);
