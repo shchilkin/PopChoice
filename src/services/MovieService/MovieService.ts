@@ -72,8 +72,8 @@ export class MovieService {
         return filteredResults[0];
       })
       .catch((error) => {
-        logger.error({ err: error, movieTitle }, 'Error fetching movie by title');
-        throw new Error(`Failed to fetch movie by title: ${movieTitle}`);
+        logger.warn({ err: error, movieTitle }, 'TMDB search request failed, skipping poster');
+        return undefined;
       });
     return response;
   }

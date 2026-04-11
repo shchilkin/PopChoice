@@ -7,7 +7,12 @@ import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { IMAGE_BASE_URL, MovieService } from '@/services';
-import { moderateInput } from '@/utils/ai/moderation';
+import {
+  ALWAYS_BLOCK_CATEGORIES,
+  checkForPromptInjection,
+  judgeForMoviePlatform,
+  moderateInput,
+} from '@/utils/ai/moderation';
 
 // ---------------------------------------------------------------------------
 // Hybrid search constants
@@ -664,7 +669,10 @@ async function getMovieInfo(
 
     return { posterURL, localizedName };
   } catch (error) {
-    logger.error({ err: error, movieTitle, locale }, 'Error fetching movie by title');
+    logger.warn(
+      { err: error, movieTitle, locale },
+      'Error fetching movie by title, returning empty',
+    );
     return {};
   }
 }
@@ -735,22 +743,79 @@ export async function POST(req: NextRequest) {
 
     logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
 
-    // Step 0: Moderate user input before processing
+    // Step 0: Protect against prompt injection, then moderate + judge all user inputs.
+    //
+    // Phase A — structural injection check on favoriteMovie (fast regex, no API call).
+    // This must run before any LLM sees the text.
+    const injectionDetected = allPeopleData.some((p) => checkForPromptInjection(p.favoriteMovie));
+    if (injectionDetected) {
+      logger.warn('Prompt injection attempt detected in favoriteMovie field');
+      return NextResponse.json(
+        {
+          error:
+            'Your input contains content that cannot be processed. Please revise your preferences and try again.',
+        },
+        { status: 422 },
+      );
+    }
+
+    // Phase B — Moderation API on all fields including the movie title.
     const textsToModerate = allPeopleData.flatMap((p) =>
       [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(
         (text): text is string => typeof text === 'string' && text.length > 0,
       ),
     );
     const moderationResult = await moderateInput(textsToModerate);
+
     if (moderationResult.flagged) {
-      logger.warn({ categories: moderationResult.categories }, 'User input flagged by moderation');
-      return NextResponse.json(
-        {
-          error:
-            'Your input contains content that cannot be processed. Please revise your preferences and try again.',
-          flaggedCategories: moderationResult.categories,
-        },
-        { status: 422 },
+      // Phase C — Always-block categories bypass the judge (no movie context justifies these).
+      const hasAlwaysBlockCategory = moderationResult.categories.some((c) =>
+        ALWAYS_BLOCK_CATEGORIES.has(c),
+      );
+      if (hasAlwaysBlockCategory) {
+        logger.warn(
+          { categories: moderationResult.categories },
+          'User input blocked by always-block moderation category',
+        );
+        return NextResponse.json(
+          {
+            error:
+              'Your input contains content that cannot be processed. Please revise your preferences and try again.',
+            flaggedCategories: moderationResult.categories,
+          },
+          { status: 422 },
+        );
+      }
+
+      // Phase D — Judge pattern: a cheap LLM decides if the flagged content is legitimate
+      // movie-platform input. "Kill Bill" flagged for violence is a real film title; the
+      // judge recognises this and returns suitable: true.
+      const labeledInputs = allPeopleData.flatMap((p) => [
+        { field: 'favoriteMovie', value: p.favoriteMovie },
+        { field: 'newVsClassic', value: p.newVsClassic },
+        { field: 'tonePreference', value: p.tonePreference },
+        ...p.moodPreference.map((m) => ({ field: 'moodPreference', value: m })),
+      ]);
+      const judgeResult = await judgeForMoviePlatform(labeledInputs, moderationResult.categories);
+
+      if (!judgeResult.suitable) {
+        logger.warn(
+          { categories: moderationResult.categories },
+          'User input blocked by judge after moderation flag',
+        );
+        return NextResponse.json(
+          {
+            error:
+              'Your input contains content that cannot be processed. Please revise your preferences and try again.',
+            flaggedCategories: moderationResult.categories,
+          },
+          { status: 422 },
+        );
+      }
+
+      logger.info(
+        { categories: moderationResult.categories },
+        'Judge approved content flagged by moderation — proceeding',
       );
     }
 
