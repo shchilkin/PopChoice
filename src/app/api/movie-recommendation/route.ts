@@ -18,18 +18,7 @@ import {
 // Hybrid search constants
 // ---------------------------------------------------------------------------
 
-/** Minimum cosine similarity for a local result to be considered "high quality".
- * text-embedding-3-large cosine similarity peaks at 0.55–0.62 for movie queries,
- * so the threshold must stay below that ceiling. */
-export const SIMILARITY_THRESHOLD = 0.4;
-
-/** Trigger TMDB fallback when fewer than this many high-quality local results are found. */
-export const MIN_HIGH_QUALITY_LOCAL = 3;
-
-/** Pure routing helper — separated so it can be unit-tested without mocking the full route. */
-export function shouldFallBackToTMDB(movies: { similarity: number }[]): boolean {
-  return movies.filter((m) => m.similarity >= SIMILARITY_THRESHOLD).length < MIN_HIGH_QUALITY_LOCAL;
-}
+import { SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 
 /** Maximum movies in the final merged result set. */
 const MAX_TOTAL_MOVIES = 6;

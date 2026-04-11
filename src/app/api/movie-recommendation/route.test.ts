@@ -79,7 +79,8 @@ vi.mock('@/services', () => ({
   })),
 }));
 
-import { POST, MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './route';
+import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
+import { POST } from './route';
 
 const validBody = {
   favoriteMovie: 'The Dark Knight',

@@ -239,7 +239,7 @@ Respond in ${language} only.`;
       year: number;
       similarity: number;
       age_rating: undefined;
-      duration: undefined;
+      duration: number | undefined;
       score_rating: number;
       posterURL: string | undefined;
       aiDescription: string;
