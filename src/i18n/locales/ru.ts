@@ -194,6 +194,9 @@ export const ru: Translations = {
     broaderSearch: 'Расширенный поиск — включает результаты из TMDB',
     foundInDb: 'Найдено в нашей базе',
     foundOnTmdb: 'Найдено на TMDB',
+    morePicksButton: 'Ещё варианты из TMDB',
+    morePicksLoading: 'Загружаем ещё…',
+    morePicksEmpty: 'Больше вариантов пока нет.',
   },
   about: {
     badge: 'Как это работает',

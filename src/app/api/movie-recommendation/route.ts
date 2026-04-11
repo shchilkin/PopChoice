@@ -581,18 +581,28 @@ async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: st
 
 // Helper: Generate AI descriptions for individual movies
 async function generateMovieDescriptions(
-  movies: (EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[],
+  movies: (EnhancedMovieMatch & {
+    posterURL?: string;
+    localizedName?: string;
+    localizedOverview?: string;
+  })[],
   userPreferences: PersonFormData[],
   locale: string,
 ): Promise<
-  (EnhancedMovieMatch & { posterURL?: string; localizedName?: string; aiDescription?: string })[]
+  (EnhancedMovieMatch & {
+    posterURL?: string;
+    localizedName?: string;
+    localizedOverview?: string;
+    aiDescription?: string;
+  })[]
 > {
   logger.info({ count: movies.length }, 'Generating AI descriptions for movies');
 
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   // Create a prompt specifically for individual movie descriptions
-  const descriptionPrompt = `
-You are PopChoice, a movie expert creating personalized movie descriptions. For each movie provided, write a brief, engaging description (2-3 sentences) that:
+  const descriptionPrompt = `CRITICAL: Your entire response MUST be written in ${language} only. Never use English or any other language unless ${language} is English.
+
+You are PopChoice, a movie expert creating personalized movie descriptions. Write a brief, engaging description (2-3 sentences) that:
 
 1. Explains why this movie would appeal to the user based on their preferences
 2. Highlights the most compelling aspects of the film
@@ -601,61 +611,90 @@ You are PopChoice, a movie expert creating personalized movie descriptions. For 
 
 User preferences context: ${combineAllPeopleDataToString(userPreferences)}
 
-For each movie, return a description that makes the user excited to watch it.
-IMPORTANT: You must respond entirely in ${language}. Do not use any other language.
-`;
+Respond in ${language} only.`;
 
-  const enhancedMovies = await Promise.all(
-    movies.map(async (movie) => {
-      try {
-        const movieContext = `
-Movie: ${movie.name} (${movie.year})
+  const enhancedMovies: (EnhancedMovieMatch & {
+    posterURL?: string;
+    localizedName?: string;
+    localizedOverview?: string;
+    aiDescription?: string;
+  })[] = [];
+
+  // Process descriptions serially in batches of 2 to avoid rate-limit bursts.
+  // gpt-5.4-mini has per-minute request limits; 6 simultaneous calls can exceed them.
+  const BATCH_SIZE = 2;
+  for (let i = 0; i < movies.length; i += BATCH_SIZE) {
+    const batch = movies.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(async (movie) => {
+        try {
+          const movieContext = `Movie: ${movie.name} (${movie.year})
 Rating: ${movie.age_rating} | Duration: ${movie.duration}min | Score: ${movie.score_rating}/10
 Plot: ${movie.description}
-Match Score: ${Math.round(movie.similarity * 100)}%
-`;
 
-        const descriptionResponse = await openAIClient.chat.completions.create({
-          model: 'gpt-5.4-mini', // Use mini model for cost efficiency on individual descriptions
-          messages: [
-            { role: 'system', content: descriptionPrompt },
-            { role: 'user', content: movieContext },
-          ],
-          max_completion_tokens: 150, // Keep descriptions concise
-        });
+Remember: respond in ${language} only.`;
 
-        const aiDescription =
-          descriptionResponse.choices[0]?.message?.content?.trim() ||
-          `${movie.name} is a ${movie.age_rating} ${movie.year} film with a ${movie.score_rating}/10 rating. This ${Math.round(movie.similarity * 100)}% match offers exactly what you're looking for!`;
+          const descriptionResponse = await openAIClient.chat.completions.create({
+            model: 'gpt-5.4-mini',
+            messages: [
+              { role: 'system', content: descriptionPrompt },
+              { role: 'user', content: movieContext },
+            ],
+            max_completion_tokens: 150,
+          });
 
-        return {
-          ...movie,
-          aiDescription,
-        };
-      } catch (error) {
-        logger.warn(
-          { err: error, movieTitle: movie.name },
-          'Failed to generate description for movie',
-        );
-        // Fallback to a basic description
-        return {
-          ...movie,
-          aiDescription: `${movie.name} (${movie.year}) is a ${movie.age_rating} film with a ${movie.score_rating}/10 rating. This ${Math.round(movie.similarity * 100)}% match aligns perfectly with your preferences!`,
-        };
-      }
-    }),
-  );
+          const aiDescription =
+            descriptionResponse.choices[0]?.message?.content?.trim() || movie.description;
+
+          return { ...movie, aiDescription };
+        } catch (error) {
+          const isRateLimit =
+            typeof error === 'object' &&
+            error !== null &&
+            'status' in error &&
+            (error as { status?: number }).status === 429;
+          if (isRateLimit) {
+            logger.warn(
+              { movieTitle: movie.name },
+              'OpenAI rate limit hit while generating description, using movie plot as fallback',
+            );
+          } else {
+            logger.warn(
+              { err: error, movieTitle: movie.name },
+              'Failed to generate AI description for movie',
+            );
+          }
+          // Use the localized TMDB overview fetched earlier (free, no extra API call).
+          // This ensures non-English users see a description in their language even when OpenAI is unavailable.
+          const fallback = movie.localizedOverview || movie.description;
+          return { ...movie, aiDescription: fallback };
+        }
+      }),
+    );
+    enhancedMovies.push(...batchResults);
+
+    // Small pause between batches to stay within rate limits
+    if (i + BATCH_SIZE < movies.length) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
 
   return enhancedMovies;
 }
 
-// Helper: Get poster URL and optional localized name for a movie
+// Helper: Get poster URL and optional localized name for a movie.
+// For TMDB-sourced movies (negative ID), does a direct ID lookup — no title search needed.
 async function getMovieInfo(
   movieTitle: string,
   locale: string,
-): Promise<{ posterURL?: string; localizedName?: string }> {
+  year?: number,
+  tmdbId?: number, // When provided (TMDB-sourced movies), skips title search entirely
+): Promise<{ posterURL?: string; localizedName?: string; localizedOverview?: string }> {
   try {
-    const enDetails = await movieService.getMovieByTitle(movieTitle);
+    // Direct ID lookup is 100% accurate — use it whenever we know the TMDB ID
+    const enDetails = tmdbId
+      ? await movieService.getMovieById(tmdbId)
+      : await movieService.getMovieByTitle(movieTitle, year);
     if (!enDetails) {
       logger.warn({ movieTitle }, 'No movie found with title');
       return {};
@@ -673,8 +712,10 @@ async function getMovieInfo(
     // Only surface a localized name when TMDB actually has a different translation
     const localizedName =
       localized?.title && localized.title !== enDetails.title ? localized.title : undefined;
+    // Localized overview from TMDB — used as fallback description if OpenAI fails
+    const localizedOverview = localized?.overview || undefined;
 
-    return { posterURL, localizedName };
+    return { posterURL, localizedName, localizedOverview };
   } catch (error) {
     logger.warn(
       { err: error, movieTitle, locale },
@@ -689,9 +730,18 @@ async function enhanceSimilarMoviesWithPosters(
   similarMovies: EnhancedMovieMatch[],
   locale: string,
   batchSize: number = 3,
-): Promise<(EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[]> {
-  const enhancedMovies: (EnhancedMovieMatch & { posterURL?: string; localizedName?: string })[] =
-    [];
+): Promise<
+  (EnhancedMovieMatch & {
+    posterURL?: string;
+    localizedName?: string;
+    localizedOverview?: string;
+  })[]
+> {
+  const enhancedMovies: (EnhancedMovieMatch & {
+    posterURL?: string;
+    localizedName?: string;
+    localizedOverview?: string;
+  })[] = [];
 
   // Process movies in batches to avoid overwhelming the TMDB API
   for (let i = 0; i < similarMovies.length; i += batchSize) {
@@ -704,11 +754,24 @@ async function enhanceSimilarMoviesWithPosters(
         return movie;
       }
       try {
-        const { posterURL, localizedName } = await getMovieInfo(movie.name, locale);
-        return { ...movie, posterURL, localizedName };
+        // For TMDB-sourced movies, the ID is stored as negative (-tmdbId).
+        // Pass the real TMDB ID so getMovieInfo can do a direct lookup instead of a title search.
+        const tmdbId = movie.id < 0 ? -movie.id : undefined;
+        const { posterURL, localizedName, localizedOverview } = await getMovieInfo(
+          movie.name,
+          locale,
+          movie.year,
+          tmdbId,
+        );
+        return { ...movie, posterURL, localizedName, localizedOverview };
       } catch (error) {
         logger.warn({ err: error, movieTitle: movie.name }, 'Failed to fetch poster for movie');
-        return { ...movie, posterURL: undefined, localizedName: undefined };
+        return {
+          ...movie,
+          posterURL: undefined,
+          localizedName: undefined,
+          localizedOverview: undefined,
+        };
       }
     });
 

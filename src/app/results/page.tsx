@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, RotateCcw, Sparkles, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, RotateCcw, Sparkles, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -48,7 +48,10 @@ export default function ResultsPage() {
   const [usedBroaderSearch, setUsedBroaderSearch] = useState(false);
   const [dbMovieCount, setDbMovieCount] = useState<number | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [noMorePicks, setNoMorePicks] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const tmdbCarouselRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -81,6 +84,83 @@ export default function ResultsPage() {
   function toggleSuggestion(id: number) {
     setActiveSuggestion((prev) => (prev === id ? null : id));
   }
+
+  const handleMorePicks = useCallback(async () => {
+    const quizDataStr = localStorage.getItem('popchoice_quiz_data');
+    if (!quizDataStr || isFetchingMore) return;
+
+    setIsFetchingMore(true);
+    try {
+      const currentTmdbIds = movies.filter((m) => m.fromTMDB).map((m) => m.id);
+      const res = await fetch('/api/more-tmdb-picks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept-Language': locale },
+        body: JSON.stringify({
+          quizData: JSON.parse(quizDataStr),
+          page: 2,
+          excludeIds: currentTmdbIds,
+        }),
+      });
+
+      if (!res.ok) {
+        // A 429 is a transient rate-limit — don't permanently hide the button.
+        // For any other error treat it as exhausted.
+        if (res.status !== 429) {
+          setNoMorePicks(true);
+        }
+        return;
+      }
+
+      const data = (await res.json()) as {
+        movies: {
+          id: number;
+          name: string;
+          year: number;
+          similarity: number;
+          age_rating?: string;
+          duration?: number;
+          score_rating?: number;
+          posterURL?: string;
+          aiDescription?: string;
+          fromTMDB: boolean;
+        }[];
+      };
+
+      if (!data.movies || data.movies.length === 0) {
+        setNoMorePicks(true);
+        return;
+      }
+
+      const newMovies: MovieRecommendation[] = data.movies.map((m) => ({
+        id: m.id,
+        name: m.name,
+        year: m.year,
+        similarity: m.similarity,
+        age_rating: m.age_rating,
+        duration: m.duration,
+        score_rating: m.score_rating,
+        posterURL: m.posterURL,
+        description: m.aiDescription,
+        fromTMDB: true,
+      }));
+
+      setMovies((prev) => [...prev, ...newMovies]);
+      setNoMorePicks(true); // One-time action — hide the button after fetching
+      // Scroll TMDB carousel to end so new cards are visible
+      requestAnimationFrame(() => {
+        if (tmdbCarouselRef.current) {
+          tmdbCarouselRef.current.scrollTo({
+            left: tmdbCarouselRef.current.scrollWidth,
+            behavior: 'smooth',
+          });
+        }
+      });
+    } catch {
+      setNoMorePicks(true);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  }, [isFetchingMore, locale, movies]);
 
   useEffect(() => {
     async function init() {
@@ -403,48 +483,82 @@ export default function ResultsPage() {
         </motion.div>
       )}
 
-      {/* Additional suggestions — from TMDB */}
-      {tmdbOtherMovies.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-          className="mt-8"
-        >
-          <div className="flex items-center gap-2 mb-4">
-            <div
-              className="w-1.5 h-5 rounded-full"
-              style={{
-                background: `linear-gradient(180deg, ${palette.teal}, ${palette.blue})`,
-              }}
-            />
-            <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
-              {t.results.foundOnTmdb}
-            </span>
-          </div>
+      {/* Additional suggestions — from TMDB (always rendered so button is always accessible) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.45 }}
+        className="mt-8"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <div
+            className="w-1.5 h-5 rounded-full"
+            style={{
+              background: `linear-gradient(180deg, ${palette.teal}, ${palette.blue})`,
+            }}
+          />
+          <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
+            {t.results.foundOnTmdb}
+          </span>
+        </div>
 
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {tmdbOtherMovies.map((movie) => (
-              <SmallSuggestionCard
-                key={movie.id}
-                movie={movie}
-                active={activeSuggestion === movie.id}
-                onClick={() => toggleSuggestion(movie.id)}
-              />
-            ))}
-          </div>
-
-          <AnimatePresence>
-            {activeSuggestion !== null &&
-              tmdbOtherMovies.some((m) => m.id === activeSuggestion) && (
-                <ExpandedSuggestion
-                  key={activeSuggestion}
-                  movie={tmdbOtherMovies.find((m) => m.id === activeSuggestion)!}
+        {tmdbOtherMovies.length > 0 && (
+          <>
+            <div ref={tmdbCarouselRef} className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {tmdbOtherMovies.map((movie) => (
+                <SmallSuggestionCard
+                  key={movie.id}
+                  movie={movie}
+                  active={activeSuggestion === movie.id}
+                  onClick={() => toggleSuggestion(movie.id)}
                 />
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {activeSuggestion !== null &&
+                tmdbOtherMovies.some((m) => m.id === activeSuggestion) && (
+                  <ExpandedSuggestion
+                    key={activeSuggestion}
+                    movie={tmdbOtherMovies.find((m) => m.id === activeSuggestion)!}
+                  />
+                )}
+            </AnimatePresence>
+          </>
+        )}
+
+        {/* More picks button — shown once, hidden after use or on error */}
+        {!noMorePicks && (
+          <div className="mt-5 flex justify-center">
+            <button
+              onClick={() => void handleMorePicks()}
+              disabled={isFetchingMore}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-all duration-200 active:scale-95"
+              style={{
+                background: `linear-gradient(135deg, ${palette.teal}22, ${palette.blue}22)`,
+                border: `1px solid ${palette.teal}55`,
+                color: palette.teal,
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                cursor: isFetchingMore ? 'wait' : 'pointer',
+                opacity: isFetchingMore ? 0.7 : 1,
+              }}
+            >
+              {isFetchingMore ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  {t.results.morePicksLoading}
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  {t.results.morePicksButton}
+                </>
               )}
-          </AnimatePresence>
-        </motion.div>
-      )}
+            </button>
+          </div>
+        )}
+      </motion.div>
 
       {/* Action buttons */}
       <motion.div
@@ -456,6 +570,7 @@ export default function ResultsPage() {
         <button
           onClick={() => {
             localStorage.removeItem('popchoice_recommendation');
+            localStorage.removeItem('popchoice_quiz_data');
             router.push('/quiz');
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
@@ -480,6 +595,7 @@ export default function ResultsPage() {
         <button
           onClick={() => {
             localStorage.removeItem('popchoice_recommendation');
+            localStorage.removeItem('popchoice_quiz_data');
             router.push('/quiz');
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"

@@ -192,6 +192,9 @@ export const fi: Translations = {
     broaderSearch: 'Laajennettu haku — sisältää TMDB-tuloksia',
     foundInDb: 'Löydetty kirjastostamme',
     foundOnTmdb: 'Löydetty TMDB:stä',
+    morePicksButton: 'Lisää valintoja TMDB:stä',
+    morePicksLoading: 'Haetaan lisää…',
+    morePicksEmpty: 'Ei enempää tuloksia juuri nyt.',
   },
   about: {
     badge: 'Miten PopChoice toimii',

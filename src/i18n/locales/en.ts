@@ -187,6 +187,9 @@ export const en = {
     broaderSearch: 'Expanded search — including results from TMDB',
     foundInDb: 'Found in our library',
     foundOnTmdb: 'Found on TMDB',
+    morePicksButton: 'Get more picks from TMDB',
+    morePicksLoading: 'Fetching more picks…',
+    morePicksEmpty: 'No more picks available right now.',
   },
   about: {
     badge: 'How PopChoice works',
