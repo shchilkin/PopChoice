@@ -105,6 +105,11 @@ const personFormDataSchema = z.object({
     .trim()
     .min(1, 'Favorite movie is required')
     .max(500, 'Favorite movie must be 500 characters or fewer'),
+  favoriteMovieWhy: z
+    .string()
+    .trim()
+    .max(300, 'Favorite movie reason must be 300 characters or fewer')
+    .optional(),
   newVsClassic: z
     .string()
     .trim()
@@ -516,6 +521,96 @@ const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string =
   return combinedString.trim();
 };
 
+/**
+ * Build the embedding input string, substituting refined semantic tags for raw "Why?" text.
+ * When refined tags are available the raw favoriteMovieWhy field is excluded to avoid noise.
+ */
+const buildEmbeddingInputWithRefinedTags = (
+  allPeopleData: PersonFormData[],
+  refinedQueryTags: string,
+): string => {
+  if (allPeopleData.length === 1) {
+    const data = allPeopleData[0];
+    const base = Object.entries(data)
+      .filter(([key]) => key !== 'favoriteMovieWhy')
+      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+    return `${base}\nrefinedQueryTags: ${refinedQueryTags}`;
+  }
+
+  let combinedString = `Group of ${allPeopleData.length} people preferences:\n\n`;
+
+  allPeopleData.forEach((personData, index) => {
+    combinedString += `Person ${index + 1}:\n`;
+    combinedString += Object.entries(personData)
+      .filter(([key]) => key !== 'favoriteMovieWhy')
+      .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
+      .join('\n');
+    combinedString += '\n\n';
+  });
+
+  return `${combinedString.trim()}\n\nrefinedQueryTags: ${refinedQueryTags}`;
+};
+
+// ---------------------------------------------------------------------------
+// Query enrichment
+// ---------------------------------------------------------------------------
+
+const QUERY_ENRICHMENT_SYSTEM_PROMPT =
+  'You are a Professional Movie Semantic Analyst. Transform user input into a high-density list of semantic tags. Extract: Core Themes, Atmospheric Keywords, Narrative Tropes, and Visual Styles. Output ONLY a comma-separated list of English keywords. No filler.';
+
+/**
+ * Use a lightweight LLM to convert natural-language "Why?" text into a dense list of
+ * cinema-specific semantic tags that produce higher-signal embeddings.
+ *
+ * Returns `null` if no "Why?" text is present or if the LLM call fails (fail-open
+ * so the caller falls back to raw text embedding).
+ */
+async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<string | null> {
+  const whyTexts = allPeopleData
+    .map((p) => p.favoriteMovieWhy)
+    .filter((text): text is string => Boolean(text?.trim()));
+
+  if (whyTexts.length === 0) return null;
+
+  const rawText = whyTexts.join(' ');
+
+  try {
+    const response = await openAIClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
+        { role: 'user', content: rawText },
+      ],
+      max_tokens: 200,
+      temperature: 0,
+    });
+
+    const refinedTags = response.choices[0]?.message?.content?.trim();
+
+    if (!refinedTags) {
+      logger.warn(
+        { rawText },
+        'Query enrichment returned empty response, falling back to raw text',
+      );
+      return null;
+    }
+
+    logger.info(
+      { rawText, refinedTags },
+      'Query enrichment: raw user text vs. refined semantic tags',
+    );
+
+    return refinedTags;
+  } catch (error) {
+    logger.warn(
+      { err: error, rawText },
+      'Query enrichment failed, falling back to raw text embedding',
+    );
+    return null;
+  }
+}
+
 async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch[] | null> {
   const db = getDbClient();
   const { error, data } = await db.rpc('match_movies', {
@@ -538,11 +633,15 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
 }
 
 // Helper: Create embedding for user request
-async function createEmbedding(allPeopleData: PersonFormData[]) {
+async function createEmbedding(allPeopleData: PersonFormData[], refinedQueryTags?: string) {
   try {
+    const embeddingInput = refinedQueryTags
+      ? buildEmbeddingInputWithRefinedTags(allPeopleData, refinedQueryTags)
+      : combineAllPeopleDataToString(allPeopleData);
+
     const embeddingResponse = await openAIClient.embeddings.create({
       model: 'text-embedding-3-large',
-      input: combineAllPeopleDataToString(allPeopleData),
+      input: embeddingInput,
     });
     if (!embeddingResponse?.data?.[0]?.embedding) {
       throw new Error('No embedding returned from OpenAI.');
@@ -902,9 +1001,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM.
+    // This reduces noise in the embedding input and improves vector search relevance.
+    // Falls back gracefully to raw text if the LLM call fails or the field is empty.
+    const refinedQueryTags = await refineQueryWithLLM(allPeopleData);
+
     // Step 1: Create embedding and fetch DB count in parallel
     const [embedding, dbMovieCountResult] = await Promise.all([
-      createEmbedding(allPeopleData),
+      createEmbedding(allPeopleData, refinedQueryTags ?? undefined),
       (async () => {
         try {
           const db = getDbClient();
