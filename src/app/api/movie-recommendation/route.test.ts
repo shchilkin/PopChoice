@@ -206,3 +206,148 @@ describe('shouldFallBackToTMDB — hybrid search routing', () => {
     expect(shouldFallBackToTMDB(weakMatches)).toBe(true);
   });
 });
+
+const validPerson = {
+  favoriteMovie: 'The Matrix',
+  newVsClassic: 'new',
+  moodPreference: ['action', 'sci-fi'],
+  tonePreference: 'serious',
+};
+
+describe('POST /api/movie-recommendation – input validation', () => {
+  describe('favoriteMovie field', () => {
+    it('rejects an empty favoriteMovie', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovie: '' });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+    });
+
+    it('rejects favoriteMovie exceeding 500 characters', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovie: 'a'.repeat(501) });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.details).toContain('500');
+    });
+
+    it('accepts favoriteMovie exactly at 500 characters', async () => {
+      // This should pass schema validation (actual processing will fail due to mocks, but not with 400)
+      const req = makeRequest({ ...validPerson, favoriteMovie: 'a'.repeat(500) });
+      const res = await POST(req);
+      expect(res.status).not.toBe(400);
+    });
+  });
+
+  describe('preference fields', () => {
+    it('rejects newVsClassic exceeding 200 characters', async () => {
+      const req = makeRequest({ ...validPerson, newVsClassic: 'x'.repeat(201) });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.details).toContain('200');
+    });
+
+    it('rejects tonePreference exceeding 200 characters', async () => {
+      const req = makeRequest({ ...validPerson, tonePreference: 'x'.repeat(201) });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.details).toContain('200');
+    });
+
+    it('rejects a moodPreference item exceeding 200 characters', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: ['x'.repeat(201)] });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.details).toContain('200');
+    });
+
+    it('rejects an empty moodPreference array', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: [] });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+    });
+
+    it('rejects a moodPreference array exceeding 10 items', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: Array(11).fill('Action') });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('sanitization', () => {
+    it('rejects favoriteMovie that is only whitespace after trimming', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovie: '   ' });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects tonePreference that is only whitespace after trimming', async () => {
+      const req = makeRequest({ ...validPerson, tonePreference: '   ' });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects moodPreference items that are only whitespace after trimming', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: ['   '] });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects newVsClassic that is only whitespace after trimming', async () => {
+      const req = makeRequest({ ...validPerson, newVsClassic: '   ' });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('accepts newVsClassic with leading/trailing whitespace around a non-empty value', async () => {
+      const req = makeRequest({ ...validPerson, newVsClassic: '  new  ' });
+      const res = await POST(req);
+      expect(res.status).not.toBe(400);
+    });
+  });
+
+  describe('missing required fields', () => {
+    it('rejects a request missing favoriteMovie', async () => {
+      const { favoriteMovie: _, ...body } = validPerson;
+      const req = makeRequest(body);
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a request with an empty body', async () => {
+      const req = makeRequest({});
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('array format', () => {
+    it('rejects an empty array body', async () => {
+      const req = makeRequest([]);
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects an array where one person has an invalid favoriteMovie', async () => {
+      const req = makeRequest([validPerson, { ...validPerson, favoriteMovie: 'b'.repeat(501) }]);
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects a people array exceeding 10 entries', async () => {
+      const req = makeRequest(Array(11).fill(validPerson));
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+    });
+  });
+});
