@@ -7,6 +7,7 @@ import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { IMAGE_BASE_URL, MovieService } from '@/services';
+import { moderateInput } from '@/utils/ai/moderation';
 
 // ---------------------------------------------------------------------------
 // Hybrid search constants
@@ -733,6 +734,25 @@ export async function POST(req: NextRequest) {
       : [validatedBody];
 
     logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
+
+    // Step 0: Moderate user input before processing
+    const textsToModerate = allPeopleData.flatMap((p) =>
+      [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(
+        (text): text is string => typeof text === 'string' && text.length > 0,
+      ),
+    );
+    const moderationResult = await moderateInput(textsToModerate);
+    if (moderationResult.flagged) {
+      logger.warn({ categories: moderationResult.categories }, 'User input flagged by moderation');
+      return NextResponse.json(
+        {
+          error:
+            'Your input contains content that cannot be processed. Please revise your preferences and try again.',
+          flaggedCategories: moderationResult.categories,
+        },
+        { status: 422 },
+      );
+    }
 
     // Step 1: Create embedding and fetch DB count in parallel
     const [embedding, dbMovieCountResult] = await Promise.all([

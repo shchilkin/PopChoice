@@ -151,6 +151,8 @@ export const en = {
       'Almost there — your perfect pick is loading… 🍿',
     ],
     retryableError: 'Something went wrong. Please try again.',
+    moderatedError:
+      'Your input was flagged for inappropriate content. Please revise your preferences and try again.',
     fatalError: 'The service is not available right now. Please try again later.',
     savedAnswers:
       "Your answers are saved in your browser — come back and we'll pick up where you left off.",
