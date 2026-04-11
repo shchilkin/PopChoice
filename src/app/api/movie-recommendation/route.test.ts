@@ -79,7 +79,7 @@ vi.mock('@/services', () => ({
   })),
 }));
 
-import { POST } from './route';
+import { POST, MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './route';
 
 const validBody = {
   favoriteMovie: 'The Dark Knight',
@@ -160,5 +160,48 @@ describe('POST /api/movie-recommendation — moderation', () => {
 
     expect(response.status).toBe(400);
     expect(data).toHaveProperty('error');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hybrid search threshold
+// ---------------------------------------------------------------------------
+// text-embedding-3-large cosine similarity for movie recommendation queries peaks
+// at 0.55–0.62 even for a direct title match (verified against 316-movie DB).
+// SIMILARITY_THRESHOLD must sit below that ceiling, otherwise highQualityLocal
+// is always empty and every request is handed to the TMDB fallback — replacing
+// local DB results entirely.
+
+// Realistic scores from text-embedding-3-large cosine similarity:
+//   The Matrix query  → The Matrix 0.55, Inception 0.40, T2 0.42
+//   Interstellar query → Interstellar 0.62, Arrival 0.46, 2001 0.44
+//   Dark Knight query  → The Dark Knight 0.61, Batman Begins 0.52, Joker 0.46
+const REALISTIC_MOVIES = [
+  { similarity: 0.55 }, // direct title match
+  { similarity: 0.48 }, // strong thematic match
+  { similarity: 0.43 }, // broad thematic match
+  { similarity: 0.38 }, // weak match
+];
+
+describe('shouldFallBackToTMDB — hybrid search routing', () => {
+  it('SIMILARITY_THRESHOLD is within the realistic similarity range (≤ 0.55)', () => {
+    // The highest realistic cosine score observed is ~0.62 for a direct title match.
+    // The threshold must be low enough that at least MIN_HIGH_QUALITY_LOCAL movies
+    // qualify without requiring TMDB, otherwise local DB results are silently dropped.
+    expect(SIMILARITY_THRESHOLD).toBeLessThanOrEqual(0.55);
+  });
+
+  it('at least MIN_HIGH_QUALITY_LOCAL realistic scores meet the threshold', () => {
+    const highQuality = REALISTIC_MOVIES.filter((m) => m.similarity >= SIMILARITY_THRESHOLD);
+    expect(highQuality.length).toBeGreaterThanOrEqual(MIN_HIGH_QUALITY_LOCAL);
+  });
+
+  it('returns false (no fallback needed) for movies with realistic similarity scores', () => {
+    expect(shouldFallBackToTMDB(REALISTIC_MOVIES)).toBe(false);
+  });
+
+  it('returns true (fallback needed) only when too few movies score above the threshold', () => {
+    const weakMatches = [{ similarity: 0.15 }, { similarity: 0.2 }];
+    expect(shouldFallBackToTMDB(weakMatches)).toBe(true);
   });
 });

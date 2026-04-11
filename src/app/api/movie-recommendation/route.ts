@@ -18,11 +18,18 @@ import {
 // Hybrid search constants
 // ---------------------------------------------------------------------------
 
-/** Minimum cosine similarity for a local result to be considered "high quality". */
-const SIMILARITY_THRESHOLD = 0.7;
+/** Minimum cosine similarity for a local result to be considered "high quality".
+ * text-embedding-3-large cosine similarity peaks at 0.55–0.62 for movie queries,
+ * so the threshold must stay below that ceiling. */
+export const SIMILARITY_THRESHOLD = 0.4;
 
 /** Trigger TMDB fallback when fewer than this many high-quality local results are found. */
-const MIN_HIGH_QUALITY_LOCAL = 3;
+export const MIN_HIGH_QUALITY_LOCAL = 3;
+
+/** Pure routing helper — separated so it can be unit-tested without mocking the full route. */
+export function shouldFallBackToTMDB(movies: { similarity: number }[]): boolean {
+  return movies.filter((m) => m.similarity >= SIMILARITY_THRESHOLD).length < MIN_HIGH_QUALITY_LOCAL;
+}
 
 /** Maximum movies in the final merged result set. */
 const MAX_TOTAL_MOVIES = 6;
@@ -841,7 +848,7 @@ export async function POST(req: NextRequest) {
     // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
     let usedBroaderSearch = false;
     const highQualityLocal = similarMovies.filter((m) => m.similarity >= SIMILARITY_THRESHOLD);
-    const needsTMDBFallback = highQualityLocal.length < MIN_HIGH_QUALITY_LOCAL;
+    const needsTMDBFallback = shouldFallBackToTMDB(similarMovies);
 
     if (needsTMDBFallback) {
       logger.info(
@@ -857,12 +864,15 @@ export async function POST(req: NextRequest) {
           // Keep only the high-quality local results, then fill remaining slots with TMDB.
           const localResultsForMerge = highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
 
-          // Build both dedup sets in one pass:
-          // - localKeys: composite (name|year) key for correctly handling remakes/sequels
+          // Build dedup sets from ALL local DB results (any similarity), not just high-quality
+          // ones. This prevents movies that are already in the DB (e.g. from a previous JIT
+          // seeding) from being returned again via TMDB with fromTMDB=true, even if their
+          // cosine similarity on this query falls just below SIMILARITY_THRESHOLD.
+          // - localKeys: composite (name|year) for TMDB dedup (handles remakes/sequels)
           // - localTitles: title-only set passed to seedMoviesInBackground
           const localKeys = new Set<string>();
           const localTitles = new Set<string>();
-          for (const m of localResultsForMerge) {
+          for (const m of similarMovies) {
             const nameLower = m.name.toLowerCase();
             localKeys.add(`${nameLower}|${m.year}`);
             localTitles.add(nameLower);
