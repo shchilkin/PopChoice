@@ -150,6 +150,12 @@ const LOCALE_LANGUAGE: Record<string, string> = {
   fi: 'Finnish',
 };
 
+const LOCALE_TO_TMDB_LANG: Record<string, string> = {
+  en: 'en-US',
+  ru: 'ru-RU',
+  fi: 'fi-FI',
+};
+
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
@@ -162,6 +168,7 @@ export async function POST(req: NextRequest) {
   const primaryLang = acceptLanguage.split(',')[0].split(';')[0].split('-')[0].toLowerCase();
   const locale = ['en', 'ru', 'fi'].includes(primaryLang) ? primaryLang : 'en';
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
+  const tmdbLang = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
 
   try {
     const body = await req.json();
@@ -251,9 +258,32 @@ Respond in ${language} only.`;
             ? `${IMAGE_BASE_URL}/w500${tmdb.poster_path}`
             : undefined;
 
+          // Fetch localized details: title, runtime, and localized overview in one call.
+          let localizedTitle = tmdb.title;
+          let runtime: number | undefined;
+          let localizedOverview = tmdb.overview;
+          try {
+            const detailRes = await fetch(
+              `${TMDB_API_BASE}/movie/${tmdb.id}?language=${tmdbLang}`,
+              { headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' } },
+            );
+            if (detailRes.ok) {
+              const detail = (await detailRes.json()) as {
+                title?: string;
+                runtime?: number;
+                overview?: string;
+              };
+              if (detail.title) localizedTitle = detail.title;
+              if (detail.runtime) runtime = detail.runtime;
+              if (detail.overview) localizedOverview = detail.overview;
+            }
+          } catch {
+            // Non-critical — fall back to discover-provided values
+          }
+
           let aiDescription: string;
           try {
-            const movieContext = `Movie: ${tmdb.title} (${year})\nScore: ${score}/10\nPlot: ${tmdb.overview}\n\nRemember: respond in ${language} only.`;
+            const movieContext = `Movie: ${localizedTitle} (${year})\nScore: ${score}/10\nPlot: ${localizedOverview}\n\nRemember: respond in ${language} only.`;
             const res = await openAIClient.chat.completions.create({
               model: 'gpt-5.4-mini',
               messages: [
@@ -280,8 +310,8 @@ Respond in ${language} only.`;
                 'more-tmdb-picks: Failed to generate AI description',
               );
             }
-            // Fall back: for non-English locales, attempt a minimal translation of the TMDB overview.
-            if (locale !== 'en' && tmdb.overview) {
+            // Fall back: for non-English locales, attempt a minimal translation of the localized TMDB overview.
+            if (locale !== 'en' && localizedOverview) {
               try {
                 const translationResponse = await openAIClient.chat.completions.create({
                   model: 'gpt-5.4-mini',
@@ -290,14 +320,14 @@ Respond in ${language} only.`;
                       role: 'system',
                       content: `Translate the following movie description to ${language}. Return only the translated text, nothing else.`,
                     },
-                    { role: 'user', content: tmdb.overview },
+                    { role: 'user', content: localizedOverview },
                   ],
                   max_completion_tokens: 150,
                 });
                 const translated = translationResponse.choices[0]?.message?.content?.trim();
-                aiDescription = translated || tmdb.overview;
+                aiDescription = translated || localizedOverview;
               } catch {
-                aiDescription = tmdb.overview;
+                aiDescription = localizedOverview;
               }
             } else {
               aiDescription = tmdb.overview;
@@ -306,11 +336,11 @@ Respond in ${language} only.`;
 
           return {
             id: -tmdb.id,
-            name: tmdb.title,
+            name: localizedTitle,
             year,
             similarity: 0.6, // Consistent with main route TMDB placeholder
             age_rating: undefined as undefined,
-            duration: undefined as undefined,
+            duration: runtime,
             score_rating: score,
             posterURL,
             aiDescription,
