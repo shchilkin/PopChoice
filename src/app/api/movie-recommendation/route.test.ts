@@ -361,6 +361,9 @@ describe('POST /api/movie-recommendation – input validation', () => {
 // Query enrichment (semantic query refinement via gpt-4o-mini)
 // ---------------------------------------------------------------------------
 
+/** Shape of a single chat.completions.create call's first argument in the mock. */
+type ChatCompletionCallArg = { model: string; messages: { role: string; content: string }[] };
+
 describe('POST /api/movie-recommendation — query enrichment', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -409,7 +412,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
     });
   });
 
-  describe('LLM enrichment call behaviour', () => {
+  describe('LLM enrichment call behavior', () => {
     it('calls chat.completions.create an extra time when favoriteMovieWhy is provided (enrichment + recommendation + descriptions)', async () => {
       // First call = enrichment, then recommendation + description calls
       mockChatCompletionsCreate
@@ -450,9 +453,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       const req = makeRequest(validPerson);
       await POST(req);
 
-      const calls = mockChatCompletionsCreate.mock.calls as unknown as {
-        messages: { role: string; content: string }[];
-      }[][];
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
       // None of the calls should use the enrichment system prompt
       const hasEnrichmentCall = calls.some((callArgs) => {
         const messages = callArgs[0].messages;
@@ -465,9 +466,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       const req = makeRequest({ ...validPerson, favoriteMovieWhy: '' });
       await POST(req);
 
-      const calls = mockChatCompletionsCreate.mock.calls as unknown as {
-        messages: { role: string; content: string }[];
-      }[][];
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
       const hasEnrichmentCall = calls.some((callArgs) => {
         const messages = callArgs[0].messages;
         return messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
@@ -497,7 +496,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       await POST(req);
 
       const firstCallArgs = mockChatCompletionsCreate.mock.calls[0] as unknown as [
-        { model: string; messages: { role: string; content: string }[] },
+        ChatCompletionCallArg,
       ];
       const firstCall = firstCallArgs[0];
       expect(firstCall.model).toBe('gpt-4o-mini');
