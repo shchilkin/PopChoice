@@ -15,6 +15,8 @@ export interface MovieRecommendation {
   description?: string;
   localizedName?: string;
   isMainRecommendation?: boolean;
+  /** True for movies sourced from the TMDB fallback (negative IDs). */
+  fromTMDB?: boolean;
 }
 
 /**

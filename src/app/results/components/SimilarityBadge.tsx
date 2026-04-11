@@ -4,10 +4,11 @@ import { Sparkles } from 'lucide-react';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
+import { scaleSimilarity } from '@/utils/ui';
 
 export function SimilarityBadge({ similarity }: { similarity: number }) {
   const { t } = useLanguage();
-  const pct = Math.round(similarity * 100);
+  const pct = scaleSimilarity(similarity);
   const color =
     pct >= 95
       ? palette.teal

@@ -1,12 +1,13 @@
 'use client';
 
-import { Sparkles, Star } from 'lucide-react';
+import { Clock, Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
+import { MarkdownText } from './MarkdownText';
 import { SimilarityBadge } from './SimilarityBadge';
 import { StarRating } from './StarRating';
 
@@ -15,6 +16,7 @@ import type { MovieRecommendation } from '@/utils/client';
 export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
   const { t } = useLanguage();
   const score = movie.score_rating ?? 0;
+  const hasRating = !!movie.age_rating && movie.age_rating !== 'NR';
 
   return (
     <motion.div
@@ -64,7 +66,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                   style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}
                 >
                   <span>{movie.year}</span>
-                  {movie.age_rating && (
+                  {hasRating && (
                     <>
                       <span>·</span>
                       <span>{movie.age_rating}</span>
@@ -76,6 +78,15 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                       <span className="flex items-center gap-0.5">
                         <Star size={10} fill={palette.gold} stroke="none" />
                         {score}
+                      </span>
+                    </>
+                  )}
+                  {(movie.duration ?? 0) > 0 && (
+                    <>
+                      <span>·</span>
+                      <span className="flex items-center gap-0.5">
+                        <Clock size={10} />
+                        {movie.duration}m
                       </span>
                     </>
                   )}
@@ -112,7 +123,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                 lineHeight: 1.7,
               }}
             >
-              {movie.description}
+              <MarkdownText text={movie.description ?? ''} />
             </p>
           </div>
         )}

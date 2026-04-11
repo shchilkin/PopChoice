@@ -52,7 +52,8 @@ export default function LoadingPage() {
         clearInterval(intervalsRef.current.tip);
         clearInterval(intervalsRef.current.prog);
         localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
-        localStorage.removeItem('popchoice_quiz_data');
+        // Keep popchoice_quiz_data alive — the results page needs it for 'Get more picks from TMDB'.
+        // It is cleaned up when the user clicks 'Try Again'.
         setProgress(100);
         setTimeout(() => router.push('/results'), 400);
       })

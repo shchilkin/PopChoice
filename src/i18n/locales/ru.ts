@@ -174,7 +174,7 @@ export const ru: Translations = {
   results: {
     badge: 'Ваши персональные рекомендации',
     title: 'Мы нашли ваш идеальный фильм',
-    subtitle: 'Подобрано из 10 000+ фильмов под вашу атмосферу',
+    subtitle: 'Подобрано из {count} фильмов под вашу атмосферу',
     topPick: 'Лучший выбор',
     moreSuggestions: 'Ещё варианты',
     loading: 'Загружаем ваши рекомендации…',
@@ -191,6 +191,12 @@ export const ru: Translations = {
     minUnit: 'мин',
     whyThisFilm: 'Почему этот фильм',
     whyThisFilmForYou: 'Почему этот фильм вам',
+    broaderSearch: 'Расширенный поиск — включает результаты из TMDB',
+    foundInDb: 'Найдено в нашей базе',
+    foundOnTmdb: 'Найдено на TMDB',
+    morePicksButton: 'Ещё варианты из TMDB',
+    morePicksLoading: 'Загружаем ещё…',
+    morePicksEmpty: 'Больше вариантов пока нет.',
   },
   about: {
     badge: 'Как это работает',

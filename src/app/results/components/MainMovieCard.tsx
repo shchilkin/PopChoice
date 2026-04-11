@@ -7,8 +7,10 @@ import { useState } from 'react';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
+import { scaleSimilarity } from '@/utils/ui';
 
 import { AgeRatingPill } from './AgeRatingPill';
+import { MarkdownText } from './MarkdownText';
 import { SimilarityBadge } from './SimilarityBadge';
 import { StarRating } from './StarRating';
 
@@ -18,7 +20,8 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
   const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);
   const score = movie.score_rating ?? 0;
-  const pct = Math.round(movie.similarity * 100);
+  const pct = scaleSimilarity(movie.similarity);
+  const hasRating = !!movie.age_rating && movie.age_rating !== 'NR';
 
   return (
     <motion.div
@@ -100,7 +103,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               style={{ color: 'var(--pc-t2)', fontSize: '0.82rem' }}
             >
               <span>{movie.year}</span>
-              {movie.age_rating && (
+              {hasRating && (
                 <>
                   <span>·</span>
                   <span
@@ -114,7 +117,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                   </span>
                 </>
               )}
-              {movie.duration && (
+              {(movie.duration ?? 0) > 0 && (
                 <>
                   <span>·</span>
                   <span className="flex items-center gap-1">
@@ -158,13 +161,13 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               style={{ color: 'var(--pc-t2)', fontSize: '0.82rem' }}
             >
               <span>{movie.year}</span>
-              {movie.age_rating && (
+              {hasRating && (
                 <>
                   <span>·</span>
                   <span>{movie.age_rating}</span>
                 </>
               )}
-              {movie.duration && (
+              {(movie.duration ?? 0) > 0 && (
                 <>
                   <span>·</span>
                   <span>
@@ -183,7 +186,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
               {movie.year} · {pct}% {t.results.match}
             </span>
           </div>
-          {movie.age_rating && <AgeRatingPill label={movie.age_rating} />}
+          {hasRating && <AgeRatingPill label={movie.age_rating!} />}
         </div>
 
         {score > 0 && (
@@ -219,7 +222,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 lineHeight: 1.75,
               }}
             >
-              {movie.description}
+              <MarkdownText text={movie.description ?? ''} />
             </p>
           </div>
         )}
