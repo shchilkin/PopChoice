@@ -537,8 +537,7 @@ const buildEmbeddingInputWithRefinedTags = (
   refinedQueryTags: string,
 ): string => {
   const base = combineAllPeopleDataToString(allPeopleData, { excludeKeys: ['favoriteMovieWhy'] });
-  const separator = allPeopleData.length === 1 ? '\n' : '\n\n';
-  return `${base}${separator}refinedQueryTags: ${refinedQueryTags}`;
+  return `${base}\nrefinedQueryTags: ${refinedQueryTags}`;
 };
 
 // ---------------------------------------------------------------------------
