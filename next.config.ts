@@ -16,7 +16,8 @@ const ContentSecurityPolicy = [
   "font-src 'self'",
   "img-src 'self' data: blob: https://image.tmdb.org https://images.unsplash.com",
   // Vercel Analytics sends page-view pings to vitals.vercel-insights.com
-  `connect-src 'self' https://vitals.vercel-insights.com${isDevelopment ? ' ws: wss:' : ''}`,
+  // TMDB API requests are also made from the browser for movie enhancement/poster data
+  `connect-src 'self' https://vitals.vercel-insights.com https://api.themoviedb.org${isDevelopment ? ' ws: wss:' : ''}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",
