@@ -65,14 +65,15 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
   try {
     const key = `rl:movie-recommendation:${ip}`;
 
-    // Atomically increment the counter and, on the very first request in the
-    // window, set the TTL — all inside Redis via a Lua script.
-    // This prevents the key from being left without a TTL if the separate
-    // EXPIRE call were to fail after a successful INCR.
-    // The script also re-applies EXPIRE when TTL < 0 (key exists without an
-    // expiry, which can happen if a prior EXPIRE failed) to keep the window
-    // well-defined. It returns {count, remaining_ttl} so Retry-After reflects
-    // the actual remaining window rather than always the full window.
+    // Atomically increment the counter and apply a TTL when the key has no
+    // expiry — all inside Redis via a Lua script. Running both operations
+    // in a single script prevents the key from ever being left without a TTL
+    // (e.g. if a separate EXPIRE call were to fail after a successful INCR,
+    // or if a prior EXPIRE was never applied). TTL < 0 means the key exists
+    // but has no expiry (-1) or does not exist yet (-2 after INCR is impossible,
+    // but guard anyway). The script returns {count, remaining_ttl} so
+    // Retry-After reflects the actual remaining window rather than always
+    // the full window.
     const [count, ttl] = (await client.eval(
       `
         local current = redis.call('INCR', KEYS[1])

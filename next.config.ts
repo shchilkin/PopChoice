@@ -8,7 +8,7 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // 'unsafe-inline' for scripts in a future hardening pass.
 // In development, Next.js tooling also needs 'unsafe-eval' for source maps
 // and ws: wss: connections for Hot Module Replacement.
-const ContentSecurityPolicy = [
+const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
@@ -28,7 +28,7 @@ const ContentSecurityPolicy = [
 const securityHeaders = [
   {
     key: 'Content-Security-Policy',
-    value: ContentSecurityPolicy,
+    value: contentSecurityPolicy,
   },
   // Enforce HTTPS for 2 years; include subdomains; opt-in to preload list
   {
