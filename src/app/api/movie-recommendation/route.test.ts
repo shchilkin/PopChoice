@@ -347,7 +347,7 @@ describe('POST /api/movie-recommendation – input validation', () => {
     });
 
     it('rejects an array where one person has an invalid favoriteMovie', async () => {
-      const req = makeRequest([validPerson, { ...validPerson, favoriteMovie: 'b'.repeat(501) }]);
+      const req = makeRequest([validPerson, { ...validPerson, favoriteMovie: 'b'.repeat(201) }]);
       const res = await POST(req);
       expect(res.status).toBe(400);
     });
