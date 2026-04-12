@@ -30,10 +30,6 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
-
-    /* Skip animations (motion/react respects prefers-reduced-motion) so
-       screenshots capture fully-rendered content rather than mid-animation states. */
-    reducedMotion: 'reduce',
   },
 
   /* Configure projects for major browsers */
