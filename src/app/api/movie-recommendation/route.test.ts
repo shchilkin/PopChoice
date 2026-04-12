@@ -232,49 +232,49 @@ describe('POST /api/movie-recommendation – input validation', () => {
       expect(data).toHaveProperty('error');
     });
 
-    it('rejects favoriteMovie exceeding 500 characters', async () => {
-      const req = makeRequest({ ...validPerson, favoriteMovie: 'a'.repeat(501) });
+    it('rejects favoriteMovie exceeding 200 characters', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovie: 'a'.repeat(201) });
       const res = await POST(req);
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data).toHaveProperty('error');
-      expect(data.details).toContain('500');
+      expect(data.details).toContain('200');
     });
 
-    it('accepts favoriteMovie exactly at 500 characters', async () => {
+    it('accepts favoriteMovie exactly at 200 characters', async () => {
       // This should pass schema validation (actual processing will fail due to mocks, but not with 400)
-      const req = makeRequest({ ...validPerson, favoriteMovie: 'a'.repeat(500) });
+      const req = makeRequest({ ...validPerson, favoriteMovie: 'a'.repeat(200) });
       const res = await POST(req);
       expect(res.status).not.toBe(400);
     });
   });
 
   describe('preference fields', () => {
-    it('rejects newVsClassic exceeding 200 characters', async () => {
-      const req = makeRequest({ ...validPerson, newVsClassic: 'x'.repeat(201) });
+    it('rejects newVsClassic exceeding 100 characters', async () => {
+      const req = makeRequest({ ...validPerson, newVsClassic: 'x'.repeat(101) });
       const res = await POST(req);
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data).toHaveProperty('error');
-      expect(data.details).toContain('200');
+      expect(data.details).toContain('100');
     });
 
-    it('rejects tonePreference exceeding 200 characters', async () => {
-      const req = makeRequest({ ...validPerson, tonePreference: 'x'.repeat(201) });
+    it('rejects tonePreference exceeding 100 characters', async () => {
+      const req = makeRequest({ ...validPerson, tonePreference: 'x'.repeat(101) });
       const res = await POST(req);
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data).toHaveProperty('error');
-      expect(data.details).toContain('200');
+      expect(data.details).toContain('100');
     });
 
-    it('rejects a moodPreference item exceeding 200 characters', async () => {
-      const req = makeRequest({ ...validPerson, moodPreference: ['x'.repeat(201)] });
+    it('rejects a moodPreference item exceeding 100 characters', async () => {
+      const req = makeRequest({ ...validPerson, moodPreference: ['x'.repeat(101)] });
       const res = await POST(req);
       expect(res.status).toBe(400);
       const data = await res.json();
       expect(data).toHaveProperty('error');
-      expect(data.details).toContain('200');
+      expect(data.details).toContain('100');
     });
 
     it('rejects an empty moodPreference array', async () => {
