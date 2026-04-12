@@ -8,6 +8,8 @@ PopChoice is a **movie recommendation engine** that uses AI embeddings and vecto
 
 This is a solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
 
+🌐 **[Live Demo](https://pop-choice.shchilkin.dev/)**
+
 ## ✨ Features
 
 - 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
@@ -18,12 +20,13 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
 ## 🛠 Tech Stack
 
-- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
-- **AI/ML:** OpenAI GPT & Embeddings API
-- **Database:** PostgreSQL with pgvector (local via Docker or any provider)
+- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS 4
+- **AI/ML:** OpenAI Embeddings API, LangChain Core
+- **Database:** PostgreSQL with pgvector, Redis (for caching)
+- **Animation:** Motion (Framer Motion)
 - **Movie Data:** TMDB (The Movie Database) API
 - **Analytics:** Vercel Web Analytics
-- **Testing:** Vitest, Storybook, Playwright
+- **Testing:** Vitest, Storybook 10, Playwright, MSW (Mock Service Worker)
 - **Development:** ESLint, Prettier, Husky, lint-staged
 
 ## 🚀 Quick Start
@@ -31,7 +34,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 1. **Clone and install dependencies**
 
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/shchilkin/PopChoice.git
    cd PopChoice
    npm install
    ```
@@ -66,27 +69,36 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
 ## 📖 Documentation
 
-- **[Setup Guide](./docs/SETUP.md)** - Complete setup instructions for OpenAI, Supabase, and development environment
-- **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflows, scripts, and project structure
-- **[CI/CD Documentation](./docs/CI-CD.md)** - GitHub Actions workflow and deployment information
+- **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
+- **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
+- **[Services Guide](./docs/SERVICES.md)** — Background services documentation
+- **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
+- **[Design Guidelines](./docs/design-guidelines.md)** — UI/UX design guidelines
 
 ## 🗂 Project Structure
 
 ```text
 src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes (movie recommendations)
-│   └── pages/             # Application pages
+├── app/                    # Next.js app directory (API routes, pages)
+├── clients/               # External API client wrappers
 ├── components/            # Reusable React components
-│   ├── QuestionsForm/     # Movie preference questionnaire
-│   ├── SuggestionCard/    # Movie recommendation cards
-│   └── ...               # Other UI components
-├── services/              # External API integrations
-│   └── MovieService/      # TMDB API integration
+├── hooks/                 # Custom React hooks
+├── i18n/                  # Internationalisation (i18n) support
+├── lib/                   # Shared library utilities
+├── mocks/                 # MSW mock handlers
+├── services/              # Business logic / service layer
+├── styles/                # Global styles
 └── utils/                 # Utility functions
-    ├── db/               # Database schemas and functions
-    └── movies/           # Movie data processing utilities
+services/
+├── movie-discovery/       # Continuous TMDB movie discovery service
+└── movie-seed/            # One-shot database seeding service
+db/                        # Database migrations / schema
 ```
+
+## 🗃 Background Services
+
+- **movie-seed** (`services/movie-seed/`) — One-shot service that reads movies from a `movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database. Safe to re-run (deduplicates by name + year). See [`services/movie-seed/README.md`](./services/movie-seed/README.md).
+- **movie-discovery** (`services/movie-discovery/`) — Continuous TMDB-driven service that discovers new movies, applies quality filters (vote count, rating, overview length), generates embeddings, and inserts them into the database. Supports scheduled and one-shot modes. See [`services/movie-discovery/README.md`](./services/movie-discovery/README.md).
 
 ## 🧪 Development Scripts
 
@@ -101,6 +113,8 @@ npm run test            # Run all tests
 npm run test:server     # Run utility function tests
 npm run test:storybook  # Component tests (browser environment)
 npm run storybook       # Start component workshop
+npm run build-storybook # Build static Storybook
+npm run start:storybook # Serve built Storybook
 
 # Code Quality
 npm run lint:check      # Check code quality
@@ -109,9 +123,10 @@ npm run type-check      # TypeScript validation
 npm run fix             # Fix all issues automatically
 
 # Database & Data
-npm run setup:local-db  # Generate credentials, start Docker PostgreSQL
-npm run populate-db     # Populate database with movie data
-npm run analyze-movies  # Analyze movie data for embeddings
+npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
+npm run populate-db          # Populate database with movie data
+npm run analyze-movies       # Analyze movie data for embeddings
+npm run calibrate-similarity # Calibrate vector similarity thresholds
 ```
 
 For detailed development workflows and project structure, see the **[Development Guide](./docs/DEVELOPMENT.md)**.
