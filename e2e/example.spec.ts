@@ -1,18 +1,20 @@
 import { test, expect } from '@playwright/test';
 
-test('has title', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+test('home page has PopChoice title', async ({ page }) => {
+  await page.goto('/');
 
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
+  await expect(page).toHaveTitle(/PopChoice/);
 });
 
-test('get started link', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+test('home page shows hero section with start button', async ({ page }) => {
+  await page.goto('/');
 
-  // Click the get started link.
-  await page.getByRole('link', { name: 'Get started' }).click();
+  const startButton = page.getByRole('link', { name: /start|find|get started|pick/i });
+  await expect(startButton.first()).toBeVisible();
+});
 
-  // Expects page to have a heading with the name of Installation.
-  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+test('navigating to quiz page', async ({ page }) => {
+  await page.goto('/quiz');
+
+  await expect(page).toHaveURL(/\/quiz/);
 });

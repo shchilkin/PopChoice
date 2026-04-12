@@ -27,6 +27,7 @@
     "setup:local-db": "bash scripts/setup-local-db.sh",
     "test": "npm run test --workspace=apps/web",
     "test:e2e": "playwright test",
+    "pretest:e2e": "playwright install --with-deps chromium",
     "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:debug": "playwright test --debug",
