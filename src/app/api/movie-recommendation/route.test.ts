@@ -358,7 +358,7 @@ describe('POST /api/movie-recommendation – input validation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Query enrichment (semantic query refinement via gpt-4o-mini)
+// Query enrichment (semantic query refinement via gpt-5.4-mini)
 // ---------------------------------------------------------------------------
 
 /** Shape of a single chat.completions.create call's first argument in the mock. */
@@ -499,7 +499,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
         ChatCompletionCallArg,
       ];
       const firstCall = firstCallArgs[0];
-      expect(firstCall.model).toBe('gpt-4o-mini');
+      expect(firstCall.model).toBe('gpt-5.4-mini');
       expect(firstCall.messages[0].role).toBe('system');
       expect(firstCall.messages[0].content).toContain('Movie Semantic Analyst');
       expect(firstCall.messages[1].role).toBe('user');

@@ -577,7 +577,7 @@ async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<stri
 
   try {
     const response = await openAIClient.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.4-mini',
       messages: [
         { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
         { role: 'user', content: rawText },
