@@ -16,7 +16,7 @@
 
 import { loadConfig } from './config.js';
 import { closeDatabase, getIncompleteMovies, initDatabase, updateMovie } from './database.js';
-import { createEmbeddings } from './embeddings.js';
+import { createEmbeddings, createOpenAIClient } from './embeddings.js';
 import { logger } from './logger.js';
 import {
   extractUSCertification,
@@ -36,8 +36,12 @@ async function main(): Promise<void> {
 
   initDatabase(config.databaseUrl);
 
+  // Create a single OpenAI client to reuse across all embedding calls
+  const openaiClient = createOpenAIClient(config.openaiApiKey);
+
   let totalProcessed = 0;
   let totalUpdated = 0;
+  let totalWouldUpdate = 0;
   let totalSkipped = 0;
 
   try {
@@ -100,16 +104,15 @@ async function main(): Promise<void> {
             // 4. Extract age rating
             const ageRating = extractUSCertification(details);
 
-            // 5. Build embedding text
-            const scoreRating = details.vote_average;
-            const overview = details.overview || '';
+            // 5. Build embedding text using the existing DB score_rating and description
+            //    to keep the embedding consistent with the stored row fields.
             const embeddingText = movieToEmbeddingText(
               movie.name,
               movie.year,
               ageRating,
               runtime,
-              overview,
-              scoreRating,
+              movie.description,
+              movie.score_rating,
             );
 
             // 6. Dry run: log and skip
@@ -121,14 +124,13 @@ async function main(): Promise<void> {
                 tmdbId,
                 runtime,
                 ageRating,
-                scoreRating: scoreRating.toFixed(1),
               });
-              totalUpdated++;
+              totalWouldUpdate++;
               return;
             }
 
             // 7. Generate embedding
-            const embeddings = await createEmbeddings(config.openaiApiKey, [embeddingText]);
+            const embeddings = await createEmbeddings(openaiClient, [embeddingText]);
             const embedding = embeddings[0];
             if (!embedding) {
               logger.warn('Failed to generate embedding — skipping', {
@@ -167,11 +169,19 @@ async function main(): Promise<void> {
     await closeDatabase();
   }
 
-  logger.info('Backfill complete', {
-    totalProcessed,
-    totalUpdated,
-    totalSkipped,
-  });
+  if (config.dryRun) {
+    logger.info('Dry-run complete', {
+      totalProcessed,
+      totalWouldUpdate,
+      totalSkipped,
+    });
+  } else {
+    logger.info('Backfill complete', {
+      totalProcessed,
+      totalUpdated,
+      totalSkipped,
+    });
+  }
 }
 
 main().catch((err) => {

@@ -10,9 +10,11 @@ import { logger } from './logger.js';
 const { Pool } = pg;
 
 export interface IncompleteMovie {
-  id: number;
+  id: string; // bigserial — kept as string to avoid JS Number.MAX_SAFE_INTEGER precision loss
   name: string;
   year: number;
+  score_rating: number;
+  description: string;
 }
 
 let pool: InstanceType<typeof Pool> | null = null;
@@ -47,17 +49,25 @@ function getPool(): InstanceType<typeof Pool> {
 export async function getIncompleteMovies(limit: number): Promise<IncompleteMovie[]> {
   const query =
     limit > 0
-      ? 'SELECT id, name, year FROM movies WHERE duration = 0 ORDER BY id LIMIT $1'
-      : 'SELECT id, name, year FROM movies WHERE duration = 0 ORDER BY id';
+      ? 'SELECT id, name, year, score_rating, description FROM movies WHERE duration = 0 ORDER BY id LIMIT $1'
+      : 'SELECT id, name, year, score_rating, description FROM movies WHERE duration = 0 ORDER BY id';
 
   const params = limit > 0 ? [limit] : [];
-  const result = await getPool().query<{ id: string; name: string; year: number }>(query, params);
+  const result = await getPool().query<{
+    id: string;
+    name: string;
+    year: number;
+    score_rating: number;
+    description: string;
+  }>(query, params);
 
-  // id is bigserial — parse to JS number
+  // id is bigserial — returned as string by pg to avoid JS precision loss
   return result.rows.map((row) => ({
-    id: parseInt(row.id, 10),
+    id: row.id,
     name: row.name,
     year: row.year,
+    score_rating: Number(row.score_rating),
+    description: row.description,
   }));
 }
 
@@ -65,7 +75,7 @@ export async function getIncompleteMovies(limit: number): Promise<IncompleteMovi
  * Update a movie's duration, age_rating, and embedding.
  */
 export async function updateMovie(
-  id: number,
+  id: string,
   duration: number,
   ageRating: string,
   embedding: number[],
