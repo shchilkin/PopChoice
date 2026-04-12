@@ -498,11 +498,17 @@ function seedMoviesInBackground(
   })();
 }
 
-const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string => {
+const combineAllPeopleDataToString = (
+  allPeopleData: PersonFormData[],
+  options: { excludeKeys?: string[] } = {},
+): string => {
+  const { excludeKeys = [] } = options;
+
   if (allPeopleData.length === 1) {
     // Single person - same as before
     const data = allPeopleData[0];
     return Object.entries(data)
+      .filter(([key]) => !excludeKeys.includes(key))
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
   }
@@ -513,6 +519,7 @@ const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string =
   allPeopleData.forEach((personData, index) => {
     combinedString += `Person ${index + 1}:\n`;
     combinedString += Object.entries(personData)
+      .filter(([key]) => !excludeKeys.includes(key))
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
     combinedString += '\n\n';
@@ -529,27 +536,9 @@ const buildEmbeddingInputWithRefinedTags = (
   allPeopleData: PersonFormData[],
   refinedQueryTags: string,
 ): string => {
-  if (allPeopleData.length === 1) {
-    const data = allPeopleData[0];
-    const base = Object.entries(data)
-      .filter(([key]) => key !== 'favoriteMovieWhy')
-      .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-      .join('\n');
-    return `${base}\nrefinedQueryTags: ${refinedQueryTags}`;
-  }
-
-  let combinedString = `Group of ${allPeopleData.length} people preferences:\n\n`;
-
-  allPeopleData.forEach((personData, index) => {
-    combinedString += `Person ${index + 1}:\n`;
-    combinedString += Object.entries(personData)
-      .filter(([key]) => key !== 'favoriteMovieWhy')
-      .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
-      .join('\n');
-    combinedString += '\n\n';
-  });
-
-  return `${combinedString.trim()}\n\nrefinedQueryTags: ${refinedQueryTags}`;
+  const base = combineAllPeopleDataToString(allPeopleData, { excludeKeys: ['favoriteMovieWhy'] });
+  const separator = allPeopleData.length === 1 ? '\n' : '\n\n';
+  return `${base}${separator}refinedQueryTags: ${refinedQueryTags}`;
 };
 
 // ---------------------------------------------------------------------------
@@ -582,7 +571,7 @@ async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<stri
         { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
         { role: 'user', content: rawText },
       ],
-      max_tokens: 200,
+      max_completion_tokens: 200,
       temperature: 0,
     });
 
@@ -590,21 +579,21 @@ async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<stri
 
     if (!refinedTags) {
       logger.warn(
-        { rawText },
+        { rawTextLength: rawText.length },
         'Query enrichment returned empty response, falling back to raw text',
       );
       return null;
     }
 
     logger.info(
-      { rawText, refinedTags },
-      'Query enrichment: raw user text vs. refined semantic tags',
+      { rawTextLength: rawText.length, refinedTagsLength: refinedTags.length },
+      'Query enrichment: raw user text refined to semantic tags',
     );
 
     return refinedTags;
   } catch (error) {
     logger.warn(
-      { err: error, rawText },
+      { err: error, rawTextLength: rawText.length },
       'Query enrichment failed, falling back to raw text embedding',
     );
     return null;
@@ -929,7 +918,11 @@ export async function POST(req: NextRequest) {
     //
     // Phase A — structural injection check on favoriteMovie (fast regex, no API call).
     // This must run before any LLM sees the text.
-    const injectionDetected = allPeopleData.some((p) => checkForPromptInjection(p.favoriteMovie));
+    const injectionDetected = allPeopleData.some(
+      (p) =>
+        checkForPromptInjection(p.favoriteMovie) ||
+        checkForPromptInjection(p.favoriteMovieWhy ?? ''),
+    );
     if (injectionDetected) {
       logger.warn('Prompt injection attempt detected in favoriteMovie field');
       return NextResponse.json(
@@ -943,9 +936,13 @@ export async function POST(req: NextRequest) {
 
     // Phase B — Moderation API on all fields including the movie title.
     const textsToModerate = allPeopleData.flatMap((p) =>
-      [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(
-        (text): text is string => typeof text === 'string' && text.length > 0,
-      ),
+      [
+        p.favoriteMovie,
+        p.newVsClassic,
+        p.tonePreference,
+        p.favoriteMovieWhy,
+        ...p.moodPreference,
+      ].filter((text): text is string => typeof text === 'string' && text.length > 0),
     );
     const moderationResult = await moderateInput(textsToModerate);
 
@@ -977,6 +974,7 @@ export async function POST(req: NextRequest) {
         { field: 'newVsClassic', value: p.newVsClassic },
         { field: 'tonePreference', value: p.tonePreference },
         ...p.moodPreference.map((m) => ({ field: 'moodPreference', value: m })),
+        ...(p.favoriteMovieWhy ? [{ field: 'favoriteMovieWhy', value: p.favoriteMovieWhy }] : []),
       ]);
       const judgeResult = await judgeForMoviePlatform(labeledInputs, moderationResult.categories);
 

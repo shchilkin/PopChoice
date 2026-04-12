@@ -413,7 +413,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
   });
 
   describe('LLM enrichment call behavior', () => {
-    it('calls chat.completions.create an extra time when favoriteMovieWhy is provided (enrichment + recommendation + descriptions)', async () => {
+    it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {
       // First call = enrichment, then recommendation + description calls
       mockChatCompletionsCreate
         .mockResolvedValueOnce({
@@ -433,20 +433,16 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
         ...validPerson,
         favoriteMovieWhy: 'I want something tense and psychological',
       });
-      const reqWithout = makeRequest(validPerson);
 
-      const [resWithWhy, resWithout] = await Promise.all([POST(reqWithWhy), POST(reqWithout)]);
+      const res = await POST(reqWithWhy);
+      expect(res.status).not.toBe(500);
 
-      expect(resWithWhy.status).not.toBe(500);
-      expect(resWithout.status).not.toBe(500);
-
-      // Requests with favoriteMovieWhy make one more chat completion call than those without
-      // (the enrichment call precedes the normal recommendation + description calls)
-      const callsWithWhy = mockChatCompletionsCreate.mock.calls.length;
-      // We expect at least 1 extra call compared to the base (without Why) flow
-      // Base flow = recommendation + movie descriptions
-      // With enrichment = enrichment + recommendation + movie descriptions
-      expect(callsWithWhy).toBeGreaterThanOrEqual(3);
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const hasEnrichmentCall = calls.some((callArgs) => {
+        const messages = callArgs[0].messages;
+        return messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
+      });
+      expect(hasEnrichmentCall).toBe(true);
     });
 
     it('the enrichment call is skipped when favoriteMovieWhy is absent', async () => {
@@ -504,6 +500,35 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       expect(firstCall.messages[0].content).toContain('Movie Semantic Analyst');
       expect(firstCall.messages[1].role).toBe('user');
       expect(firstCall.messages[1].content).toBe('Something dark and mysterious');
+    });
+
+    it('excludes raw favoriteMovieWhy from embedding input and appends refinedQueryTags when enrichment succeeds', async () => {
+      const refinedTags = 'psychological tension, paranoia, isolation';
+      mockChatCompletionsCreate
+        .mockResolvedValueOnce({
+          choices: [{ message: { content: refinedTags } }],
+        })
+        .mockResolvedValue({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+              },
+            },
+          ],
+        });
+
+      const rawWhyText = 'I want something tense and psychological';
+      const req = makeRequest({ ...validPerson, favoriteMovieWhy: rawWhyText });
+      await POST(req);
+
+      const embeddingCallArgs = mockEmbeddingsCreate.mock.calls[0] as unknown as [
+        { model: string; input: string },
+      ];
+      const embeddingInput = embeddingCallArgs[0].input;
+
+      expect(embeddingInput).not.toContain(rawWhyText);
+      expect(embeddingInput).toContain(`refinedQueryTags: ${refinedTags}`);
     });
 
     it('still succeeds (falls back to raw text) when enrichment LLM call fails', async () => {
