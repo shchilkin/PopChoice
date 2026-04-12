@@ -6,15 +6,17 @@ test('home page has PopChoice title', async ({ page }) => {
   await expect(page).toHaveTitle(/PopChoice/);
 });
 
-test('home page shows hero section with start button', async ({ page }) => {
+test('home page shows Find My Movie button in hero section', async ({ page }) => {
   await page.goto('/');
 
-  const startButton = page.getByRole('link', { name: /start|find|get started|pick/i });
-  await expect(startButton.first()).toBeVisible();
+  const ctaButton = page.getByRole('button', { name: 'Find My Movie' });
+  await expect(ctaButton).toBeVisible();
 });
 
-test('navigating to quiz page', async ({ page }) => {
-  await page.goto('/quiz');
+test('clicking Find My Movie navigates to quiz page', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'Find My Movie' }).click();
 
   await expect(page).toHaveURL(/\/quiz/);
 });
