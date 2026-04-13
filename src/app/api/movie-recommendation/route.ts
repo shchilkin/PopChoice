@@ -105,11 +105,10 @@ const personFormDataSchema = z.object({
     .trim()
     .min(1, 'Favorite movie is required')
     .max(500, 'Favorite movie must be 500 characters or fewer'),
-  favoriteMovieWhy: z
-    .string()
-    .trim()
-    .max(300, 'Favorite movie reason must be 300 characters or fewer')
-    .optional(),
+  favoriteMovieWhy: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().trim().max(300, 'Favorite movie reason must be 300 characters or fewer').optional(),
+  ),
   newVsClassic: z
     .string()
     .trim()
@@ -500,7 +499,7 @@ function seedMoviesInBackground(
 
 const combineAllPeopleDataToString = (
   allPeopleData: PersonFormData[],
-  options: { excludeKeys?: string[] } = {},
+  options: { excludeKeys?: (keyof PersonFormData)[] } = {},
 ): string => {
   const { excludeKeys = [] } = options;
 
@@ -508,7 +507,7 @@ const combineAllPeopleDataToString = (
     // Single person - same as before
     const data = allPeopleData[0];
     return Object.entries(data)
-      .filter(([key]) => !excludeKeys.includes(key))
+      .filter(([key]) => !excludeKeys.includes(key as keyof PersonFormData))
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
   }
@@ -519,7 +518,7 @@ const combineAllPeopleDataToString = (
   allPeopleData.forEach((personData, index) => {
     combinedString += `Person ${index + 1}:\n`;
     combinedString += Object.entries(personData)
-      .filter(([key]) => !excludeKeys.includes(key))
+      .filter(([key]) => !excludeKeys.includes(key as keyof PersonFormData))
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
     combinedString += '\n\n';
@@ -923,7 +922,7 @@ export async function POST(req: NextRequest) {
         checkForPromptInjection(p.favoriteMovieWhy ?? ''),
     );
     if (injectionDetected) {
-      logger.warn('Prompt injection attempt detected in favoriteMovie field');
+      logger.warn('Prompt injection attempt detected in user input');
       return NextResponse.json(
         {
           error:
