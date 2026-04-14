@@ -26,7 +26,10 @@ vi.mock('@/utils/ai/moderation', () => ({
 const mockEmbeddingsCreate = vi.fn(() =>
   Promise.resolve({ data: [{ embedding: new Array(3072).fill(0) }] }),
 );
-const mockChatCompletionsCreate = vi.fn(() =>
+// Typed broadly to accept any arguments so mockImplementation can use call args for routing.
+const mockChatCompletionsCreate = vi.fn<
+  (..._args: unknown[]) => Promise<{ choices: { message: { content: string } }[] }>
+>(() =>
   Promise.resolve({
     choices: [
       {
@@ -364,15 +367,19 @@ describe('POST /api/movie-recommendation – input validation', () => {
 /** Shape of a single chat.completions.create call's first argument in the mock. */
 type ChatCompletionCallArg = { model: string; messages: { role: string; content: string }[] };
 
+/** Distinctive substring of the enrichment system prompt — used to detect enrichment calls. */
+const ENRICHMENT_SYSTEM_PROMPT_MARKER = 'Movie Semantic Analyst';
+
 describe('POST /api/movie-recommendation — query enrichment', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Context-aware default: return semantic tags for the enrichment call (detected by system
     // prompt) and valid recommendation JSON for all other chat calls.
-    mockChatCompletionsCreate.mockImplementation(((args: {
-      messages: { role: string; content: string }[];
-    }) => {
-      const isEnrichment = args.messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
+    mockChatCompletionsCreate.mockImplementation((...args) => {
+      const callArgs = args[0] as { messages: { role: string; content: string }[] };
+      const isEnrichment = callArgs.messages.some((m) =>
+        m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER),
+      );
       return Promise.resolve({
         choices: [
           {
@@ -384,7 +391,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
           },
         ],
       });
-    }) as Parameters<typeof mockChatCompletionsCreate.mockImplementation>[0]);
+    });
     mockEmbeddingsCreate.mockResolvedValue({ data: [{ embedding: new Array(3072).fill(0) }] });
   });
 
@@ -448,7 +455,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
       const hasEnrichmentCall = calls.some((callArgs) => {
         const messages = callArgs[0].messages;
-        return messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
+        return messages.some((m) => m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER));
       });
       expect(hasEnrichmentCall).toBe(true);
     });
@@ -461,7 +468,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       // None of the calls should use the enrichment system prompt
       const hasEnrichmentCall = calls.some((callArgs) => {
         const messages = callArgs[0].messages;
-        return messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
+        return messages.some((m) => m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER));
       });
       expect(hasEnrichmentCall).toBe(false);
     });
@@ -473,7 +480,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
       const hasEnrichmentCall = calls.some((callArgs) => {
         const messages = callArgs[0].messages;
-        return messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
+        return messages.some((m) => m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER));
       });
       expect(hasEnrichmentCall).toBe(false);
     });
@@ -505,7 +512,7 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       const firstCall = firstCallArgs[0];
       expect(firstCall.model).toBe('gpt-5.4-mini');
       expect(firstCall.messages[0].role).toBe('system');
-      expect(firstCall.messages[0].content).toContain('Movie Semantic Analyst');
+      expect(firstCall.messages[0].content).toContain(ENRICHMENT_SYSTEM_PROMPT_MARKER);
       expect(firstCall.messages[1].role).toBe('user');
       expect(firstCall.messages[1].content).toBe('Something dark and mysterious');
     });
