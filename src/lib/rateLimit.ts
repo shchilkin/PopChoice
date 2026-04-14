@@ -64,11 +64,15 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
 
   try {
     // Derive a safe key segment from the request pathname so each API route
-    // gets its own rate-limit bucket. Strip the leading slash and replace
-    // remaining slashes with hyphens (e.g. /api/movie-recommendation →
-    // api-movie-recommendation) to keep Redis keys human-readable and avoid
-    // delimiter collisions.
-    const pathname = new URL(req.url).pathname;
+    // gets its own rate-limit bucket. Normalize the pathname first (collapse
+    // consecutive slashes, remove trailing slash) so semantically equivalent
+    // paths like /api/foo and /api/foo/ share the same bucket. Then strip the
+    // leading slash and replace remaining slashes with hyphens
+    // (e.g. /api/movie-recommendation → api-movie-recommendation) to keep
+    // Redis keys human-readable and avoid delimiter collisions.
+    const pathname = new URL(req.url).pathname
+      .replace(/\/+/g, '/') // collapse consecutive slashes
+      .replace(/\/$/, ''); // remove trailing slash
     const routeKey = pathname.replace(/^\//, '').replace(/\//g, '-') || 'unknown';
     const key = `rl:${routeKey}:${ip}`;
 

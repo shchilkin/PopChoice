@@ -30,11 +30,17 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: contentSecurityPolicy,
   },
-  // Enforce HTTPS for 2 years; include subdomains; opt-in to preload list
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload',
-  },
+  // Enforce HTTPS for 2 years; include subdomains; opt-in to preload list.
+  // Omitted in development to prevent browsers from caching HSTS for localhost,
+  // which would force HTTPS on subsequent HTTP dev sessions.
+  ...(!isDevelopment
+    ? [
+        {
+          key: 'Strict-Transport-Security',
+          value: 'max-age=63072000; includeSubDomains; preload',
+        },
+      ]
+    : []),
   // Prevent the page from being embedded in any frame (legacy header alongside CSP frame-ancestors)
   {
     key: 'X-Frame-Options',
