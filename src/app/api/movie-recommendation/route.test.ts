@@ -28,7 +28,7 @@ const mockEmbeddingsCreate = vi.fn(() =>
 );
 // Typed broadly to accept any arguments so mockImplementation can use call args for routing.
 const mockChatCompletionsCreate = vi.fn<
-  (..._args: unknown[]) => Promise<{ choices: { message: { content: string } }[] }>
+  (...args: unknown[]) => Promise<{ choices: { message: { content: string } }[] }>
 >(() =>
   Promise.resolve({
     choices: [

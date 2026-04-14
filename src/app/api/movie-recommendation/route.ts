@@ -1018,7 +1018,8 @@ export async function POST(req: NextRequest) {
       })(),
     ]);
 
-    // Step 1: Create embedding (must happen after refinement is complete)
+    // Step 1: Create embedding (sequential after enrichment — depends on refinedQueryTags).
+    // DB count was already fetched in parallel above, so this only adds embedding latency.
     const embedding = await createEmbedding(allPeopleData, refinedQueryTags ?? undefined);
     logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
 
