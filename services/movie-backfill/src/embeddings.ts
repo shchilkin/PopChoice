@@ -6,8 +6,6 @@ import OpenAI from 'openai';
 
 import { logger } from './logger.js';
 
-export { OpenAI };
-
 /**
  * Create a single OpenAI client to reuse across the whole run.
  */
