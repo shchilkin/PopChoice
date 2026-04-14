@@ -4,13 +4,16 @@
 
 # PopChoice
 
-PopChoice is a **movie recommendation engine** that uses AI embeddings and vector databases to provide personalized movie suggestions based on user preferences.
+**AI-powered movie recommendations for solo & group viewing** — built with Next.js, OpenAI, and pgvector.
 
-This is a solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
+> 🎬 **[Live Demo →](https://pop-choice.shchilkin.dev/)**
+
+PopChoice is a **movie recommendation engine** that uses AI embeddings and vector similarity search to deliver personalised movie suggestions — whether you are picking for yourself or finding a film everyone in the group will enjoy.
 
 ## ✨ Features
 
 - 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
+- 👥 **Solo & Group Modes** - Pick for yourself or collect preferences from up to 6 people and find a film everyone will enjoy
 - 📊 **Interactive Questionnaire** - Collects user preferences through engaging questions
 - 🔍 **Vector Search** - Lightning-fast similarity search with pgvector
 - 📱 **Responsive Design** - Works seamlessly on desktop and mobile
