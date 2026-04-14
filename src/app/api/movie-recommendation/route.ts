@@ -593,7 +593,7 @@ async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<stri
     const err =
       error instanceof Error
         ? { name: error.name, message: error.message }
-        : { name: 'UnknownError' };
+        : { name: 'UnknownError', message: 'An unknown error occurred' };
     logger.warn(
       { err, rawTextLength: rawText.length },
       'Query enrichment failed, falling back to raw text embedding',
