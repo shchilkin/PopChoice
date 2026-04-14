@@ -175,7 +175,7 @@ This project includes a development container configuration for consistent devel
 
 ### Features included:
 
-- Node.js 22 with npm
+- Node.js 24 with npm
 - Git and GitHub CLI pre-installed
 - All VS Code extensions pre-configured
 - Port forwarding for development servers (3000, 6006)
