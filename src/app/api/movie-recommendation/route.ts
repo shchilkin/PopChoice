@@ -507,7 +507,7 @@ const combineAllPeopleDataToString = (
     // Single person - same as before
     const data = allPeopleData[0];
     return Object.entries(data)
-      .filter(([key]) => !excludeKeys.includes(key as keyof PersonFormData))
+      .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
   }
@@ -518,7 +518,7 @@ const combineAllPeopleDataToString = (
   allPeopleData.forEach((personData, index) => {
     combinedString += `Person ${index + 1}:\n`;
     combinedString += Object.entries(personData)
-      .filter(([key]) => !excludeKeys.includes(key as keyof PersonFormData))
+      .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
     combinedString += '\n\n';
@@ -590,8 +590,12 @@ async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<stri
 
     return refinedTags;
   } catch (error) {
+    const err =
+      error instanceof Error
+        ? { name: error.name, message: error.message }
+        : { name: 'UnknownError' };
     logger.warn(
-      { err: error, rawTextLength: rawText.length },
+      { err, rawTextLength: rawText.length },
       'Query enrichment failed, falling back to raw text embedding',
     );
     return null;
