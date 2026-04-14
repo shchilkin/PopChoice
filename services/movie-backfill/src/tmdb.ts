@@ -157,13 +157,15 @@ export function extractUSCertification(details: TMDBMovieDetails): string {
 /**
  * Convert movie data into a text description suitable for embedding.
  * Format must match the format used by services/movie-seed/src/sync.ts.
+ * The `description` parameter should be the value from the DB (not TMDB overview),
+ * to keep embeddings consistent with the stored row.
  */
 export function movieToEmbeddingText(
   title: string,
   year: number,
   ageRating: string,
   runtime: number,
-  overview: string,
+  description: string,
   scoreRating: number,
 ): string {
   return [
@@ -171,6 +173,6 @@ export function movieToEmbeddingText(
     `Rating: ${ageRating}`,
     `Duration: ${runtime} min`,
     `Score: ${scoreRating.toFixed(1)}/10`,
-    `Description: ${overview}`,
+    `Description: ${description}`,
   ].join('\n');
 }

@@ -23,6 +23,8 @@ Movies for which TMDB returns no runtime are skipped (logged as warnings) so the
 | `BATCH_SIZE`    | ❌       | `5`         | Number of parallel TMDB detail requests per batch   |
 | `MAX_MOVIES`    | ❌       | `0`         | Max movies to process; `0` means all               |
 
+> **Note:** `TMDB_API_KEY` must be a **TMDB v4 read access token** (not a v3 API key). It is sent as `Authorization: Bearer <token>`. You can generate one in the TMDB dashboard under **Settings → API → Read Access Token**.
+
 ## How to run locally
 
 ```bash

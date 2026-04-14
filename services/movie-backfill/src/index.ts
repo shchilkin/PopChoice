@@ -6,7 +6,7 @@
  * embeddings and updates the database rows.
  *
  * Environment variables:
- *   TMDB_API_KEY    — TMDB API read access token (required)
+ *   TMDB_API_KEY    — TMDB v4 read access token (required)
  *   OPENAI_API_KEY  — OpenAI API key (required)
  *   DATABASE_URL    — PostgreSQL connection string (required)
  *   DRY_RUN         — Set to "true" to skip DB writes (default: false)
@@ -15,7 +15,13 @@
  */
 
 import { loadConfig } from './config.js';
-import { closeDatabase, getIncompleteMovies, initDatabase, updateMovie } from './database.js';
+import {
+  closeDatabase,
+  getIncompleteMovies,
+  initDatabase,
+  updateMovie,
+  type IncompleteMovie,
+} from './database.js';
 import { createEmbeddings, createOpenAIClient } from './embeddings.js';
 import { logger } from './logger.js';
 import {
@@ -24,6 +30,15 @@ import {
   movieToEmbeddingText,
   searchMovie,
 } from './tmdb.js';
+
+/** A movie that passed all TMDB validations and is ready for embedding + DB update. */
+interface PendingUpdate {
+  movie: IncompleteMovie;
+  tmdbId: number;
+  runtime: number;
+  ageRating: string;
+  embeddingText: string;
+}
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -60,6 +75,9 @@ async function main(): Promise<void> {
       const totalBatches = Math.ceil(movies.length / config.batchSize);
 
       logger.info('Processing batch', { batch: batchNum, totalBatches, size: batch.length });
+
+      // Phase 1: parallel TMDB lookups for the entire batch
+      const pendingUpdates: PendingUpdate[] = [];
 
       await Promise.all(
         batch.map(async (movie) => {
@@ -115,7 +133,7 @@ async function main(): Promise<void> {
               movie.score_rating,
             );
 
-            // 6. Dry run: log and skip
+            // 6. Dry run: log and skip DB write
             if (config.dryRun) {
               logger.info('DRY RUN: would update movie', {
                 id: movie.id,
@@ -129,35 +147,69 @@ async function main(): Promise<void> {
               return;
             }
 
-            // 7. Generate embedding
-            const embeddings = await createEmbeddings(openaiClient, [embeddingText]);
-            const embedding = embeddings[0];
-            if (!embedding) {
-              logger.warn('Failed to generate embedding — skipping', {
-                name: movie.name,
-                year: movie.year,
-              });
-              totalSkipped++;
-              return;
-            }
-
-            // 8. Update database
-            await updateMovie(movie.id, runtime, ageRating, embedding);
-
-            logger.info('Movie backfilled successfully', {
-              id: movie.id,
-              name: movie.name,
-              year: movie.year,
-              tmdbId,
-              runtime,
-              ageRating,
-            });
-            totalUpdated++;
+            // Collect for batch embedding in Phase 2
+            pendingUpdates.push({ movie, tmdbId, runtime, ageRating, embeddingText });
           } catch (err) {
             logger.warn('Failed to backfill movie — skipping', {
               id: movie.id,
               name: movie.name,
               year: movie.year,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            totalSkipped++;
+          }
+        }),
+      );
+
+      if (pendingUpdates.length === 0) continue;
+
+      // Phase 2: generate all embeddings in a single API call for this batch
+      let embeddings: number[][];
+      try {
+        embeddings = await createEmbeddings(
+          openaiClient,
+          pendingUpdates.map((u) => u.embeddingText),
+        );
+      } catch (err) {
+        logger.warn('Failed to generate embeddings for batch — skipping all', {
+          batch: batchNum,
+          count: pendingUpdates.length,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        totalSkipped += pendingUpdates.length;
+        continue;
+      }
+
+      // Phase 3: write results to DB in parallel
+      await Promise.all(
+        pendingUpdates.map(async (update, idx) => {
+          const embedding = embeddings[idx];
+          if (!embedding) {
+            logger.warn('Missing embedding for movie — skipping', {
+              name: update.movie.name,
+              year: update.movie.year,
+            });
+            totalSkipped++;
+            return;
+          }
+
+          try {
+            await updateMovie(update.movie.id, update.runtime, update.ageRating, embedding);
+
+            logger.info('Movie backfilled successfully', {
+              id: update.movie.id,
+              name: update.movie.name,
+              year: update.movie.year,
+              tmdbId: update.tmdbId,
+              runtime: update.runtime,
+              ageRating: update.ageRating,
+            });
+            totalUpdated++;
+          } catch (err) {
+            logger.warn('Failed to update movie in database — skipping', {
+              id: update.movie.id,
+              name: update.movie.name,
+              year: update.movie.year,
               error: err instanceof Error ? err.message : String(err),
             });
             totalSkipped++;
