@@ -367,16 +367,24 @@ type ChatCompletionCallArg = { model: string; messages: { role: string; content:
 describe('POST /api/movie-recommendation — query enrichment', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: recommendation call returns valid JSON
-    mockChatCompletionsCreate.mockResolvedValue({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+    // Context-aware default: return semantic tags for the enrichment call (detected by system
+    // prompt) and valid recommendation JSON for all other chat calls.
+    mockChatCompletionsCreate.mockImplementation(((args: {
+      messages: { role: string; content: string }[];
+    }) => {
+      const isEnrichment = args.messages.some((m) => m.content?.includes('Movie Semantic Analyst'));
+      return Promise.resolve({
+        choices: [
+          {
+            message: {
+              content: isEnrichment
+                ? 'drama, tension, character-driven'
+                : JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+            },
           },
-        },
-      ],
-    });
+        ],
+      });
+    }) as Parameters<typeof mockChatCompletionsCreate.mockImplementation>[0]);
     mockEmbeddingsCreate.mockResolvedValue({ data: [{ embedding: new Array(3072).fill(0) }] });
   });
 

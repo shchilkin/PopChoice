@@ -1001,14 +1001,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM.
-    // This reduces noise in the embedding input and improves vector search relevance.
+    // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM,
+    // while the DB movie count is fetched in parallel (both are independent of each other).
     // Falls back gracefully to raw text if the LLM call fails or the field is empty.
-    const refinedQueryTags = await refineQueryWithLLM(allPeopleData);
-
-    // Step 1: Create embedding and fetch DB count in parallel
-    const [embedding, dbMovieCountResult] = await Promise.all([
-      createEmbedding(allPeopleData, refinedQueryTags ?? undefined),
+    const [refinedQueryTags, dbMovieCountResult] = await Promise.all([
+      refineQueryWithLLM(allPeopleData),
       (async () => {
         try {
           const db = getDbClient();
@@ -1020,6 +1017,9 @@ export async function POST(req: NextRequest) {
         }
       })(),
     ]);
+
+    // Step 1: Create embedding (must happen after refinement is complete)
+    const embedding = await createEmbedding(allPeopleData, refinedQueryTags ?? undefined);
     logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
 
     // Step 2: Find similar movies (local vector search)
@@ -1218,6 +1218,8 @@ export async function GET() {
           description: 'Single person data or array of people data',
           schema: {
             favoriteMovie: 'string (required)',
+            favoriteMovieWhy:
+              'string (optional, max 300 chars) — why you love that movie; empty/whitespace is treated as absent',
             newVsClassic: 'string (required)',
             moodPreference: 'string[] (required, min 1)',
             tonePreference: 'string (required)',
@@ -1241,6 +1243,7 @@ export async function GET() {
     examples: {
       singlePerson: {
         favoriteMovie: 'The Matrix',
+        favoriteMovieWhy: 'I love the mind-bending reality twists and tense action',
         newVsClassic: 'new',
         moodPreference: ['action', 'sci-fi'],
         tonePreference: 'serious',
@@ -1248,6 +1251,7 @@ export async function GET() {
       multiplePeople: [
         {
           favoriteMovie: 'The Matrix',
+          favoriteMovieWhy: 'Mind-bending and visually stunning',
           newVsClassic: 'new',
           moodPreference: ['action'],
           tonePreference: 'serious',
