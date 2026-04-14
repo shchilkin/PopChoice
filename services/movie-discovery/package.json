@@ -15,7 +15,7 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^24.12.2",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.20.0",
     "tsx": "^4.19.4",
