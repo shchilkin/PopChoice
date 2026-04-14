@@ -8,8 +8,6 @@ PopChoice is a **movie recommendation engine** that uses AI embeddings and vecto
 
 This is a solo project for the **Embeddings and Vector Databases** chapter from "The AI Engineer Path" on Scrimba.
 
-🌐 **[Live Demo](https://pop-choice.shchilkin.dev/)**
-
 ## ✨ Features
 
 - 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
@@ -22,50 +20,108 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS 4
 - **AI/ML:** OpenAI Embeddings API, LangChain Core
-- **Database:** PostgreSQL with pgvector, Redis (for caching)
-- **Animation:** Motion (Framer Motion)
+- **Database:** PostgreSQL with pgvector, Redis (rate limiting)
+- **Animation:** Motion
 - **Movie Data:** TMDB (The Movie Database) API
-- **Analytics:** Vercel Web Analytics
+- **Analytics:** Vercel Analytics
 - **Testing:** Vitest, Storybook 10, Playwright, MSW (Mock Service Worker)
 - **Development:** ESLint, Prettier, Husky, lint-staged
 
 ## 🚀 Quick Start
 
-1. **Clone and install dependencies**
+```bash
+git clone https://github.com/shchilkin/PopChoice.git
+cd PopChoice
+npm install
+cp .env.example .env        # add OPENAI_API_KEY (and optionally TMDB_API_KEY)
+npm run setup:local-db      # spin up local PostgreSQL via Docker
+npm run populate-db         # seed the database with movie embeddings
+npm run dev                 # start the dev server at http://localhost:3000
+```
 
-   ```bash
-   git clone https://github.com/shchilkin/PopChoice.git
-   cd PopChoice
-   npm install
-   ```
+For a step-by-step walkthrough, see **[💻 Local Development Setup](#-local-development-setup)** below.
 
-2. **Set up environment variables**
+## 💻 Local Development Setup
 
-   ```bash
-   cp .env.example .env
-   # Edit .env with your OpenAI and TMDB API keys
-   ```
+This section walks you through setting up a fully working local development environment, including a local PostgreSQL instance with pgvector support via Docker.
 
-3. **Start local PostgreSQL** (requires Docker)
+### Prerequisites
 
-   ```bash
-   npm run setup:local-db
-   # Generates a random password, writes DATABASE_URL to .env, and starts the container
-   npm run populate-db
-   # Seeds the database with movie embeddings
-   ```
+- **Node.js** 20 or later
+- **Docker** — required to run the local PostgreSQL container
+- **OpenAI API key** — required to generate movie embeddings
 
-   For other database options, see the **[Setup Guide](./docs/SETUP.md)**.
+### Step 1 — Clone and install
 
-4. **Start development server**
+```bash
+git clone https://github.com/shchilkin/PopChoice.git
+cd PopChoice
+npm install
+```
 
-   ```bash
-   npm run dev
-   ```
+### Step 2 — Configure environment variables
 
-5. **Open the application**
-   - Navigate to [http://localhost:3000](http://localhost:3000)
-   - Start the Storybook workshop at [http://localhost:6006](http://localhost:6006) with `npm run storybook`
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in at least:
+
+```env
+OPENAI_API_KEY=your-openai-api-key-here
+TMDB_API_KEY=your-tmdb-api-key          # optional – enables live poster images
+```
+
+> The database credentials (`DATABASE_URL`, `POSTGRES_*`) are generated automatically in the next step.
+
+### Step 3 — Start local PostgreSQL
+
+```bash
+npm run setup:local-db
+```
+
+This script:
+- Generates a random `POSTGRES_PASSWORD` on first run
+- Writes `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `DATABASE_URL` into `.env`
+- Starts a `pgvector/pgvector:pg16` Docker container (via `docker compose up -d`)
+- The database schema and the `pgvector` extension are applied automatically on first start via `db/init/`
+
+On subsequent runs the script reuses the existing credentials and just ensures the container is running.
+
+### Step 4 — Seed the database
+
+```bash
+npm run populate-db
+```
+
+This reads the curated movie list, calls the OpenAI Embeddings API to generate vectors for each movie, and inserts the results into your local PostgreSQL database.
+
+> **Note:** Each run deduplicates by title + year, so it is safe to re-run.
+
+### Step 5 — Start the development server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to use the app.
+
+### Optional — Storybook component workshop
+
+```bash
+npm run storybook
+```
+
+Open [http://localhost:6006](http://localhost:6006) to browse and develop UI components in isolation.
+
+### Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| `DATABASE_URL is not set` | Run `npm run setup:local-db` to generate credentials |
+| Docker container not starting | Ensure Docker Desktop is running |
+| OpenAI errors when seeding | Verify `OPENAI_API_KEY` is correct in `.env` |
+| Missing movie posters | Add a valid `TMDB_API_KEY` to `.env` |
 
 ## 📖 Documentation
 
