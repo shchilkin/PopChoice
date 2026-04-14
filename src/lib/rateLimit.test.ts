@@ -74,7 +74,7 @@ describe('applyRateLimit', () => {
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '10.0.0.1, 10.0.0.2, 10.0.0.3' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:10.0.0.1'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:10.0.0.1'] }),
       );
     });
 
@@ -83,7 +83,7 @@ describe('applyRateLimit', () => {
       await applyRateLimit(makeRequest({ 'x-real-ip': '192.168.1.5' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:192.168.1.5'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:192.168.1.5'] }),
       );
     });
 
@@ -92,7 +92,7 @@ describe('applyRateLimit', () => {
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '2001:db8::1' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:2001:db8::1'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:2001:db8::1'] }),
       );
     });
 

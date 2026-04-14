@@ -63,7 +63,14 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
   if (!client) return null;
 
   try {
-    const key = `rl:movie-recommendation:${ip}`;
+    // Derive a safe key segment from the request pathname so each API route
+    // gets its own rate-limit bucket. Strip the leading slash and replace
+    // remaining slashes with hyphens (e.g. /api/movie-recommendation →
+    // api-movie-recommendation) to keep Redis keys human-readable and avoid
+    // delimiter collisions.
+    const pathname = new URL(req.url).pathname;
+    const routeKey = pathname.replace(/^\//, '').replace(/\//g, '-') || 'unknown';
+    const key = `rl:${routeKey}:${ip}`;
 
     // Atomically increment the counter and apply a TTL when the key has no
     // expiry — all inside Redis via a Lua script. Running both operations
