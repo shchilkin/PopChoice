@@ -30,18 +30,38 @@ interface TMDBSearchResponse {
   results: TMDBSearchResult[];
 }
 
+/** Year tolerance (in years) when disambiguating TMDB search results. */
+const YEAR_TOLERANCE = 1;
+
 /**
- * Search TMDB for a movie by title and year. Returns the TMDB movie ID or null if not found.
+ * Pick the first TMDB result whose release_date year is within YEAR_TOLERANCE of targetYear.
  */
-export async function searchMovie(
+function pickByYear(results: TMDBSearchResult[], targetYear: number): number | null {
+  for (const result of results) {
+    const releaseYear = result.release_date
+      ? parseInt(result.release_date.substring(0, 4), 10)
+      : NaN;
+    if (!Number.isNaN(releaseYear) && Math.abs(releaseYear - targetYear) <= YEAR_TOLERANCE) {
+      return result.id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Execute a single TMDB /search/movie request and return the raw results array.
+ */
+async function tmdbSearch(
   apiKey: string,
   title: string,
-  year: number,
-): Promise<number | null> {
+  year: number | null,
+): Promise<TMDBSearchResult[]> {
   const url = new URL(`${TMDB_BASE_URL}/search/movie`);
   url.searchParams.set('query', title);
-  url.searchParams.set('year', String(year));
   url.searchParams.set('language', 'en-US');
+  if (year !== null && year > 0) {
+    url.searchParams.set('year', String(year));
+  }
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -55,13 +75,38 @@ export async function searchMovie(
   }
 
   const data = (await response.json()) as TMDBSearchResponse;
+  return data.results ?? [];
+}
 
-  if (!data.results || data.results.length === 0) {
-    return null;
+/**
+ * Search TMDB for a movie by title and optional year.
+ *
+ * Strategy:
+ * 1. If year > 0, run a year-scoped search and validate results against ±YEAR_TOLERANCE.
+ * 2. Fall back to a year-less search:
+ *    - Still validate against ±YEAR_TOLERANCE when year > 0.
+ *    - Return the first result when year === 0 (no year to validate against).
+ * 3. Return null when no suitable match is found.
+ */
+export async function searchMovie(
+  apiKey: string,
+  title: string,
+  year: number,
+): Promise<number | null> {
+  if (year > 0) {
+    // 1. Year-scoped search
+    const scopedResults = await tmdbSearch(apiKey, title, year);
+    const id = pickByYear(scopedResults, year);
+    if (id !== null) return id;
+
+    // 2. Year-less fallback — TMDB may rank differently without the year filter
+    const broadResults = await tmdbSearch(apiKey, title, null);
+    return pickByYear(broadResults, year);
   }
 
-  // Return the first result's ID — TMDB search already ranks by relevance
-  return data.results[0].id;
+  // year === 0 — year unknown, return first result without year validation
+  const results = await tmdbSearch(apiKey, title, null);
+  return results.length > 0 ? results[0].id : null;
 }
 
 /**
