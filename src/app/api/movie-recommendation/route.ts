@@ -4,6 +4,7 @@ import z from 'zod';
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { withAuth } from '@/lib/withAuth';
 import {
   ALWAYS_BLOCK_CATEGORIES,
   checkForPromptInjection,
@@ -34,12 +35,12 @@ import type { ApiResponse, PersonFormData } from './types';
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest): Promise<NextResponse> {
   const startTime = Date.now();
 
   try {
     const rateLimitResponse = await applyRateLimit(req);
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) return rateLimitResponse as NextResponse;
 
     const body = await req.json();
 
@@ -347,6 +348,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuth(postHandler);
 
 // ---------------------------------------------------------------------------
 // GET handler — API documentation

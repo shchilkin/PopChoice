@@ -4,6 +4,7 @@ import z from 'zod';
 import { openAIClient } from '@/clients';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { withAuth } from '@/lib/withAuth';
 import { IMAGE_BASE_URL } from '@/services';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
@@ -174,9 +175,9 @@ function cosineSimilarity(a: number[], b: number[]): number {
 // Main handler
 // ---------------------------------------------------------------------------
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest): Promise<NextResponse> {
   const rateLimitResponse = await applyRateLimit(req);
-  if (rateLimitResponse) return rateLimitResponse;
+  if (rateLimitResponse) return rateLimitResponse as NextResponse;
 
   const acceptLanguage = req.headers.get('accept-language') ?? 'en';
   const primaryLang = acceptLanguage.split(',')[0].split(';')[0].split('-')[0].toLowerCase();
@@ -416,3 +417,5 @@ Respond in ${language} only.`;
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuth(postHandler);

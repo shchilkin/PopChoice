@@ -22,6 +22,10 @@ TMDB_API_KEY=your-tmdb-api-key
 # Redis (optional) – enables distributed rate limiting on /api/movie-recommendation
 # When unset, rate limiting is disabled and the API fails open
 REDIS_URL=redis://user:password@host:6379
+
+# API key authentication – comma-separated SHA-256 hashes of valid API keys
+# Required in production; when unset in development, auth is disabled with a warning
+VALID_API_KEYS=<sha256-hash-of-key1>,<sha256-hash-of-key2>
 ```
 
 ## OpenAI Setup
@@ -79,6 +83,35 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
+
+## API Key Authentication
+
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by API key authentication. Callers must supply a key via one of these headers:
+
+- `Authorization: Bearer <key>`
+- `X-API-Key: <key>`
+
+Keys are stored as **SHA-256 hashes** in the `VALID_API_KEYS` environment variable (comma-separated). Never store plaintext keys.
+
+### Generating and registering a key
+
+1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
+2. **Hash it** using the utility exported from `src/lib/apiAuth.ts`:
+   ```ts
+   import { hashApiKey } from '@/lib/apiAuth';
+   console.log(hashApiKey('your-plaintext-key'));
+   ```
+3. **Add the hash** to your environment:
+   ```env
+   VALID_API_KEYS=<sha256-hash-of-key1>,<sha256-hash-of-key2>
+   ```
+4. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
+
+### Development mode
+
+When `VALID_API_KEYS` is not set, authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. In production, all requests are rejected when the variable is absent to prevent an accidentally open API from consuming quota.
+
+> **Security note:** Store `VALID_API_KEYS` as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
 
 ## Redis Setup (Optional – Rate Limiting)
 
