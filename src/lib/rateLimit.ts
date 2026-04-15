@@ -40,6 +40,9 @@ function getRedisClient(): Promise<RedisClient | null> {
   return initPromise;
 }
 
+const RATE_LIMIT = 10;
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+
 export async function applyRateLimit(req: Request): Promise<Response | null> {
   const forwardedFor = req.headers.get('x-forwarded-for');
   const forwardedForClientIp = forwardedFor
@@ -60,36 +63,57 @@ export async function applyRateLimit(req: Request): Promise<Response | null> {
   if (!client) return null;
 
   try {
-    const key = `rl:movie-recommendation:${ip}`;
+    // Derive a safe key segment from the request pathname so each API route
+    // gets its own rate-limit bucket. Normalize the pathname first (collapse
+    // consecutive slashes, remove trailing slash) so semantically equivalent
+    // paths like /api/foo and /api/foo/ share the same bucket. Then strip the
+    // leading slash and replace remaining slashes with hyphens
+    // (e.g. /api/movie-recommendation → api-movie-recommendation) to keep
+    // Redis keys human-readable and avoid delimiter collisions.
+    const pathname = new URL(req.url).pathname
+      .replace(/\/+/g, '/') // collapse consecutive slashes
+      .replace(/\/$/, ''); // remove trailing slash
+    const routeKey = pathname.replace(/^\//, '').replace(/\//g, '-') || 'unknown';
+    const key = `rl:${routeKey}:${ip}`;
 
-    // Atomically increment the counter and, on the very first request in the
-    // window, set the 60-second TTL — all inside Redis via a Lua script.
-    // This prevents the key from being left without a TTL if the separate
-    // EXPIRE call were to fail after a successful INCR.
-    const count = Number(
-      await client.eval(
-        `
-          local current = redis.call('INCR', KEYS[1])
-          if current == 1 then
-            redis.call('EXPIRE', KEYS[1], ARGV[1])
-          end
-          return current
-        `,
-        {
-          keys: [key],
-          arguments: ['60'],
-        },
-      ),
-    );
+    // Atomically increment the counter and apply a TTL when the key has no
+    // expiry — all inside Redis via a Lua script. Running both operations
+    // in a single script prevents the key from ever being left without a TTL
+    // (e.g. if a separate EXPIRE call were to fail after a successful INCR,
+    // or if a prior EXPIRE was never applied). TTL < 0 means the key exists
+    // but has no expiry (-1) or does not exist yet (-2 after INCR is impossible,
+    // but guard anyway). The script returns {count, remaining_ttl} so
+    // Retry-After reflects the actual remaining window rather than always
+    // the full window.
+    const [count, ttl] = (await client.eval(
+      `
+        local current = redis.call('INCR', KEYS[1])
+        local remaining = redis.call('TTL', KEYS[1])
+        if remaining < 0 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+          remaining = tonumber(ARGV[1])
+        end
+        return {current, remaining}
+      `,
+      {
+        keys: [key],
+        arguments: [String(RATE_LIMIT_WINDOW_SECONDS)],
+      },
+    )) as [number, number];
 
-    if (count > 10) {
+    if (count > RATE_LIMIT) {
       return new Response(
         JSON.stringify({
-          error: 'Too many requests. Maximum 10 requests per minute allowed.',
+          error: `Too many requests. Maximum ${RATE_LIMIT} requests per ${RATE_LIMIT_WINDOW_SECONDS} seconds allowed.`,
         }),
         {
           status: 429,
-          headers: { 'Content-Type': 'application/json', 'Retry-After': '60' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': String(ttl),
+            'X-RateLimit-Limit': String(RATE_LIMIT),
+            'X-RateLimit-Remaining': '0',
+          },
         },
       );
     }
