@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock rate limit (pass-through)
 vi.mock('@/lib/rateLimit', () => ({
@@ -570,5 +570,148 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       // Should not fail — enrichment failure is non-fatal
       expect(res.status).not.toBe(500);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TMDB fallback scoring (scoreAndConvertTMDBMovies)
+// ---------------------------------------------------------------------------
+// These tests exercise the TMDB hybrid-search path by configuring the DB mock
+// to return zero high-quality results, forcing the route to call TMDB and then
+// embed the candidates for real cosine scoring.
+
+const tmdbEnv = {
+  TMDB_API_KEY: 'test-tmdb-key',
+};
+
+/** Minimal TMDB discover result shape used in these tests. */
+const makeTmdbMovie = (id: number, title: string) => ({
+  id,
+  title,
+  overview: `Overview of ${title}`,
+  release_date: '2020-01-01',
+  vote_average: 7.5,
+  vote_count: 500,
+  genre_ids: [28],
+  popularity: 100,
+  poster_path: null,
+});
+
+describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    // Stub DB to return a single weak result so shouldFallBackToTMDB() returns true
+    const { getDbClient } = vi.mocked(await import('@/clients/dbClient'));
+    (getDbClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      isConfigured: vi.fn().mockReturnValue(false),
+      rpc: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            name: 'Weak Match',
+            age_rating: 'PG',
+            description: 'A weak match.',
+            duration: 90,
+            score_rating: 5.0,
+            year: 2010,
+            similarity: 0.15, // below SIMILARITY_THRESHOLD — triggers TMDB fallback
+            content: 'Weak Match (2010)',
+          },
+        ],
+        error: null,
+      }),
+    });
+
+    // Stub TMDB discover API to return two candidate movies
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          results: [makeTmdbMovie(101, 'Action Hero'), makeTmdbMovie(102, 'Space Epic')],
+        }),
+    } as Response);
+
+    // Default chat mock: return valid recommendation JSON
+    mockChatCompletionsCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ title: 'Action Hero', description: 'Great action film.' }),
+          },
+        },
+      ],
+    });
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    delete process.env.TMDB_API_KEY;
+  });
+
+  it('uses real cosine similarity (dot product) when embeddings call succeeds', async () => {
+    process.env.TMDB_API_KEY = tmdbEnv.TMDB_API_KEY;
+
+    // Query embedding: unit vector along dim 0
+    // Movie embedding for call 2 (TMDB candidates batch): vectors at dim 0 and 1
+    // Expected dot products: movie[0] = 0.8, movie[1] = 0.0
+    const queryEmbedding = Array(3072).fill(0);
+    queryEmbedding[0] = 1;
+
+    const movie0Embedding = Array(3072).fill(0);
+    movie0Embedding[0] = 0.8;
+    const movie1Embedding = Array(3072).fill(0);
+    movie1Embedding[1] = 1; // orthogonal to query → dot=0
+
+    mockEmbeddingsCreate
+      // Call 1: query embedding (createEmbedding)
+      .mockResolvedValueOnce({ data: [{ embedding: queryEmbedding }] })
+      // Call 2: TMDB candidates batch (scoreAndConvertTMDBMovies)
+      .mockResolvedValueOnce({
+        data: [{ embedding: movie0Embedding }, { embedding: movie1Embedding }],
+      })
+      // Subsequent calls for AI description generation
+      .mockResolvedValue({ data: [{ embedding: Array(3072).fill(0) }] });
+
+    const res = await POST(makeRequest(validPerson));
+    expect(res.status).not.toBe(500);
+
+    // The second embeddings call should be for the TMDB batch (2 inputs)
+    const embeddingCalls = mockEmbeddingsCreate.mock.calls as unknown as { input: unknown }[][];
+    const tmdbBatchCall = embeddingCalls.find((call) => Array.isArray(call[0]?.input));
+    expect(tmdbBatchCall).toBeDefined();
+  });
+
+  it('falls back to similarity 0.35 when the TMDB embeddings call throws', async () => {
+    process.env.TMDB_API_KEY = tmdbEnv.TMDB_API_KEY;
+
+    mockEmbeddingsCreate
+      // Call 1: query embedding succeeds
+      .mockResolvedValueOnce({ data: [{ embedding: Array(3072).fill(0.1) }] })
+      // Call 2: TMDB batch embedding fails
+      .mockRejectedValueOnce(new Error('OpenAI rate limit'))
+      // Remaining calls succeed (description generation etc.)
+      .mockResolvedValue({ data: [{ embedding: Array(3072).fill(0) }] });
+
+    const res = await POST(makeRequest(validPerson));
+
+    // The route must not hard-fail when TMDB embedding throws
+    expect(res.status).not.toBe(500);
+  });
+
+  it('falls back to similarity 0.35 when the TMDB embeddings response is missing data', async () => {
+    process.env.TMDB_API_KEY = tmdbEnv.TMDB_API_KEY;
+
+    mockEmbeddingsCreate
+      // Call 1: query embedding
+      .mockResolvedValueOnce({ data: [{ embedding: Array(3072).fill(0.1) }] })
+      // Call 2: TMDB batch returns empty data (incomplete response)
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValue({ data: [{ embedding: Array(3072).fill(0) }] });
+
+    const res = await POST(makeRequest(validPerson));
+    expect(res.status).not.toBe(500);
   });
 });
