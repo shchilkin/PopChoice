@@ -18,8 +18,11 @@ vi.mock('redis', () => ({
 // Import AFTER the mock is registered
 const { applyRateLimit, closeRateLimiter } = await import('./rateLimit');
 
-function makeRequest(headers: Record<string, string> = {}): Request {
-  return new Request('http://localhost/api/movie-recommendation', {
+function makeRequest(
+  headers: Record<string, string> = {},
+  url = 'http://localhost/api/movie-recommendation',
+): Request {
+  return new Request(url, {
     method: 'POST',
     headers,
   });
@@ -140,6 +143,45 @@ describe('applyRateLimit', () => {
       mockEval.mockRejectedValue(new Error('Redis error'));
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(result).toBeNull();
+    });
+
+    describe('pathname normalization', () => {
+      it('trailing slash produces the same key as canonical path', async () => {
+        mockEval.mockResolvedValue([1, 60]);
+        await applyRateLimit(
+          makeRequest(
+            { 'x-forwarded-for': '1.2.3.4' },
+            'http://localhost/api/movie-recommendation/',
+          ),
+        );
+        expect(mockEval).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({ keys: ['rl:api-movie-recommendation:1.2.3.4'] }),
+        );
+      });
+
+      it('consecutive slashes produce the same key as canonical path', async () => {
+        mockEval.mockResolvedValue([1, 60]);
+        await applyRateLimit(
+          makeRequest(
+            { 'x-forwarded-for': '1.2.3.4' },
+            'http://localhost/api//movie-recommendation',
+          ),
+        );
+        expect(mockEval).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({ keys: ['rl:api-movie-recommendation:1.2.3.4'] }),
+        );
+      });
+
+      it('root pathname falls back to rl:unknown:<ip>', async () => {
+        mockEval.mockResolvedValue([1, 60]);
+        await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }, 'http://localhost/'));
+        expect(mockEval).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({ keys: ['rl:unknown:1.2.3.4'] }),
+        );
+      });
     });
   });
 });
