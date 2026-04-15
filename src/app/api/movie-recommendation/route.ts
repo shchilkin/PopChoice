@@ -104,7 +104,7 @@ const personFormDataSchema = z.object({
     .string()
     .trim()
     .min(1, 'Favorite movie is required')
-    .max(500, 'Favorite movie must be 500 characters or fewer'),
+    .max(200, 'Favorite movie must be 200 characters or fewer'),
   favoriteMovieWhy: z.preprocess(
     (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
     z.string().trim().max(300, 'Favorite movie reason must be 300 characters or fewer').optional(),
@@ -113,14 +113,14 @@ const personFormDataSchema = z.object({
     .string()
     .trim()
     .min(1, 'New vs Classic preference is required')
-    .max(200, 'New vs Classic preference must be 200 characters or fewer'),
+    .max(100, 'New vs Classic preference must be 100 characters or fewer'),
   moodPreference: z
     .array(
       z
         .string()
         .trim()
         .min(1, 'Mood preference cannot be empty')
-        .max(200, 'Each mood preference must be 200 characters or fewer'),
+        .max(100, 'Each mood preference must be 100 characters or fewer'),
     )
     .min(1, 'At least one mood preference is required')
     .max(10, 'No more than 10 mood preferences allowed'),
@@ -128,7 +128,7 @@ const personFormDataSchema = z.object({
     .string()
     .trim()
     .min(1, 'Tone preference is required')
-    .max(200, 'Tone preference must be 200 characters or fewer'),
+    .max(100, 'Tone preference must be 100 characters or fewer'),
 });
 
 const requestBodySchema = z.union([

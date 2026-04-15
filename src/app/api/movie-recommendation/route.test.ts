@@ -57,6 +57,7 @@ vi.mock('@/clients', () => ({
 // Mock DB client
 vi.mock('@/clients/dbClient', () => ({
   getDbClient: vi.fn(() => ({
+    isConfigured: vi.fn().mockReturnValue(false),
     rpc: vi.fn(() =>
       Promise.resolve({
         data: [
@@ -80,6 +81,7 @@ vi.mock('@/clients/dbClient', () => ({
 
 // Mock MovieService (TMDB poster lookups)
 vi.mock('@/services', () => ({
+  IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
   MovieService: vi.fn(() => ({
     getMovieDetails: vi.fn(() =>
       Promise.resolve({ posterURL: undefined, localizedName: undefined }),
