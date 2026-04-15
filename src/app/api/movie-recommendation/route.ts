@@ -226,7 +226,8 @@ export async function POST(req: NextRequest) {
           );
 
           // JIT seeding in background — do not await so it never blocks the response.
-          // Pass only local titles so the TMDB movies just returned to the user can be seeded.
+          // Pass composite local (name|year) keys so background seeding can deduplicate
+          // against movies already present in the local DB while still seeding new TMDB results.
           seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
         }
       } else {

@@ -373,7 +373,7 @@ export function seedMoviesInBackground(
         }
         if (!embedding) continue;
 
-        await db.from('movies').insert({
+        const { error: insertError } = await db.from('movies').insert({
           name: movie.title,
           year,
           age_rating: 'NR',
@@ -383,9 +383,27 @@ export function seedMoviesInBackground(
           embedding,
         });
 
+        if (insertError) {
+          const errMsg = insertError.message;
+          const isDuplicateEntry =
+            errMsg.toLowerCase().includes('unique') ||
+            errMsg.toLowerCase().includes('duplicate') ||
+            errMsg.toLowerCase().includes('already exists');
+
+          if (isDuplicateEntry) {
+            logger.debug(
+              { movieTitle: movie.title },
+              'JIT seeding skipped — movie already in database',
+            );
+          } else {
+            logger.warn({ err: insertError, movieTitle: movie.title }, 'JIT seeding insert failed');
+          }
+          continue;
+        }
+
         logger.info({ movieTitle: movie.title, year }, 'JIT seeded TMDB movie into database');
       } catch (err) {
-        // Distinguish expected constraint violations (movie already in DB) from unexpected errors
+        // Catch truly thrown errors (e.g. network failures during embedding)
         const errMsg = err instanceof Error ? err.message : String(err);
         const isDuplicateEntry =
           errMsg.toLowerCase().includes('unique') ||
