@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  extractUSCertification,
-  movieToEmbeddingText,
-  searchMovie,
-} from './tmdb.js';
+import { extractUSCertification, movieToEmbeddingText, searchMovie } from './tmdb.js';
 
 import type { TMDBMovieDetails } from './tmdb.js';
 
@@ -116,7 +112,14 @@ describe('extractUSCertification', () => {
 
 describe('movieToEmbeddingText', () => {
   it('produces correct multi-line embedding text', () => {
-    const text = movieToEmbeddingText('Inception', 2010, 'PG-13', 148, 'A mind-bending thriller.', 8.8);
+    const text = movieToEmbeddingText(
+      'Inception',
+      2010,
+      'PG-13',
+      148,
+      'A mind-bending thriller.',
+      8.8,
+    );
     expect(text).toBe(
       'Inception (2010)\nRating: PG-13\nDuration: 148 min\nScore: 8.8/10\nDescription: A mind-bending thriller.',
     );

@@ -23,24 +23,32 @@ vi.mock('@/utils/ai/moderation', () => ({
 }));
 
 // Mock OpenAI client (embeddings + chat)
+const mockEmbeddingsCreate = vi.fn(() =>
+  Promise.resolve({ data: [{ embedding: new Array(3072).fill(0) }] }),
+);
+// Typed broadly to accept any arguments so mockImplementation can use call args for routing.
+const mockChatCompletionsCreate = vi.fn<
+  (...args: unknown[]) => Promise<{ choices: { message: { content: string } }[] }>
+>(() =>
+  Promise.resolve({
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+        },
+      },
+    ],
+  }),
+);
 vi.mock('@/clients', () => ({
   openAIClient: {
     embeddings: {
-      create: vi.fn(() => Promise.resolve({ data: [{ embedding: new Array(3072).fill(0) }] })),
+      create: (...args: Parameters<typeof mockEmbeddingsCreate>) => mockEmbeddingsCreate(...args),
     },
     chat: {
       completions: {
-        create: vi.fn(() =>
-          Promise.resolve({
-            choices: [
-              {
-                message: {
-                  content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
-                },
-              },
-            ],
-          }),
-        ),
+        create: (...args: Parameters<typeof mockChatCompletionsCreate>) =>
+          mockChatCompletionsCreate(...args),
       },
     },
   },
@@ -348,6 +356,217 @@ describe('POST /api/movie-recommendation – input validation', () => {
       const req = makeRequest(Array(11).fill(validPerson));
       const res = await POST(req);
       expect(res.status).toBe(400);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Query enrichment (semantic query refinement via gpt-5.4-mini)
+// ---------------------------------------------------------------------------
+
+/** Shape of a single chat.completions.create call's first argument in the mock. */
+type ChatCompletionCallArg = { model: string; messages: { role: string; content: string }[] };
+
+/** Distinctive substring of the enrichment system prompt — used to detect enrichment calls. */
+const ENRICHMENT_SYSTEM_PROMPT_MARKER = 'Movie Semantic Analyst';
+
+describe('POST /api/movie-recommendation — query enrichment', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Context-aware default: return semantic tags for the enrichment call (detected by system
+    // prompt) and valid recommendation JSON for all other chat calls.
+    mockChatCompletionsCreate.mockImplementation((...args) => {
+      const callArgs = args[0] as { messages: { role: string; content: string }[] };
+      const isEnrichment = callArgs.messages.some((m) =>
+        m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER),
+      );
+      return Promise.resolve({
+        choices: [
+          {
+            message: {
+              content: isEnrichment
+                ? 'drama, tension, character-driven'
+                : JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+            },
+          },
+        ],
+      });
+    });
+    mockEmbeddingsCreate.mockResolvedValue({ data: [{ embedding: new Array(3072).fill(0) }] });
+  });
+
+  describe('favoriteMovieWhy field schema validation', () => {
+    it('accepts a request with a valid favoriteMovieWhy field', async () => {
+      const req = makeRequest({
+        ...validPerson,
+        favoriteMovieWhy: 'I love psychological thrillers',
+      });
+      const res = await POST(req);
+      expect(res.status).not.toBe(400);
+    });
+
+    it('accepts a request without favoriteMovieWhy (optional field)', async () => {
+      const req = makeRequest(validPerson);
+      const res = await POST(req);
+      expect(res.status).not.toBe(400);
+    });
+
+    it('rejects favoriteMovieWhy exceeding 300 characters', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovieWhy: 'x'.repeat(301) });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data).toHaveProperty('error');
+      expect(data.details).toContain('300');
+    });
+
+    it('accepts favoriteMovieWhy exactly at 300 characters', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovieWhy: 'x'.repeat(300) });
+      const res = await POST(req);
+      expect(res.status).not.toBe(400);
+    });
+  });
+
+  describe('LLM enrichment call behavior', () => {
+    it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {
+      // First call = enrichment, then recommendation + description calls
+      mockChatCompletionsCreate
+        .mockResolvedValueOnce({
+          choices: [{ message: { content: 'psychological tension, paranoia, isolation' } }],
+        })
+        .mockResolvedValue({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+              },
+            },
+          ],
+        });
+
+      const reqWithWhy = makeRequest({
+        ...validPerson,
+        favoriteMovieWhy: 'I want something tense and psychological',
+      });
+
+      const res = await POST(reqWithWhy);
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const hasEnrichmentCall = calls.some((callArgs) => {
+        const messages = callArgs[0].messages;
+        return messages.some((m) => m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER));
+      });
+      expect(hasEnrichmentCall).toBe(true);
+    });
+
+    it('the enrichment call is skipped when favoriteMovieWhy is absent', async () => {
+      const req = makeRequest(validPerson);
+      await POST(req);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      // None of the calls should use the enrichment system prompt
+      const hasEnrichmentCall = calls.some((callArgs) => {
+        const messages = callArgs[0].messages;
+        return messages.some((m) => m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER));
+      });
+      expect(hasEnrichmentCall).toBe(false);
+    });
+
+    it('the enrichment call is skipped when favoriteMovieWhy is an empty string', async () => {
+      const req = makeRequest({ ...validPerson, favoriteMovieWhy: '' });
+      await POST(req);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const hasEnrichmentCall = calls.some((callArgs) => {
+        const messages = callArgs[0].messages;
+        return messages.some((m) => m.content?.includes(ENRICHMENT_SYSTEM_PROMPT_MARKER));
+      });
+      expect(hasEnrichmentCall).toBe(false);
+    });
+
+    it('uses enrichment system prompt when calling the LLM for query refinement', async () => {
+      mockChatCompletionsCreate
+        .mockResolvedValueOnce({
+          choices: [{ message: { content: 'suspense, mystery, dark atmosphere' } }],
+        })
+        .mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+              },
+            },
+          ],
+        });
+
+      const req = makeRequest({
+        ...validPerson,
+        favoriteMovieWhy: 'Something dark and mysterious',
+      });
+      await POST(req);
+
+      const firstCallArgs = mockChatCompletionsCreate.mock.calls[0] as unknown as [
+        ChatCompletionCallArg,
+      ];
+      const firstCall = firstCallArgs[0];
+      expect(firstCall.model).toBe('gpt-5.4-mini');
+      expect(firstCall.messages[0].role).toBe('system');
+      expect(firstCall.messages[0].content).toContain(ENRICHMENT_SYSTEM_PROMPT_MARKER);
+      expect(firstCall.messages[1].role).toBe('user');
+      expect(firstCall.messages[1].content).toBe('Something dark and mysterious');
+    });
+
+    it('excludes raw favoriteMovieWhy from embedding input and appends refinedQueryTags when enrichment succeeds', async () => {
+      const refinedTags = 'psychological tension, paranoia, isolation';
+      mockChatCompletionsCreate
+        .mockResolvedValueOnce({
+          choices: [{ message: { content: refinedTags } }],
+        })
+        .mockResolvedValue({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+              },
+            },
+          ],
+        });
+
+      const rawWhyText = 'I want something tense and psychological';
+      const req = makeRequest({ ...validPerson, favoriteMovieWhy: rawWhyText });
+      await POST(req);
+
+      const embeddingCallArgs = mockEmbeddingsCreate.mock.calls[0] as unknown as [
+        { model: string; input: string },
+      ];
+      const embeddingInput = embeddingCallArgs[0].input;
+
+      expect(embeddingInput).not.toContain(rawWhyText);
+      expect(embeddingInput).toContain(`refinedQueryTags: ${refinedTags}`);
+    });
+
+    it('still succeeds (falls back to raw text) when enrichment LLM call fails', async () => {
+      mockChatCompletionsCreate
+        .mockRejectedValueOnce(new Error('LLM timeout'))
+        .mockResolvedValueOnce({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({ title: 'Test Movie', description: 'Great film.' }),
+              },
+            },
+          ],
+        });
+
+      const req = makeRequest({
+        ...validPerson,
+        favoriteMovieWhy: 'I want a mind-bending film',
+      });
+      const res = await POST(req);
+
+      // Should not fail — enrichment failure is non-fatal
+      expect(res.status).not.toBe(500);
     });
   });
 });

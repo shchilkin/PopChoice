@@ -14,14 +14,14 @@ Movies for which TMDB returns no runtime are skipped (logged as warnings) so the
 
 ## Environment Variables
 
-| Variable        | Required | Default     | Description                                         |
-| --------------- | -------- | ----------- | --------------------------------------------------- |
-| `TMDB_API_KEY`  | ✅       | —           | TMDB v4 read access token (Bearer auth)             |
-| `OPENAI_API_KEY` | ✅       | —           | OpenAI API key for generating embeddings            |
-| `DATABASE_URL`  | ✅       | —           | PostgreSQL connection string (with pgvector)        |
-| `DRY_RUN`       | ❌       | `false`     | Set to `true` to log changes without writing to DB  |
-| `BATCH_SIZE`    | ❌       | `5`         | Number of parallel TMDB detail requests per batch   |
-| `MAX_MOVIES`    | ❌       | `0`         | Max movies to process; `0` means all               |
+| Variable         | Required | Default | Description                                        |
+| ---------------- | -------- | ------- | -------------------------------------------------- |
+| `TMDB_API_KEY`   | ✅       | —       | TMDB v4 read access token (Bearer auth)            |
+| `OPENAI_API_KEY` | ✅       | —       | OpenAI API key for generating embeddings           |
+| `DATABASE_URL`   | ✅       | —       | PostgreSQL connection string (with pgvector)       |
+| `DRY_RUN`        | ❌       | `false` | Set to `true` to log changes without writing to DB |
+| `BATCH_SIZE`     | ❌       | `5`     | Number of parallel TMDB detail requests per batch  |
+| `MAX_MOVIES`     | ❌       | `0`     | Max movies to process; `0` means all               |
 
 > **Note:** `TMDB_API_KEY` must be a **TMDB v4 read access token** (not a v3 API key). It is sent as `Authorization: Bearer <token>`. You can generate one in the TMDB dashboard under **Settings → API → Read Access Token**.
 

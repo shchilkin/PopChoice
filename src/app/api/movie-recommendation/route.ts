@@ -105,6 +105,10 @@ const personFormDataSchema = z.object({
     .trim()
     .min(1, 'Favorite movie is required')
     .max(500, 'Favorite movie must be 500 characters or fewer'),
+  favoriteMovieWhy: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().trim().max(300, 'Favorite movie reason must be 300 characters or fewer').optional(),
+  ),
   newVsClassic: z
     .string()
     .trim()
@@ -493,11 +497,17 @@ function seedMoviesInBackground(
   })();
 }
 
-const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string => {
+const combineAllPeopleDataToString = (
+  allPeopleData: PersonFormData[],
+  options: { excludeKeys?: (keyof PersonFormData)[] } = {},
+): string => {
+  const { excludeKeys = [] } = options;
+
   if (allPeopleData.length === 1) {
     // Single person - same as before
     const data = allPeopleData[0];
     return Object.entries(data)
+      .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
   }
@@ -508,6 +518,7 @@ const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string =
   allPeopleData.forEach((personData, index) => {
     combinedString += `Person ${index + 1}:\n`;
     combinedString += Object.entries(personData)
+      .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
     combinedString += '\n\n';
@@ -515,6 +526,81 @@ const combineAllPeopleDataToString = (allPeopleData: PersonFormData[]): string =
 
   return combinedString.trim();
 };
+
+/**
+ * Build the embedding input string, substituting refined semantic tags for raw "Why?" text.
+ * When refined tags are available the raw favoriteMovieWhy field is excluded to avoid noise.
+ */
+const buildEmbeddingInputWithRefinedTags = (
+  allPeopleData: PersonFormData[],
+  refinedQueryTags: string,
+): string => {
+  const base = combineAllPeopleDataToString(allPeopleData, { excludeKeys: ['favoriteMovieWhy'] });
+  return `${base}\nrefinedQueryTags: ${refinedQueryTags}`;
+};
+
+// ---------------------------------------------------------------------------
+// Query enrichment
+// ---------------------------------------------------------------------------
+
+const QUERY_ENRICHMENT_SYSTEM_PROMPT =
+  'You are a Professional Movie Semantic Analyst. Transform user input into a high-density list of semantic tags. Extract: Core Themes, Atmospheric Keywords, Narrative Tropes, and Visual Styles. Output ONLY a comma-separated list of English keywords. No filler.';
+
+/**
+ * Use a lightweight LLM to convert natural-language "Why?" text into a dense list of
+ * cinema-specific semantic tags that produce higher-signal embeddings.
+ *
+ * Returns `null` if no "Why?" text is present or if the LLM call fails (fail-open
+ * so the caller falls back to raw text embedding).
+ */
+async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promise<string | null> {
+  const whyTexts = allPeopleData
+    .map((p) => p.favoriteMovieWhy)
+    .filter((text): text is string => Boolean(text?.trim()));
+
+  if (whyTexts.length === 0) return null;
+
+  const rawText = whyTexts.join(' ');
+
+  try {
+    const response = await openAIClient.chat.completions.create({
+      model: 'gpt-5.4-mini',
+      messages: [
+        { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
+        { role: 'user', content: rawText },
+      ],
+      max_completion_tokens: 200,
+      temperature: 0,
+    });
+
+    const refinedTags = response.choices[0]?.message?.content?.trim();
+
+    if (!refinedTags) {
+      logger.warn(
+        { rawTextLength: rawText.length },
+        'Query enrichment returned empty response, falling back to raw text',
+      );
+      return null;
+    }
+
+    logger.info(
+      { rawTextLength: rawText.length, refinedTagsLength: refinedTags.length },
+      'Query enrichment: raw user text refined to semantic tags',
+    );
+
+    return refinedTags;
+  } catch (error) {
+    const err =
+      error instanceof Error
+        ? { name: error.name, message: error.message }
+        : { name: 'UnknownError', message: 'An unknown error occurred' };
+    logger.warn(
+      { err, rawTextLength: rawText.length },
+      'Query enrichment failed, falling back to raw text embedding',
+    );
+    return null;
+  }
+}
 
 async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch[] | null> {
   const db = getDbClient();
@@ -538,11 +624,15 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
 }
 
 // Helper: Create embedding for user request
-async function createEmbedding(allPeopleData: PersonFormData[]) {
+async function createEmbedding(allPeopleData: PersonFormData[], refinedQueryTags?: string) {
   try {
+    const embeddingInput = refinedQueryTags
+      ? buildEmbeddingInputWithRefinedTags(allPeopleData, refinedQueryTags)
+      : combineAllPeopleDataToString(allPeopleData);
+
     const embeddingResponse = await openAIClient.embeddings.create({
       model: 'text-embedding-3-large',
-      input: combineAllPeopleDataToString(allPeopleData),
+      input: embeddingInput,
     });
     if (!embeddingResponse?.data?.[0]?.embedding) {
       throw new Error('No embedding returned from OpenAI.');
@@ -828,11 +918,15 @@ export async function POST(req: NextRequest) {
 
     // Step 0: Protect against prompt injection, then moderate + judge all user inputs.
     //
-    // Phase A — structural injection check on favoriteMovie (fast regex, no API call).
-    // This must run before any LLM sees the text.
-    const injectionDetected = allPeopleData.some((p) => checkForPromptInjection(p.favoriteMovie));
+    // Phase A — structural injection check on favoriteMovie and favoriteMovieWhy
+    // (fast regex, no API call). This must run before any LLM sees the text.
+    const injectionDetected = allPeopleData.some(
+      (p) =>
+        checkForPromptInjection(p.favoriteMovie) ||
+        checkForPromptInjection(p.favoriteMovieWhy ?? ''),
+    );
     if (injectionDetected) {
-      logger.warn('Prompt injection attempt detected in favoriteMovie field');
+      logger.warn('Prompt injection attempt detected in user input');
       return NextResponse.json(
         {
           error:
@@ -844,9 +938,13 @@ export async function POST(req: NextRequest) {
 
     // Phase B — Moderation API on all fields including the movie title.
     const textsToModerate = allPeopleData.flatMap((p) =>
-      [p.favoriteMovie, p.newVsClassic, p.tonePreference, ...p.moodPreference].filter(
-        (text): text is string => typeof text === 'string' && text.length > 0,
-      ),
+      [
+        p.favoriteMovie,
+        p.newVsClassic,
+        p.tonePreference,
+        p.favoriteMovieWhy,
+        ...p.moodPreference,
+      ].filter((text): text is string => typeof text === 'string' && text.length > 0),
     );
     const moderationResult = await moderateInput(textsToModerate);
 
@@ -878,6 +976,7 @@ export async function POST(req: NextRequest) {
         { field: 'newVsClassic', value: p.newVsClassic },
         { field: 'tonePreference', value: p.tonePreference },
         ...p.moodPreference.map((m) => ({ field: 'moodPreference', value: m })),
+        ...(p.favoriteMovieWhy ? [{ field: 'favoriteMovieWhy', value: p.favoriteMovieWhy }] : []),
       ]);
       const judgeResult = await judgeForMoviePlatform(labeledInputs, moderationResult.categories);
 
@@ -902,9 +1001,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1: Create embedding and fetch DB count in parallel
-    const [embedding, dbMovieCountResult] = await Promise.all([
-      createEmbedding(allPeopleData),
+    // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM,
+    // while the DB movie count is fetched in parallel (both are independent of each other).
+    // Falls back gracefully to raw text if the LLM call fails or the field is empty.
+    const [refinedQueryTags, dbMovieCountResult] = await Promise.all([
+      refineQueryWithLLM(allPeopleData),
       (async () => {
         try {
           const db = getDbClient();
@@ -916,6 +1017,10 @@ export async function POST(req: NextRequest) {
         }
       })(),
     ]);
+
+    // Step 1: Create embedding (sequential after enrichment — depends on refinedQueryTags).
+    // DB count was already fetched in parallel above, so this only adds embedding latency.
+    const embedding = await createEmbedding(allPeopleData, refinedQueryTags ?? undefined);
     logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
 
     // Step 2: Find similar movies (local vector search)
@@ -1114,6 +1219,8 @@ export async function GET() {
           description: 'Single person data or array of people data',
           schema: {
             favoriteMovie: 'string (required)',
+            favoriteMovieWhy:
+              'string (optional, max 300 chars) — why you love that movie; empty/whitespace is treated as absent',
             newVsClassic: 'string (required)',
             moodPreference: 'string[] (required, min 1)',
             tonePreference: 'string (required)',
@@ -1137,6 +1244,7 @@ export async function GET() {
     examples: {
       singlePerson: {
         favoriteMovie: 'The Matrix',
+        favoriteMovieWhy: 'I love the mind-bending reality twists and tense action',
         newVsClassic: 'new',
         moodPreference: ['action', 'sci-fi'],
         tonePreference: 'serious',
@@ -1144,6 +1252,7 @@ export async function GET() {
       multiplePeople: [
         {
           favoriteMovie: 'The Matrix',
+          favoriteMovieWhy: 'Mind-bending and visually stunning',
           newVsClassic: 'new',
           moodPreference: ['action'],
           tonePreference: 'serious',
