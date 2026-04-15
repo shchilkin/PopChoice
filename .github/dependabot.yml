@@ -118,6 +118,14 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+      dev-misc:
+        applies-to: version-updates
+        dependency-type: 'development'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
       npm-security-patches:
         applies-to: security-updates
         patterns:
