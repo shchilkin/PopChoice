@@ -359,10 +359,63 @@ async function fetchTMDBDiscoverMovies(
 }
 
 /**
+ * Dot product of two unit-norm vectors equals their cosine similarity.
+ * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return dot;
+}
+
+/**
+ * Embed every TMDB movie in a single batched API call, compute real cosine similarity
+ * against the user's query embedding, and return fully-populated EnhancedMovieMatch objects.
+ * Falls back to a neutral score (0.35) for any movie whose embedding could not be obtained.
+ */
+async function scoreAndConvertTMDBMovies(
+  movies: TMDBDiscoverMovie[],
+  queryEmbedding: number[],
+): Promise<EnhancedMovieMatch[]> {
+  if (movies.length === 0) return [];
+
+  const texts = movies.map((m) => {
+    const year = parseTMDBReleaseYear(m.release_date);
+    const score = Number(m.vote_average?.toFixed(1)) || 0;
+    return [`${m.title} (${year}) | TMDB Score: ${score}/10`, m.overview || '']
+      .filter(Boolean)
+      .join('\n');
+  });
+
+  let embeddings: number[][] = [];
+  try {
+    const response = await openAIClient.embeddings.create({
+      model: 'text-embedding-3-large',
+      input: texts,
+    });
+    embeddings = response.data.map((d) => d.embedding);
+  } catch (error) {
+    logger.warn(
+      { err: error },
+      'Failed to embed TMDB movies for similarity scoring — using fallback score',
+    );
+  }
+
+  return movies.map((movie, i) => {
+    const movieEmbedding = embeddings[i];
+    const similarity = movieEmbedding ? cosineSimilarity(queryEmbedding, movieEmbedding) : 0.35;
+    return tmdbMovieToEnhancedMatch(movie, similarity);
+  });
+}
+
+/**
  * Convert a TMDB discover result to the EnhancedMovieMatch shape used by the rest of the route.
  * Uses a negative TMDB ID so it is distinct from positive local DB IDs.
  */
-function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch {
+function tmdbMovieToEnhancedMatch(
+  movie: TMDBDiscoverMovie,
+  similarity: number,
+): EnhancedMovieMatch {
   const year = parseTMDBReleaseYear(movie.release_date);
   const score = Number(movie.vote_average?.toFixed(1)) || 0;
 
@@ -381,7 +434,7 @@ function tmdbMovieToEnhancedMatch(movie: TMDBDiscoverMovie): EnhancedMovieMatch 
     duration: 0,
     score_rating: score,
     year,
-    similarity: 0.6, // Below SIMILARITY_THRESHOLD — clearly a broadened result
+    similarity,
     content,
     posterURL,
   };
@@ -1059,13 +1112,13 @@ export async function POST(req: NextRequest) {
             localTitles.add(nameLower);
           }
           const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
-          const newTMDBMatches = tmdbMovies
+          const filteredTMDBMovies = tmdbMovies
             .filter((m) => {
               const tmdbYear = parseTMDBReleaseYear(m.release_date);
               return !localKeys.has(`${m.title.toLowerCase()}|${tmdbYear}`);
             })
-            .slice(0, slotsRemaining)
-            .map(tmdbMovieToEnhancedMatch);
+            .slice(0, slotsRemaining);
+          const newTMDBMatches = await scoreAndConvertTMDBMovies(filteredTMDBMovies, embedding);
 
           similarMovies = [...localResultsForMerge, ...newTMDBMatches].slice(0, MAX_TOTAL_MOVIES);
 

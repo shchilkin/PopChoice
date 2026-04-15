@@ -157,6 +157,20 @@ const LOCALE_TO_TMDB_LANG: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Similarity helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Dot product of two unit-norm vectors equals cosine similarity.
+ * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return dot;
+}
+
+// ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
@@ -216,6 +230,36 @@ export async function POST(req: NextRequest) {
 
     if (candidates.length === 0) {
       return NextResponse.json({ movies: [] });
+    }
+
+    // Compute real cosine similarities between the query and each TMDB candidate.
+    // Both embeddings use the same model so their dot product is the cosine similarity.
+    const queryText = combineAllPeopleDataToString(allPeopleData);
+    const candidateTexts = candidates.map((m) => {
+      const year = parseTMDBReleaseYear(m.release_date);
+      const score = Number(m.vote_average?.toFixed(1)) || 0;
+      return [`${m.title} (${year}) | TMDB Score: ${score}/10`, m.overview || '']
+        .filter(Boolean)
+        .join('\n');
+    });
+
+    const similarityMap = new Map<number, number>();
+    try {
+      const [queryEmbedRes, movieEmbedRes] = await Promise.all([
+        openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: queryText }),
+        openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: candidateTexts }),
+      ]);
+      const queryEmbedding = queryEmbedRes.data[0]?.embedding ?? [];
+      candidates.forEach((m, i) => {
+        const movieEmbedding = movieEmbedRes.data[i]?.embedding;
+        if (movieEmbedding)
+          similarityMap.set(m.id, cosineSimilarity(queryEmbedding, movieEmbedding));
+      });
+    } catch (err) {
+      logger.warn(
+        { err },
+        'more-tmdb-picks: embedding for similarity failed — using fallback score',
+      );
     }
 
     // Build descriptions in parallel
@@ -338,7 +382,7 @@ Respond in ${language} only.`;
             id: -tmdb.id,
             name: localizedTitle,
             year,
-            similarity: 0.6, // Consistent with main route TMDB placeholder
+            similarity: similarityMap.get(tmdb.id) ?? 0.35,
             age_rating: undefined as undefined,
             duration: runtime,
             score_rating: score,
