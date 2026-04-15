@@ -194,6 +194,13 @@ export async function fetchTMDBDiscoverMovies(
  * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) {
+    logger.warn(
+      { aLength: a.length, bLength: b.length },
+      'Skipping cosine similarity for mismatched embedding lengths',
+    );
+    return 0;
+  }
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
   return dot;
@@ -289,14 +296,17 @@ function tmdbMovieToEnhancedMatch(
  */
 export function seedMoviesInBackground(
   tmdbMovies: TMDBDiscoverMovie[],
-  existingLocalNames: Set<string>,
+  existingLocalKeys: Set<string>,
   precomputedEmbeddings?: Map<number, number[]>,
 ): void {
   const db = getDbClient();
   if (!db.isConfigured()) return;
 
   // Avoid re-seeding movies already present in the local results for this request
-  const toSeed = tmdbMovies.filter((m) => !existingLocalNames.has(m.title.toLowerCase()));
+  const toSeed = tmdbMovies.filter(
+    (m) =>
+      !existingLocalKeys.has(`${m.title.toLowerCase()}|${parseTMDBReleaseYear(m.release_date)}`),
+  );
   if (toSeed.length === 0) return;
 
   // Process in the background — intentionally not awaited

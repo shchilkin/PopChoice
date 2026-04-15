@@ -29,10 +29,7 @@ import {
 } from './tmdb';
 import { apiResponseSchema, requestBodySchema } from './types';
 
-import type { ApiResponse, EnhancedMovieMatch, MovieMatch, PersonFormData } from './types';
-
-// Re-export shared types that external modules may import from this path
-export type { EnhancedMovieMatch, MovieMatch };
+import type { ApiResponse, PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -195,14 +192,11 @@ export async function POST(req: NextRequest) {
           // ones. This prevents movies that are already in the DB (e.g. from a previous JIT
           // seeding) from being returned again via TMDB with fromTMDB=true, even if their
           // cosine similarity on this query falls just below SIMILARITY_THRESHOLD.
-          // - localKeys: composite (name|year) for TMDB dedup (handles remakes/sequels)
-          // - localTitles: title-only set passed to seedMoviesInBackground
+          // - localKeys: composite (name|year) for both TMDB dedup and seeding dedup
           const localKeys = new Set<string>();
-          const localTitles = new Set<string>();
           for (const m of similarMovies) {
             const nameLower = m.name.toLowerCase();
             localKeys.add(`${nameLower}|${m.year}`);
-            localTitles.add(nameLower);
           }
           const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
           const filteredTMDBMovies = tmdbMovies
@@ -233,7 +227,7 @@ export async function POST(req: NextRequest) {
 
           // JIT seeding in background — do not await so it never blocks the response.
           // Pass only local titles so the TMDB movies just returned to the user can be seeded.
-          seedMoviesInBackground(tmdbMovies, localTitles, tmdbEmbeddings);
+          seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
         }
       } else {
         logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
