@@ -1,0 +1,178 @@
+import { logger } from './logger.js';
+
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+
+export interface TMDBMovieDetails {
+  id: number;
+  title: string;
+  overview: string;
+  release_date: string;
+  vote_average: number;
+  runtime: number | null;
+  release_dates: {
+    results: Array<{
+      iso_3166_1: string;
+      release_dates: Array<{
+        certification: string;
+        type: number;
+      }>;
+    }>;
+  };
+}
+
+interface TMDBSearchResult {
+  id: number;
+  title: string;
+  release_date: string;
+}
+
+interface TMDBSearchResponse {
+  results: TMDBSearchResult[];
+}
+
+/** Year tolerance (in years) when disambiguating TMDB search results. */
+const YEAR_TOLERANCE = 1;
+
+/**
+ * Pick the first TMDB result whose release_date year is within YEAR_TOLERANCE of targetYear.
+ */
+function pickByYear(results: TMDBSearchResult[], targetYear: number): number | null {
+  for (const result of results) {
+    const releaseYear = result.release_date
+      ? parseInt(result.release_date.substring(0, 4), 10)
+      : NaN;
+    if (!Number.isNaN(releaseYear) && Math.abs(releaseYear - targetYear) <= YEAR_TOLERANCE) {
+      return result.id;
+    }
+  }
+  return null;
+}
+
+/**
+ * Execute a single TMDB /search/movie request and return the raw results array.
+ */
+async function tmdbSearch(
+  apiKey: string,
+  title: string,
+  year: number | null,
+): Promise<TMDBSearchResult[]> {
+  const url = new URL(`${TMDB_BASE_URL}/search/movie`);
+  url.searchParams.set('query', title);
+  url.searchParams.set('language', 'en-US');
+  if (year !== null && year > 0) {
+    url.searchParams.set('year', String(year));
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`TMDB search API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as TMDBSearchResponse;
+  return data.results ?? [];
+}
+
+/**
+ * Search TMDB for a movie by title and optional year.
+ *
+ * Strategy:
+ * 1. If year > 0, run a year-scoped search and validate results against ±YEAR_TOLERANCE.
+ * 2. Fall back to a year-less search:
+ *    - Still validate against ±YEAR_TOLERANCE when year > 0.
+ *    - Return the first result when year === 0 (no year to validate against).
+ * 3. Return null when no suitable match is found.
+ */
+export async function searchMovie(
+  apiKey: string,
+  title: string,
+  year: number,
+): Promise<number | null> {
+  if (year > 0) {
+    // 1. Year-scoped search
+    const scopedResults = await tmdbSearch(apiKey, title, year);
+    const id = pickByYear(scopedResults, year);
+    if (id !== null) return id;
+
+    // 2. Year-less fallback — TMDB may rank differently without the year filter
+    const broadResults = await tmdbSearch(apiKey, title, null);
+    return pickByYear(broadResults, year);
+  }
+
+  // year === 0 — year unknown, return first result without year validation
+  const results = await tmdbSearch(apiKey, title, null);
+  return results.length > 0 ? results[0].id : null;
+}
+
+/**
+ * Fetch full movie details including runtime and US certification.
+ */
+export async function fetchMovieDetails(
+  apiKey: string,
+  movieId: number,
+): Promise<TMDBMovieDetails | null> {
+  const url = new URL(`${TMDB_BASE_URL}/movie/${movieId}`);
+  url.searchParams.set('append_to_response', 'release_dates');
+  url.searchParams.set('language', 'en-US');
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    logger.warn('TMDB movie details fetch failed', {
+      movieId,
+      status: response.status,
+      statusText: response.statusText,
+    });
+    return null;
+  }
+
+  return (await response.json()) as TMDBMovieDetails;
+}
+
+/**
+ * Extract the US certification from movie details.
+ * Falls back to 'NR' if not found.
+ */
+export function extractUSCertification(details: TMDBMovieDetails): string {
+  const usEntry = details.release_dates?.results?.find((r) => r.iso_3166_1 === 'US');
+  if (!usEntry) return 'NR';
+
+  // Type 3 = Theatrical, prefer that; otherwise take the first with a certification
+  const theatrical = usEntry.release_dates.find((rd) => rd.type === 3 && rd.certification);
+  const any = usEntry.release_dates.find((rd) => rd.certification);
+  const cert = (theatrical ?? any)?.certification ?? '';
+  return cert || 'NR';
+}
+
+/**
+ * Convert movie data into a text description suitable for embedding.
+ * Format must match the format used by services/movie-seed/src/sync.ts.
+ * The `description` parameter should be the value from the DB (not TMDB overview),
+ * to keep embeddings consistent with the stored row.
+ */
+export function movieToEmbeddingText(
+  title: string,
+  year: number,
+  ageRating: string,
+  runtime: number,
+  description: string,
+  scoreRating: number,
+): string {
+  return [
+    `${title} (${year})`,
+    `Rating: ${ageRating}`,
+    `Duration: ${runtime} min`,
+    `Score: ${scoreRating.toFixed(1)}/10`,
+    `Description: ${description}`,
+  ].join('\n');
+}
