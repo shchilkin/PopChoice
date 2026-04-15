@@ -249,12 +249,15 @@ export async function POST(req: NextRequest) {
         openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: queryText }),
         openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: candidateTexts }),
       ]);
-      const queryEmbedding = queryEmbedRes.data[0]?.embedding ?? [];
-      candidates.forEach((m, i) => {
-        const movieEmbedding = movieEmbedRes.data[i]?.embedding;
-        if (movieEmbedding)
-          similarityMap.set(m.id, cosineSimilarity(queryEmbedding, movieEmbedding));
-      });
+      const queryEmbedding = queryEmbedRes.data[0]?.embedding;
+      if (queryEmbedding && queryEmbedding.length > 0) {
+        candidates.forEach((m, i) => {
+          const movieEmbedding = movieEmbedRes.data[i]?.embedding;
+          if (movieEmbedding && movieEmbedding.length === queryEmbedding.length) {
+            similarityMap.set(m.id, cosineSimilarity(queryEmbedding, movieEmbedding));
+          }
+        });
+      }
     } catch (err) {
       logger.warn(
         { err },
@@ -263,7 +266,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build descriptions in parallel
-    const preferenceContext = combineAllPeopleDataToString(allPeopleData);
+    const preferenceContext = queryText;
     const descriptionSystemPrompt = `CRITICAL: Your entire response MUST be written in ${language} only. Never use English or any other language unless ${language} is English.
 
 You are PopChoice, a movie expert creating personalized movie descriptions. Write a brief, engaging description (2-3 sentences) that:

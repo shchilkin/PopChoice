@@ -376,8 +376,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
 async function scoreAndConvertTMDBMovies(
   movies: TMDBDiscoverMovie[],
   queryEmbedding: number[],
-): Promise<EnhancedMovieMatch[]> {
-  if (movies.length === 0) return [];
+): Promise<{ matches: EnhancedMovieMatch[]; embeddings: Map<number, number[]> }> {
+  if (movies.length === 0) return { matches: [], embeddings: new Map() };
 
   const texts = movies.map((m) => {
     const year = parseTMDBReleaseYear(m.release_date);
@@ -387,13 +387,13 @@ async function scoreAndConvertTMDBMovies(
       .join('\n');
   });
 
-  let embeddings: number[][] = [];
+  let rawEmbeddings: number[][] = [];
   try {
     const response = await openAIClient.embeddings.create({
       model: 'text-embedding-3-large',
       input: texts,
     });
-    embeddings = response.data.map((d) => d.embedding);
+    rawEmbeddings = response.data.map((d) => d.embedding);
   } catch (error) {
     logger.warn(
       { err: error },
@@ -401,11 +401,15 @@ async function scoreAndConvertTMDBMovies(
     );
   }
 
-  return movies.map((movie, i) => {
-    const movieEmbedding = embeddings[i];
+  const embeddingsMap = new Map<number, number[]>();
+  const matches = movies.map((movie, i) => {
+    const movieEmbedding = rawEmbeddings[i];
+    if (movieEmbedding) embeddingsMap.set(movie.id, movieEmbedding);
     const similarity = movieEmbedding ? cosineSimilarity(queryEmbedding, movieEmbedding) : 0.35;
     return tmdbMovieToEnhancedMatch(movie, similarity);
   });
+
+  return { matches, embeddings: embeddingsMap };
 }
 
 /**
@@ -451,6 +455,7 @@ function tmdbMovieToEnhancedMatch(
 function seedMoviesInBackground(
   tmdbMovies: TMDBDiscoverMovie[],
   existingLocalNames: Set<string>,
+  precomputedEmbeddings?: Map<number, number[]>,
 ): void {
   const db = getDbClient();
   if (!db.isConfigured()) return;
@@ -503,19 +508,24 @@ function seedMoviesInBackground(
 
         const score = Number(movie.vote_average?.toFixed(1)) || 0;
 
-        const embeddingText = [
-          `${movie.title} (${year})`,
-          `Rating: NR`,
-          `Duration: 0 min`,
-          `Score: ${score}/10`,
-          `Description: ${movie.overview || ''}`,
-        ].join('\n');
+        // Reuse the embedding already computed during similarity scoring if available,
+        // falling back to a fresh API call only for movies not in the precomputed map.
+        let embedding: number[] | undefined = precomputedEmbeddings?.get(movie.id);
+        if (!embedding) {
+          const embeddingText = [
+            `${movie.title} (${year})`,
+            `Rating: NR`,
+            `Duration: 0 min`,
+            `Score: ${score}/10`,
+            `Description: ${movie.overview || ''}`,
+          ].join('\n');
 
-        const embeddingResponse = await openAIClient.embeddings.create({
-          model: 'text-embedding-3-large',
-          input: embeddingText,
-        });
-        const embedding = embeddingResponse.data[0]?.embedding;
+          const embeddingResponse = await openAIClient.embeddings.create({
+            model: 'text-embedding-3-large',
+            input: embeddingText,
+          });
+          embedding = embeddingResponse.data[0]?.embedding;
+        }
         if (!embedding) continue;
 
         await db.from('movies').insert({
@@ -1119,18 +1129,20 @@ export async function POST(req: NextRequest) {
             })
             .slice(0, slotsRemaining);
           const newTMDBMatches = await scoreAndConvertTMDBMovies(filteredTMDBMovies, embedding);
+          const tmdbEmbeddings = newTMDBMatches.embeddings;
+          const newTMDBMatchList = newTMDBMatches.matches;
 
-          similarMovies = [...localResultsForMerge, ...newTMDBMatches].slice(0, MAX_TOTAL_MOVIES);
+          similarMovies = [...localResultsForMerge, ...newTMDBMatchList].slice(0, MAX_TOTAL_MOVIES);
 
           // Only show the UI banner when TMDB movies are actually included
-          if (newTMDBMatches.length > 0) {
+          if (newTMDBMatchList.length > 0) {
             usedBroaderSearch = true;
           }
 
           logger.info(
             {
               localCount: localResultsForMerge.length,
-              tmdbCount: newTMDBMatches.length,
+              tmdbCount: newTMDBMatchList.length,
               finalCount: similarMovies.length,
             },
             'Merged local and TMDB results',
@@ -1138,7 +1150,7 @@ export async function POST(req: NextRequest) {
 
           // JIT seeding in background — do not await so it never blocks the response.
           // Pass only local titles so the TMDB movies just returned to the user can be seeded.
-          seedMoviesInBackground(tmdbMovies, localTitles);
+          seedMoviesInBackground(tmdbMovies, localTitles, tmdbEmbeddings);
         }
       } else {
         logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
