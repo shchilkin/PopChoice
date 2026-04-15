@@ -918,8 +918,8 @@ export async function POST(req: NextRequest) {
 
     // Step 0: Protect against prompt injection, then moderate + judge all user inputs.
     //
-    // Phase A — structural injection check on favoriteMovie (fast regex, no API call).
-    // This must run before any LLM sees the text.
+    // Phase A — structural injection check on favoriteMovie and favoriteMovieWhy
+    // (fast regex, no API call). This must run before any LLM sees the text.
     const injectionDetected = allPeopleData.some(
       (p) =>
         checkForPromptInjection(p.favoriteMovie) ||
