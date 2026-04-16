@@ -17,6 +17,15 @@ buildCommand = "npm ci"
 startCommand = "npm run start:workers"
 
 [[services]]
+name = "bull-board"
+
+[services.build]
+buildCommand = "npm ci"
+
+[services.deploy]
+startCommand = "npm run bull-board"
+
+[[services]]
 name = "storybook"
 
 [services.build]

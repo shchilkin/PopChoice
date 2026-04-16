@@ -5,7 +5,7 @@ import { Queue } from 'bullmq';
 import express from 'express';
 import IORedis from 'ioredis';
 
-const PORT = process.env.BULL_BOARD_PORT ? Number(process.env.BULL_BOARD_PORT) : 3001;
+const PORT = Number(process.env.PORT ?? process.env.BULL_BOARD_PORT ?? 3001);
 const REDIS_URL = process.env.REDIS_URL;
 
 if (!REDIS_URL) {
