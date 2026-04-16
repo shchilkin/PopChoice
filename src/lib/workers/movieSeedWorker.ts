@@ -42,7 +42,7 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
       {
         err,
         jobId: job?.id,
-        queuedMovies: job?.data.tmdbMovies.length ?? 0,
+        queuedMovies: job?.data?.tmdbMovies?.length ?? 0,
         attemptsMade,
         maxAttempts: MAX_MOVIE_SEED_ATTEMPTS,
         willRetry: attemptsMade < MAX_MOVIE_SEED_ATTEMPTS,
