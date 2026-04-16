@@ -43,6 +43,25 @@ const requestBodySchema = z.object({
 
 type PersonFormData = z.infer<typeof personFormDataSchema>;
 
+const tmdbMovieSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  overview: z.string(),
+  release_date: z.string(),
+  vote_average: z.number(),
+  poster_path: z.string().nullable(),
+});
+
+const tmdbDiscoverResponseSchema = z.object({
+  results: z.array(tmdbMovieSchema).optional(),
+});
+
+const tmdbMovieDetailSchema = z.object({
+  title: z.string().optional(),
+  runtime: z.number().nullable().optional(),
+  overview: z.string().optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Helpers (self-contained — mirrors logic from movie-recommendation/route.ts)
 // ---------------------------------------------------------------------------
@@ -135,15 +154,6 @@ function combineAllPeopleDataToString(allPeopleData: PersonFormData[]): string {
   return combined.trim();
 }
 
-interface TMDBMovie {
-  id: number;
-  title: string;
-  overview: string;
-  release_date: string;
-  vote_average: number;
-  poster_path: string | null;
-}
-
 const LOCALE_LANGUAGE: Record<string, string> = {
   en: 'English',
   ru: 'Russian',
@@ -220,11 +230,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'TMDB request failed' }, { status: 502 });
     }
 
-    const tmdbData = (await tmdbResponse.json()) as { results?: TMDBMovie[] };
+    const parsedDiscoverResponse = tmdbDiscoverResponseSchema.safeParse(await tmdbResponse.json());
+    if (!parsedDiscoverResponse.success) {
+      logger.warn(
+        { zodError: parsedDiscoverResponse.error },
+        'more-tmdb-picks: TMDB discover response validation failed',
+      );
+    }
 
     // Deduplicate against already-shown movies (excludeIds uses negative TMDB IDs)
     const excludedTmdbIds = new Set(excludeIds.map((id) => -id));
-    const candidates = (tmdbData.results ?? [])
+    const candidates = (
+      parsedDiscoverResponse.success ? (parsedDiscoverResponse.data.results ?? []) : []
+    )
       .filter((m) => !excludedTmdbIds.has(m.id))
       .slice(0, RESULTS_PER_PAGE);
 
@@ -315,14 +333,18 @@ Respond in ${language} only.`;
               { headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' } },
             );
             if (detailRes.ok) {
-              const detail = (await detailRes.json()) as {
-                title?: string;
-                runtime?: number;
-                overview?: string;
-              };
-              if (detail.title) localizedTitle = detail.title;
-              if (detail.runtime) runtime = detail.runtime;
-              if (detail.overview) localizedOverview = detail.overview;
+              const parsedDetailResponse = tmdbMovieDetailSchema.safeParse(await detailRes.json());
+              if (parsedDetailResponse.success) {
+                const detail = parsedDetailResponse.data;
+                if (detail.title) localizedTitle = detail.title;
+                if (detail.runtime) runtime = detail.runtime;
+                if (detail.overview) localizedOverview = detail.overview;
+              } else {
+                logger.warn(
+                  { zodError: parsedDetailResponse.error, tmdbId: tmdb.id },
+                  'more-tmdb-picks: TMDB detail response validation failed',
+                );
+              }
             }
           } catch {
             // Non-critical — fall back to discover-provided values
