@@ -714,4 +714,16 @@ describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
     const res = await POST(makeRequest(validPerson));
     expect(res.status).not.toBe(500);
   });
+
+  it('handles invalid TMDB discover payloads without failing the request', async () => {
+    process.env.TMDB_API_KEY = tmdbEnv.TMDB_API_KEY;
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ results: [{ id: 'invalid-id' }] }),
+    } as Response);
+
+    const res = await POST(makeRequest(validPerson));
+    expect(res.status).not.toBe(500);
+  });
 });
