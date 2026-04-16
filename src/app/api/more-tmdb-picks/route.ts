@@ -144,6 +144,9 @@ interface TMDBMovie {
   overview: string;
   release_date: string;
   vote_average: number;
+  vote_count: number;
+  genre_ids: number[];
+  popularity: number;
   poster_path: string | null;
 }
 
