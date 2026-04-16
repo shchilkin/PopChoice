@@ -6,11 +6,14 @@ const movieSeedWorker = createMovieSeedWorker();
 
 if (!movieSeedWorker) {
   logger.warn('No workers started.');
-  process.exit(0);
 }
 
 const shutdown = async (signal: NodeJS.Signals) => {
   logger.info({ signal }, 'Shutting down workers');
+  if (!movieSeedWorker) {
+    process.exit(0);
+  }
+
   try {
     await movieSeedWorker.close();
     logger.info('Movie seeding worker closed gracefully');

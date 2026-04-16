@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
-import { seedQueue } from '@/lib/jobQueue';
+import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import {
@@ -238,12 +238,7 @@ export async function POST(req: NextRequest) {
                   localKeys: Array.from(localKeys),
                   tmdbEmbeddings: serializeTMDBEmbeddings(tmdbEmbeddings),
                 },
-                {
-                  attempts: 3,
-                  backoff: { type: 'exponential', delay: 2000 },
-                  removeOnComplete: 100,
-                  removeOnFail: 50,
-                },
+                MOVIE_SEED_JOB_OPTIONS,
               );
               logger.info({ queuedMovies: tmdbMovies.length }, 'Queued TMDB seeding job');
             } catch (error) {
@@ -255,7 +250,8 @@ export async function POST(req: NextRequest) {
             }
           } else {
             logger.warn(
-              'REDIS_URL not set or queue unavailable — falling back to fire-and-forget seeding',
+              { redisConfigured: Boolean(process.env.REDIS_URL) },
+              'Movie seed queue unavailable — falling back to fire-and-forget TMDB seeding',
             );
             seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
           }

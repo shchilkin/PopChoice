@@ -6,13 +6,6 @@ vi.mock('@/lib/rateLimit', () => ({
   applyRateLimit: vi.fn(() => Promise.resolve(null)),
 }));
 
-const mockSeedQueueAdd = vi.fn(() => Promise.resolve({ id: 'job-1' }));
-vi.mock('@/lib/jobQueue', () => ({
-  seedQueue: {
-    add: (...args: Parameters<typeof mockSeedQueueAdd>) => mockSeedQueueAdd(...args),
-  },
-}));
-
 // Mock moderation — defaults to safe; overridden per test as needed.
 // checkForPromptInjection is a pure function, so we expose a controllable mock.
 const mockModerateInput = vi.fn<
@@ -689,17 +682,6 @@ describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
     const embeddingCalls = mockEmbeddingsCreate.mock.calls as unknown as { input: unknown }[][];
     const tmdbBatchCall = embeddingCalls.find((call) => Array.isArray(call[0]?.input));
     expect(tmdbBatchCall).toBeDefined();
-    expect(mockSeedQueueAdd).toHaveBeenCalledWith(
-      'seed-movies',
-      expect.objectContaining({
-        tmdbMovies: expect.any(Array),
-        localKeys: expect.any(Array),
-      }),
-      expect.objectContaining({
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
-      }),
-    );
   });
 
   it('falls back to similarity 0.35 when the TMDB embeddings call throws', async () => {

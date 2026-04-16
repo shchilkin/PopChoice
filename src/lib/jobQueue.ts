@@ -12,6 +12,13 @@ export type MovieSeedJobData = {
   tmdbEmbeddings?: SerializableTMDBEmbeddings;
 };
 
+export const MOVIE_SEED_JOB_OPTIONS = {
+  attempts: 3,
+  backoff: { type: 'exponential' as const, delay: 2000 },
+  removeOnComplete: 100,
+  removeOnFail: 50,
+};
+
 export function createBullMQConnection(): IORedis | null {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) return null;

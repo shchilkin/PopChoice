@@ -1,7 +1,11 @@
 import { Worker } from 'bullmq';
 
 import { deserializeTMDBEmbeddings, seedMovies } from '@/app/api/movie-recommendation/tmdb';
-import { MOVIE_SEED_QUEUE_NAME, createBullMQConnection } from '@/lib/jobQueue';
+import {
+  MOVIE_SEED_JOB_OPTIONS,
+  MOVIE_SEED_QUEUE_NAME,
+  createBullMQConnection,
+} from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 
 import type { MovieSeedJobData } from '@/lib/jobQueue';
@@ -31,8 +35,17 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
   });
 
   worker.on('failed', (job, err) => {
+    const maxAttempts = MOVIE_SEED_JOB_OPTIONS.attempts;
+    const attemptsMade = job?.attemptsMade ?? 0;
     logger.error(
-      { err, jobId: job?.id, queuedMovies: job?.data.tmdbMovies.length ?? 0 },
+      {
+        err,
+        jobId: job?.id,
+        queuedMovies: job?.data.tmdbMovies.length ?? 0,
+        attemptsMade,
+        maxAttempts,
+        willRetry: attemptsMade < maxAttempts,
+      },
       'Movie seeding job failed',
     );
   });
