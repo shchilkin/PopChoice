@@ -15,6 +15,24 @@ const baseLogger = pino({
 type LogFields = Record<string, unknown>;
 type PinoLogMethod = (objOrMsg: object | string, msg?: string, ...args: unknown[]) => void;
 
+const SENSITIVE_KEYS = new Set([
+  'apikey',
+  'api_key',
+  'password',
+  'token',
+  'secret',
+  'authorization',
+]);
+
+function redactSensitiveFields(obj: LogFields): LogFields {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      key,
+      SENSITIVE_KEYS.has(key.toLowerCase()) ? '[REDACTED]' : value,
+    ]),
+  );
+}
+
 // Bind methods once to avoid repeated function allocation on every log call
 const boundTrace = baseLogger.trace.bind(baseLogger) as PinoLogMethod;
 const boundDebug = baseLogger.debug.bind(baseLogger) as PinoLogMethod;
@@ -25,7 +43,7 @@ const boundFatal = baseLogger.fatal.bind(baseLogger) as PinoLogMethod;
 
 function logWithFields(method: PinoLogMethod, message: string, extra?: LogFields): void {
   if (extra !== undefined) {
-    method(extra, message);
+    method(redactSensitiveFields(extra), message);
   } else {
     method(message);
   }
