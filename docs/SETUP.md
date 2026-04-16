@@ -84,34 +84,48 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
 
-## API Key Authentication
+## API Endpoint Protection
 
-The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by API key authentication. Callers must supply a key via one of these headers:
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by a dual authentication scheme handled by the `withAuth` wrapper:
+
+### 1. CSRF tokens (same-origin frontend)
+
+Next.js middleware (`src/middleware.ts`) issues a signed `__csrf` cookie on every page load. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls. The server verifies the HMAC signature and expiry.
+
+| Variable      | Required             | Description                                                                                                                      |
+| ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `CSRF_SECRET` | **Yes (production)** | Stable secret used to sign CSRF tokens. Generate with `openssl rand -hex 32`. In development a random value is used per process. |
+
+> **Security note:** Store `CSRF_SECRET` as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+
+### 2. API key authentication (external consumers)
+
+External callers (mobile apps, partner integrations) can authenticate via one of these headers:
 
 - `Authorization: Bearer <key>`
 - `X-API-Key: <key>`
 
-Keys are stored as **SHA-256 hashes** in the `VALID_API_KEYS` environment variable (comma-separated). Never store plaintext keys.
+Keys are stored as **HMAC-SHA-256 hashes** in the `VALID_API_KEYS` environment variable (comma-separated). The HMAC uses a server-side secret from `API_KEY_HMAC_SECRET`. Never store plaintext keys.
 
-### Generating and registering a key
+#### Generating and registering a key
 
 1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
-2. **Hash it** using the utility exported from `src/lib/apiAuth.ts`:
+2. **Set `API_KEY_HMAC_SECRET`** in your environment (e.g. `openssl rand -hex 32`). This secret must stay the same across restarts.
+3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`:
    ```ts
    import { hashApiKey } from '@/lib/apiAuth';
    console.log(hashApiKey('your-plaintext-key'));
    ```
-3. **Add the hash** to your environment:
+4. **Add the hash** to your environment:
    ```env
-   VALID_API_KEYS=<sha256-hash-of-key1>,<sha256-hash-of-key2>
+   API_KEY_HMAC_SECRET=<your-hmac-secret>
+   VALID_API_KEYS=<hmac-hash-of-key1>,<hmac-hash-of-key2>
    ```
-4. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
+5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
 
-### Development mode
+#### Development mode
 
-When `VALID_API_KEYS` is not set, authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. In production, all requests are rejected when the variable is absent to prevent an accidentally open API from consuming quota.
-
-> **Security note:** Store `VALID_API_KEYS` as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+When `VALID_API_KEYS` is not set, API key authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. The frontend still works via CSRF tokens. In production, API key requests are rejected when the variable is absent.
 
 ## Redis Setup (Optional – Rate Limiting)
 

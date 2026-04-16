@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 import logger from '@/lib/logger';
 
@@ -9,9 +9,11 @@ import logger from '@/lib/logger';
  *   - `Authorization: Bearer <key>`
  *   - `X-API-Key: <key>`
  *
- * Keys are stored as SHA-256 hashes in the `VALID_API_KEYS` environment variable
- * (comma-separated). In development, when `VALID_API_KEYS` is not set, all requests
- * are allowed through and a warning is logged.
+ * Keys are stored as HMAC-SHA-256 hashes in the `VALID_API_KEYS` environment variable
+ * (comma-separated). The HMAC secret is read from `API_KEY_HMAC_SECRET`; if absent
+ * a random secret is generated per process (existing hashes won't match after restart).
+ * In development, when `VALID_API_KEYS` is not set, all requests are allowed through
+ * and a warning is logged.
  *
  * @returns A client identifier string on success, or `null` on failure.
  */
@@ -62,10 +64,9 @@ export function validateApiKey(req: Request): string | null {
     return null;
   }
 
-  // Hash the candidate key and compare against the stored hashes.
-  // SHA-256 is appropriate here: API keys are high-entropy random tokens (not passwords),
-  // so bcrypt/scrypt are unnecessary. timingSafeEqual prevents timing-based key enumeration.
-  // codeql[js/insufficient-password-hash] -- intentional: hashing random API tokens, not passwords
+  // HMAC-SHA-256 with a server-side secret: API keys are high-entropy random tokens
+  // (not passwords), so bcrypt/scrypt are unnecessary. The HMAC secret adds defense-in-depth.
+  // timingSafeEqual prevents timing-based key enumeration.
   const candidateHash = hashApiKey(candidateKey);
   const candidateHashBuf = Buffer.from(candidateHash, 'hex');
 
@@ -94,11 +95,21 @@ export function validateApiKey(req: Request): string | null {
 }
 
 /**
- * Returns the SHA-256 hex digest of a plaintext API key.
+ * HMAC secret used to hash API keys. Read from `API_KEY_HMAC_SECRET` env var;
+ * falls back to a random value (meaning stored hashes won't survive a restart
+ * unless the env var is set).
+ */
+const hmacSecret: string = process.env.API_KEY_HMAC_SECRET || randomBytes(32).toString('hex');
+
+/**
+ * Returns the HMAC-SHA-256 hex digest of a plaintext API key.
  * Use this to pre-hash keys before storing them in `VALID_API_KEYS`.
+ *
+ * **Important:** set `API_KEY_HMAC_SECRET` to the same value used when the hashes
+ * in `VALID_API_KEYS` were generated, otherwise validation will fail.
  */
 export function hashApiKey(plaintext: string): string {
-  return createHash('sha256').update(plaintext).digest('hex');
+  return createHmac('sha256', hmacSecret).update(plaintext).digest('hex');
 }
 
 /** Best-effort extraction of the client IP for logging purposes. */

@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { validateApiKey } from '@/lib/apiAuth';
+import { verifyCsrfToken } from '@/lib/csrf';
+import logger from '@/lib/logger';
 
 type RouteHandler = (req: NextRequest, clientId: string) => Promise<NextResponse> | NextResponse;
 
 /**
- * Higher-order function that wraps a Next.js API route handler with API key authentication.
+ * Higher-order function that wraps a Next.js API route handler with authentication.
  *
- * The wrapped handler receives the validated `clientId` as its second argument so it can
- * be forwarded to rate limiting or audit logging.
+ * Two authentication methods are supported (checked in order):
+ *
+ * 1. **CSRF token** — for same-origin frontend requests. The middleware in
+ *    `src/middleware.ts` issues a `__csrf` cookie on page loads; client code
+ *    reads the cookie and echoes it in the `X-CSRF-Token` request header.
+ * 2. **API key** — for external consumers. The key is sent via `Authorization:
+ *    Bearer <key>` or `X-API-Key: <key>` and validated against HMAC-hashed
+ *    values in the `VALID_API_KEYS` environment variable.
+ *
+ * The wrapped handler receives a `clientId` string identifying the caller.
  *
  * Responses:
- *   - `401 Unauthorized` — no API key supplied or key is missing/malformed.
- *   - `403 Forbidden`    — key is valid but the client has exceeded its rate limit.
+ *   - `401 Unauthorized` — neither a valid CSRF token nor API key was supplied.
  *   - Delegates to the inner handler on success.
  *
  * @example
@@ -25,15 +34,22 @@ type RouteHandler = (req: NextRequest, clientId: string) => Promise<NextResponse
  */
 export function withAuth(handler: RouteHandler) {
   return async function authMiddleware(req: NextRequest): Promise<NextResponse> {
-    const clientId = validateApiKey(req);
-
-    if (clientId === null) {
-      return NextResponse.json(
-        { error: 'Unauthorized: a valid API key is required.' },
-        { status: 401 },
-      );
+    // 1. Try CSRF token (same-origin frontend).
+    const csrfHeader = req.headers.get('x-csrf-token');
+    if (csrfHeader && verifyCsrfToken(csrfHeader)) {
+      logger.debug('Auth succeeded via CSRF token');
+      return handler(req, 'csrf-verified');
     }
 
-    return handler(req, clientId);
+    // 2. Fall back to API key (external consumers).
+    const clientId = validateApiKey(req);
+    if (clientId !== null) {
+      return handler(req, clientId);
+    }
+
+    return NextResponse.json(
+      { error: 'Unauthorized: a valid CSRF token or API key is required.' },
+      { status: 401 },
+    );
   };
 }
