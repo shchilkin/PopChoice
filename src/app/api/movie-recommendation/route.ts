@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
+import { seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import {
@@ -24,6 +25,7 @@ import {
   MAX_TOTAL_MOVIES,
   fetchTMDBDiscoverMovies,
   parseTMDBReleaseYear,
+  serializeTMDBEmbeddings,
   scoreAndConvertTMDBMovies,
   seedMoviesInBackground,
 } from './tmdb';
@@ -225,10 +227,38 @@ export async function POST(req: NextRequest) {
             'Merged local and TMDB results',
           );
 
-          // JIT seeding in background — do not await so it never blocks the response.
-          // Pass composite local (name|year) keys so background seeding can deduplicate
-          // against movies already present in the local DB while still seeding new TMDB results.
-          seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+          // Queue JIT seeding with retries/backoff for reliability and observability.
+          // Fail open if queueing is unavailable so recommendation flow is never blocked.
+          if (seedQueue) {
+            try {
+              await seedQueue.add(
+                'seed-movies',
+                {
+                  tmdbMovies,
+                  localKeys: Array.from(localKeys),
+                  tmdbEmbeddings: serializeTMDBEmbeddings(tmdbEmbeddings),
+                },
+                {
+                  attempts: 3,
+                  backoff: { type: 'exponential', delay: 2000 },
+                  removeOnComplete: 100,
+                  removeOnFail: 50,
+                },
+              );
+              logger.info({ queuedMovies: tmdbMovies.length }, 'Queued TMDB seeding job');
+            } catch (error) {
+              logger.warn(
+                { err: error },
+                'Failed to enqueue TMDB seeding job — falling back to fire-and-forget seeding',
+              );
+              seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+            }
+          } else {
+            logger.warn(
+              'REDIS_URL not set or queue unavailable — falling back to fire-and-forget seeding',
+            );
+            seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+          }
         }
       } else {
         logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');

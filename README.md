@@ -41,6 +41,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
    ```bash
    cp .env.example .env
    # Edit .env with your OpenAI and TMDB API keys
+   # Optional for background TMDB seeding jobs: REDIS_URL
    ```
 
 3. **Start local PostgreSQL** (requires Docker)
@@ -95,6 +96,7 @@ src/
 npm run dev              # Start development server
 npm run build           # Build for production
 npm run start           # Start production server
+npm run start:workers   # Start BullMQ background workers (requires REDIS_URL)
 
 # Testing
 npm run test            # Run all tests
