@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getDbClient } from '@/clients/dbClient';
+import logger from '@/lib/logger';
+
 export interface Movie {
   id: number;
   name: string;
   age_rating: string;
-  description: string;
   duration: number;
   score_rating: number;
   year: number;
@@ -31,39 +33,25 @@ export async function GET(request: NextRequest) {
     const yearFrom = yearFromParam ? parseInt(yearFromParam, 10) : undefined;
     const yearTo = yearToParam ? parseInt(yearToParam, 10) : undefined;
 
-    // Validate page and pageSize
+    // Validate pagination
     if (page < 1 || pageSize < 1 || pageSize > 100) {
       return NextResponse.json({ error: 'Invalid page or pageSize parameters' }, { status: 400 });
     }
 
-    // Validate year parameters
+    // Validate year filters
     if (yearFrom !== undefined && !Number.isFinite(yearFrom)) {
       return NextResponse.json({ error: 'Invalid yearFrom parameter' }, { status: 400 });
     }
+
     if (yearTo !== undefined && !Number.isFinite(yearTo)) {
       return NextResponse.json({ error: 'Invalid yearTo parameter' }, { status: 400 });
     }
 
-    // Check if Supabase is configured
-    const privateKey = process.env.SUPABASE_API_KEY;
-    const url = process.env.SUPABASE_URL;
+    // Check if database is configured
+    const db = getDbClient();
 
-    if (!privateKey || !url) {
-      // Return mock data when Supabase is not configured (for development/demo)
-      let mockMovies = generateMockMovies();
-
-      // Apply search filters to mock data
-      if (title) {
-        const lowerTitle = title.toLowerCase();
-        mockMovies = mockMovies.filter((m) => m.name.toLowerCase().includes(lowerTitle));
-      }
-      if (yearFrom) {
-        mockMovies = mockMovies.filter((m) => m.year >= yearFrom);
-      }
-      if (yearTo) {
-        mockMovies = mockMovies.filter((m) => m.year <= yearTo);
-      }
-
+    if (!db.isConfigured()) {
+      const mockMovies = applySearchFilters(generateMockMovies(), { title, yearFrom, yearTo });
       const totalCount = mockMovies.length;
       const totalPages = Math.ceil(totalCount / pageSize);
       const offset = (page - 1) * pageSize;
@@ -80,53 +68,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(response);
     }
 
-    // Only import Supabase when we have the credentials
-    const { supabase } = await import('@/clients/supabaseClient');
-
-    // Build query with search filters
-    let countQuery = supabase.from('movies').select('*', { count: 'exact', head: true });
-    let dataQuery = supabase
-      .from('movies')
-      .select('id, name, age_rating, description, duration, score_rating, year');
-
-    // Apply search filters to both queries
-    if (title) {
-      countQuery = countQuery.ilike('name', `%${title}%`);
-      dataQuery = dataQuery.ilike('name', `%${title}%`);
-    }
-    if (yearFrom) {
-      countQuery = countQuery.gte('year', yearFrom);
-      dataQuery = dataQuery.gte('year', yearFrom);
-    }
-    if (yearTo) {
-      countQuery = countQuery.lte('year', yearTo);
-      dataQuery = dataQuery.lte('year', yearTo);
-    }
-
-    // Get total count
-    const { count, error: countError } = await countQuery;
-
-    if (countError) {
-      console.error('Error getting movie count:', countError);
-      return NextResponse.json({ error: 'Failed to fetch movie count' }, { status: 500 });
-    }
-
-    const totalCount = count || 0;
-    const totalPages = Math.ceil(totalCount / pageSize);
-    const offset = (page - 1) * pageSize;
-
-    // Get paginated movies
-    const { data: movies, error } = await dataQuery
-      .range(offset, offset + pageSize - 1)
-      .order('id', { ascending: true });
+    // DB client currently supports eq/neq/in filters but not ilike/gte/lte.
+    // Fetch rows once, then apply title/year filters in-memory to preserve
+    // functional parity with mock mode.
+    const { data: dbMovies, error } = await db
+      .from<Movie>('movies')
+      .select('id, name, age_rating, duration, score_rating, year');
 
     if (error) {
-      console.error('Error fetching movies:', error);
+      logger.error({ err: error }, 'Error fetching movies');
       return NextResponse.json({ error: 'Failed to fetch movies' }, { status: 500 });
     }
 
+    const filteredMovies = applySearchFilters(dbMovies ?? [], { title, yearFrom, yearTo });
+    const totalCount = filteredMovies.length;
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const offset = (page - 1) * pageSize;
+    const paginatedMovies = filteredMovies.slice(offset, offset + pageSize);
+
     const response: MoviesResponse = {
-      movies: movies || [],
+      movies: paginatedMovies,
       totalCount,
       page,
       pageSize,
@@ -135,9 +96,32 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Unexpected error in movies API:', error);
+    logger.error({ err: error }, 'Unexpected error in movies API');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+function applySearchFilters(
+  movies: Movie[],
+  filters: { title: string; yearFrom?: number; yearTo?: number },
+): Movie[] {
+  const titleFilter = filters.title.trim().toLowerCase();
+
+  return movies.filter((movie) => {
+    if (titleFilter && !movie.name.toLowerCase().includes(titleFilter)) {
+      return false;
+    }
+
+    if (filters.yearFrom !== undefined && movie.year < filters.yearFrom) {
+      return false;
+    }
+
+    if (filters.yearTo !== undefined && movie.year > filters.yearTo) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 // Generate mock data for development/demo purposes
@@ -147,8 +131,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Casablanca',
       age_rating: 'PG',
-      description:
-        'In Vichy-controlled Morocco, cynical nightclub owner Rick Blaine uncovers letters of transit that could provide escape from the war-torn city.',
       duration: 102,
       score_rating: 8.5,
       year: 1942,
@@ -156,8 +138,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Seven Samurai',
       age_rating: 'NR',
-      description:
-        'When bandits threaten to raid a poor farming village, the desperate villagers seek help from wandering samurai.',
       duration: 207,
       score_rating: 8.6,
       year: 1954,
@@ -165,17 +145,13 @@ function generateMockMovies(): Movie[] {
     {
       name: 'The Godfather',
       age_rating: 'R',
-      description:
-        'As aging Don Vito Corleone navigates wartime and family politics, his reluctant son Michael is drawn into the family business.',
       duration: 175,
       score_rating: 9.2,
       year: 1972,
     },
     {
-      name: 'One Flew Over the Cuckoo&apos;s Nest',
+      name: "One Flew Over the Cuckoo's Nest",
       age_rating: '15',
-      description:
-        'Charming rogue Randle P. McMurphy feigns mental illness to serve his sentence in a psychiatric hospital instead of prison.',
       duration: 133,
       score_rating: 8.7,
       year: 1975,
@@ -183,8 +159,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Star Wars: Episode IV - A New Hope',
       age_rating: 'G',
-      description:
-        'Farm boy Luke Skywalker joins a rebellion against the evil Galactic Empire in this epic space opera.',
       duration: 121,
       score_rating: 8.6,
       year: 1977,
@@ -192,17 +166,13 @@ function generateMockMovies(): Movie[] {
     {
       name: 'The Avengers',
       age_rating: 'PG-13',
-      description:
-        'Earth&apos;s mightiest heroes must come together and learn to fight as a team to stop the mischievous Loki and his alien army.',
       duration: 143,
       score_rating: 8.0,
       year: 2012,
     },
     {
-      name: 'Harry Potter and the Philosopher&apos;s Stone',
+      name: "Harry Potter and the Philosopher's Stone",
       age_rating: '12+',
-      description:
-        'An orphaned boy enrolls in a school of wizardry, where he learns the truth about himself and his parents.',
       duration: 152,
       score_rating: 7.6,
       year: 2001,
@@ -210,8 +180,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'Deadpool',
       age_rating: '16+',
-      description:
-        'A former Special Forces operative turned mercenary is subjected to a rogue experiment.',
       duration: 108,
       score_rating: 8.0,
       year: 2016,
@@ -219,8 +187,6 @@ function generateMockMovies(): Movie[] {
     {
       name: 'John Wick',
       age_rating: '18+',
-      description:
-        'An ex-hit-man comes out of retirement to track down the gangsters that took everything from him.',
       duration: 101,
       score_rating: 7.4,
       year: 2014,
@@ -235,7 +201,6 @@ function generateMockMovies(): Movie[] {
       name:
         i === 0 ? baseMovie.name : `${baseMovie.name} ${Math.floor(i / sampleMovies.length) + 1}`,
       age_rating: baseMovie.age_rating,
-      description: baseMovie.description,
       duration: baseMovie.duration + (i % 10),
       score_rating: Math.round((baseMovie.score_rating + (i % 20) * 0.1) * 10) / 10,
       year: baseMovie.year + (i % 40),
