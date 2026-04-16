@@ -2,7 +2,9 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
+import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG } from '@/lib/locale';
 import logger from '@/lib/logger';
+import { MODELS } from '@/lib/models';
 import { MovieService } from '@/services';
 
 import { combineAllPeopleDataToString } from './embedding';
@@ -13,18 +15,6 @@ import type { EnhancedMovieMatch, PersonFormData } from './types';
 // ---------------------------------------------------------------------------
 // Locale helpers
 // ---------------------------------------------------------------------------
-
-const LOCALE_LANGUAGE: Record<string, string> = {
-  en: 'English',
-  ru: 'Russian',
-  fi: 'Finnish',
-};
-
-const TMDB_LOCALE: Record<string, string> = {
-  en: 'en-US',
-  ru: 'ru-RU',
-  fi: 'fi-FI',
-};
 
 const buildPrompt = (locale: string) => {
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
@@ -106,7 +96,7 @@ export async function getRecommendation(similarMovies: EnhancedMovieMatch[], loc
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
 
     const recommendation = await openAIClient.chat.completions.create({
-      model: 'gpt-5.4',
+      model: MODELS.RECOMMENDATION,
       messages: [
         { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
@@ -185,7 +175,7 @@ Plot: ${movie.description}
 Remember: respond in ${language} only.`;
 
           const descriptionResponse = await openAIClient.chat.completions.create({
-            model: 'gpt-5.4-mini',
+            model: MODELS.MINI,
             messages: [
               { role: 'system', content: descriptionPrompt },
               { role: 'user', content: movieContext },
@@ -259,7 +249,7 @@ export async function getMovieInfo(
 
     if (locale === 'en') return { posterURL: enPosterURL };
 
-    const tmdbLocale = TMDB_LOCALE[locale] ?? 'en-US';
+    const tmdbLocale = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
     const localized = await movieService.getLocalizedMovieInfo(enDetails.id, tmdbLocale);
 
     const posterURL = localized?.poster_path

@@ -1,6 +1,5 @@
 'use client';
 
-import axios from 'axios';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -44,14 +43,28 @@ export default function LoadingPage() {
       setProgress((p) => (p >= 85 ? 85 : p + 1));
     }, 60);
 
-    axios
-      .post('/api/movie-recommendation', JSON.parse(quizDataStr), {
-        headers: { 'Accept-Language': locale },
-      })
-      .then((response) => {
+    fetch('/api/movie-recommendation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': locale,
+      },
+      body: quizDataStr,
+    })
+      .then(async (response) => {
         clearInterval(intervalsRef.current.tip);
         clearInterval(intervalsRef.current.prog);
-        localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
+        if (response.status === 422) {
+          setErrorState('moderated');
+          return;
+        }
+        if (!response.ok) {
+          retryCount.current += 1;
+          setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
+          return;
+        }
+        const data = await response.json();
+        localStorage.setItem('popchoice_recommendation', JSON.stringify(data));
         // Keep popchoice_quiz_data alive — the results page needs it for 'Get more picks from TMDB'.
         // It is cleaned up when the user clicks 'Try Again'.
         setProgress(100);
@@ -62,10 +75,6 @@ export default function LoadingPage() {
         clearInterval(intervalsRef.current.prog);
         // eslint-disable-next-line no-console
         console.error('API error:', err);
-        if (err.response?.status === 422) {
-          setErrorState('moderated');
-          return;
-        }
         retryCount.current += 1;
         setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });

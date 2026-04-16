@@ -1,4 +1,3 @@
-import axios, { AxiosInstance } from 'axios';
 import z from 'zod';
 
 import logger from '@/lib/logger';
@@ -33,15 +32,26 @@ export type TMDB_MovieEntry = z.infer<typeof TMDB_MovieDetailsSchema>;
 // TODO: Move to types after service is fully implemented
 type PosterSize = z.infer<typeof posterSize>;
 
-export class MovieService {
-  private axiosClient: AxiosInstance;
-  private imageURLBase: string;
-  private apiURLBase: string;
+type Fetcher = typeof globalThis.fetch;
 
-  constructor() {
-    this.axiosClient = axios.create();
-    this.imageURLBase = IMAGE_BASE_URL;
-    this.apiURLBase = API_BASE_URL;
+export class MovieService {
+  constructor(
+    private fetcher: Fetcher = globalThis.fetch,
+    private apiURLBase = API_BASE_URL,
+    private imageURLBase = IMAGE_BASE_URL,
+  ) {}
+
+  private async tmdbGet(path: string, params: Record<string, string>): Promise<Response> {
+    const url = new URL(`${this.apiURLBase}${path}`);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+    return this.fetcher(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        Accept: 'application/json',
+      },
+    });
   }
 
   /**
@@ -50,14 +60,12 @@ export class MovieService {
    */
   async getMovieById(tmdbId: number): Promise<TMDB_MovieEntry | undefined> {
     try {
-      const response = await this.axiosClient({
-        method: 'GET',
-        url: `${this.apiURLBase}/movie/${tmdbId}`,
-        responseType: 'json',
-        headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` },
-        params: { language: 'en-US' },
-      });
-      return response.data as TMDB_MovieEntry;
+      const response = await this.tmdbGet(`/movie/${tmdbId}`, { language: 'en-US' });
+      if (!response.ok) {
+        logger.warn({ status: response.status, tmdbId }, 'TMDB direct ID lookup failed');
+        return undefined;
+      }
+      return (await response.json()) as TMDB_MovieEntry;
     } catch (error) {
       logger.warn({ err: error, tmdbId }, 'TMDB direct ID lookup failed');
       return undefined;
@@ -80,20 +88,25 @@ export class MovieService {
 
     const searchOnce = async (withYear: boolean): Promise<TMDB_MovieEntry | undefined> => {
       try {
-        const response = await this.axiosClient({
-          method: 'GET',
-          url: `${this.apiURLBase}/search/movie`,
-          responseType: 'json',
-          headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` },
-          params: {
-            query: cleanedTitle,
-            language: 'en-US',
-            include_adult: false,
-            ...(withYear && year ? { year } : {}),
-          },
-        });
+        const params: Record<string, string> = {
+          query: cleanedTitle,
+          language: 'en-US',
+          include_adult: 'false',
+        };
+        if (withYear && year) {
+          params['year'] = String(year);
+        }
+        const response = await this.tmdbGet('/search/movie', params);
+        if (!response.ok) {
+          logger.warn(
+            { status: response.status, movieTitle: cleanedTitle, withYear },
+            'TMDB search request failed',
+          );
+          return undefined;
+        }
 
-        const results: TMDB_MovieEntry[] = response.data.results ?? [];
+        const data = (await response.json()) as { results?: TMDB_MovieEntry[] };
+        const results: TMDB_MovieEntry[] = data.results ?? [];
         if (results.length === 0) return undefined;
 
         // 1. Exact title match (case-insensitive)
@@ -162,19 +175,20 @@ export class MovieService {
     language: string,
   ): Promise<{ title: string; poster_path: string | null; overview?: string } | undefined> {
     try {
-      const response = await this.axiosClient({
-        method: 'GET',
-        url: `${this.apiURLBase}/movie/${movieId}`,
-        responseType: 'json',
-        headers: {
-          Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-        },
-        params: { language },
-      });
+      const response = await this.tmdbGet(`/movie/${movieId}`, { language });
+      if (!response.ok) {
+        logger.warn({ status: response.status, movieId }, 'Failed to fetch localized movie info');
+        return undefined;
+      }
+      const data = (await response.json()) as {
+        title: string;
+        poster_path: string | null;
+        overview?: string;
+      };
       return {
-        title: response.data.title,
-        poster_path: response.data.poster_path,
-        overview: response.data.overview as string | undefined,
+        title: data.title,
+        poster_path: data.poster_path,
+        overview: data.overview,
       };
     } catch (error) {
       logger.warn({ movieId, err: error }, 'Failed to fetch localized movie info');
