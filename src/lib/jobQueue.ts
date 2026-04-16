@@ -3,8 +3,10 @@ import IORedis from 'ioredis';
 
 import logger from '@/lib/logger';
 
-import type { SerializableTMDBEmbeddings } from '@/app/api/movie-recommendation/tmdb';
-import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/types';
+import type {
+  SerializableTMDBEmbeddings,
+  TMDBDiscoverMovie,
+} from '@/app/api/movie-recommendation/tmdb';
 
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 

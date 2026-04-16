@@ -1,9 +1,11 @@
+import z from 'zod';
+
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { IMAGE_BASE_URL } from '@/services';
 
-import type { EnhancedMovieMatch, PersonFormData, TMDBDiscoverMovie } from './types';
+import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -17,6 +19,21 @@ const MAX_JIT_SEED_MOVIES = 5;
 
 /** TMDB API base URL (v3). */
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
+
+const tmdbDiscoverMovieSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  overview: z.string(),
+  release_date: z.string(),
+  vote_average: z.number(),
+  poster_path: z.string().nullable(),
+});
+
+export type TMDBDiscoverMovie = z.infer<typeof tmdbDiscoverMovieSchema>;
+
+const tmdbDiscoverResponseSchema = z.object({
+  results: z.array(tmdbDiscoverMovieSchema).optional(),
+});
 
 /**
  * Mapping from stable genre IDs to TMDB genre IDs.
@@ -177,8 +194,12 @@ export async function fetchTMDBDiscoverMovies(
       return [];
     }
 
-    const data = (await response.json()) as { results?: TMDBDiscoverMovie[] };
-    return (data.results ?? []).slice(0, MAX_TOTAL_MOVIES);
+    const parsedResponse = tmdbDiscoverResponseSchema.safeParse(await response.json());
+    if (!parsedResponse.success) {
+      logger.warn({ zodError: parsedResponse.error }, 'TMDB discover response validation failed');
+      return [];
+    }
+    return (parsedResponse.data.results ?? []).slice(0, MAX_TOTAL_MOVIES);
   } catch (error) {
     logger.warn({ err: error }, 'Error fetching movies from TMDB discover');
     return [];

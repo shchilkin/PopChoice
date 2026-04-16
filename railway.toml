@@ -20,7 +20,4 @@ startCommand = "npm run start:workers"
 name = "storybook"
 
 [services.build]
-buildCommand = "npm ci && npm run build-storybook"
-
-[services.deploy]
-startCommand = "npm run start:storybook"
+dockerfilePath = "storybook.Dockerfile"
