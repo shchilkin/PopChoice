@@ -5,8 +5,16 @@ const logger = pino({
   // Defensive redaction to avoid leaking secrets if request/metadata objects are logged.
   redact: {
     paths: [
+      'authorization',
+      'headers.authorization',
+      'headers.cookie',
       'req.headers.authorization',
       'req.headers.cookie',
+      'apiKey',
+      'api_key',
+      'password',
+      'token',
+      'secret',
       '*.apiKey',
       '*.api_key',
       '*.password',
