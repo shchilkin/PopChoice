@@ -677,6 +677,10 @@ describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
 
     const res = await POST(makeRequest(validPerson));
     expect(res.status).not.toBe(500);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
 
     // The second embeddings call should be for the TMDB batch (2 inputs)
     const embeddingCalls = mockEmbeddingsCreate.mock.calls as unknown as { input: unknown }[][];

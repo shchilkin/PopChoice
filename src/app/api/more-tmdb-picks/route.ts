@@ -8,6 +8,8 @@ import { IMAGE_BASE_URL } from '@/services';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const RESULTS_PER_PAGE = 6;
+const TMDB_DISCOVER_FETCH_TIMEOUT_MS = 8_000;
+const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 5_000;
 
 const GENRE_LABEL_TO_TMDB_ID: Record<string, number> = {
   action: 28,
@@ -211,9 +213,22 @@ export async function POST(req: NextRequest) {
       url.searchParams.set('primary_release_date.lte', params.primary_release_date_lte);
     }
 
-    const tmdbResponse = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' },
-    });
+    let tmdbResponse: Response;
+    try {
+      tmdbResponse = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(TMDB_DISCOVER_FETCH_TIMEOUT_MS),
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.warn(
+          { timeoutMs: TMDB_DISCOVER_FETCH_TIMEOUT_MS },
+          'more-tmdb-picks: TMDB discover request timed out',
+        );
+        return NextResponse.json({ error: 'TMDB request timed out' }, { status: 504 });
+      }
+      throw error;
+    }
 
     if (!tmdbResponse.ok) {
       logger.warn({ status: tmdbResponse.status }, 'more-tmdb-picks: TMDB discover failed');
@@ -312,7 +327,10 @@ Respond in ${language} only.`;
           try {
             const detailRes = await fetch(
               `${TMDB_API_BASE}/movie/${tmdb.id}?language=${tmdbLang}`,
-              { headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' } },
+              {
+                headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' },
+                signal: AbortSignal.timeout(TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS),
+              },
             );
             if (detailRes.ok) {
               const detail = (await detailRes.json()) as {
@@ -324,7 +342,13 @@ Respond in ${language} only.`;
               if (detail.runtime) runtime = detail.runtime;
               if (detail.overview) localizedOverview = detail.overview;
             }
-          } catch {
+          } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') {
+              logger.warn(
+                { movieId: tmdb.id, timeoutMs: TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS },
+                'more-tmdb-picks: localized TMDB detail request timed out',
+              );
+            }
             // Non-critical — fall back to discover-provided values
           }
 

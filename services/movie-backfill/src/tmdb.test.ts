@@ -166,6 +166,10 @@ describe('searchMovie', () => {
     const id = await searchMovie(API_KEY, 'Inception', 2010);
     expect(id).toBe(42);
     expect(fetch).toHaveBeenCalledTimes(1);
+    const options = vi.mocked(fetch).mock.calls[0][1];
+    expect(options).toMatchObject({
+      signal: expect.any(AbortSignal),
+    });
   });
 
   it('accepts a result within ±1 year tolerance', async () => {
@@ -216,5 +220,13 @@ describe('searchMovie', () => {
       statusText: 'Unauthorized',
     } as Response);
     await expect(searchMovie(API_KEY, 'Movie', 2020)).rejects.toThrow('TMDB search API error');
+  });
+
+  it('throws a timeout error when TMDB search is aborted', async () => {
+    const abortError = new Error('The operation was aborted');
+    abortError.name = 'AbortError';
+    vi.mocked(fetch).mockRejectedValueOnce(abortError);
+
+    await expect(searchMovie(API_KEY, 'Movie', 2020)).rejects.toThrow('TMDB search timeout');
   });
 });

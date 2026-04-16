@@ -1,6 +1,7 @@
 import { logger } from './logger.js';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_SEARCH_FETCH_TIMEOUT_MS = 8_000;
 
 export interface TMDBMovieDetails {
   id: number;
@@ -63,12 +64,26 @@ async function tmdbSearch(
     url.searchParams.set('year', String(year));
   }
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(TMDB_SEARCH_FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.warn('TMDB search request timed out', {
+        title,
+        year,
+        timeoutMs: TMDB_SEARCH_FETCH_TIMEOUT_MS,
+      });
+      throw new Error(`TMDB search timeout after ${TMDB_SEARCH_FETCH_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     throw new Error(`TMDB search API error: ${response.status} ${response.statusText}`);
