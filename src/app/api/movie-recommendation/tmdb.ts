@@ -29,7 +29,7 @@ const tmdbDiscoverMovieSchema = z.object({
   poster_path: z.string().nullable(),
 });
 
-type TMDBDiscoverMovie = z.infer<typeof tmdbDiscoverMovieSchema>;
+export type TMDBDiscoverMovie = z.infer<typeof tmdbDiscoverMovieSchema>;
 
 const tmdbDiscoverResponseSchema = z.object({
   results: z.array(tmdbDiscoverMovieSchema).optional(),
@@ -308,18 +308,46 @@ function tmdbMovieToEnhancedMatch(
 // ---------------------------------------------------------------------------
 
 /**
- * Fire-and-forget: generate embeddings for TMDB movies that are not already in the local DB
- * and insert them so that future local searches can find them.
- *
- * NOTE: This runs as a fire-and-forget async task. In serverless environments the runtime
- * may freeze the process after the response is sent, so seeding is best-effort. For
- * guaranteed background work consider a queue/cron worker or a platform `waitUntil` hook.
+ * Serializable shape used when passing precomputed embeddings through queue payloads.
  */
-export function seedMoviesInBackground(
+export type SerializableTMDBEmbeddings = Record<string, number[]>;
+
+export function serializeTMDBEmbeddings(
+  embeddings?: Map<number, number[]>,
+): SerializableTMDBEmbeddings | undefined {
+  if (!embeddings || embeddings.size === 0) return undefined;
+  return Object.fromEntries(
+    Array.from(embeddings.entries()).map(([movieId, embedding]) => [String(movieId), embedding]),
+  );
+}
+
+export function deserializeTMDBEmbeddings(
+  serialized?: SerializableTMDBEmbeddings,
+): Map<number, number[]> | undefined {
+  if (!serialized) return undefined;
+  const entries: Array<[number, number[]]> = Object.entries(serialized).flatMap(
+    ([movieId, embedding]) => {
+      const parsedMovieId = Number(movieId);
+      const isValidMovieId = Number.isFinite(parsedMovieId) && Number.isInteger(parsedMovieId);
+      const isValidEmbedding =
+        Array.isArray(embedding) &&
+        embedding.every((value) => typeof value === 'number' && Number.isFinite(value));
+
+      if (!isValidMovieId || !isValidEmbedding) return [];
+      return [[parsedMovieId, embedding]];
+    },
+  );
+  return new Map(entries);
+}
+
+/**
+ * Seed TMDB movies into the local DB for future local vector search.
+ */
+export async function seedMovies(
   tmdbMovies: TMDBDiscoverMovie[],
   existingLocalKeys: Set<string>,
   precomputedEmbeddings?: Map<number, number[]>,
-): void {
+): Promise<void> {
   const db = getDbClient();
   if (!db.isConfigured()) return;
 
@@ -330,102 +358,80 @@ export function seedMoviesInBackground(
   );
   if (toSeed.length === 0) return;
 
-  // Process in the background — intentionally not awaited
-  void (async () => {
-    const candidateMovies = toSeed.slice(0, MAX_JIT_SEED_MOVIES);
-    if (candidateMovies.length === 0) return;
+  const candidateMovies = toSeed.slice(0, MAX_JIT_SEED_MOVIES);
+  if (candidateMovies.length === 0) return;
 
-    // Bulk DB existence check to avoid wasting OpenAI embedding tokens on rows that already exist.
-    // The DB uniqueness constraint is (name, year). We query by the movies.name column (matching
-    // the TMDB title) only, then filter by year in-memory to build exact composite keys —
-    // avoids a Cartesian product from two .in() clauses.
-    const existingMovieKeys = new Set<string>();
-    try {
-      // TMDB movies use `title`; the DB column is `name` — same value, different field names.
-      const movieNames = candidateMovies.map((m) => m.title);
-      const { data: existingMovies, error } = await db
-        .from<{ name: string; year: number }>('movies')
-        .select('name, year')
-        .in('name', movieNames);
+  // Bulk DB existence check to avoid wasting OpenAI embedding tokens on rows that already exist.
+  // The DB uniqueness constraint is (name, year). We query by the movies.name column (matching
+  // the TMDB title) only, then filter by year in-memory to build exact composite keys —
+  // avoids a Cartesian product from two .in() clauses.
+  const existingMovieKeys = new Set<string>();
+  try {
+    // TMDB movies use `title`; the DB column is `name` — same value, different field names.
+    const movieNames = candidateMovies.map((m) => m.title);
+    const { data: existingMovies, error } = await db
+      .from<{ name: string; year: number }>('movies')
+      .select('name, year')
+      .in('name', movieNames);
 
-      if (error) {
-        logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
-      } else {
-        for (const row of existingMovies ?? []) {
-          existingMovieKeys.add(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`);
-        }
+    if (error) {
+      logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
+    } else {
+      for (const row of existingMovies ?? []) {
+        existingMovieKeys.add(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`);
       }
-    } catch (err) {
-      logger.warn({ err }, 'JIT seeding existence pre-check failed with unexpected error');
     }
+  } catch (err) {
+    logger.warn({ err }, 'JIT seeding existence pre-check failed with unexpected error');
+  }
 
-    for (const movie of candidateMovies) {
-      try {
-        const year = parseTMDBReleaseYear(movie.release_date);
-        const movieKey = `${movie.title.toLowerCase()}|${year}`;
+  for (const movie of candidateMovies) {
+    try {
+      const year = parseTMDBReleaseYear(movie.release_date);
+      const movieKey = `${movie.title.toLowerCase()}|${year}`;
 
-        if (existingMovieKeys.has(movieKey)) {
-          logger.debug(
-            { movieTitle: movie.title, year },
-            'JIT seeding skipped — movie already in database',
-          );
-          continue;
-        }
+      if (existingMovieKeys.has(movieKey)) {
+        logger.debug(
+          { movieTitle: movie.title, year },
+          'JIT seeding skipped — movie already in database',
+        );
+        continue;
+      }
 
-        const score = Number(movie.vote_average?.toFixed(1)) || 0;
+      const score = Number(movie.vote_average?.toFixed(1)) || 0;
 
-        // Reuse the embedding already computed during similarity scoring if available,
-        // falling back to a fresh API call only for movies not in the precomputed map.
-        let embedding: number[] | undefined = precomputedEmbeddings?.get(movie.id);
-        if (!embedding) {
-          const embeddingText = [
-            `${movie.title} (${year})`,
-            `Rating: NR`,
-            `Duration: 0 min`,
-            `Score: ${score}/10`,
-            `Description: ${movie.overview || ''}`,
-          ].join('\n');
+      // Reuse the embedding already computed during similarity scoring if available,
+      // falling back to a fresh API call only for movies not in the precomputed map.
+      let embedding: number[] | undefined = precomputedEmbeddings?.get(movie.id);
+      if (!embedding) {
+        const embeddingText = [
+          `${movie.title} (${year})`,
+          `Rating: NR`,
+          `Duration: 0 min`,
+          `Score: ${score}/10`,
+          `Description: ${movie.overview || ''}`,
+        ].join('\n');
 
-          const embeddingResponse = await openAIClient.embeddings.create({
-            model: 'text-embedding-3-large',
-            input: embeddingText,
-          });
-          embedding = embeddingResponse.data[0]?.embedding;
-        }
-        if (!embedding) continue;
-
-        const { error: insertError } = await db.from('movies').insert({
-          name: movie.title,
-          year,
-          age_rating: 'NR',
-          description: movie.overview || '',
-          duration: 0,
-          score_rating: score,
-          embedding,
+        const embeddingResponse = await openAIClient.embeddings.create({
+          model: 'text-embedding-3-large',
+          input: embeddingText,
         });
+        embedding = embeddingResponse.data[0]?.embedding;
+      }
+      if (!embedding) continue;
 
-        if (insertError) {
-          const errMsg = insertError.message;
-          const isDuplicateEntry =
-            errMsg.toLowerCase().includes('unique') ||
-            errMsg.toLowerCase().includes('duplicate') ||
-            errMsg.toLowerCase().includes('already exists');
+      const { error: insertError } = await db.from('movies').insert({
+        name: movie.title,
+        year,
+        age_rating: 'NR',
+        description: movie.overview || '',
+        duration: 0,
+        score_rating: score,
+        embedding,
+      });
 
-          if (isDuplicateEntry) {
-            logger.debug(
-              { movieTitle: movie.title },
-              'JIT seeding skipped — movie already in database',
-            );
-          } else {
-            logger.warn({ err: insertError, movieTitle: movie.title }, 'JIT seeding insert failed');
-          }
-          continue;
-        }
-
-        logger.info({ movieTitle: movie.title, year }, 'JIT seeded TMDB movie into database');
-      } catch (err) {
-        // Catch truly thrown errors (e.g. network failures during embedding)
-        const errMsg = err instanceof Error ? err.message : String(err);
+      if (insertError) {
+        const errMsg = insertError.message;
         const isDuplicateEntry =
           errMsg.toLowerCase().includes('unique') ||
           errMsg.toLowerCase().includes('duplicate') ||
@@ -437,9 +443,39 @@ export function seedMoviesInBackground(
             'JIT seeding skipped — movie already in database',
           );
         } else {
-          logger.warn({ err, movieTitle: movie.title }, 'JIT seeding failed with unexpected error');
+          logger.warn({ err: insertError, movieTitle: movie.title }, 'JIT seeding insert failed');
         }
+        continue;
+      }
+
+      logger.info({ movieTitle: movie.title, year }, 'JIT seeded TMDB movie into database');
+    } catch (err) {
+      // Catch truly thrown errors (e.g. network failures during embedding)
+      const errMsg = err instanceof Error ? err.message : String(err);
+      const isDuplicateEntry =
+        errMsg.toLowerCase().includes('unique') ||
+        errMsg.toLowerCase().includes('duplicate') ||
+        errMsg.toLowerCase().includes('already exists');
+
+      if (isDuplicateEntry) {
+        logger.debug(
+          { movieTitle: movie.title },
+          'JIT seeding skipped — movie already in database',
+        );
+      } else {
+        logger.warn({ err, movieTitle: movie.title }, 'JIT seeding failed with unexpected error');
       }
     }
-  })();
+  }
+}
+
+/**
+ * Fire-and-forget wrapper kept for fail-open fallback when queueing is unavailable.
+ */
+export function seedMoviesInBackground(
+  tmdbMovies: TMDBDiscoverMovie[],
+  existingLocalKeys: Set<string>,
+  precomputedEmbeddings?: Map<number, number[]>,
+): void {
+  void seedMovies(tmdbMovies, existingLocalKeys, precomputedEmbeddings);
 }
