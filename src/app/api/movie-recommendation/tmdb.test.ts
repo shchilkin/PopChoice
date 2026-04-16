@@ -47,4 +47,18 @@ describe('TMDB seeding payload serialization', () => {
       [102, [0.3, 0.4]],
     ]);
   });
+
+  it('ignores invalid IDs and malformed embedding values during deserialization', () => {
+    const deserialized = deserializeTMDBEmbeddings({
+      '101': [0.1, 0.2],
+      invalid: [0.2, 0.3],
+      '102': [0.3, Number.NaN],
+      '103': [0.4, 0.5],
+    });
+
+    expect(Array.from(deserialized?.entries() ?? [])).toEqual([
+      [101, [0.1, 0.2]],
+      [103, [0.4, 0.5]],
+    ]);
+  });
 });

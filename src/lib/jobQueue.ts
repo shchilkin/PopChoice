@@ -1,6 +1,8 @@
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 
+import logger from '@/lib/logger';
+
 import type { SerializableTMDBEmbeddings } from '@/app/api/movie-recommendation/tmdb';
 import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/types';
 
@@ -19,13 +21,29 @@ export const MOVIE_SEED_JOB_OPTIONS = {
   removeOnFail: 50,
 };
 
+let bullMQConnection: IORedis | null = null;
+
 export function createBullMQConnection(): IORedis | null {
+  if (bullMQConnection) return bullMQConnection;
+
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) return null;
 
-  return new IORedis(redisUrl, {
+  bullMQConnection = new IORedis(redisUrl, {
     maxRetriesPerRequest: null,
   });
+
+  bullMQConnection.on('connect', () => {
+    logger.info('BullMQ Redis client connected');
+  });
+  bullMQConnection.on('ready', () => {
+    logger.info('BullMQ Redis client ready');
+  });
+  bullMQConnection.on('error', (error) => {
+    logger.error({ err: error }, 'BullMQ Redis client error');
+  });
+
+  return bullMQConnection;
 }
 
 const queueConnection = createBullMQConnection();

@@ -304,8 +304,17 @@ export function deserializeTMDBEmbeddings(
   serialized?: SerializableTMDBEmbeddings,
 ): Map<number, number[]> | undefined {
   if (!serialized) return undefined;
-  const entries: Array<[number, number[]]> = Object.entries(serialized).map(
-    ([movieId, embedding]) => [Number(movieId), embedding],
+  const entries: Array<[number, number[]]> = Object.entries(serialized).flatMap(
+    ([movieId, embedding]) => {
+      const parsedMovieId = Number(movieId);
+      const isValidMovieId = Number.isFinite(parsedMovieId) && Number.isInteger(parsedMovieId);
+      const isValidEmbedding =
+        Array.isArray(embedding) &&
+        embedding.every((value) => typeof value === 'number' && Number.isFinite(value));
+
+      if (!isValidMovieId || !isValidEmbedding) return [];
+      return [[parsedMovieId, embedding]];
+    },
   );
   return new Map(entries);
 }

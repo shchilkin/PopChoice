@@ -33,6 +33,26 @@ import { apiResponseSchema, requestBodySchema } from './types';
 
 import type { ApiResponse, PersonFormData } from './types';
 
+const MOVIE_SEED_ENQUEUE_TIMEOUT_MS = 1500;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
@@ -231,14 +251,18 @@ export async function POST(req: NextRequest) {
           // Fail open if queueing is unavailable so recommendation flow is never blocked.
           if (seedQueue) {
             try {
-              await seedQueue.add(
-                'seed-movies',
-                {
-                  tmdbMovies,
-                  localKeys: Array.from(localKeys),
-                  tmdbEmbeddings: serializeTMDBEmbeddings(tmdbEmbeddings),
-                },
-                MOVIE_SEED_JOB_OPTIONS,
+              await withTimeout(
+                seedQueue.add(
+                  'seed-movies',
+                  {
+                    tmdbMovies,
+                    localKeys: Array.from(localKeys),
+                    tmdbEmbeddings: serializeTMDBEmbeddings(tmdbEmbeddings),
+                  },
+                  MOVIE_SEED_JOB_OPTIONS,
+                ),
+                MOVIE_SEED_ENQUEUE_TIMEOUT_MS,
+                'Movie seed enqueue timed out',
               );
               logger.info({ queuedMovies: tmdbMovies.length }, 'Queued TMDB seeding job');
             } catch (error) {
@@ -250,7 +274,6 @@ export async function POST(req: NextRequest) {
             }
           } else {
             logger.warn(
-              { redisConfigured: Boolean(process.env.REDIS_URL) },
               'Movie seed queue unavailable — falling back to fire-and-forget TMDB seeding',
             );
             seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);

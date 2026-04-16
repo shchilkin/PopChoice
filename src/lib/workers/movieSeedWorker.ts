@@ -10,6 +10,8 @@ import logger from '@/lib/logger';
 
 import type { MovieSeedJobData } from '@/lib/jobQueue';
 
+const MAX_MOVIE_SEED_ATTEMPTS = MOVIE_SEED_JOB_OPTIONS.attempts;
+
 export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
   const connection = createBullMQConnection();
   if (!connection) {
@@ -35,7 +37,6 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
   });
 
   worker.on('failed', (job, err) => {
-    const maxAttempts = MOVIE_SEED_JOB_OPTIONS.attempts;
     const attemptsMade = job?.attemptsMade ?? 0;
     logger.error(
       {
@@ -43,8 +44,8 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
         jobId: job?.id,
         queuedMovies: job?.data.tmdbMovies.length ?? 0,
         attemptsMade,
-        maxAttempts,
-        willRetry: attemptsMade < maxAttempts,
+        maxAttempts: MAX_MOVIE_SEED_ATTEMPTS,
+        willRetry: attemptsMade < MAX_MOVIE_SEED_ATTEMPTS,
       },
       'Movie seeding job failed',
     );
