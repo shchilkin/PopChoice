@@ -2,6 +2,7 @@ import { logger } from './logger.js';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_SEARCH_FETCH_TIMEOUT_MS = 8_000;
+const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 8_000;
 
 export interface TMDBMovieDetails {
   id: number;
@@ -135,12 +136,25 @@ export async function fetchMovieDetails(
   url.searchParams.set('append_to_response', 'release_dates');
   url.searchParams.set('language', 'en-US');
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      logger.warn('TMDB movie details request timed out, returning null', {
+        movieId,
+        timeoutMs: TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS,
+      });
+      return null;
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     logger.warn('TMDB movie details fetch failed', {

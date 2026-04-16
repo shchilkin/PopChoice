@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { extractUSCertification, movieToEmbeddingText, searchMovie } from './tmdb.js';
+import {
+  extractUSCertification,
+  fetchMovieDetails,
+  movieToEmbeddingText,
+  searchMovie,
+} from './tmdb.js';
 
 import type { TMDBMovieDetails } from './tmdb.js';
 
@@ -228,5 +233,44 @@ describe('searchMovie', () => {
     vi.mocked(fetch).mockRejectedValueOnce(abortError);
 
     await expect(searchMovie(API_KEY, 'Movie', 2020)).rejects.toThrow('TMDB search timeout');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fetchMovieDetails
+// ---------------------------------------------------------------------------
+
+describe('fetchMovieDetails', () => {
+  const API_KEY = 'test-key';
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('passes an abort signal to TMDB movie details fetch', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => makeDetails({ id: 42 }),
+    } as Response);
+
+    const result = await fetchMovieDetails(API_KEY, 42);
+
+    expect(result?.id).toBe(42);
+    const options = vi.mocked(fetch).mock.calls[0][1];
+    expect(options).toMatchObject({
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  it('returns null when TMDB movie details request is aborted', async () => {
+    const abortError = new Error('The operation was aborted');
+    abortError.name = 'AbortError';
+    vi.mocked(fetch).mockRejectedValueOnce(abortError);
+
+    await expect(fetchMovieDetails(API_KEY, 42)).resolves.toBeNull();
   });
 });
