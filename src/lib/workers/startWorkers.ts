@@ -11,10 +11,6 @@ if (!movieSeedWorker) {
 
 const shutdown = async (signal: NodeJS.Signals) => {
   logger.info({ signal }, 'Shutting down workers');
-  if (!movieSeedWorker) {
-    process.exit(1);
-  }
-
   try {
     await movieSeedWorker.close();
     logger.info('Movie seeding worker closed gracefully');

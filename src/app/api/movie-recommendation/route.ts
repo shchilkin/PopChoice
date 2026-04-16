@@ -35,19 +35,35 @@ import type { ApiResponse, PersonFormData } from './types';
 
 const MOVIE_SEED_ENQUEUE_TIMEOUT_MS = 1500;
 
+class EnqueueTimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EnqueueTimeoutError';
+  }
+}
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   timeoutMessage: string,
 ): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  const wrappedPromise: Promise<{ ok: true; value: T } | { ok: false; error: unknown }> =
+    promise.then(
+      (value) => ({ ok: true, value }),
+      (error: unknown) => ({ ok: false, error }),
+    );
+  const timeoutPromise = new Promise<{ ok: false; error: EnqueueTimeoutError }>((resolve) => {
+    timeoutId = setTimeout(
+      () => resolve({ ok: false, error: new EnqueueTimeoutError(timeoutMessage) }),
+      timeoutMs,
+    );
   });
 
   try {
-    return await Promise.race([promise, timeoutPromise]);
+    const result = await Promise.race([wrappedPromise, timeoutPromise]);
+    if (!result.ok) throw result.error;
+    return result.value;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
@@ -266,11 +282,18 @@ export async function POST(req: NextRequest) {
               );
               logger.info({ queuedMovies: tmdbMovies.length }, 'Queued TMDB seeding job');
             } catch (error) {
-              logger.warn(
-                { err: error },
-                'Failed to enqueue TMDB seeding job — falling back to fire-and-forget seeding',
-              );
-              seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+              if (error instanceof EnqueueTimeoutError) {
+                logger.warn(
+                  { err: error, queuedMovies: tmdbMovies.length },
+                  'Timed out while enqueueing TMDB seeding job; skipping fallback to avoid duplicate seeding',
+                );
+              } else {
+                logger.warn(
+                  { err: error },
+                  'Failed to enqueue TMDB seeding job — falling back to fire-and-forget seeding',
+                );
+                seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+              }
             }
           } else {
             logger.warn(

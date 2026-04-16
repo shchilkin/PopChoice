@@ -51,5 +51,15 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
     );
   });
 
+  worker.on('error', (err) => {
+    logger.error({ err }, 'Movie seeding worker encountered an unrecoverable error');
+    process.exit(1);
+  });
+
+  void worker.waitUntilReady().catch((err) => {
+    logger.error({ err }, 'Movie seeding worker failed to initialize');
+    process.exit(1);
+  });
+
   return worker;
 }
