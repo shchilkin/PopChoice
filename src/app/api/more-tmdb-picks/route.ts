@@ -258,7 +258,8 @@ async function postHandler(req: NextRequest): Promise<Response> {
     }
 
     // Queue seeding job to persist TMDB movies in the local DB for future queries.
-    // Convert discover results to TMDBDiscoverMovie, preserving source metadata when available.
+    // Convert TMDB discover results → TMDBDiscoverMovie, preserving metadata and
+    // using safe defaults when fields are absent.
     if (seedQueue) {
       const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
         id: m.id,
@@ -468,7 +469,7 @@ Respond in ${language} only.`;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request', details: error.errors },
+        { error: 'Invalid request', details: error.issues },
         { status: 400 },
       );
     }
