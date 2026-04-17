@@ -387,11 +387,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     // Handle validation errors first — these are client errors (400), not server errors
     if (error instanceof z.ZodError) {
-      logger.warn({ err: error, issues: error.errors }, 'Invalid request body');
+      logger.warn({ err: error, issues: error.issues }, 'Invalid request body');
       return NextResponse.json(
         {
           error: 'Invalid request data',
-          details: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          details: error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
         },
         { status: 400 },
       );

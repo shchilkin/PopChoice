@@ -56,7 +56,7 @@
     "redis": "^5.11.0",
     "serve": "^14.2.6",
     "tsx": "^4.21.0",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@bull-board/api": "^7.0.0",
