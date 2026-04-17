@@ -38,6 +38,8 @@
     "tar": "^7.5.11"
   },
   "dependencies": {
+    "@bull-board/api": "^7.0.0",
+    "@bull-board/express": "^7.0.0",
     "@langchain/core": "^1.1.39",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.15.0",
@@ -54,14 +56,13 @@
     "react": "^19.2.5",
     "react-canvas-confetti": "^2.0.7",
     "react-dom": "^19.2.5",
+    "express": "^5.2.1",
     "redis": "^5.11.0",
     "serve": "^14.2.6",
     "tsx": "^4.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@bull-board/api": "^7.0.0",
-    "@bull-board/express": "^7.0.0",
     "@chromatic-com/storybook": "^5",
     "@eslint/eslintrc": "^3",
     "@storybook/addon-a11y": "^10",
@@ -83,7 +84,6 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-storybook": "^10",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "express": "^5.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "msw": "^2.13.2",
