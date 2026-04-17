@@ -31,6 +31,7 @@ else
   set_env_var "POSTGRES_DB" "$POSTGRES_DB"
   DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}"
   set_env_var "DATABASE_URL" "$DATABASE_URL"
+  set_env_var "REDIS_URL" "redis://localhost:6379"
   echo "Credentials written to ${ENV_FILE}"
 fi
 
@@ -39,4 +40,5 @@ echo "Starting Docker container..."
 docker compose up -d --wait
 echo ""
 echo "PostgreSQL is healthy and ready."
+echo "Redis is running at localhost:6379."
 echo "Run 'npm run populate-db' to seed the database."

@@ -8,6 +8,24 @@ buildCommand = "npm ci && npm run build"
 startCommand = "npm run start"
 
 [[services]]
+name = "workers"
+
+[services.build]
+buildCommand = "npm ci"
+
+[services.deploy]
+startCommand = "npm run start:workers"
+
+[[services]]
+name = "bull-board"
+
+[services.build]
+buildCommand = "npm ci"
+
+[services.deploy]
+startCommand = "npm run bull-board"
+
+[[services]]
 name = "storybook"
 
 [services.build]

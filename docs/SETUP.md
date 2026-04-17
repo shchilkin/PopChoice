@@ -19,8 +19,8 @@ POSTGRES_DB=popchoice
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
 
-# Redis (optional) – enables distributed rate limiting on /api/movie-recommendation
-# When unset, rate limiting is disabled and the API fails open
+# Redis (optional) – enables distributed rate limiting and BullMQ background workers
+# When unset, rate limiting is skipped and background seeding is disabled
 REDIS_URL=redis://user:password@host:6379
 ```
 
@@ -80,11 +80,36 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
 
-## Redis Setup (Optional – Rate Limiting)
+## Redis Setup (Optional – Rate Limiting & Background Workers)
 
-The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10 requests per minute per IP). This requires a Redis instance and the `REDIS_URL` environment variable to be set. When `REDIS_URL` is absent the endpoint continues to work without rate limiting.
+Redis is used for two features:
+
+- **Rate limiting** – `/api/movie-recommendation` is limited to 10 requests per minute per IP. When `REDIS_URL` is absent, rate limiting is skipped and the API fails open.
+- **BullMQ workers** – background TMDB seeding jobs are queued via BullMQ. When `REDIS_URL` is absent, background seeding is disabled.
 
 > **Security note:** `REDIS_URL` may contain credentials (e.g. `redis://user:password@host:6379`). Store it as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+
+### Local Redis with Docker
+
+A `redis` service is included in `docker-compose.yml`. Start it with:
+
+```bash
+docker compose up redis -d
+```
+
+Then add to your `.env`:
+
+```env
+REDIS_URL=redis://localhost:6379
+```
+
+Run background workers in a separate terminal:
+
+```bash
+npm run start:workers
+```
+
+### Production Redis
 
 1. **Provision a Redis instance**
    - Use any Redis provider, e.g. [Redis Cloud](https://redis.io/cloud/), [Railway](https://railway.app), or a self-hosted instance
@@ -94,7 +119,8 @@ The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10
 
 3. **Verify**
    - On the first request to `/api/movie-recommendation`, the app logs `Rate limiter initialized with Redis` when the connection succeeds
-   - On the first request to `/api/movie-recommendation`, when `REDIS_URL` is not set, it logs `REDIS_URL not set. Rate limiting disabled.`
+   - When `REDIS_URL` is not set, rate limiting logs `REDIS_URL not set. Rate limiting disabled.`
+   - When `REDIS_URL` is not set, the worker logs `REDIS_URL not set. Movie seeding worker is disabled.`
 
 ## Local Docker PostgreSQL Setup
 

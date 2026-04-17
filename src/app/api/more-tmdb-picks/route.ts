@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import { openAIClient } from '@/clients';
+import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
@@ -13,6 +14,8 @@ import {
   parseTMDBReleaseYear,
 } from '@/lib/tmdb';
 import { IMAGE_BASE_URL } from '@/services';
+
+import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/tmdb';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const RESULTS_PER_PAGE = 6;
@@ -207,6 +210,37 @@ export async function POST(req: NextRequest) {
 
     if (candidates.length === 0) {
       return NextResponse.json({ movies: [] });
+    }
+
+    // Queue seeding job to persist TMDB movies in the local DB for future queries.
+    // Convert TMDBMovie → TMDBDiscoverMovie with default values for missing fields.
+    if (seedQueue) {
+      const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
+        id: m.id,
+        title: m.title,
+        overview: m.overview,
+        release_date: m.release_date,
+        vote_average: m.vote_average,
+        vote_count: 100, // We filter by vote_count.gte=100, so this is the minimum
+        genre_ids: [], // Not used by seedMovies
+        popularity: 0, // Not used by seedMovies
+        poster_path: m.poster_path,
+      }));
+      seedQueue
+        .add(
+          'seed-movies',
+          { tmdbMovies: tmdbMoviesForSeeding, localKeys: [] },
+          MOVIE_SEED_JOB_OPTIONS,
+        )
+        .then(() =>
+          logger.info(
+            { queuedMovies: candidates.length },
+            'more-tmdb-picks: Queued TMDB seeding job',
+          ),
+        )
+        .catch((err) =>
+          logger.warn({ err }, 'more-tmdb-picks: Failed to enqueue TMDB seeding job'),
+        );
     }
 
     // Compute real cosine similarities between the query and each TMDB candidate.
