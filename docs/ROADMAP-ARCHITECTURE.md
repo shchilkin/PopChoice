@@ -6,7 +6,7 @@ This roadmap exists to guide architectural refactoring in a practical, low-risk 
 
 ## Current State
 
-The repository is maintainable today and productive for ongoing work.  
+The repository is maintainable today and productive for ongoing work.
 The main risks are:
 
 - boundary clarity across app/domain/infrastructure concerns
