@@ -81,5 +81,5 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 - [ ] Document and enforce boundaries for `app` / `services` / `lib` / `utils`.
 - [ ] Keep API route handlers thin and centralize recommendation orchestration.
 - [ ] Eliminate manual sync points for recommendation thresholds/config and docs.
-- [ ] Align docs with current structure (for example naming drift like `db` vs `database`).
+- [ ] Align docs with current structure (e.g. naming drift like `db` vs `database`).
 - [ ] Standardize conventions shared by root app and root-level `services/*` packages.
