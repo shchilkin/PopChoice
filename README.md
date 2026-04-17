@@ -70,6 +70,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 - **[Setup Guide](./docs/SETUP.md)** - Complete setup instructions for OpenAI, Supabase, and development environment
 - **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflows, scripts, and project structure
 - **[CI/CD Documentation](./docs/CI-CD.md)** - GitHub Actions workflow and deployment information
+- **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** - Practical phased direction for cleaner boundaries and future monorepo evolution
 
 ## 🗂 Project Structure
 

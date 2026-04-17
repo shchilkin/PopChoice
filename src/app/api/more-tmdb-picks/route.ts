@@ -159,18 +159,6 @@ function combineAllPeopleDataToString(allPeopleData: PersonFormData[]): string {
   return combined.trim();
 }
 
-interface TMDBMovie {
-  id: number;
-  title: string;
-  overview: string;
-  release_date: string;
-  vote_average: number;
-  vote_count: number;
-  genre_ids: number[];
-  popularity: number;
-  poster_path: string | null;
-}
-
 const LOCALE_LANGUAGE: Record<string, string> = {
   en: 'English',
   ru: 'Russian',
@@ -281,7 +269,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Queue seeding job to persist TMDB movies in the local DB for future queries.
-    // Convert TMDBMovie → TMDBDiscoverMovie with default values for missing fields.
+    // Convert TMDB discover results → TMDBDiscoverMovie with defaults for missing fields.
     if (seedQueue) {
       const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
         id: m.id,
@@ -500,7 +488,7 @@ Respond in ${language} only.`;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request', details: error.errors },
+        { error: 'Invalid request', details: error.issues },
         { status: 400 },
       );
     }
