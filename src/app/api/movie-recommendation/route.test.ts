@@ -91,6 +91,7 @@ vi.mock('@/services', () => ({
 
 import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import { POST } from './route';
+import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
 const validBody = {
   favoriteMovie: 'The Dark Knight',
@@ -767,5 +768,48 @@ describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
 
     const res = await POST(makeRequest(validPerson));
     expect(res.status).not.toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Schema invariants — prevents drift between Zod and JSON schema definitions
+// ---------------------------------------------------------------------------
+
+describe('recommendationResponse schema invariants', () => {
+  it('JSON schema and Zod schema define the same required field names', () => {
+    const jsonSchemaKeys = [...recommendationResponseJsonSchema.required].sort();
+    const zodKeys = Object.keys(recommendationResponseSchema.shape).sort();
+    expect(zodKeys).toEqual(jsonSchemaKeys);
+  });
+
+  it('JSON schema has additionalProperties: false, matching Zod .strict()', () => {
+    expect(recommendationResponseJsonSchema.additionalProperties).toBe(false);
+  });
+
+  it('Zod schema accepts all required fields', () => {
+    const result = recommendationResponseSchema.safeParse({
+      description: 'A great film.',
+      title: 'Test Movie',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('Zod schema rejects additional properties (strictness)', () => {
+    const result = recommendationResponseSchema.safeParse({
+      description: 'A great film.',
+      title: 'Test Movie',
+      extra: 'unexpected',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('Zod schema rejects missing required field: title', () => {
+    const result = recommendationResponseSchema.safeParse({ description: 'A great film.' });
+    expect(result.success).toBe(false);
+  });
+
+  it('Zod schema rejects missing required field: description', () => {
+    const result = recommendationResponseSchema.safeParse({ title: 'Test Movie' });
+    expect(result.success).toBe(false);
   });
 });
