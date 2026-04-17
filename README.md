@@ -163,6 +163,8 @@ db/                        # Database migrations / schema
 npm run dev              # Start development server
 npm run build           # Build for production
 npm run start           # Start production server
+npm run start:workers   # Start BullMQ background workers (requires REDIS_URL)
+npm run bull-board      # Launch BullMQ monitoring dashboard (requires REDIS_URL)
 
 # Testing
 npm run test            # Run all tests
@@ -195,11 +197,9 @@ For detailed development workflows and project structure, see the **[Development
 - [TMDB API Documentation](https://developer.themoviedb.org/docs/getting-started) - The Movie Database API integration
 - [The AI Engineer Path](https://scrimba.com/the-ai-engineer-path-c02v) - Complete AI engineering course
 
-## 🚀 Deploy on Vercel
+## 🚀 Deploy on Railway
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme).
-
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All production services (web app, Storybook, background workers) are deployed on [Railway](https://railway.app). See [`railway.toml`](./railway.toml) for the service configuration.
 
 ---
 

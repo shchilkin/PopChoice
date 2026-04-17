@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import { openAIClient } from '@/clients';
+import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { IMAGE_BASE_URL } from '@/services';
+
+import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/tmdb';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const RESULTS_PER_PAGE = 6;
@@ -42,6 +45,25 @@ const requestBodySchema = z.object({
 });
 
 type PersonFormData = z.infer<typeof personFormDataSchema>;
+
+const tmdbMovieSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  overview: z.string(),
+  release_date: z.string(),
+  vote_average: z.number(),
+  poster_path: z.string().nullable(),
+});
+
+const tmdbDiscoverResponseSchema = z.object({
+  results: z.array(tmdbMovieSchema).optional(),
+});
+
+const tmdbMovieDetailSchema = z.object({
+  title: z.string().optional(),
+  runtime: z.number().nullable().optional(),
+  overview: z.string().optional(),
+});
 
 // ---------------------------------------------------------------------------
 // Helpers (self-contained — mirrors logic from movie-recommendation/route.ts)
@@ -141,6 +163,9 @@ interface TMDBMovie {
   overview: string;
   release_date: string;
   vote_average: number;
+  vote_count: number;
+  genre_ids: number[];
+  popularity: number;
   poster_path: string | null;
 }
 
@@ -155,6 +180,20 @@ const LOCALE_TO_TMDB_LANG: Record<string, string> = {
   ru: 'ru-RU',
   fi: 'fi-FI',
 };
+
+// ---------------------------------------------------------------------------
+// Similarity helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Dot product of two unit-norm vectors equals cosine similarity.
+ * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
+ */
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
+  return dot;
+}
 
 // ---------------------------------------------------------------------------
 // Main handler
@@ -206,11 +245,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'TMDB request failed' }, { status: 502 });
     }
 
-    const tmdbData = (await tmdbResponse.json()) as { results?: TMDBMovie[] };
+    const parsedDiscoverResponse = tmdbDiscoverResponseSchema.safeParse(await tmdbResponse.json());
+    if (!parsedDiscoverResponse.success) {
+      logger.warn(
+        { zodError: parsedDiscoverResponse.error },
+        'more-tmdb-picks: TMDB discover response validation failed',
+      );
+    }
 
     // Deduplicate against already-shown movies (excludeIds uses negative TMDB IDs)
     const excludedTmdbIds = new Set(excludeIds.map((id) => -id));
-    const candidates = (tmdbData.results ?? [])
+    const candidates = (
+      parsedDiscoverResponse.success ? (parsedDiscoverResponse.data.results ?? []) : []
+    )
       .filter((m) => !excludedTmdbIds.has(m.id))
       .slice(0, RESULTS_PER_PAGE);
 
@@ -218,8 +265,72 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ movies: [] });
     }
 
+    // Queue seeding job to persist TMDB movies in the local DB for future queries.
+    // Convert TMDBMovie → TMDBDiscoverMovie with default values for missing fields.
+    if (seedQueue) {
+      const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
+        id: m.id,
+        title: m.title,
+        overview: m.overview,
+        release_date: m.release_date,
+        vote_average: m.vote_average,
+        vote_count: 100, // We filter by vote_count.gte=100, so this is the minimum
+        genre_ids: [], // Not used by seedMovies
+        popularity: 0, // Not used by seedMovies
+        poster_path: m.poster_path,
+      }));
+      seedQueue
+        .add(
+          'seed-movies',
+          { tmdbMovies: tmdbMoviesForSeeding, localKeys: [] },
+          MOVIE_SEED_JOB_OPTIONS,
+        )
+        .then(() =>
+          logger.info(
+            { queuedMovies: candidates.length },
+            'more-tmdb-picks: Queued TMDB seeding job',
+          ),
+        )
+        .catch((err) =>
+          logger.warn({ err }, 'more-tmdb-picks: Failed to enqueue TMDB seeding job'),
+        );
+    }
+
+    // Compute real cosine similarities between the query and each TMDB candidate.
+    // Both embeddings use the same model so their dot product is the cosine similarity.
+    const queryText = combineAllPeopleDataToString(allPeopleData);
+    const candidateTexts = candidates.map((m) => {
+      const year = parseTMDBReleaseYear(m.release_date);
+      const score = Number(m.vote_average?.toFixed(1)) || 0;
+      return [`${m.title} (${year}) | TMDB Score: ${score}/10`, m.overview || '']
+        .filter(Boolean)
+        .join('\n');
+    });
+
+    const similarityMap = new Map<number, number>();
+    try {
+      const [queryEmbedRes, movieEmbedRes] = await Promise.all([
+        openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: queryText }),
+        openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: candidateTexts }),
+      ]);
+      const queryEmbedding = queryEmbedRes.data[0]?.embedding;
+      if (queryEmbedding && queryEmbedding.length > 0) {
+        candidates.forEach((m, i) => {
+          const movieEmbedding = movieEmbedRes.data[i]?.embedding;
+          if (movieEmbedding && movieEmbedding.length === queryEmbedding.length) {
+            similarityMap.set(m.id, cosineSimilarity(queryEmbedding, movieEmbedding));
+          }
+        });
+      }
+    } catch (err) {
+      logger.warn(
+        { err },
+        'more-tmdb-picks: embedding for similarity failed — using fallback score',
+      );
+    }
+
     // Build descriptions in parallel
-    const preferenceContext = combineAllPeopleDataToString(allPeopleData);
+    const preferenceContext = queryText;
     const descriptionSystemPrompt = `CRITICAL: Your entire response MUST be written in ${language} only. Never use English or any other language unless ${language} is English.
 
 You are PopChoice, a movie expert creating personalized movie descriptions. Write a brief, engaging description (2-3 sentences) that:
@@ -268,14 +379,18 @@ Respond in ${language} only.`;
               { headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' } },
             );
             if (detailRes.ok) {
-              const detail = (await detailRes.json()) as {
-                title?: string;
-                runtime?: number;
-                overview?: string;
-              };
-              if (detail.title) localizedTitle = detail.title;
-              if (detail.runtime) runtime = detail.runtime;
-              if (detail.overview) localizedOverview = detail.overview;
+              const parsedDetailResponse = tmdbMovieDetailSchema.safeParse(await detailRes.json());
+              if (parsedDetailResponse.success) {
+                const detail = parsedDetailResponse.data;
+                if (detail.title) localizedTitle = detail.title;
+                if (detail.runtime) runtime = detail.runtime;
+                if (detail.overview) localizedOverview = detail.overview;
+              } else {
+                logger.warn(
+                  { zodError: parsedDetailResponse.error, tmdbId: tmdb.id },
+                  'more-tmdb-picks: TMDB detail response validation failed',
+                );
+              }
             }
           } catch {
             // Non-critical — fall back to discover-provided values
@@ -338,7 +453,7 @@ Respond in ${language} only.`;
             id: -tmdb.id,
             name: localizedTitle,
             year,
-            similarity: 0.6, // Consistent with main route TMDB placeholder
+            similarity: similarityMap.get(tmdb.id) ?? 0.35,
             age_rating: undefined as undefined,
             duration: runtime,
             score_rating: score,

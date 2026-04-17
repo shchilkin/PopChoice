@@ -1,6 +1,5 @@
 /**
- * OpenAI embedding utilities for movie-discovery service.
- * Adapted from src/utils/ai/embeddings.ts in the main PopChoice app.
+ * OpenAI embedding utilities for movie-backfill service.
  */
 
 import OpenAI from 'openai';
@@ -8,17 +7,23 @@ import OpenAI from 'openai';
 import { logger } from './logger.js';
 
 /**
- * Create embeddings for an array of text strings.
+ * Create a single OpenAI client to reuse across the whole run.
+ */
+export function createOpenAIClient(apiKey: string): OpenAI {
+  return new OpenAI({ apiKey });
+}
+
+/**
+ * Create embeddings for an array of text strings using the provided client.
  * Processes in batches to avoid rate limits.
  */
 export async function createEmbeddings(
-  openaiApiKey: string,
+  client: OpenAI,
   texts: string[],
   options: { model?: string; batchSize?: number } = {},
 ): Promise<number[][]> {
   const { model = 'text-embedding-3-large', batchSize = 50 } = options;
 
-  const client = new OpenAI({ apiKey: openaiApiKey, timeout: 60_000 });
   const allEmbeddings: number[][] = [];
 
   logger.info('Creating embeddings', { count: texts.length, model, batchSize });
