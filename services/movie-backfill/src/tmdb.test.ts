@@ -218,6 +218,12 @@ describe('searchMovie', () => {
     expect(id).toBeNull();
   });
 
+  it('returns null when TMDB search response has an invalid shape', async () => {
+    mockFetch({ results: [{ id: 'bad-id', title: 'Movie', release_date: '2020-01-01' }] });
+    const id = await searchMovie(API_KEY, 'Movie', 0);
+    expect(id).toBeNull();
+  });
+
   it('throws on TMDB API error', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
