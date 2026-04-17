@@ -55,7 +55,7 @@ jobs:
                 exit 1
               fi
 
-              echo "Push failed due to remote updates, re-syncing with origin/development"
+              echo "Push failed due to remote updates, resyncing with origin/development"
               git fetch origin development
               if ! git rebase origin/development; then
                 git rebase --abort || true
