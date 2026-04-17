@@ -7,6 +7,7 @@
     "analyze-movies": "tsx scripts/analyze-movies.ts",
     "build": "next build",
     "build-storybook": "storybook build",
+    "bull-board": "tsx --env-file=.env scripts/bull-board.ts",
     "calibrate-similarity": "tsx --env-file=.env scripts/calibrate-similarity.ts",
     "dev": "next dev",
     "fix": "npm run lint:fix && npm run format:write && npm run format:package",
@@ -21,6 +22,7 @@
     "setup:local-db": "bash scripts/setup-local-db.sh",
     "start": "next start",
     "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
+    "start:workers": "tsx --env-file=.env src/lib/workers/startWorkers.ts",
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
     "test:server": "vitest --project=server",
@@ -39,7 +41,9 @@
     "@langchain/core": "^1.1.39",
     "@vercel/analytics": "^1.5.0",
     "axios": "^1.15.0",
+    "bullmq": "^5.74.1",
     "canvas-confetti": "^1.9.4",
+    "ioredis": "^5.10.1",
     "lucide-react": "^1.7.0",
     "motion": "^12.38.0",
     "next": "^16",
@@ -52,9 +56,12 @@
     "react-dom": "^19.2.5",
     "redis": "^5.11.0",
     "serve": "^14.2.6",
-    "zod": "^3.25.76"
+    "tsx": "^4.21.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@bull-board/api": "^7.0.0",
+    "@bull-board/express": "^7.0.0",
     "@chromatic-com/storybook": "^5",
     "@eslint/eslintrc": "^3",
     "@storybook/addon-a11y": "^10",
@@ -63,7 +70,8 @@
     "@storybook/addon-vitest": "^10",
     "@storybook/nextjs-vite": "^10",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.12.2",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -75,6 +83,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-storybook": "^10",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "express": "^5.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "msw": "^2.13.2",
@@ -85,9 +94,12 @@
     "sort-package-json": "^3.6.1",
     "storybook": "^10",
     "tailwindcss": "^4",
-    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
   },
   "msw": {
     "workerDirectory": [

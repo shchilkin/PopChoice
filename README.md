@@ -44,6 +44,7 @@ PopChoice is a **movie recommendation engine** that uses AI embeddings and vecto
    ```bash
    cp .env.example .env
    # Edit .env with your OpenAI and TMDB API keys
+   # Optional for background TMDB seeding jobs: REDIS_URL
    ```
 
 3. **Start local PostgreSQL** (requires Docker)
@@ -72,6 +73,7 @@ PopChoice is a **movie recommendation engine** that uses AI embeddings and vecto
 - **[Setup Guide](./docs/SETUP.md)** - Complete setup instructions for OpenAI, Supabase, and development environment
 - **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflows, scripts, and project structure
 - **[CI/CD Documentation](./docs/CI-CD.md)** - GitHub Actions workflow and deployment information
+- **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** - Practical phased direction for cleaner boundaries and future monorepo evolution
 
 ## 🗂 Project Structure
 
@@ -98,6 +100,7 @@ src/
 npm run dev              # Start development server
 npm run build           # Build for production
 npm run start           # Start production server
+npm run start:workers   # Start BullMQ background workers (requires REDIS_URL)
 
 # Testing
 npm run test            # Run all tests

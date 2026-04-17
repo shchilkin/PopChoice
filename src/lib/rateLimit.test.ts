@@ -18,8 +18,11 @@ vi.mock('redis', () => ({
 // Import AFTER the mock is registered
 const { applyRateLimit, closeRateLimiter } = await import('./rateLimit');
 
-function makeRequest(headers: Record<string, string> = {}): Request {
-  return new Request('http://localhost/api/movie-recommendation', {
+function makeRequest(
+  headers: Record<string, string> = {},
+  url = 'http://localhost/api/movie-recommendation',
+): Request {
+  return new Request(url, {
     method: 'POST',
     headers,
   });
@@ -70,34 +73,34 @@ describe('applyRateLimit', () => {
     });
 
     it('extracts client IP from x-forwarded-for (first valid)', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '10.0.0.1, 10.0.0.2, 10.0.0.3' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:10.0.0.1'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:10.0.0.1'] }),
       );
     });
 
     it('falls back to x-real-ip when x-forwarded-for is absent', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-real-ip': '192.168.1.5' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:192.168.1.5'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:192.168.1.5'] }),
       );
     });
 
     it('accepts a valid IPv6 address', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '2001:db8::1' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:movie-recommendation:2001:db8::1'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:2001:db8::1'] }),
       );
     });
 
     it('uses a Lua eval call with a 60-second TTL argument', async () => {
-      mockEval.mockResolvedValue(1);
+      mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
@@ -106,28 +109,79 @@ describe('applyRateLimit', () => {
     });
 
     it('returns null for requests within the limit', async () => {
-      mockEval.mockResolvedValue(5);
+      mockEval.mockResolvedValue([5, 42]);
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(result).toBeNull();
     });
 
     it('returns 429 when the request count exceeds 10', async () => {
-      mockEval.mockResolvedValue(11);
+      mockEval.mockResolvedValue([11, 45]);
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(result).not.toBeNull();
       expect(result!.status).toBe(429);
     });
 
-    it('includes Retry-After: 60 header in the 429 response', async () => {
-      mockEval.mockResolvedValue(11);
+    it('includes Retry-After header reflecting remaining TTL in the 429 response', async () => {
+      mockEval.mockResolvedValue([11, 45]);
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
-      expect(result!.headers.get('Retry-After')).toBe('60');
+      expect(result!.headers.get('Retry-After')).toBe('45');
+    });
+
+    it('includes X-RateLimit-Limit header in the 429 response', async () => {
+      mockEval.mockResolvedValue([11, 45]);
+      const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
+      expect(result!.headers.get('X-RateLimit-Limit')).toBe('10');
+    });
+
+    it('includes X-RateLimit-Remaining: 0 header in the 429 response', async () => {
+      mockEval.mockResolvedValue([11, 45]);
+      const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
+      expect(result!.headers.get('X-RateLimit-Remaining')).toBe('0');
     });
 
     it('returns null (fail-open) when Redis eval throws', async () => {
       mockEval.mockRejectedValue(new Error('Redis error'));
       const result = await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }));
       expect(result).toBeNull();
+    });
+
+    describe('pathname normalization', () => {
+      it('trailing slash produces the same key as canonical path', async () => {
+        mockEval.mockResolvedValue([1, 60]);
+        await applyRateLimit(
+          makeRequest(
+            { 'x-forwarded-for': '1.2.3.4' },
+            'http://localhost/api/movie-recommendation/',
+          ),
+        );
+        expect(mockEval).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({ keys: ['rl:api-movie-recommendation:1.2.3.4'] }),
+        );
+      });
+
+      it('consecutive slashes produce the same key as canonical path', async () => {
+        mockEval.mockResolvedValue([1, 60]);
+        await applyRateLimit(
+          makeRequest(
+            { 'x-forwarded-for': '1.2.3.4' },
+            'http://localhost/api//movie-recommendation',
+          ),
+        );
+        expect(mockEval).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({ keys: ['rl:api-movie-recommendation:1.2.3.4'] }),
+        );
+      });
+
+      it('root pathname falls back to rl:unknown:<ip>', async () => {
+        mockEval.mockResolvedValue([1, 60]);
+        await applyRateLimit(makeRequest({ 'x-forwarded-for': '1.2.3.4' }, 'http://localhost/'));
+        expect(mockEval).toHaveBeenCalledWith(
+          expect.any(String),
+          expect.objectContaining({ keys: ['rl:unknown:1.2.3.4'] }),
+        );
+      });
     });
   });
 });

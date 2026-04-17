@@ -1,5 +1,5 @@
 {
-  "name": "movie-discovery",
+  "name": "movie-backfill",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -10,20 +10,15 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "node-cron": "^4.2.1",
-    "openai": "^6.34.0",
-    "pg": "^8.20.0"
+    "openai": "^6.33.0",
+    "pg": "^8.20.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^24.12.2",
-    "@types/node-cron": "^3.0.11",
+    "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
     "tsx": "^4.19.4",
     "typescript": "^6.0.2",
     "vitest": "^4.1.4"
-  },
-  "engines": {
-    "node": ">=24",
-    "npm": ">=11"
   }
 }
