@@ -1,5 +1,3 @@
-import { zodResponseFormat } from 'openai/helpers/zod';
-
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
@@ -24,6 +22,26 @@ const TMDB_LOCALE: Record<string, string> = {
   en: 'en-US',
   ru: 'ru-RU',
   fi: 'fi-FI',
+};
+
+const recommendationResponseFormat = {
+  type: 'json_schema' as const,
+  json_schema: {
+    name: 'recommendationAPIRequestEvent',
+    strict: true,
+    schema: {
+      type: 'object',
+      properties: {
+        description: { type: 'string' },
+        title: {
+          type: 'string',
+          description: 'The title of the recommended movie',
+        },
+      },
+      required: ['description', 'title'],
+      additionalProperties: false,
+    },
+  },
 };
 
 const buildPrompt = (locale: string) => {
@@ -111,15 +129,14 @@ export async function getRecommendation(similarMovies: EnhancedMovieMatch[], loc
         { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
       ],
-      response_format: zodResponseFormat(
-        recommendationResponseSchema,
-        'recommendationAPIRequestEvent',
-      ),
+      response_format: recommendationResponseFormat,
     });
     if (!recommendation.choices[0].message.content) {
       throw new Error('No output text from OpenAI.');
     }
-    return JSON.parse(recommendation.choices[0].message.content);
+    return recommendationResponseSchema.parse(
+      JSON.parse(recommendation.choices[0].message.content),
+    );
   } catch (error) {
     throw new Error(`Failed to get recommendation from OpenAI: ${error}`);
   }

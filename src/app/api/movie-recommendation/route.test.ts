@@ -367,7 +367,21 @@ describe('POST /api/movie-recommendation – input validation', () => {
 // ---------------------------------------------------------------------------
 
 /** Shape of a single chat.completions.create call's first argument in the mock. */
-type ChatCompletionCallArg = { model: string; messages: { role: string; content: string }[] };
+type ChatCompletionCallArg = {
+  model: string;
+  messages: { role: string; content: string }[];
+  response_format?: {
+    type?: string;
+    json_schema?: {
+      name?: string;
+      schema?: {
+        type?: string;
+        required?: string[];
+        properties?: Record<string, { type?: string }>;
+      };
+    };
+  };
+};
 
 /** Distinctive substring of the enrichment system prompt — used to detect enrichment calls. */
 const ENRICHMENT_SYSTEM_PROMPT_MARKER = 'Movie Semantic Analyst';
@@ -430,6 +444,30 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
   });
 
   describe('LLM enrichment call behavior', () => {
+    it('uses a top-level object json schema for recommendation structured output', async () => {
+      const req = makeRequest(validPerson);
+      const res = await POST(req);
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const recommendationCall = calls.find((callArgs) => callArgs[0].response_format);
+      expect(recommendationCall).toBeDefined();
+
+      const responseFormat = recommendationCall?.[0].response_format;
+      expect(responseFormat).toEqual(expect.objectContaining({ type: 'json_schema' }));
+      expect(responseFormat?.json_schema?.name).toBe('recommendationAPIRequestEvent');
+      expect(responseFormat?.json_schema?.schema).toEqual(
+        expect.objectContaining({
+          type: 'object',
+          required: expect.arrayContaining(['title', 'description']),
+          properties: expect.objectContaining({
+            title: expect.objectContaining({ type: 'string' }),
+            description: expect.objectContaining({ type: 'string' }),
+          }),
+        }),
+      );
+    });
+
     it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {
       // First call = enrichment, then recommendation + description calls
       mockChatCompletionsCreate
