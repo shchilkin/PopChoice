@@ -2,7 +2,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
-import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG } from '@/lib/locale';
+import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 import { MovieService } from '@/services';
@@ -16,7 +16,7 @@ import type { EnhancedMovieMatch, PersonFormData } from './types';
 // Locale helpers
 // ---------------------------------------------------------------------------
 
-const buildPrompt = (locale: string) => {
+const buildPrompt = (locale: Locale) => {
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   return `You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
@@ -90,7 +90,7 @@ export async function getSimilarMovies(embedding: number[]): Promise<EnhancedMov
 // ---------------------------------------------------------------------------
 
 /** Ask OpenAI to pick the single best movie from the candidates. */
-export async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: string) {
+export async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: Locale) {
   try {
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
@@ -127,7 +127,7 @@ export async function generateMovieDescriptions(
     localizedOverview?: string;
   })[],
   userPreferences: PersonFormData[],
-  locale: string,
+  locale: Locale,
 ): Promise<
   (EnhancedMovieMatch & {
     posterURL?: string;
@@ -232,7 +232,7 @@ Remember: respond in ${language} only.`;
  */
 export async function getMovieInfo(
   movieTitle: string,
-  locale: string,
+  locale: Locale,
   year?: number,
   tmdbId?: number, // When provided (TMDB-sourced movies), skips title search entirely
 ): Promise<{ posterURL?: string; localizedName?: string; localizedOverview?: string }> {
@@ -274,7 +274,7 @@ export async function getMovieInfo(
 /** Batch-fetch poster URLs and localized info for all similar movies. */
 export async function enhanceSimilarMoviesWithPosters(
   similarMovies: EnhancedMovieMatch[],
-  locale: string,
+  locale: Locale,
   batchSize: number = 3,
 ): Promise<
   (EnhancedMovieMatch & {

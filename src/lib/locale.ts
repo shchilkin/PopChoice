@@ -1,19 +1,19 @@
 import { NextRequest } from 'next/server';
 
-/** Supported locale codes. */
-export type Locale = 'en' | 'ru' | 'fi';
+export const SUPPORTED_LOCALES = ['en', 'ru', 'fi'] as const;
 
-export const SUPPORTED_LOCALES: readonly Locale[] = ['en', 'ru', 'fi'];
+/** Supported locale codes — derived from SUPPORTED_LOCALES so the type and list stay in sync. */
+export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 /** Maps a locale code to the full language name used in LLM prompts. */
-export const LOCALE_LANGUAGE: Record<string, string> = {
+export const LOCALE_LANGUAGE: Record<Locale, string> = {
   en: 'English',
   ru: 'Russian',
   fi: 'Finnish',
 };
 
 /** Maps a locale code to the TMDB language tag (BCP 47). */
-export const LOCALE_TO_TMDB_LANG: Record<string, string> = {
+export const LOCALE_TO_TMDB_LANG: Record<Locale, string> = {
   en: 'en-US',
   ru: 'ru-RU',
   fi: 'fi-FI',
