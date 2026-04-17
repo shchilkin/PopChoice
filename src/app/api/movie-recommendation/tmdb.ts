@@ -224,7 +224,7 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   }
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return dot;
+  return Number.isFinite(dot) ? dot : 0;
 }
 
 /**
@@ -419,6 +419,15 @@ export async function seedMovies(
         embedding = embeddingResponse.data[0]?.embedding;
       }
       if (!embedding) continue;
+
+      // Reject zero-magnitude embeddings — pgvector cosine distance returns NaN for them
+      if (embedding.every((v) => v === 0)) {
+        logger.warn(
+          { movieTitle: movie.title, year },
+          'JIT seeding skipped — zero-magnitude embedding',
+        );
+        continue;
+      }
 
       const { error: insertError } = await db.from('movies').insert({
         name: movie.title,
