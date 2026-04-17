@@ -78,7 +78,7 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 ## PopChoice priority next steps (highest impact)
 
-- [ ] Document and enforce boundaries for `app` / `services` / `lib` / `utils`.
+- [ ] Document and enforce boundaries for `src/app`, `src/services`, `src/lib`, and `src/utils`, and clarify how they relate to root-level `services/*`.
 - [ ] Keep API route handlers thin and centralize recommendation orchestration.
 - [ ] Eliminate manual sync points for recommendation thresholds/config and docs.
 - [ ] Align docs with current structure (e.g. naming drift like `db` vs `database`).
