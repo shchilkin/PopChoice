@@ -3,16 +3,46 @@ name: PR
 on:
   pull_request:
     branches: ['development']
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - name: Classify pull request changes
+        id: classify
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const pullRequest = context.payload.pull_request;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              per_page: 100,
+            });
+
+            const isDocumentationFile = (filename) =>
+              filename.startsWith('docs/') || /^[^/]+\.md$/.test(filename);
+            const docsOnly =
+              files.length > 0 && files.every((file) => isDocumentationFile(file.filename));
+
+            core.info(`Changed files: ${files.length}`);
+            core.info(`Docs-only pull request: ${docsOnly}`);
+            core.setOutput('docs_only', docsOnly ? 'true' : 'false');
+
   lint:
     name: Lint & Format
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -37,6 +67,8 @@ jobs:
 
   type-check:
     name: Type Check
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -58,6 +90,8 @@ jobs:
 
   server-tests:
     name: Server Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -90,6 +124,8 @@ jobs:
 
   storybook-tests:
     name: Storybook Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -128,6 +164,8 @@ jobs:
 
   build:
     name: Build
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -153,6 +191,8 @@ jobs:
 
   movie-seed-ci:
     name: Movie Seed CI
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -178,6 +218,8 @@ jobs:
 
   dependency-review:
     name: Dependency Review
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -187,3 +229,52 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
+
+  pr-validation:
+    name: PR Validation
+    if: always()
+    needs:
+      - changes
+      - lint
+      - type-check
+      - server-tests
+      - storybook-tests
+      - build
+      - movie-seed-ci
+      - dependency-review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+      LINT_RESULT: ${{ needs.lint.result }}
+      TYPE_CHECK_RESULT: ${{ needs.type-check.result }}
+      SERVER_TESTS_RESULT: ${{ needs.server-tests.result }}
+      STORYBOOK_TESTS_RESULT: ${{ needs.storybook-tests.result }}
+      BUILD_RESULT: ${{ needs.build.result }}
+      MOVIE_SEED_RESULT: ${{ needs.movie-seed-ci.result }}
+      DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+    steps:
+      - name: Validate workflow outcome
+        run: |
+          if [[ "$DOCS_ONLY" == "true" ]]; then
+            echo "Docs-only pull request detected. Full CI jobs were intentionally skipped."
+            exit 0
+          fi
+
+          failures=()
+
+          [[ "$LINT_RESULT" == "success" ]] || failures+=("Lint & Format: $LINT_RESULT")
+          [[ "$TYPE_CHECK_RESULT" == "success" ]] || failures+=("Type Check: $TYPE_CHECK_RESULT")
+          [[ "$SERVER_TESTS_RESULT" == "success" ]] || failures+=("Server Tests: $SERVER_TESTS_RESULT")
+          [[ "$STORYBOOK_TESTS_RESULT" == "success" ]] || failures+=("Storybook Tests: $STORYBOOK_TESTS_RESULT")
+          [[ "$BUILD_RESULT" == "success" ]] || failures+=("Build: $BUILD_RESULT")
+          [[ "$MOVIE_SEED_RESULT" == "success" ]] || failures+=("Movie Seed CI: $MOVIE_SEED_RESULT")
+          [[ "$DEPENDENCY_REVIEW_RESULT" == "success" ]] || failures+=("Dependency Review: $DEPENDENCY_REVIEW_RESULT")
+
+          if [[ ${#failures[@]} -gt 0 ]]; then
+            printf '%s\n' "One or more required CI jobs did not pass:" "${failures[@]}"
+            exit 1
+          fi
+
+          echo "All required CI jobs passed for a non-doc pull request."
