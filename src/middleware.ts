@@ -9,7 +9,7 @@ function generateCsrfToken(): string {
 }
 
 /**
- * Next.js middleware that issues a signed CSRF cookie on every non-API request.
+ * Next.js middleware that issues a CSRF cookie on every non-API request.
  *
  * The cookie is `SameSite=Lax`, `Secure` in production, and readable by
  * client-side JavaScript so the frontend can echo it back in the

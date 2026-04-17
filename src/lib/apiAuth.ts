@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 import logger from '@/lib/logger';
 
@@ -9,9 +9,9 @@ import logger from '@/lib/logger';
  *   - `Authorization: Bearer <key>`
  *   - `X-API-Key: <key>`
  *
- * Keys are stored as HMAC-SHA-256 hashes in the `VALID_API_KEYS` environment variable
- * (comma-separated). The HMAC secret is read from `API_KEY_HMAC_SECRET` and must be
- * configured whenever `VALID_API_KEYS` is set.
+ * Keys are stored as scrypt digests in the `VALID_API_KEYS` environment variable
+ * (comma-separated). The derivation secret is read from `API_KEY_HMAC_SECRET` and
+ * must be configured whenever `VALID_API_KEYS` is set.
  * In development, when `VALID_API_KEYS` is not set, all requests are allowed through
  * and a warning is logged.
  *
@@ -44,8 +44,8 @@ export function validateApiKey(req: Request): string | null {
       .filter(Boolean),
   );
 
-  const hmacSecret = getConfiguredHmacSecret();
-  if (!hmacSecret) {
+  const derivationSecret = getConfiguredHmacSecret();
+  if (!derivationSecret) {
     logger.error(
       'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
     );
@@ -83,7 +83,7 @@ export function validateApiKey(req: Request): string | null {
   // HMAC-SHA-256 with a server-side secret: API keys are high-entropy random tokens
   // (not passwords), so bcrypt/scrypt are unnecessary. The HMAC secret adds defense-in-depth.
   // timingSafeEqual prevents timing-based key enumeration.
-  const candidateHash = hashApiKeyWithSecret(candidateKey, hmacSecret);
+  const candidateHash = hashApiKeyWithSecret(candidateKey, derivationSecret);
   const candidateHashBuf = Buffer.from(candidateHash, 'hex');
 
   const matched = [...validKeyHashes].some((storedHash) => {
@@ -111,14 +111,14 @@ export function validateApiKey(req: Request): string | null {
 }
 
 /**
- * HMAC secret used to hash API keys in utility contexts.
+ * Secret used to derive API key digests in utility contexts.
  * When absent, a random secret is used in non-production environments.
  */
 const fallbackHmacSecret: string = randomBytes(32).toString('hex');
 
 /**
- * Returns the HMAC-SHA-256 hex digest of a plaintext API key.
- * Use this to pre-hash keys before storing them in `VALID_API_KEYS`.
+ * Returns the scrypt hex digest of a plaintext API key.
+ * Use this to pre-derive key digests before storing them in `VALID_API_KEYS`.
  *
  * **Important:** set `API_KEY_HMAC_SECRET` to the same value used when the hashes
  * in `VALID_API_KEYS` were generated, otherwise validation will fail.
@@ -139,7 +139,7 @@ export function hashApiKey(plaintext: string): string {
 }
 
 function hashApiKeyWithSecret(plaintext: string, secret: string): string {
-  return createHmac('sha256', secret).update(plaintext).digest('hex');
+  return scryptSync(plaintext, secret, 32).toString('hex');
 }
 
 function getConfiguredHmacSecret(): string | null {

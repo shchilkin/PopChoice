@@ -19,11 +19,7 @@ POSTGRES_DB=popchoice
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
 
-# CSRF token cookie (same-origin safeguard)
-# Required in production so CSRF behavior stays stable across instances
-CSRF_SECRET=your-stable-csrf-secret
-
-# API key authentication secret (used to compute HMAC-SHA-256 digests)
+# API key authentication secret (used to derive scrypt key digests)
 # Required when VALID_API_KEYS is set; must stay stable across restarts
 API_KEY_HMAC_SECRET=your-stable-hmac-secret
 
@@ -31,9 +27,9 @@ API_KEY_HMAC_SECRET=your-stable-hmac-secret
 # When unset, rate limiting is skipped and background seeding is disabled
 REDIS_URL=redis://user:password@host:6379
 
-# API key authentication – comma-separated HMAC-SHA-256 digests of valid API keys
+# API key authentication – comma-separated scrypt digests of valid API keys
 # Required in production; when unset in development, auth is disabled with a warning
-VALID_API_KEYS=<hmac-sha256-of-key1>,<hmac-sha256-of-key2>
+VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
 ```
 
 ## OpenAI Setup
@@ -103,7 +99,7 @@ External callers (mobile apps, partner integrations) can authenticate via one of
 - `Authorization: Bearer <key>`
 - `X-API-Key: <key>`
 
-Keys are stored as **HMAC-SHA-256 hashes** in the `VALID_API_KEYS` environment variable (comma-separated). The HMAC uses a server-side secret from `API_KEY_HMAC_SECRET`. Never store plaintext keys.
+Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variable (comma-separated). The derivation uses a server-side secret from `API_KEY_HMAC_SECRET`. Never store plaintext keys.
 
 #### Generating and registering a key
 
@@ -116,8 +112,8 @@ Keys are stored as **HMAC-SHA-256 hashes** in the `VALID_API_KEYS` environment v
    ```
 4. **Add the hash** to your environment:
    ```env
-   API_KEY_HMAC_SECRET=<your-hmac-secret>
-   VALID_API_KEYS=<hmac-hash-of-key1>,<hmac-hash-of-key2>
+   API_KEY_HMAC_SECRET=<your-derivation-secret>
+   VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
    ```
 5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
 
@@ -127,13 +123,7 @@ When `VALID_API_KEYS` is not set, API key authentication is **disabled in develo
 
 ### 2. CSRF tokens (optional defense-in-depth for browser callers)
 
-Next.js middleware (`src/middleware.ts`) issues a signed `__csrf` cookie on every page load. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls. The server verifies the HMAC signature and expiry.
-
-| Variable      | Required             | Description                                                                                                                      |
-| ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `CSRF_SECRET` | **Yes (production)** | Stable secret used to sign CSRF tokens. Generate with `openssl rand -hex 32`. In development a random value is used per process. |
-
-> **Security note:** Store `CSRF_SECRET` as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+Next.js middleware (`src/middleware.ts`) issues a random `__csrf` cookie on page loads. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls.
 
 The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. When either the CSRF cookie or header is present, both must be present and identical.
 
