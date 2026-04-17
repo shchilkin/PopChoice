@@ -44,26 +44,28 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: bump version [skip ci]"
+            push_succeeded=false
+
             for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
               if git push origin HEAD:development; then
                 echo "Push succeeded on attempt ${attempt}"
-                exit 0
+                push_succeeded=true
+                break
               fi
 
-              if [ "${attempt}" -eq "${MAX_ATTEMPTS}" ]; then
-                echo "Push failed after ${MAX_ATTEMPTS} attempts"
-                exit 1
-              fi
-
-              echo "Push failed due to remote updates, resyncing with origin/development"
-              git fetch origin development
-              if ! git rebase origin/development; then
-                git rebase --abort || true
-                echo "Rebase failed on attempt ${attempt} of ${MAX_ATTEMPTS}. Manual resolution may be required."
-                exit 1
+              if [ "${attempt}" -lt "${MAX_ATTEMPTS}" ]; then
+                echo "Push failed due to remote updates, resyncing with origin/development"
+                git fetch origin development
+                if ! git rebase origin/development; then
+                  git rebase --abort || true
+                  echo "Rebase failed on attempt ${attempt} of ${MAX_ATTEMPTS}. Manual resolution may be required."
+                  exit 1
+                fi
               fi
             done
 
-            echo "Push did not succeed after retry loop completion"
-            exit 1
+            if [ "${push_succeeded}" != "true" ]; then
+              echo "Push failed after ${MAX_ATTEMPTS} attempts"
+              exit 1
+            fi
           fi
