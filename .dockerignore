@@ -1,0 +1,9 @@
+.git
+.next
+coverage
+dist
+node_modules
+storybook-static
+*.log
+.env
+.env.*

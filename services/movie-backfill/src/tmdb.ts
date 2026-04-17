@@ -1,4 +1,5 @@
 import { logger } from './logger.js';
+import z from 'zod';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 
@@ -20,15 +21,17 @@ export interface TMDBMovieDetails {
   };
 }
 
-interface TMDBSearchResult {
-  id: number;
-  title: string;
-  release_date: string;
-}
+const tmdbSearchResultSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  release_date: z.string(),
+});
 
-interface TMDBSearchResponse {
-  results: TMDBSearchResult[];
-}
+type TMDBSearchResult = z.infer<typeof tmdbSearchResultSchema>;
+
+const tmdbSearchResponseSchema = z.object({
+  results: z.array(tmdbSearchResultSchema),
+});
 
 /** Year tolerance (in years) when disambiguating TMDB search results. */
 const YEAR_TOLERANCE = 1;
@@ -74,8 +77,17 @@ async function tmdbSearch(
     throw new Error(`TMDB search API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = (await response.json()) as TMDBSearchResponse;
-  return data.results ?? [];
+  const parsedSearchResponse = tmdbSearchResponseSchema.safeParse(await response.json());
+  if (!parsedSearchResponse.success) {
+    logger.warn('TMDB search response validation failed', {
+      title,
+      year,
+      zodError: parsedSearchResponse.error,
+    });
+    return [];
+  }
+
+  return parsedSearchResponse.data.results;
 }
 
 /**
