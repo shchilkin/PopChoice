@@ -7,6 +7,7 @@ const logger = pino({
     paths: [
       'authorization',
       'Authorization',
+      'cookie',
       'Cookie',
       'headers.authorization',
       'headers.Authorization',
