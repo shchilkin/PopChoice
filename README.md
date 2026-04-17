@@ -8,7 +8,7 @@
 
 > 🎬 **[Live Demo →](https://pop-choice.shchilkin.dev/)**
 
-PopChoice is a **movie recommendation engine** that uses AI embeddings and vector similarity search to deliver personalised movie suggestions — whether you are picking for yourself or finding a film everyone in the group will enjoy.
+PopChoice is a **movie recommendation engine** that uses AI embeddings and vector similarity search to deliver personalized movie suggestions — whether you are picking for yourself or finding a film everyone in the group will enjoy.
 
 ## ✨ Features
 
