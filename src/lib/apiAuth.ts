@@ -44,7 +44,7 @@ export function validateApiKey(req: Request): string | null {
       .filter(Boolean),
   );
 
-  const derivationSecret = getConfiguredHmacSecret();
+  const derivationSecret = getConfiguredDerivationSecret();
   if (!derivationSecret) {
     logger.error(
       'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
@@ -80,9 +80,8 @@ export function validateApiKey(req: Request): string | null {
     return null;
   }
 
-  // HMAC-SHA-256 with a server-side secret: API keys are high-entropy random tokens
-  // (not passwords), so bcrypt/scrypt are unnecessary. The HMAC secret adds defense-in-depth.
-  // timingSafeEqual prevents timing-based key enumeration.
+  // Derive a digest with scrypt + a server-side secret, then compare with
+  // timingSafeEqual to reduce both brute-force and timing attack risk.
   const candidateHash = hashApiKeyWithSecret(candidateKey, derivationSecret);
   const candidateHashBuf = Buffer.from(candidateHash, 'hex');
 
@@ -120,11 +119,11 @@ const fallbackHmacSecret: string = randomBytes(32).toString('hex');
  * Returns the scrypt hex digest of a plaintext API key.
  * Use this to pre-derive key digests before storing them in `VALID_API_KEYS`.
  *
- * **Important:** set `API_KEY_HMAC_SECRET` to the same value used when the hashes
+ * **Important:** set `API_KEY_HMAC_SECRET` to the same value used when the digests
  * in `VALID_API_KEYS` were generated, otherwise validation will fail.
  */
 export function hashApiKey(plaintext: string): string {
-  const secret = getConfiguredHmacSecret();
+  const secret = getConfiguredDerivationSecret();
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('API_KEY_HMAC_SECRET must be set in production.');
@@ -139,10 +138,12 @@ export function hashApiKey(plaintext: string): string {
 }
 
 function hashApiKeyWithSecret(plaintext: string, secret: string): string {
-  return scryptSync(plaintext, secret, 32).toString('hex');
+  // scrypt defaults recommended by OWASP for interactive verification workloads.
+  // These settings balance security and API latency.
+  return scryptSync(plaintext, secret, 32, { N: 16_384, r: 8, p: 1 }).toString('hex');
 }
 
-function getConfiguredHmacSecret(): string | null {
+function getConfiguredDerivationSecret(): string | null {
   const configuredSecret = process.env.API_KEY_HMAC_SECRET?.trim();
   return configuredSecret ? configuredSecret : null;
 }
