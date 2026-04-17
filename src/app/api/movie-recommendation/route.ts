@@ -354,14 +354,16 @@ export async function POST(req: NextRequest) {
             age_rating: recommendedMovie.age_rating,
             duration: recommendedMovie.duration,
             score_rating: recommendedMovie.score_rating,
-            similarity: recommendedMovie.similarity,
+            similarity: Number.isFinite(recommendedMovie.similarity)
+              ? recommendedMovie.similarity
+              : 0,
           }
         : undefined,
       similarMovies: moviesWithDescriptions.map((movie) => ({
         id: Number(movie.id),
         name: movie.name,
         year: movie.year,
-        similarity: movie.similarity,
+        similarity: Number.isFinite(movie.similarity) ? movie.similarity : 0,
         age_rating: movie.age_rating,
         duration: movie.duration,
         score_rating: movie.score_rating,

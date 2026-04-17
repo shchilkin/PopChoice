@@ -1,5 +1,3 @@
-import { zodResponseFormat } from 'openai/helpers/zod';
-
 import { openAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';
@@ -8,13 +6,22 @@ import { MODELS } from '@/lib/models';
 import { MovieService } from '@/services';
 
 import { combineAllPeopleDataToString } from './embedding';
-import { recommendationResponseSchema } from './types';
+import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
 import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // Locale helpers
 // ---------------------------------------------------------------------------
+
+const recommendationResponseFormat = {
+  type: 'json_schema' as const,
+  json_schema: {
+    name: 'recommendationAPIRequestEvent',
+    strict: true,
+    schema: recommendationResponseJsonSchema,
+  },
+};
 
 const buildPrompt = (locale: Locale) => {
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
@@ -101,15 +108,14 @@ export async function getRecommendation(similarMovies: EnhancedMovieMatch[], loc
         { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
       ],
-      response_format: zodResponseFormat(
-        recommendationResponseSchema,
-        'recommendationAPIRequestEvent',
-      ),
+      response_format: recommendationResponseFormat,
     });
     if (!recommendation.choices[0].message.content) {
       throw new Error('No output text from OpenAI.');
     }
-    return JSON.parse(recommendation.choices[0].message.content);
+    return recommendationResponseSchema.parse(
+      JSON.parse(recommendation.choices[0].message.content),
+    );
   } catch (error) {
     throw new Error(`Failed to get recommendation from OpenAI: ${error}`);
   }

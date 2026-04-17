@@ -91,6 +91,7 @@ vi.mock('@/services', () => ({
 
 import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import { POST } from './route';
+import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
 const validBody = {
   favoriteMovie: 'The Dark Knight',
@@ -367,7 +368,23 @@ describe('POST /api/movie-recommendation – input validation', () => {
 // ---------------------------------------------------------------------------
 
 /** Shape of a single chat.completions.create call's first argument in the mock. */
-type ChatCompletionCallArg = { model: string; messages: { role: string; content: string }[] };
+type ChatCompletionCallArg = {
+  model: string;
+  messages: { role: string; content: string }[];
+  response_format?: {
+    type?: string;
+    json_schema?: {
+      name?: string;
+      strict?: boolean;
+      schema?: {
+        type?: string;
+        additionalProperties?: boolean;
+        required?: string[];
+        properties?: Record<string, { type?: string }>;
+      };
+    };
+  };
+};
 
 /** Distinctive substring of the enrichment system prompt — used to detect enrichment calls. */
 const ENRICHMENT_SYSTEM_PROMPT_MARKER = 'Movie Semantic Analyst';
@@ -430,6 +447,32 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
   });
 
   describe('LLM enrichment call behavior', () => {
+    it('uses a top-level object json schema for recommendation structured output', async () => {
+      const req = makeRequest(validPerson);
+      const res = await POST(req);
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const recommendationCall = calls.find((callArgs) => callArgs[0].response_format);
+      expect(recommendationCall).toBeDefined();
+
+      const responseFormat = recommendationCall?.[0].response_format;
+      expect(responseFormat).toEqual(expect.objectContaining({ type: 'json_schema' }));
+      expect(responseFormat?.json_schema?.name).toBe('recommendationAPIRequestEvent');
+      expect(responseFormat?.json_schema?.strict).toBe(true);
+      expect(responseFormat?.json_schema?.schema).toEqual(
+        expect.objectContaining({
+          type: 'object',
+          additionalProperties: false,
+          required: expect.arrayContaining(['title', 'description']),
+          properties: expect.objectContaining({
+            title: expect.objectContaining({ type: 'string' }),
+            description: expect.objectContaining({ type: 'string' }),
+          }),
+        }),
+      );
+    });
+
     it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {
       // First call = enrichment, then recommendation + description calls
       mockChatCompletionsCreate
@@ -725,5 +768,48 @@ describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
 
     const res = await POST(makeRequest(validPerson));
     expect(res.status).not.toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Schema invariants — prevents drift between Zod and JSON schema definitions
+// ---------------------------------------------------------------------------
+
+describe('recommendationResponse schema invariants', () => {
+  it('JSON schema and Zod schema define the same required field names', () => {
+    const jsonSchemaKeys = [...recommendationResponseJsonSchema.required].sort();
+    const zodKeys = Object.keys(recommendationResponseSchema.shape).sort();
+    expect(zodKeys).toEqual(jsonSchemaKeys);
+  });
+
+  it('JSON schema has additionalProperties: false, matching Zod .strict()', () => {
+    expect(recommendationResponseJsonSchema.additionalProperties).toBe(false);
+  });
+
+  it('Zod schema accepts all required fields', () => {
+    const result = recommendationResponseSchema.safeParse({
+      description: 'A great film.',
+      title: 'Test Movie',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('Zod schema rejects additional properties (strictness)', () => {
+    const result = recommendationResponseSchema.safeParse({
+      description: 'A great film.',
+      title: 'Test Movie',
+      extra: 'unexpected',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('Zod schema rejects missing required field: title', () => {
+    const result = recommendationResponseSchema.safeParse({ description: 'A great film.' });
+    expect(result.success).toBe(false);
+  });
+
+  it('Zod schema rejects missing required field: description', () => {
+    const result = recommendationResponseSchema.safeParse({ title: 'Test Movie' });
+    expect(result.success).toBe(false);
   });
 });

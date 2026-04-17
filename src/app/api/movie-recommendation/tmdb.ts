@@ -382,6 +382,15 @@ export async function seedMovies(
       }
       if (!embedding) continue;
 
+      // Reject zero-magnitude embeddings — pgvector cosine distance returns NaN for them
+      if (embedding.every((v) => v === 0)) {
+        logger.warn(
+          { movieTitle: movie.title, year },
+          'JIT seeding skipped — zero-magnitude embedding',
+        );
+        continue;
+      }
+
       const { error: insertError } = await db.from('movies').insert({
         name: movie.title,
         year,
