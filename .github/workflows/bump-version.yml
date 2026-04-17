@@ -37,19 +37,21 @@ jobs:
 
       - name: Commit and push version update
         run: |
+          MAX_ATTEMPTS=3
+
           git add package.json package-lock.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
             git commit -m "chore: bump version [skip ci]"
-            for attempt in 1 2 3; do
+            for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
               if git push origin HEAD:development; then
                 echo "Push succeeded on attempt ${attempt}"
                 exit 0
               fi
 
-              if [ "${attempt}" -eq 3 ]; then
-                echo "Push failed after ${attempt} attempts"
+              if [ "${attempt}" -eq "${MAX_ATTEMPTS}" ]; then
+                echo "Push failed after ${MAX_ATTEMPTS} attempts"
                 exit 1
               fi
 
@@ -57,7 +59,7 @@ jobs:
               git fetch origin development
               if ! git rebase origin/development; then
                 git rebase --abort || true
-                echo "Rebase failed while re-syncing with origin/development"
+                echo "Rebase failed on attempt ${attempt} of ${MAX_ATTEMPTS}. Manual resolution may be required."
                 exit 1
               fi
             done
