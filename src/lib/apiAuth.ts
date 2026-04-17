@@ -10,8 +10,8 @@ import logger from '@/lib/logger';
  *   - `X-API-Key: <key>`
  *
  * Keys are stored as HMAC-SHA-256 hashes in the `VALID_API_KEYS` environment variable
- * (comma-separated). The HMAC secret is read from `API_KEY_HMAC_SECRET`; if absent
- * a random secret is generated per process (existing hashes won't match after restart).
+ * (comma-separated). The HMAC secret is read from `API_KEY_HMAC_SECRET` and must be
+ * configured whenever `VALID_API_KEYS` is set.
  * In development, when `VALID_API_KEYS` is not set, all requests are allowed through
  * and a warning is logged.
  *
@@ -44,6 +44,14 @@ export function validateApiKey(req: Request): string | null {
       .filter(Boolean),
   );
 
+  const hmacSecret = getConfiguredHmacSecret();
+  if (!hmacSecret) {
+    logger.error(
+      'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
+    );
+    return null;
+  }
+
   // Extract the raw key from the request headers.
   const authHeader = req.headers.get('authorization');
   const apiKeyHeader = req.headers.get('x-api-key');
@@ -53,10 +61,18 @@ export function validateApiKey(req: Request): string | null {
   if (authHeader) {
     const parts = authHeader.split(' ');
     if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') {
-      candidateKey = parts[1];
+      const bearerToken = parts[1].trim();
+      if (bearerToken) {
+        candidateKey = bearerToken;
+      }
     }
-  } else if (apiKeyHeader) {
-    candidateKey = apiKeyHeader.trim();
+  }
+
+  if (!candidateKey && apiKeyHeader) {
+    const trimmedApiKeyHeader = apiKeyHeader.trim();
+    if (trimmedApiKeyHeader) {
+      candidateKey = trimmedApiKeyHeader;
+    }
   }
 
   if (!candidateKey) {
@@ -67,7 +83,7 @@ export function validateApiKey(req: Request): string | null {
   // HMAC-SHA-256 with a server-side secret: API keys are high-entropy random tokens
   // (not passwords), so bcrypt/scrypt are unnecessary. The HMAC secret adds defense-in-depth.
   // timingSafeEqual prevents timing-based key enumeration.
-  const candidateHash = hashApiKey(candidateKey);
+  const candidateHash = hashApiKeyWithSecret(candidateKey, hmacSecret);
   const candidateHashBuf = Buffer.from(candidateHash, 'hex');
 
   const matched = [...validKeyHashes].some((storedHash) => {
@@ -95,11 +111,10 @@ export function validateApiKey(req: Request): string | null {
 }
 
 /**
- * HMAC secret used to hash API keys. Read from `API_KEY_HMAC_SECRET` env var;
- * falls back to a random value (meaning stored hashes won't survive a restart
- * unless the env var is set).
+ * HMAC secret used to hash API keys in utility contexts.
+ * When absent, a random secret is used in non-production environments.
  */
-const hmacSecret: string = process.env.API_KEY_HMAC_SECRET || randomBytes(32).toString('hex');
+const fallbackHmacSecret: string = randomBytes(32).toString('hex');
 
 /**
  * Returns the HMAC-SHA-256 hex digest of a plaintext API key.
@@ -109,7 +124,27 @@ const hmacSecret: string = process.env.API_KEY_HMAC_SECRET || randomBytes(32).to
  * in `VALID_API_KEYS` were generated, otherwise validation will fail.
  */
 export function hashApiKey(plaintext: string): string {
-  return createHmac('sha256', hmacSecret).update(plaintext).digest('hex');
+  const secret = getConfiguredHmacSecret();
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('API_KEY_HMAC_SECRET must be set in production.');
+    }
+    logger.warn(
+      'API_KEY_HMAC_SECRET is not set — using an ephemeral dev secret for hashApiKey output.',
+    );
+    return hashApiKeyWithSecret(plaintext, fallbackHmacSecret);
+  }
+
+  return hashApiKeyWithSecret(plaintext, secret);
+}
+
+function hashApiKeyWithSecret(plaintext: string, secret: string): string {
+  return createHmac('sha256', secret).update(plaintext).digest('hex');
+}
+
+function getConfiguredHmacSecret(): string | null {
+  const configuredSecret = process.env.API_KEY_HMAC_SECRET?.trim();
+  return configuredSecret ? configuredSecret : null;
 }
 
 /** Best-effort extraction of the client IP for logging purposes. */

@@ -19,13 +19,21 @@ POSTGRES_DB=popchoice
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
 
+# CSRF token cookie (same-origin safeguard)
+# Required in production so CSRF behavior stays stable across instances
+CSRF_SECRET=your-stable-csrf-secret
+
+# API key authentication secret (used to compute HMAC-SHA-256 digests)
+# Required when VALID_API_KEYS is set; must stay stable across restarts
+API_KEY_HMAC_SECRET=your-stable-hmac-secret
+
 # Redis (optional) – enables distributed rate limiting and BullMQ background workers
 # When unset, rate limiting is skipped and background seeding is disabled
 REDIS_URL=redis://user:password@host:6379
 
-# API key authentication – comma-separated SHA-256 hashes of valid API keys
+# API key authentication – comma-separated HMAC-SHA-256 digests of valid API keys
 # Required in production; when unset in development, auth is disabled with a warning
-VALID_API_KEYS=<sha256-hash-of-key1>,<sha256-hash-of-key2>
+VALID_API_KEYS=<hmac-sha256-of-key1>,<hmac-sha256-of-key2>
 ```
 
 ## OpenAI Setup
@@ -86,19 +94,9 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 
 ## API Endpoint Protection
 
-The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by a dual authentication scheme handled by the `withAuth` wrapper:
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints require API key authentication (`withAuth` wrapper). CSRF is used as an additional same-origin safeguard when a browser sends CSRF cookie/header pairs.
 
-### 1. CSRF tokens (same-origin frontend)
-
-Next.js middleware (`src/middleware.ts`) issues a signed `__csrf` cookie on every page load. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls. The server verifies the HMAC signature and expiry.
-
-| Variable      | Required             | Description                                                                                                                      |
-| ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `CSRF_SECRET` | **Yes (production)** | Stable secret used to sign CSRF tokens. Generate with `openssl rand -hex 32`. In development a random value is used per process. |
-
-> **Security note:** Store `CSRF_SECRET` as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
-
-### 2. API key authentication (external consumers)
+### 1. API key authentication (required)
 
 External callers (mobile apps, partner integrations) can authenticate via one of these headers:
 
@@ -125,7 +123,19 @@ Keys are stored as **HMAC-SHA-256 hashes** in the `VALID_API_KEYS` environment v
 
 #### Development mode
 
-When `VALID_API_KEYS` is not set, API key authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. The frontend still works via CSRF tokens. In production, API key requests are rejected when the variable is absent.
+When `VALID_API_KEYS` is not set, API key authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. In production, all API requests are rejected when the variable is absent.
+
+### 2. CSRF tokens (optional defense-in-depth for browser callers)
+
+Next.js middleware (`src/middleware.ts`) issues a signed `__csrf` cookie on every page load. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls. The server verifies the HMAC signature and expiry.
+
+| Variable      | Required             | Description                                                                                                                      |
+| ------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `CSRF_SECRET` | **Yes (production)** | Stable secret used to sign CSRF tokens. Generate with `openssl rand -hex 32`. In development a random value is used per process. |
+
+> **Security note:** Store `CSRF_SECRET` as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+
+The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. When either the CSRF cookie or header is present, both must be present and identical.
 
 ## Redis Setup (Optional – Rate Limiting & Background Workers)
 

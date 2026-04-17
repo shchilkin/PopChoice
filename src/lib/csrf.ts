@@ -4,12 +4,26 @@ import { createHmac, randomBytes } from 'node:crypto';
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Server-side secret used to sign CSRF tokens. In production this should be a
+ * Server-side secret used to sign CSRF tokens. In production this must be a
  * stable value set via the `CSRF_SECRET` environment variable. In development a
  * random secret is generated per process restart (tokens won't survive restarts
  * but that's acceptable for local work).
  */
-const secret: string = process.env.CSRF_SECRET || randomBytes(32).toString('hex');
+function getCsrfSecret(): string {
+  const configuredSecret = process.env.CSRF_SECRET?.trim();
+
+  if (configuredSecret) {
+    return configuredSecret;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('CSRF_SECRET must be set in production.');
+  }
+
+  return randomBytes(32).toString('hex');
+}
+
+const secret: string = getCsrfSecret();
 
 function sign(payload: string): string {
   return createHmac('sha256', secret).update(payload).digest('hex');

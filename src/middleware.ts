@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { generateCsrfToken } from '@/lib/csrf';
-
 const CSRF_COOKIE = '__csrf';
+
+function generateCsrfToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 /**
  * Next.js middleware that issues a signed CSRF cookie on every non-API request.

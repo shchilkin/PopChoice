@@ -1,27 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { validateApiKey } from '@/lib/apiAuth';
-import { verifyCsrfToken } from '@/lib/csrf';
 import logger from '@/lib/logger';
 
-type RouteHandler = (req: NextRequest, clientId: string) => Promise<NextResponse> | NextResponse;
+type RouteHandler = (req: NextRequest, clientId: string) => Promise<Response> | Response;
+const CSRF_COOKIE = '__csrf';
 
 /**
  * Higher-order function that wraps a Next.js API route handler with authentication.
  *
- * Two authentication methods are supported (checked in order):
+ * API key authentication is required for all protected routes:
  *
- * 1. **CSRF token** — for same-origin frontend requests. The middleware in
- *    `src/middleware.ts` issues a `__csrf` cookie on page loads; client code
- *    reads the cookie and echoes it in the `X-CSRF-Token` request header.
- * 2. **API key** — for external consumers. The key is sent via `Authorization:
- *    Bearer <key>` or `X-API-Key: <key>` and validated against HMAC-hashed
- *    values in the `VALID_API_KEYS` environment variable.
+ * - **API key** — sent via `Authorization: Bearer <key>` or `X-API-Key: <key>`
+ *   and validated against HMAC-hashed values in the `VALID_API_KEYS`
+ *   environment variable.
+ * - **CSRF token** (optional, additional safeguard) — when a CSRF cookie/header
+ *   pair is present, both must match exactly.
  *
  * The wrapped handler receives a `clientId` string identifying the caller.
  *
  * Responses:
- *   - `401 Unauthorized` — neither a valid CSRF token nor API key was supplied.
+ *   - `401 Unauthorized` — missing/invalid API key or invalid CSRF pair.
  *   - Delegates to the inner handler on success.
  *
  * @example
@@ -33,23 +32,27 @@ type RouteHandler = (req: NextRequest, clientId: string) => Promise<NextResponse
  * ```
  */
 export function withAuth(handler: RouteHandler) {
-  return async function authMiddleware(req: NextRequest): Promise<NextResponse> {
-    // 1. Try CSRF token (same-origin frontend).
-    const csrfHeader = req.headers.get('x-csrf-token');
-    if (csrfHeader && verifyCsrfToken(csrfHeader)) {
-      logger.debug('Auth succeeded via CSRF token');
-      return handler(req, 'csrf-verified');
-    }
-
-    // 2. Fall back to API key (external consumers).
+  return async function authMiddleware(req: NextRequest): Promise<Response> {
+    // 1. Require API key auth for all callers.
     const clientId = validateApiKey(req);
-    if (clientId !== null) {
-      return handler(req, clientId);
+    if (clientId === null) {
+      return NextResponse.json(
+        { error: 'Unauthorized: a valid API key is required.' },
+        { status: 401 },
+      );
     }
 
-    return NextResponse.json(
-      { error: 'Unauthorized: a valid CSRF token or API key is required.' },
-      { status: 401 },
-    );
+    // 2. Optional CSRF verification (defense in depth for browser requests).
+    const csrfHeader = req.headers.get('x-csrf-token');
+    const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
+    if (csrfHeader || csrfCookie) {
+      if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
+        logger.warn('Auth failed: CSRF header/cookie mismatch');
+        return NextResponse.json({ error: 'Unauthorized: invalid CSRF token.' }, { status: 401 });
+      }
+      logger.debug('CSRF check passed for API-key-authenticated request');
+    }
+
+    return handler(req, clientId);
   };
 }

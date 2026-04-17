@@ -53,6 +53,9 @@ const tmdbMovieSchema = z.object({
   overview: z.string(),
   release_date: z.string(),
   vote_average: z.number(),
+  vote_count: z.number().optional(),
+  genre_ids: z.array(z.number()).optional(),
+  popularity: z.number().optional(),
   poster_path: z.string().nullable(),
 });
 
@@ -158,18 +161,6 @@ function combineAllPeopleDataToString(allPeopleData: PersonFormData[]): string {
   return combined.trim();
 }
 
-interface TMDBMovie {
-  id: number;
-  title: string;
-  overview: string;
-  release_date: string;
-  vote_average: number;
-  vote_count: number;
-  genre_ids: number[];
-  popularity: number;
-  poster_path: string | null;
-}
-
 const LOCALE_LANGUAGE: Record<string, string> = {
   en: 'English',
   ru: 'Russian',
@@ -200,9 +191,9 @@ function cosineSimilarity(a: number[], b: number[]): number {
 // Main handler
 // ---------------------------------------------------------------------------
 
-async function postHandler(req: NextRequest): Promise<NextResponse> {
+async function postHandler(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
-  if (rateLimitResponse) return rateLimitResponse as NextResponse;
+  if (rateLimitResponse) return rateLimitResponse;
 
   const acceptLanguage = req.headers.get('accept-language') ?? 'en';
   const primaryLang = acceptLanguage.split(',')[0].split(';')[0].split('-')[0].toLowerCase();
@@ -267,7 +258,7 @@ async function postHandler(req: NextRequest): Promise<NextResponse> {
     }
 
     // Queue seeding job to persist TMDB movies in the local DB for future queries.
-    // Convert TMDBMovie → TMDBDiscoverMovie with default values for missing fields.
+    // Convert discover results to TMDBDiscoverMovie, preserving source metadata when available.
     if (seedQueue) {
       const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
         id: m.id,
@@ -275,9 +266,9 @@ async function postHandler(req: NextRequest): Promise<NextResponse> {
         overview: m.overview,
         release_date: m.release_date,
         vote_average: m.vote_average,
-        vote_count: 100, // We filter by vote_count.gte=100, so this is the minimum
-        genre_ids: [], // Not used by seedMovies
-        popularity: 0, // Not used by seedMovies
+        vote_count: m.vote_count ?? 100,
+        genre_ids: m.genre_ids ?? [],
+        popularity: m.popularity ?? 0,
         poster_path: m.poster_path,
       }));
       seedQueue

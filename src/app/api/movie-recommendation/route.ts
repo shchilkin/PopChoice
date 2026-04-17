@@ -73,12 +73,12 @@ async function withTimeout<T>(
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
-async function postHandler(req: NextRequest): Promise<NextResponse> {
+async function postHandler(req: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   try {
     const rateLimitResponse = await applyRateLimit(req);
-    if (rateLimitResponse) return rateLimitResponse as NextResponse;
+    if (rateLimitResponse) return rateLimitResponse;
 
     const body = await req.json();
 
@@ -286,7 +286,7 @@ async function postHandler(req: NextRequest): Promise<NextResponse> {
               if (error instanceof EnqueueTimeoutError) {
                 logger.warn(
                   { err: error, queuedMovies: tmdbMovies.length },
-                  'Timed out while enqueueing TMDB seeding job; skipping fallback to avoid duplicate seeding',
+                  'Timed out while enqueueing TMDB seeding job; skipping fallback since enqueue status is uncertain',
                 );
               } else {
                 logger.warn(
