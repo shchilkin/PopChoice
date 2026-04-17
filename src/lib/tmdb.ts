@@ -36,10 +36,15 @@ export function parseTMDBReleaseYear(releaseDate: string | null | undefined): nu
 /**
  * Dot product of two unit-norm vectors equals cosine similarity.
  * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
- * Returns 0 for mismatched embedding lengths.
+ * Returns 0 for mismatched embedding lengths and logs a warning so the issue is observable.
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) return 0;
+  if (a.length !== b.length) {
+    console.warn(
+      `cosineSimilarity received embeddings with mismatched lengths: ${a.length} !== ${b.length}`,
+    );
+    return 0;
+  }
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
   return dot;
