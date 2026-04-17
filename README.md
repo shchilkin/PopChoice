@@ -69,6 +69,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
 - **[Setup Guide](./docs/SETUP.md)** - Complete setup instructions for OpenAI, Supabase, and development environment
 - **[Development Guide](./docs/DEVELOPMENT.md)** - Development workflows, scripts, and project structure
+- **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** - Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** - GitHub Actions workflow and deployment information
 
 ## 🗂 Project Structure

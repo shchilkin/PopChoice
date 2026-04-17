@@ -1,5 +1,7 @@
 # Development Guide
 
+For ongoing code health reviews, use the **[Maintainability Checklist](./MAINTAINABILITY-CHECKLIST.md)**.
+
 ## Prerequisites
 
 - Node.js 18+ and npm
