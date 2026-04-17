@@ -7,6 +7,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: bump-version-development
+  cancel-in-progress: false
+
 jobs:
   bump-version:
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
@@ -38,5 +42,23 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: bump version [skip ci]"
-            git push origin HEAD:development
+            for attempt in 1 2 3; do
+              if git push origin HEAD:development; then
+                echo "Push succeeded on attempt ${attempt}"
+                exit 0
+              fi
+
+              if [ "${attempt}" -eq 3 ]; then
+                echo "Push failed after ${attempt} attempts"
+                exit 1
+              fi
+
+              echo "Push failed due to remote updates, re-syncing with origin/development"
+              git fetch origin development
+              if ! git rebase origin/development; then
+                git rebase --abort || true
+                echo "Rebase failed while re-syncing with origin/development"
+                exit 1
+              fi
+            done
           fi
