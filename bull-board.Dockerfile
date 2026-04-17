@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
+COPY tsconfig.json ./
 COPY scripts/bull-board.ts ./scripts/bull-board.ts
 
 CMD ["npm", "run", "bull-board"]
