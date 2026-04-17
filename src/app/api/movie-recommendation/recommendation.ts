@@ -4,7 +4,7 @@ import logger from '@/lib/logger';
 import { MovieService } from '@/services';
 
 import { combineAllPeopleDataToString } from './embedding';
-import { recommendationResponseSchema } from './types';
+import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
 import type { EnhancedMovieMatch, PersonFormData } from './types';
 
@@ -29,18 +29,7 @@ const recommendationResponseFormat = {
   json_schema: {
     name: 'recommendationAPIRequestEvent',
     strict: true,
-    schema: {
-      type: 'object',
-      properties: {
-        description: { type: 'string' },
-        title: {
-          type: 'string',
-          description: 'The title of the recommended movie',
-        },
-      },
-      required: ['description', 'title'],
-      additionalProperties: false,
-    },
+    schema: recommendationResponseJsonSchema,
   },
 };
 

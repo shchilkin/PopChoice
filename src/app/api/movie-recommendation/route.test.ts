@@ -374,8 +374,10 @@ type ChatCompletionCallArg = {
     type?: string;
     json_schema?: {
       name?: string;
+      strict?: boolean;
       schema?: {
         type?: string;
+        additionalProperties?: boolean;
         required?: string[];
         properties?: Record<string, { type?: string }>;
       };
@@ -456,9 +458,11 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       const responseFormat = recommendationCall?.[0].response_format;
       expect(responseFormat).toEqual(expect.objectContaining({ type: 'json_schema' }));
       expect(responseFormat?.json_schema?.name).toBe('recommendationAPIRequestEvent');
+      expect(responseFormat?.json_schema?.strict).toBe(true);
       expect(responseFormat?.json_schema?.schema).toEqual(
         expect.objectContaining({
           type: 'object',
+          additionalProperties: false,
           required: expect.arrayContaining(['title', 'description']),
           properties: expect.objectContaining({
             title: expect.objectContaining({ type: 'string' }),
