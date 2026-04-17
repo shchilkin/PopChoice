@@ -45,6 +45,7 @@ jobs:
           else
             git commit -m "chore: bump version [skip ci]"
             push_succeeded=false
+            resync_failed=false
 
             for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
               if git push origin HEAD:development; then
@@ -58,13 +59,17 @@ jobs:
                 git fetch origin development
                 if ! git rebase origin/development; then
                   git rebase --abort || true
-                  echo "Rebase failed on attempt ${attempt} of ${MAX_ATTEMPTS}. Manual resolution may be required."
-                  exit 1
+                  echo "Rebase failed on attempt ${attempt} of ${MAX_ATTEMPTS}. Automatic retries cannot continue."
+                  resync_failed=true
+                  break
                 fi
               fi
             done
 
             if [ "${push_succeeded}" != "true" ]; then
+              if [ "${resync_failed}" = "true" ]; then
+                echo "Manual resolution may be required after rebase conflict."
+              fi
               echo "Push failed after ${MAX_ATTEMPTS} attempts"
               exit 1
             fi
