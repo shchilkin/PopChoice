@@ -390,12 +390,6 @@ export async function seedMovies(
         duration: 0,
         score_rating: score,
         embedding,
-        year,
-        age_rating: 'NR',
-        description: movie.overview || '',
-        duration: 0,
-        score_rating: score,
-        embedding,
       });
 
       if (insertError) {
