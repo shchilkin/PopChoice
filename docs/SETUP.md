@@ -90,9 +90,12 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 
 ## API Endpoint Protection
 
-The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints require API key authentication (`withAuth` wrapper). CSRF is used as an additional same-origin safeguard when a browser sends CSRF cookie/header pairs.
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by the `withAuth` wrapper and accept either:
 
-### 1. API key authentication (required)
+- API key authentication (`Authorization: Bearer <key>` or `X-API-Key`)
+- Same-origin browser requests with a valid CSRF cookie/header pair
+
+### 1. API key authentication (recommended for external/service callers)
 
 External callers (mobile apps, partner integrations) can authenticate via one of these headers:
 
@@ -121,11 +124,11 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
 
 When `VALID_API_KEYS` is not set, API key authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. In production, all API requests are rejected when the variable is absent.
 
-### 2. CSRF tokens (optional defense-in-depth for browser callers)
+### 2. CSRF tokens (browser fallback path)
 
 Next.js middleware (`src/middleware.ts`) issues a random `__csrf` cookie on page loads. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls.
 
-The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. When either the CSRF cookie or header is present, both must be present and identical.
+The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. CSRF fallback is accepted only for same-origin browser requests and only when both cookie and header are present and identical.
 
 ## Redis Setup (Optional – Rate Limiting & Background Workers)
 

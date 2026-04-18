@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import { randomBytes, scrypt, scryptSync, timingSafeEqual } from 'node:crypto';
 
 import logger from '@/lib/logger';
 
@@ -17,38 +17,47 @@ import logger from '@/lib/logger';
  *
  * @returns A client identifier string on success, or `null` on failure.
  */
-export function validateApiKey(req: Request): string | null {
+let hasLoggedMissingKeysWarning = false;
+let hasLoggedMissingKeysError = false;
+let hasLoggedMissingSecretError = false;
+let cachedRawKeys: string | null = null;
+let cachedValidHashBuffers: Buffer[] = [];
+
+export async function validateApiKey(req: Request): Promise<string | null> {
   const rawKeys = process.env.VALID_API_KEYS;
 
   // Development mode: auth is disabled when VALID_API_KEYS is not configured.
   if (!rawKeys || rawKeys.trim() === '') {
     if (process.env.NODE_ENV !== 'production') {
-      logger.warn(
-        'VALID_API_KEYS is not set — API authentication is disabled. Set this variable in production.',
-      );
+      if (!hasLoggedMissingKeysWarning) {
+        logger.warn(
+          'VALID_API_KEYS is not set — API authentication is disabled. Set this variable in production.',
+        );
+        hasLoggedMissingKeysWarning = true;
+      }
       return 'dev-unauthenticated';
     }
     // In production with no keys configured, deny all requests to prevent an
     // accidentally open API from consuming quota.
-    logger.error(
-      'VALID_API_KEYS is not configured in production — all API requests will be rejected.',
-    );
+    if (!hasLoggedMissingKeysError) {
+      logger.error(
+        'VALID_API_KEYS is not configured in production — all API requests will be rejected.',
+      );
+      hasLoggedMissingKeysError = true;
+    }
     return null;
   }
 
-  // Parse the set of valid hashed keys once per call (keys rarely change at runtime).
-  const validKeyHashes = new Set(
-    rawKeys
-      .split(',')
-      .map((k) => k.trim())
-      .filter(Boolean),
-  );
+  const validHashBuffers = getValidHashBuffers(rawKeys);
 
   const derivationSecret = getConfiguredDerivationSecret();
   if (!derivationSecret) {
-    logger.error(
-      'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
-    );
+    if (!hasLoggedMissingSecretError) {
+      logger.error(
+        'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
+      );
+      hasLoggedMissingSecretError = true;
+    }
     return null;
   }
 
@@ -82,13 +91,13 @@ export function validateApiKey(req: Request): string | null {
 
   // Derive a digest with scrypt + a server-side secret, then compare with
   // timingSafeEqual to reduce both brute-force and timing attack risk.
-  const candidateHash = hashApiKeyWithSecret(candidateKey, derivationSecret);
+  const candidateHash = await hashApiKeyWithSecretAsync(candidateKey, derivationSecret);
   const candidateHashBuf = Buffer.from(candidateHash, 'hex');
 
-  const matched = [...validKeyHashes].some((storedHash) => {
-    if (storedHash.length !== candidateHash.length) return false;
+  const matched = validHashBuffers.some((storedHashBuf) => {
+    if (storedHashBuf.length !== candidateHashBuf.length) return false;
     try {
-      return timingSafeEqual(Buffer.from(storedHash, 'hex'), candidateHashBuf);
+      return timingSafeEqual(storedHashBuf, candidateHashBuf);
     } catch {
       return false;
     }
@@ -141,6 +150,44 @@ function hashApiKeyWithSecret(plaintext: string, secret: string): string {
   // scrypt defaults recommended by OWASP for interactive verification workloads.
   // These settings balance security and API latency.
   return scryptSync(plaintext, secret, 32, { N: 16_384, r: 8, p: 1 }).toString('hex');
+}
+
+async function hashApiKeyWithSecretAsync(plaintext: string, secret: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    scrypt(plaintext, secret, 32, { N: 16_384, r: 8, p: 1 }, (error, derivedKey) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(Buffer.from(derivedKey).toString('hex'));
+    });
+  });
+}
+
+function getValidHashBuffers(rawKeys: string): Buffer[] {
+  if (cachedRawKeys === rawKeys) {
+    return cachedValidHashBuffers;
+  }
+
+  const parsed = rawKeys
+    .split(',')
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean)
+    .flatMap((hash) => {
+      if (!/^[0-9a-f]+$/u.test(hash) || hash.length % 2 !== 0) {
+        return [];
+      }
+      try {
+        return [Buffer.from(hash, 'hex')];
+      } catch {
+        return [];
+      }
+    });
+
+  cachedRawKeys = rawKeys;
+  cachedValidHashBuffers = parsed;
+
+  return cachedValidHashBuffers;
 }
 
 function getConfiguredDerivationSecret(): string | null {

@@ -15,8 +15,9 @@ function generateCsrfToken(): string {
  * client-side JavaScript so the frontend can echo it back in the
  * `X-CSRF-Token` header on API calls.
  *
- * API route protection (CSRF verification + API key fallback) is handled by
- * the `withAuth` wrapper in `src/lib/withAuth.ts`.
+ * API route protection is handled by the `withAuth` wrapper in
+ * `src/lib/withAuth.ts`, which prefers API key authentication and supports a
+ * same-origin CSRF fallback for browser requests.
  */
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

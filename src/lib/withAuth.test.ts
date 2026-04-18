@@ -29,6 +29,42 @@ describe('withAuth', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('allows same-origin requests with matching CSRF header/cookie when API key is missing', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          Origin: 'http://localhost',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('rejects cross-origin CSRF fallback when API key is missing', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          Origin: 'http://example.com',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('allows request when API key is valid', async () => {
     const handler = vi.fn(async () => NextResponse.json({ ok: true }));
     const wrapped = withAuth(handler);

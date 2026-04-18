@@ -15,7 +15,7 @@ describe('validateApiKey', () => {
     process.env = { ...ORIGINAL_ENV };
   });
 
-  it('falls back to X-API-Key when Authorization header is malformed', () => {
+  it('falls back to X-API-Key when Authorization header is malformed', async () => {
     process.env.API_KEY_HMAC_SECRET = 'test-secret';
     process.env.VALID_API_KEYS = hashApiKey('valid-key');
 
@@ -26,10 +26,10 @@ describe('validateApiKey', () => {
       },
     });
 
-    expect(validateApiKey(req)).toBeTruthy();
+    await expect(validateApiKey(req)).resolves.toBeTruthy();
   });
 
-  it('rejects requests when VALID_API_KEYS is set but API_KEY_HMAC_SECRET is missing', () => {
+  it('rejects requests when VALID_API_KEYS is set but API_KEY_HMAC_SECRET is missing', async () => {
     delete process.env.API_KEY_HMAC_SECRET;
     process.env.VALID_API_KEYS = 'abc123';
 
@@ -37,6 +37,6 @@ describe('validateApiKey', () => {
       headers: { 'X-API-Key': 'any-key' },
     });
 
-    expect(validateApiKey(req)).toBeNull();
+    await expect(validateApiKey(req)).resolves.toBeNull();
   });
 });
