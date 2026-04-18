@@ -1,4 +1,3 @@
-import { Analytics } from '@vercel/analytics/next';
 import { Manrope, Oswald } from 'next/font/google';
 
 import { PCLayout } from '../components/PCLayout';
@@ -97,7 +96,6 @@ export default function RootLayout({
           <LanguageProvider>
             <PCLayout>{children}</PCLayout>
           </LanguageProvider>
-          <Analytics />
         </ThemeProvider>
       </body>
     </html>
