@@ -15,7 +15,7 @@ describe('analyzeMovieChunks', () => {
 
   beforeEach(() => {
     // Create a unique test file path
-    testFilePath = join(tmpdir(), `test-movies-${Date.now()}.txt`);
+    testFilePath = join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
 
     // Spy on console methods to capture output
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -126,8 +126,8 @@ Pulp Fiction: 1994 | The lives of two mob hitmen, a boxer, a gangster and his wi
     expect(consoleLogSpy).toHaveBeenCalledWith('-'.repeat(80));
 
     // Should display exactly 10 movies in the top list
-    const topMovieCalls = consoleLogSpy.mock.calls.filter((call) =>
-      call[0]?.toString().match(/^\s*\d+\.\s+Movie/),
+    const topMovieCalls = consoleLogSpy.mock.calls.filter((call: unknown[]) =>
+      String(call[0]).match(/^\s*\d+\.\s+Movie/),
     );
     expect(topMovieCalls).toHaveLength(10);
   });
