@@ -10,7 +10,9 @@ import { createPgDbClient } from './pgClient';
 const mockQuery = vi.fn();
 
 vi.mock('pg', () => {
-  const MockPool = vi.fn().mockImplementation(() => ({ query: mockQuery }));
+  const MockPool = vi.fn().mockImplementation(function () {
+    return { query: mockQuery };
+  });
   return { default: { Pool: MockPool }, Pool: MockPool };
 });
 
