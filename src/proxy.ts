@@ -9,7 +9,7 @@ function generateCsrfToken(): string {
 }
 
 /**
- * Next.js middleware that issues a CSRF cookie on every non-API request.
+ * Next.js proxy (formerly middleware) that issues a CSRF cookie on every non-API request.
  *
  * The cookie is `SameSite=Lax`, `Secure` in production, and readable by
  * client-side JavaScript so the frontend can echo it back in the
@@ -19,7 +19,7 @@ function generateCsrfToken(): string {
  * `src/lib/withAuth.ts`, which prefers API key authentication and supports a
  * same-origin CSRF fallback for browser requests.
  */
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Only issue the cookie on non-API navigation requests that don't already
