@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
@@ -94,7 +95,11 @@ export default function ResultsPage() {
       const currentTmdbIds = movies.filter((m) => m.fromTMDB).map((m) => m.id);
       const res = await fetch('/api/more-tmdb-picks', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept-Language': locale },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept-Language': locale,
+          'X-CSRF-Token': getCsrfToken(),
+        },
         body: JSON.stringify({
           quizData: JSON.parse(quizDataStr),
           page: 2,
