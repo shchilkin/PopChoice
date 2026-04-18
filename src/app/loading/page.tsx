@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 
 import { FilmReel } from './components/FilmReel';
@@ -46,7 +47,7 @@ export default function LoadingPage() {
 
     axios
       .post('/api/movie-recommendation', JSON.parse(quizDataStr), {
-        headers: { 'Accept-Language': locale },
+        headers: { 'Accept-Language': locale, 'X-CSRF-Token': getCsrfToken() },
       })
       .then((response) => {
         clearInterval(intervalsRef.current.tip);

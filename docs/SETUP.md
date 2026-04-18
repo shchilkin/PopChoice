@@ -19,9 +19,21 @@ POSTGRES_DB=popchoice
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
 
+# API key authentication secret (used to derive scrypt key digests)
+# Required when VALID_API_KEYS is set; must stay stable across restarts
+API_KEY_HMAC_SECRET=your-stable-hmac-secret
+
 # Redis (optional) – enables distributed rate limiting and BullMQ background workers
 # When unset, rate limiting is skipped and background seeding is disabled
 REDIS_URL=redis://user:password@host:6379
+
+# API key authentication – comma-separated scrypt digests of valid API keys
+# Required in production; when unset in development, auth is disabled with a warning
+VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
+
+# Public base URL of the app (required behind a reverse proxy such as Railway or Vercel)
+# Used for same-origin CSRF validation; without this, browser API calls will return 401
+NEXT_PUBLIC_BASE_URL=https://your-app.up.railway.app
 ```
 
 ## OpenAI Setup
@@ -79,6 +91,48 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
+
+## API Endpoint Protection
+
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by the `withAuth` wrapper and accept either:
+
+- API key authentication (`Authorization: Bearer <key>` or `X-API-Key`)
+- Same-origin browser requests with a valid CSRF cookie/header pair
+
+### 1. API key authentication (recommended for external/service callers)
+
+External callers (mobile apps, partner integrations) can authenticate via one of these headers:
+
+- `Authorization: Bearer <key>`
+- `X-API-Key: <key>`
+
+Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variable (comma-separated). The derivation uses a server-side secret from `API_KEY_HMAC_SECRET`. Never store plaintext keys.
+
+#### Generating and registering a key
+
+1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
+2. **Set `API_KEY_HMAC_SECRET`** in your environment (e.g. `openssl rand -hex 32`). This secret must stay the same across restarts.
+3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`:
+   ```ts
+   import { hashApiKey } from '@/lib/apiAuth';
+   console.log(hashApiKey('your-plaintext-key'));
+   ```
+4. **Add the hash** to your environment:
+   ```env
+   API_KEY_HMAC_SECRET=<your-derivation-secret>
+   VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
+   ```
+5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
+
+#### Development mode
+
+When `VALID_API_KEYS` is not set, API key authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. In production, all API requests are rejected when the variable is absent.
+
+### 2. CSRF tokens (browser fallback path)
+
+Next.js middleware (`src/middleware.ts`) issues a random `__csrf` cookie on page loads. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls.
+
+The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. CSRF fallback is accepted only for same-origin browser requests and only when both cookie and header are present and identical.
 
 ## Redis Setup (Optional – Rate Limiting & Background Workers)
 
