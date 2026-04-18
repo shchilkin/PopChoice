@@ -70,13 +70,23 @@ export function withAuth(handler: RouteHandler) {
 
 /**
  * Returns the canonical public origin of the app.
- * Behind a reverse proxy (e.g. Railway, Vercel) `req.nextUrl.origin` may
- * resolve to the internal address; set `NEXT_PUBLIC_BASE_URL` to the public
- * URL so origin comparisons work correctly.
+ * Resolution order:
+ *  1. `NEXT_PUBLIC_BASE_URL` — explicit override (any platform).
+ *  2. `RAILWAY_PUBLIC_DOMAIN` — automatically injected by Railway; avoids
+ *     comparing against the internal `.railway.internal` address.
+ *  3. `req.nextUrl.origin` — local dev and other platforms.
  */
 function getExpectedOrigin(req: NextRequest): string {
   const configured = process.env.NEXT_PUBLIC_BASE_URL?.trim().replace(/\/$/, '');
-  return configured || req.nextUrl.origin;
+  if (configured) return configured;
+
+  // Use Railway's public domain if available
+  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
+  if (railwayDomain) {
+    return `https://${railwayDomain}`;
+  }
+
+  return req.nextUrl.origin;
 }
 
 function isSameOriginBrowserRequest(req: NextRequest): boolean {
