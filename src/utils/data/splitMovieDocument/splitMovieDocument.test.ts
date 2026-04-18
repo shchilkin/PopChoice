@@ -12,7 +12,7 @@ describe('splitMovieDocument', () => {
 
   beforeEach(() => {
     // Create a unique test file path
-    testFilePath = path.join(tmpdir(), `test-movies-${Date.now()}.txt`);
+    testFilePath = path.join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
 
     // Spy on console.error to capture validation error logs
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

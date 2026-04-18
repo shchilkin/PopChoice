@@ -128,7 +128,9 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
 - **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
+- **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
+- **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** — Practical phased direction for cleaner boundaries and future monorepo evolution
 - **[Design Guidelines](./docs/design-guidelines.md)** — UI/UX design guidelines
 
 ## 🗂 Project Structure

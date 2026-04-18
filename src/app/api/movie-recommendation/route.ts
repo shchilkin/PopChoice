@@ -356,14 +356,16 @@ export async function POST(req: NextRequest) {
             age_rating: recommendedMovie.age_rating,
             duration: recommendedMovie.duration,
             score_rating: recommendedMovie.score_rating,
-            similarity: recommendedMovie.similarity,
+            similarity: Number.isFinite(recommendedMovie.similarity)
+              ? recommendedMovie.similarity
+              : 0,
           }
         : undefined,
       similarMovies: moviesWithDescriptions.map((movie) => ({
         id: Number(movie.id),
         name: movie.name,
         year: movie.year,
-        similarity: movie.similarity,
+        similarity: Number.isFinite(movie.similarity) ? movie.similarity : 0,
         age_rating: movie.age_rating,
         duration: movie.duration,
         score_rating: movie.score_rating,
@@ -389,11 +391,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     // Handle validation errors first — these are client errors (400), not server errors
     if (error instanceof z.ZodError) {
-      logger.warn({ err: error, issues: error.errors }, 'Invalid request body');
+      logger.warn({ err: error, issues: error.issues }, 'Invalid request body');
       return NextResponse.json(
         {
           error: 'Invalid request data',
-          details: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          details: error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
         },
         { status: 400 },
       );
