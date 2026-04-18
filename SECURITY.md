@@ -20,10 +20,11 @@ This document outlines the security measures and vulnerability management for th
   - [x] Add rate limiting for expensive operations (OpenAI API calls via `/api/movie-recommendation`)
   - [x] Configure appropriate 429 responses (returns `Retry-After: 60`)
 
-- [ ] **Authentication & Authorization**
-  - [ ] Add CSRF protection for state-changing operations
+- [x] **Authentication & Authorization**
+  - [x] Add CSRF protection for state-changing operations (`src/middleware.ts` issues `__csrf` cookie; `withAuth` validates matching header/cookie pair)
+  - [x] Add API key authentication for external callers (scrypt-derived key digests via `VALID_API_KEYS`; `Authorization: Bearer` or `X-API-Key` headers)
+  - [x] Add request origin validation (same-origin check in `withAuth` using `NEXT_PUBLIC_BASE_URL`)
   - [ ] Implement session management
-  - [ ] Add request origin validation
 
 - [ ] **Request Size & Timeout Management**
   - [ ] Set maximum request body size limits
@@ -53,7 +54,7 @@ This document outlines the security measures and vulnerability management for th
 
 - [ ] **API Security**
   - [ ] Validate environment variables on application startup
-  - [ ] Implement API key rotation procedures
+  - [x] Implement API key rotation procedures (keys are hashed with scrypt; rotate by updating `VALID_API_KEYS` without touching code)
   - [ ] Add monitoring for unusual API usage patterns
   - [ ] Implement circuit breaker pattern for external APIs
 
@@ -91,7 +92,7 @@ This document outlines the security measures and vulnerability management for th
 1. Implement security headers
 2. Replace localStorage with secure storage
 3. Add proper error handling
-4. CSRF protection
+4. ~~CSRF protection~~ ✅ Done
 
 ### Phase 3 (Long-term - Additional Measures)
 
