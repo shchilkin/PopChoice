@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 
 import type { Movie, MoviesResponse } from '../api/movies/route';
 
@@ -52,6 +53,7 @@ export default function AvailableMoviesPage() {
       try {
         const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`, {
           signal: controller.signal,
+          headers: { 'X-CSRF-Token': getCsrfToken() },
         });
 
         if (!response.ok) {

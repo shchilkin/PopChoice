@@ -5,6 +5,7 @@ import { openAIClient } from '@/clients';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { withAuth } from '@/lib/withAuth';
 import { IMAGE_BASE_URL } from '@/services';
 
 import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/tmdb';
@@ -54,6 +55,9 @@ const tmdbMovieSchema = z.object({
   overview: z.string(),
   release_date: z.string(),
   vote_average: z.number(),
+  vote_count: z.number().optional(),
+  genre_ids: z.array(z.number()).optional(),
+  popularity: z.number().optional(),
   poster_path: z.string().nullable(),
 });
 
@@ -182,14 +186,14 @@ const LOCALE_TO_TMDB_LANG: Record<string, string> = {
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return dot;
+  return Number.isFinite(dot) ? dot : 0;
 }
 
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -269,7 +273,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Queue seeding job to persist TMDB movies in the local DB for future queries.
-    // Convert TMDB discover results → TMDBDiscoverMovie with defaults for missing fields.
+    // Convert TMDB discover results → TMDBDiscoverMovie, preserving metadata and
+    // using safe defaults when fields are absent.
     if (seedQueue) {
       const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
         id: m.id,
@@ -277,9 +282,9 @@ export async function POST(req: NextRequest) {
         overview: m.overview,
         release_date: m.release_date,
         vote_average: m.vote_average,
-        vote_count: 100, // We filter by vote_count.gte=100, so this is the minimum
-        genre_ids: [], // Not used by seedMovies
-        popularity: 0, // Not used by seedMovies
+        vote_count: m.vote_count ?? 100,
+        genre_ids: m.genre_ids ?? [],
+        popularity: m.popularity ?? 0,
         poster_path: m.poster_path,
       }));
       seedQueue
@@ -496,3 +501,5 @@ Respond in ${language} only.`;
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuth(postHandler);

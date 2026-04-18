@@ -5,6 +5,7 @@ import { getDbClient } from '@/clients/dbClient';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { withAuth } from '@/lib/withAuth';
 import {
   ALWAYS_BLOCK_CATEGORIES,
   checkForPromptInjection,
@@ -72,7 +73,7 @@ async function withTimeout<T>(
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   try {
@@ -285,7 +286,7 @@ export async function POST(req: NextRequest) {
               if (error instanceof EnqueueTimeoutError) {
                 logger.warn(
                   { err: error, queuedMovies: tmdbMovies.length },
-                  'Timed out while enqueueing TMDB seeding job; skipping fallback to avoid duplicate seeding',
+                  'Timed out while enqueueing TMDB seeding job; skipping fallback since enqueue status is uncertain',
                 );
               } else {
                 logger.warn(
@@ -356,14 +357,16 @@ export async function POST(req: NextRequest) {
             age_rating: recommendedMovie.age_rating,
             duration: recommendedMovie.duration,
             score_rating: recommendedMovie.score_rating,
-            similarity: recommendedMovie.similarity,
+            similarity: Number.isFinite(recommendedMovie.similarity)
+              ? recommendedMovie.similarity
+              : 0,
           }
         : undefined,
       similarMovies: moviesWithDescriptions.map((movie) => ({
         id: Number(movie.id),
         name: movie.name,
         year: movie.year,
-        similarity: movie.similarity,
+        similarity: Number.isFinite(movie.similarity) ? movie.similarity : 0,
         age_rating: movie.age_rating,
         duration: movie.duration,
         score_rating: movie.score_rating,
@@ -419,6 +422,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuth(postHandler);
 
 // ---------------------------------------------------------------------------
 // GET handler — API documentation

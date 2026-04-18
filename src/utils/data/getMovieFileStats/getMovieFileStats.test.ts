@@ -11,7 +11,7 @@ describe('getMovieFileStats', () => {
 
   beforeEach(() => {
     // Create a unique test file path
-    testFilePath = path.join(tmpdir(), `test-movies-${Date.now()}.txt`);
+    testFilePath = path.join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
   });
 
   afterEach(async () => {
