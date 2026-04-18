@@ -180,7 +180,7 @@ const LOCALE_TO_TMDB_LANG: Record<string, string> = {
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
   for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return dot;
+  return Number.isFinite(dot) ? dot : 0;
 }
 
 // ---------------------------------------------------------------------------

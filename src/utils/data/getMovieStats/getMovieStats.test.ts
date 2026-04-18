@@ -11,7 +11,7 @@ describe('getMovieStats', () => {
 
   // Helper function to create temporary test files
   const createTestMovieFile = async (content: string): Promise<string> => {
-    const tempFile = join(tmpdir(), `test-movies-${Date.now()}-${Math.random()}.txt`);
+    const tempFile = join(tmpdir(), `test-movies-${crypto.randomUUID()}-${Math.random()}.txt`);
     await writeFile(tempFile, content, 'utf-8');
     tempFiles.push(tempFile);
     return tempFile;
