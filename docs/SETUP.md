@@ -30,6 +30,10 @@ REDIS_URL=redis://user:password@host:6379
 # API key authentication – comma-separated scrypt digests of valid API keys
 # Required in production; when unset in development, auth is disabled with a warning
 VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
+
+# Public base URL of the app (required behind a reverse proxy such as Railway or Vercel)
+# Used for same-origin CSRF validation; without this, browser API calls will return 401
+NEXT_PUBLIC_BASE_URL=https://your-app.up.railway.app
 ```
 
 ## OpenAI Setup

@@ -68,12 +68,23 @@ export function withAuth(handler: RouteHandler) {
   };
 }
 
+/**
+ * Returns the canonical public origin of the app.
+ * Behind a reverse proxy (e.g. Railway, Vercel) `req.nextUrl.origin` may
+ * resolve to the internal address; set `NEXT_PUBLIC_BASE_URL` to the public
+ * URL so origin comparisons work correctly.
+ */
+function getExpectedOrigin(req: NextRequest): string {
+  const configured = process.env.NEXT_PUBLIC_BASE_URL?.trim().replace(/\/$/, '');
+  return configured || req.nextUrl.origin;
+}
+
 function isSameOriginBrowserRequest(req: NextRequest): boolean {
   const secFetchSite = req.headers.get('sec-fetch-site');
   const secFetchMode = req.headers.get('sec-fetch-mode');
   const originHeader = req.headers.get('origin');
   if (originHeader) {
-    if (originHeader !== req.nextUrl.origin) {
+    if (originHeader !== getExpectedOrigin(req)) {
       return false;
     }
     return secFetchSite === null || secFetchSite === 'same-origin';

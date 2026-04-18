@@ -133,4 +133,24 @@ describe('withAuth', () => {
     expect(response.status).toBe(200);
     expect(handler).toHaveBeenCalledOnce();
   });
+
+  it('allows CSRF fallback when Origin matches NEXT_PUBLIC_BASE_URL behind a reverse proxy', async () => {
+    vi.stubEnv('NEXT_PUBLIC_BASE_URL', 'https://my-app.up.railway.app');
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    // req.nextUrl.origin is the internal address; Origin header is the public URL
+    const response = await wrapped(
+      new NextRequest('http://0.0.0.0:3000/api/movies', {
+        headers: {
+          Origin: 'https://my-app.up.railway.app',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
 });
