@@ -1,6 +1,23 @@
+import { getUmamiConfig } from './src/utils/analytics/getUmamiConfig';
+
 import type { NextConfig } from 'next';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
+const umamiConfig = getUmamiConfig();
+const umamiOrigin = umamiConfig?.scriptOrigin;
+
+const scriptSrc = [
+  `'self'`,
+  "'unsafe-inline'",
+  ...(umamiOrigin ? [umamiOrigin] : []),
+  ...(isDevelopment ? [`'unsafe-eval'`] : []),
+];
+const connectSrc = [
+  `'self'`,
+  ...(umamiOrigin ? [umamiOrigin] : []),
+  'https://api.themoviedb.org',
+  ...(isDevelopment ? ['ws:', 'wss:'] : []),
+];
 
 // Content-Security-Policy
 // 'unsafe-inline' for scripts is required because Next.js App Router injects
@@ -10,14 +27,14 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 // and ws: wss: connections for Hot Module Replacement.
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ''}`,
+  `script-src ${scriptSrc.join(' ')}`,
   "style-src 'self' 'unsafe-inline'",
   // next/font self-hosts all font files under /_next/static/media/
   "font-src 'self'",
   "img-src 'self' data: blob: https://image.tmdb.org https://images.unsplash.com",
-  // Vercel Analytics sends page-view pings to vitals.vercel-insights.com
-  // TMDB API requests are also made from the browser for movie enhancement/poster data
-  `connect-src 'self' https://vitals.vercel-insights.com https://api.themoviedb.org${isDevelopment ? ' ws: wss:' : ''}`,
+  // TMDB API requests are made from the browser for movie enhancement/poster data.
+  // When Umami is configured, allow browser requests to the Umami origin.
+  `connect-src ${connectSrc.join(' ')}`,
   "frame-src 'none'",
   "frame-ancestors 'none'",
   "object-src 'none'",

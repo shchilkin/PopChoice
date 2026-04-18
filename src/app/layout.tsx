@@ -1,8 +1,10 @@
 import { Manrope, Oswald } from 'next/font/google';
+import Script from 'next/script';
 
 import { PCLayout } from '../components/PCLayout';
 import { ThemeProvider } from '../components/ThemeProvider';
 import { LanguageProvider } from '../i18n';
+import { getUmamiConfig } from '../utils/analytics/getUmamiConfig';
 
 import type { Metadata } from 'next';
 import './globals.css';
@@ -84,6 +86,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const umamiConfig = getUmamiConfig();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${oswald.variable} antialiased`}>
@@ -96,6 +100,15 @@ export default function RootLayout({
           <LanguageProvider>
             <PCLayout>{children}</PCLayout>
           </LanguageProvider>
+          {umamiConfig ? (
+            <Script
+              data-auto-track="true"
+              data-website-id={umamiConfig.websiteId}
+              defer
+              src={umamiConfig.scriptUrl}
+              strategy="afterInteractive"
+            />
+          ) : null}
         </ThemeProvider>
       </body>
     </html>

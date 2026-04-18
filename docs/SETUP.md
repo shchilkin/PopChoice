@@ -22,6 +22,10 @@ TMDB_API_KEY=your-tmdb-api-key
 # API key authentication secret (used to derive scrypt key digests)
 # Required when VALID_API_KEYS is set; must stay stable across restarts
 API_KEY_HMAC_SECRET=your-stable-hmac-secret
+# Umami Analytics (optional)
+# When both variables are set, pageview analytics are enabled.
+NEXT_PUBLIC_UMAMI_WEBSITE_ID=your-umami-website-id
+NEXT_PUBLIC_UMAMI_SCRIPT_URL=https://analytics.example.com/script.js
 
 # Redis (optional) – enables distributed rate limiting and BullMQ background workers
 # When unset, rate limiting is skipped and background seeding is disabled
