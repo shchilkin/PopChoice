@@ -20,6 +20,8 @@ const oswald = Oswald({
   subsets: ['latin', 'cyrillic'],
   weight: ['400', '500', '600', '700'],
 });
+const umamiConfig = getUmamiConfig();
+
 export const metadata: Metadata = {
   title: 'PopChoice - AI Movie Recommendations',
   description:
@@ -86,8 +88,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const umamiConfig = getUmamiConfig();
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${oswald.variable} antialiased`}>

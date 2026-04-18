@@ -3,6 +3,8 @@ import { getUmamiConfig } from './src/utils/analytics/getUmamiConfig';
 import type { NextConfig } from 'next';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
+// Note: this config is evaluated when Next.js loads next.config.ts.
+// Update NEXT_PUBLIC_UMAMI_* values before building/deploying.
 const umamiConfig = getUmamiConfig();
 const umamiOrigin = umamiConfig?.scriptOrigin;
 
