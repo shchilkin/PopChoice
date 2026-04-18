@@ -31,10 +31,13 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@bull-board/api": "^7.0.0",
+    "@bull-board/express": "^7.0.0",
     "@langchain/core": "^1.1.40",
     "axios": "^1.15.0",
     "bullmq": "^5.74.1",
     "canvas-confetti": "^1.9.4",
+    "express": "^5.2.1",
     "ioredis": "^5.10.1",
     "lucide-react": "^1.7.0",
     "motion": "^12.38.0",
@@ -52,8 +55,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@bull-board/api": "^7.0.0",
-    "@bull-board/express": "^7.0.0",
     "@chromatic-com/storybook": "^5",
     "@eslint/eslintrc": "^3",
     "@storybook/addon-a11y": "^10",
@@ -76,7 +77,6 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-storybook": "^10",
     "eslint-plugin-unused-imports": "^4.4.1",
-    "express": "^5.2.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "msw": "^2.13.4",

@@ -48,10 +48,25 @@ export const requestBodySchema = z.union([
 // Response schemas
 // ---------------------------------------------------------------------------
 
-export const recommendationResponseSchema = z.object({
-  description: z.string(),
-  title: z.string().describe('The title of the recommended movie'),
-});
+export const recommendationResponseSchema = z
+  .object({
+    description: z.string(),
+    title: z.string().describe('The title of the recommended movie'),
+  })
+  .strict();
+
+export const recommendationResponseJsonSchema = {
+  type: 'object',
+  properties: {
+    description: { type: 'string' },
+    title: {
+      type: 'string',
+      description: 'The title of the recommended movie',
+    },
+  },
+  required: ['description', 'title'],
+  additionalProperties: false,
+} as const;
 
 export const apiResponseSchema = z.object({
   description: z.string(),
