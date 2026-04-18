@@ -82,11 +82,13 @@ vi.mock('@/clients/dbClient', () => ({
 // Mock MovieService (TMDB poster lookups)
 vi.mock('@/services', () => ({
   IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
-  MovieService: vi.fn(() => ({
-    getMovieDetails: vi.fn(() =>
-      Promise.resolve({ posterURL: undefined, localizedName: undefined }),
-    ),
-  })),
+  MovieService: vi.fn(function () {
+    return {
+      getMovieDetails: vi.fn(() =>
+        Promise.resolve({ posterURL: undefined, localizedName: undefined }),
+      ),
+    };
+  }),
 }));
 
 import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';

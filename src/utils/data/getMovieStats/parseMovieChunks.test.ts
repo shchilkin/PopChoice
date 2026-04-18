@@ -51,7 +51,7 @@ describe('parseMovieChunks - validating correct movies are identified', () => {
   const tempFiles: string[] = [];
 
   const createTestMovieFile = async (content: string): Promise<string> => {
-    const tempFile = join(tmpdir(), `test-movies-${Date.now()}-${Math.random()}.txt`);
+    const tempFile = join(tmpdir(), `test-movies-${crypto.randomUUID()}-${Math.random()}.txt`);
     await writeFile(tempFile, content, 'utf-8');
     tempFiles.push(tempFile);
     return tempFile;
