@@ -153,9 +153,9 @@ function hashApiKeyWithSecret(plaintext: string, secret: string): string {
 
 async function hashApiKeyWithSecretAsync(plaintext: string, secret: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    scrypt(plaintext, secret, 32, { N: 16_384, r: 8, p: 1 }, (error, derivedKey) => {
-      if (error) {
-        reject(error);
+    scrypt(plaintext, secret, 32, { N: 16_384, r: 8, p: 1 }, (err, derivedKey) => {
+      if (err) {
+        reject(err);
         return;
       }
       resolve(Buffer.from(derivedKey).toString('hex'));
