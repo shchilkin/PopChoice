@@ -115,4 +115,22 @@ describe('withAuth', () => {
     expect(response.status).toBe(401);
     expect(handler).not.toHaveBeenCalled();
   });
+
+  it('allows CSRF fallback when Origin is absent but Sec-Fetch-Site indicates same-origin', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          'Sec-Fetch-Site': 'same-origin',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
 });
