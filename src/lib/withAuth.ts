@@ -69,15 +69,17 @@ export function withAuth(handler: RouteHandler) {
 }
 
 function isSameOriginBrowserRequest(req: NextRequest): boolean {
-  const originHeader = req.headers.get('origin');
-  if (!originHeader) {
-    return false;
-  }
-
-  if (originHeader !== req.nextUrl.origin) {
-    return false;
-  }
-
   const secFetchSite = req.headers.get('sec-fetch-site');
-  return secFetchSite === null || secFetchSite === 'same-origin';
+  const secFetchMode = req.headers.get('sec-fetch-mode');
+  const originHeader = req.headers.get('origin');
+  if (originHeader) {
+    if (originHeader !== req.nextUrl.origin) {
+      return false;
+    }
+    return secFetchSite === null || secFetchSite === 'same-origin';
+  }
+
+  // Some same-origin browser fetches omit Origin, so allow an explicit browser
+  // same-origin fetch signal instead.
+  return secFetchSite === 'same-origin' && (secFetchMode === null || secFetchMode === 'cors');
 }

@@ -20,8 +20,7 @@ import logger from '@/lib/logger';
 let hasLoggedMissingKeysWarning = false;
 let hasLoggedMissingKeysError = false;
 let hasLoggedMissingSecretError = false;
-let cachedRawKeys: string | null = null;
-let cachedValidHashBuffers: Buffer[] = [];
+let cachedValidKeys: { rawKeys: string; hashBuffers: Buffer[] } | null = null;
 
 export async function validateApiKey(req: Request): Promise<string | null> {
   const rawKeys = process.env.VALID_API_KEYS;
@@ -165,29 +164,37 @@ async function hashApiKeyWithSecretAsync(plaintext: string, secret: string): Pro
 }
 
 function getValidHashBuffers(rawKeys: string): Buffer[] {
-  if (cachedRawKeys === rawKeys) {
-    return cachedValidHashBuffers;
+  if (cachedValidKeys?.rawKeys === rawKeys) {
+    return cachedValidKeys.hashBuffers;
   }
 
+  const invalidHashes: string[] = [];
   const parsed = rawKeys
     .split(',')
     .map((k) => k.trim())
     .filter(Boolean)
     .flatMap((hash) => {
       if (!/^[0-9a-fA-F]+$/.test(hash) || hash.length % 2 !== 0) {
+        invalidHashes.push(hash);
         return [];
       }
       try {
         return [Buffer.from(hash, 'hex')];
       } catch {
+        invalidHashes.push(hash);
         return [];
       }
     });
 
-  cachedRawKeys = rawKeys;
-  cachedValidHashBuffers = parsed;
+  if (invalidHashes.length > 0) {
+    logger.warn(
+      { invalidHashCount: invalidHashes.length },
+      'Some VALID_API_KEYS entries are invalid hex digests and were ignored.',
+    );
+  }
 
-  return cachedValidHashBuffers;
+  cachedValidKeys = { rawKeys, hashBuffers: parsed };
+  return parsed;
 }
 
 function getConfiguredDerivationSecret(): string | null {
