@@ -69,15 +69,15 @@ export function withAuth(handler: RouteHandler) {
 }
 
 function isSameOriginBrowserRequest(req: NextRequest): boolean {
-  const secFetchSite = req.headers.get('sec-fetch-site');
-  if (secFetchSite === 'same-origin') {
-    return true;
-  }
-
   const originHeader = req.headers.get('origin');
   if (!originHeader) {
     return false;
   }
 
-  return originHeader === req.nextUrl.origin;
+  if (originHeader !== req.nextUrl.origin) {
+    return false;
+  }
+
+  const secFetchSite = req.headers.get('sec-fetch-site');
+  return secFetchSite === null || secFetchSite === 'same-origin';
 }

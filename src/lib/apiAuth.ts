@@ -174,7 +174,7 @@ function getValidHashBuffers(rawKeys: string): Buffer[] {
     .map((k) => k.trim())
     .filter(Boolean)
     .flatMap((hash) => {
-      if (!/^[0-9a-fA-F]+$/u.test(hash) || hash.length % 2 !== 0) {
+      if (!/^[0-9a-fA-F]+$/.test(hash) || hash.length % 2 !== 0) {
         return [];
       }
       try {
