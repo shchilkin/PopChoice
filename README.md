@@ -21,9 +21,11 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS 4
 - **AI/ML:** OpenAI Embeddings API, LangChain Core
 - **Database:** PostgreSQL with pgvector, Redis (rate limiting)
+- **Background Jobs:** BullMQ, Bull Board (monitoring dashboard)
 - **Animation:** Motion
 - **Movie Data:** TMDB (The Movie Database) API
-- **Analytics:** Vercel Analytics
+- **Validation:** Zod
+- **Logging:** Pino
 - **Testing:** Vitest, Storybook 10, Playwright, MSW (Mock Service Worker)
 - **Development:** ESLint, Prettier, Husky, lint-staged
 
@@ -34,7 +36,7 @@ git clone https://github.com/shchilkin/PopChoice.git
 cd PopChoice
 npm install
 cp .env.example .env        # add OPENAI_API_KEY (and optionally TMDB_API_KEY)
-npm run setup:local-db      # spin up local PostgreSQL via Docker
+npm run setup:local-db      # spin up local PostgreSQL + Redis via Docker
 npm run populate-db         # seed the database with movie embeddings
 npm run dev                 # start the dev server at http://localhost:3000
 ```
@@ -47,8 +49,8 @@ This section walks you through setting up a fully working local development envi
 
 ### Prerequisites
 
-- **Node.js** 20 or later
-- **Docker** — required to run the local PostgreSQL container
+- **Node.js** 24 or later
+- **Docker** — required to run local PostgreSQL and Redis containers
 - **OpenAI API key** — required to generate movie embeddings
 
 ### Step 1 — Clone and install
@@ -74,19 +76,20 @@ TMDB_API_KEY=your-tmdb-api-key          # optional – enables live poster image
 
 > The database credentials (`DATABASE_URL`, `POSTGRES_*`) are generated automatically in the next step.
 
-### Step 3 — Start local PostgreSQL
+### Step 3 — Start local PostgreSQL and Redis
 
 ```bash
 npm run setup:local-db
 ```
 
 This script:
+
 - Generates a random `POSTGRES_PASSWORD` on first run
-- Writes `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, and `DATABASE_URL` into `.env`
-- Starts a `pgvector/pgvector:pg16` Docker container (via `docker compose up -d`)
+- Writes `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`, and `REDIS_URL` into `.env`
+- Starts PostgreSQL (`pgvector/pgvector:pg16`) and Redis (`redis:7-alpine`) containers via `docker compose up -d`
 - The database schema and the `pgvector` extension are applied automatically on first start via `db/init/`
 
-On subsequent runs the script reuses the existing credentials and just ensures the container is running.
+On subsequent runs the script reuses the existing credentials and just ensures the containers are running.
 
 ### Step 4 — Seed the database
 
@@ -116,12 +119,12 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 
 ### Troubleshooting
 
-| Problem | Solution |
-|---|---|
-| `DATABASE_URL is not set` | Run `npm run setup:local-db` to generate credentials |
-| Docker container not starting | Ensure Docker Desktop is running |
-| OpenAI errors when seeding | Verify `OPENAI_API_KEY` is correct in `.env` |
-| Missing movie posters | Add a valid `TMDB_API_KEY` to `.env` |
+| Problem                       | Solution                                             |
+| ----------------------------- | ---------------------------------------------------- |
+| `DATABASE_URL is not set`     | Run `npm run setup:local-db` to generate credentials |
+| Docker container not starting | Ensure Docker Desktop is running                     |
+| OpenAI errors when seeding    | Verify `OPENAI_API_KEY` is correct in `.env`         |
+| Missing movie posters         | Add a valid `TMDB_API_KEY` to `.env`                 |
 
 ## 📖 Documentation
 
