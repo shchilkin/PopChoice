@@ -30,7 +30,10 @@ export function normalizeGenreLabel(label: string): string {
 
 /** Extract a 4-digit year from a TMDB `release_date` string ("YYYY-MM-DD"), defaulting to 0. */
 export function parseTMDBReleaseYear(releaseDate: string | null | undefined): number {
-  return releaseDate ? parseInt(releaseDate.substring(0, 4), 10) : 0;
+  if (!releaseDate) return 0;
+
+  const year = Number.parseInt(releaseDate.substring(0, 4), 10);
+  return Number.isFinite(year) ? year : 0;
 }
 
 /**

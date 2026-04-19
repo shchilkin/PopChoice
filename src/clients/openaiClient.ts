@@ -1,8 +1,33 @@
 import OpenAI from 'openai';
 
+/**
+ * Minimal interface covering the subset of the OpenAI SDK used by this application.
+ *
+ * Using this interface instead of the concrete `OpenAI` class makes it trivial to
+ * inject lightweight mocks in tests:
+ *
+ * ```ts
+ * import { setOpenAIClient, type OpenAIClientLike } from '@/clients/openaiClient';
+ *
+ * const mock: OpenAIClientLike = {
+ *   embeddings: { create: vi.fn() },
+ *   chat: { completions: { create: vi.fn(), parse: vi.fn() } },
+ *   moderations: { create: vi.fn() },
+ * };
+ * setOpenAIClient(mock);
+ * ```
+ */
+export interface OpenAIClientLike {
+  embeddings: Pick<OpenAI['embeddings'], 'create'>;
+  chat: {
+    completions: Pick<OpenAI['chat']['completions'], 'create' | 'parse'>;
+  };
+  moderations: Pick<OpenAI['moderations'], 'create'>;
+}
+
 // Lazily-initialised: starts null so the module can be imported (and a mock
 // injected via setOpenAIClient) without OPENAI_API_KEY being present.
-let _openAIClient: OpenAI | null = null;
+let _openAIClient: OpenAIClientLike | null = null;
 
 function createDefaultClient(): OpenAI {
   if (!process.env.OPENAI_API_KEY) {
@@ -16,7 +41,7 @@ function createDefaultClient(): OpenAI {
 }
 
 /** Return the current OpenAI client instance, creating the default lazily on first call. */
-export function getOpenAIClient(): OpenAI {
+export function getOpenAIClient(): OpenAIClientLike {
   if (!_openAIClient) {
     _openAIClient = createDefaultClient();
   }
@@ -24,7 +49,7 @@ export function getOpenAIClient(): OpenAI {
 }
 
 /** Replace the OpenAI client instance (useful for testing / DI). */
-export function setOpenAIClient(client: OpenAI): void {
+export function setOpenAIClient(client: OpenAIClientLike): void {
   _openAIClient = client;
 }
 
