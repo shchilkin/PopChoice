@@ -78,7 +78,7 @@ async function tmdbSearch(
       signal: AbortSignal.timeout(TMDB_SEARCH_FETCH_TIMEOUT_MS),
     });
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
       logger.warn('TMDB search request timed out', {
         title,
         year,
@@ -158,7 +158,7 @@ export async function fetchMovieDetails(
       signal: AbortSignal.timeout(TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS),
     });
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
       logger.warn('TMDB movie details request timed out, returning null', {
         movieId,
         timeoutMs: TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS,

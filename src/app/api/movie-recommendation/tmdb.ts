@@ -205,7 +205,7 @@ export async function fetchTMDBDiscoverMovies(
     }
     return (parsedResponse.data.results ?? []).slice(0, MAX_TOTAL_MOVIES);
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
       logger.warn({ timeoutMs: TMDB_DISCOVER_FETCH_TIMEOUT_MS }, 'TMDB discover request timed out');
       return [];
     }

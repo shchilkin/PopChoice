@@ -237,7 +237,10 @@ async function postHandler(req: NextRequest): Promise<Response> {
         signal: AbortSignal.timeout(TMDB_DISCOVER_FETCH_TIMEOUT_MS),
       });
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
+      if (
+        error instanceof Error &&
+        (error.name === 'AbortError' || error.name === 'TimeoutError')
+      ) {
         logger.warn(
           { timeoutMs: TMDB_DISCOVER_FETCH_TIMEOUT_MS },
           'more-tmdb-picks: TMDB discover request timed out',
@@ -404,7 +407,10 @@ Respond in ${language} only.`;
               }
             }
           } catch (error) {
-            if (error instanceof Error && error.name === 'AbortError') {
+            if (
+              error instanceof Error &&
+              (error.name === 'AbortError' || error.name === 'TimeoutError')
+            ) {
               logger.warn(
                 { movieId: tmdb.id, timeoutMs: TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS },
                 'more-tmdb-picks: localized TMDB detail request timed out',
