@@ -86,3 +86,49 @@ export async function updateMovie(
   );
   logger.debug('Movie updated in database', { id, duration, ageRating });
 }
+
+export interface MovieUpdate {
+  id: string;
+  duration: number;
+  ageRating: string;
+  embedding: number[];
+}
+
+/**
+ * Update multiple movies in a single query using UNNEST.
+ */
+export async function updateMoviesBatch(updates: MovieUpdate[]): Promise<void> {
+  if (updates.length === 0) return;
+
+  // Validate embedding lengths before sending to DB
+  for (const update of updates) {
+    if (update.embedding.length !== 3072) {
+      throw new Error(
+        `Invalid embedding length for movie ID ${update.id}: expected 3072, got ${update.embedding.length}`,
+      );
+    }
+  }
+
+  const ids = updates.map((u) => u.id);
+  const durations = updates.map((u) => u.duration);
+  const ageRatings = updates.map((u) => u.ageRating);
+  const embeddings = updates.map((u) => JSON.stringify(u.embedding));
+
+  await getPool().query(
+    `
+    UPDATE movies AS m
+    SET
+      duration = u.duration,
+      age_rating = u.age_rating,
+      embedding = u.embedding::vector
+    FROM (
+      SELECT * FROM UNNEST($1::bigint[], $2::int[], $3::text[], $4::text[])
+      AS t(id, duration, age_rating, embedding)
+    ) AS u
+    WHERE m.id = u.id
+    `,
+    [ids, durations, ageRatings, embeddings],
+  );
+
+  logger.debug('Movies batch updated in database', { count: updates.length });
+}
