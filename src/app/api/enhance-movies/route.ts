@@ -91,11 +91,10 @@ async function enhanceMovieWithPoster(
 ): Promise<MovieRecommendation> {
   try {
     const searchQuery = encodeURIComponent(`${movie.name} ${movie.year}`);
-    const searchUrl = `${TMDB_BASE_URL}/search/movie?query=${searchQuery}&year=${movie.year}`;
+    const searchUrl = `${TMDB_BASE_URL}/search/movie?query=${searchQuery}&year=${movie.year}&api_key=${tmdbApiKey}`;
 
     const response = await fetch(searchUrl, {
       headers: {
-        Authorization: `Bearer ${tmdbApiKey}`,
         Accept: 'application/json',
       },
     });
