@@ -37,7 +37,12 @@ describe('database', () => {
       const result = await checkTableExists('movies');
 
       expect(poolMock.query).toHaveBeenCalledWith(
-        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
+        `SELECT EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_class AS c
+       WHERE c.oid = pg_catalog.to_regclass($1)
+         AND c.relkind = 'r'
+     )`,
         ['movies'],
       );
       expect(result).toBe(true);
@@ -49,7 +54,12 @@ describe('database', () => {
       const result = await checkTableExists('non_existent_table');
 
       expect(poolMock.query).toHaveBeenCalledWith(
-        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
+        `SELECT EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_class AS c
+       WHERE c.oid = pg_catalog.to_regclass($1)
+         AND c.relkind = 'r'
+     )`,
         ['non_existent_table'],
       );
       expect(result).toBe(false);
