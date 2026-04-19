@@ -2,7 +2,13 @@ import axios, { AxiosInstance } from 'axios';
 
 import logger from '@/lib/logger';
 
-import { POSTER_SIZES, posterSize, PosterSize, TMDB_MovieEntry } from './types';
+import {
+  POSTER_SIZES,
+  posterSizeSchema,
+  PosterSize,
+  TMDB_MovieEntry,
+  TMDB_MovieDetailsSchema,
+} from './types';
 
 export const API_BASE_URL = 'https://api.themoviedb.org/3';
 export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -156,8 +162,11 @@ export class MovieService {
     }
   }
 
-  getPosterURL(posterPath: string, size: PosterSize): string {
-    const { success, data: parsedSize } = posterSize.safeParse(size);
+  getPosterURL(posterPath: string | null, size: PosterSize): string | undefined {
+    if (!posterPath) {
+      return undefined;
+    }
+    const { success, data: parsedSize } = posterSizeSchema.safeParse(size);
     if (!success) {
       throw new Error(`Invalid poster size: ${size}. Available sizes: ${POSTER_SIZES.join(', ')}`);
     }
