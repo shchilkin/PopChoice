@@ -226,7 +226,9 @@ export async function scoreAndConvertTMDBMovies(
   const matches = movies.map((movie, i) => {
     const movieEmbedding = rawEmbeddings[i];
     if (movieEmbedding) embeddingsMap.set(movie.id, movieEmbedding);
-    const similarity = movieEmbedding ? cosineSimilarity(queryEmbedding, movieEmbedding) : 0.35;
+    const similarity = movieEmbedding
+      ? cosineSimilarity(queryEmbedding, movieEmbedding, (msg) => logger.warn(msg))
+      : 0.35;
     return tmdbMovieToEnhancedMatch(movie, similarity);
   });
 

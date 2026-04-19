@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 export const SUPPORTED_LOCALES = ['en', 'ru', 'fi'] as const;
 
