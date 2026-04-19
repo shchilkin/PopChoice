@@ -19,8 +19,9 @@ import {
   closeDatabase,
   getIncompleteMovies,
   initDatabase,
-  updateMovie,
+  updateMoviesBatch,
   type IncompleteMovie,
+  type MovieUpdate,
 } from './database.js';
 import { createEmbeddings, createOpenAIClient } from './embeddings.js';
 import { logger } from './logger.js';
@@ -180,42 +181,54 @@ async function main(): Promise<void> {
         continue;
       }
 
-      // Phase 3: write results to DB in parallel
-      await Promise.all(
-        pendingUpdates.map(async (update, idx) => {
-          const embedding = embeddings[idx];
-          if (!embedding) {
-            logger.warn('Missing embedding for movie — skipping', {
-              name: update.movie.name,
-              year: update.movie.year,
-            });
-            totalSkipped++;
-            return;
-          }
+      // Phase 3: write results to DB in a single batch
+      const movieUpdates: MovieUpdate[] = [];
 
-          try {
-            await updateMovie(update.movie.id, update.runtime, update.ageRating, embedding);
+      pendingUpdates.forEach((update, idx) => {
+        const embedding = embeddings[idx];
+        if (!embedding) {
+          logger.warn('Missing embedding for movie — skipping', {
+            name: update.movie.name,
+            year: update.movie.year,
+          });
+          totalSkipped++;
+          return;
+        }
+        movieUpdates.push({
+          id: update.movie.id,
+          duration: update.runtime,
+          ageRating: update.ageRating,
+          embedding,
+        });
+      });
 
-            logger.info('Movie backfilled successfully', {
-              id: update.movie.id,
-              name: update.movie.name,
-              year: update.movie.year,
-              tmdbId: update.tmdbId,
-              runtime: update.runtime,
-              ageRating: update.ageRating,
-            });
-            totalUpdated++;
-          } catch (err) {
-            logger.warn('Failed to update movie in database — skipping', {
-              id: update.movie.id,
-              name: update.movie.name,
-              year: update.movie.year,
-              error: err instanceof Error ? err.message : String(err),
-            });
-            totalSkipped++;
+      if (movieUpdates.length > 0) {
+        try {
+          await updateMoviesBatch(movieUpdates);
+
+          for (const update of pendingUpdates) {
+            // Only log and count as updated if it was included in movieUpdates
+            if (movieUpdates.some((mu) => mu.id === update.movie.id)) {
+              logger.info('Movie backfilled successfully', {
+                id: update.movie.id,
+                name: update.movie.name,
+                year: update.movie.year,
+                tmdbId: update.tmdbId,
+                runtime: update.runtime,
+                ageRating: update.ageRating,
+              });
+              totalUpdated++;
+            }
           }
-        }),
-      );
+        } catch (err) {
+          logger.warn('Failed to update movies batch in database — skipping batch', {
+            batch: batchNum,
+            count: movieUpdates.length,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          totalSkipped += movieUpdates.length;
+        }
+      }
     }
   } finally {
     await closeDatabase();
