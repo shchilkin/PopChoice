@@ -1,37 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
-import z from 'zod';
 
 import logger from '@/lib/logger';
 
-const POSTER_SIZES = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original'] as const;
+import { POSTER_SIZES, posterSizeSchema, PosterSize, TMDB_MovieEntry } from './types';
 
 export const API_BASE_URL = 'https://api.themoviedb.org/3';
 export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
-
-const posterSize = z.enum(POSTER_SIZES).default('original');
-
-// TODO: Move to types after service is fully implemented
-export const TMDB_MovieDetailsSchema = z.object({
-  adult: z.boolean(),
-  backdrop_path: z.string(),
-  genre_ids: z.array(z.number()),
-  id: z.number(),
-  original_language: z.string(),
-  original_title: z.string(),
-  overview: z.string(),
-  popularity: z.number(),
-  poster_path: z.string(),
-  release_date: z.string(),
-  title: z.string(),
-  video: z.boolean(),
-  vote_average: z.number(),
-  vote_count: z.number(),
-});
-
-export type TMDB_MovieEntry = z.infer<typeof TMDB_MovieDetailsSchema>;
-
-// TODO: Move to types after service is fully implemented
-type PosterSize = z.infer<typeof posterSize>;
 
 export class MovieService {
   private axiosClient: AxiosInstance;
@@ -182,8 +156,11 @@ export class MovieService {
     }
   }
 
-  getPosterURL(posterPath: string, size: PosterSize): string {
-    const { success, data: parsedSize } = posterSize.safeParse(size);
+  getPosterURL(posterPath: string | null, size: PosterSize): string | undefined {
+    if (!posterPath) {
+      return undefined;
+    }
+    const { success, data: parsedSize } = posterSizeSchema.safeParse(size);
     if (!success) {
       throw new Error(`Invalid poster size: ${size}. Available sizes: ${POSTER_SIZES.join(', ')}`);
     }
