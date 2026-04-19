@@ -11,19 +11,30 @@ vi.mock('@/lib/logger', () => ({
 }));
 
 vi.mock('@/lib/withAuth', () => ({
-  // Dummy withAuth wrapper that just passes the request through
-  withAuth: vi.fn((handler) => handler),
+  withAuth: vi.fn((handler) => async (req: NextRequest) => {
+    if (req.headers.get('x-test-auth') === 'deny') {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
+    return handler(req);
+  }),
+}));
+
+vi.mock('@/lib/rateLimit', () => ({
+  applyRateLimit: vi.fn(() => Promise.resolve(null)),
 }));
 
 // 2. Now import the module under test
+import { applyRateLimit } from '@/lib/rateLimit';
+
 import { POST } from './route';
 
-const makeRequest = (body: any) =>
+const makeRequest = (body: any, headers: Record<string, string> = {}) =>
   new NextRequest('http://localhost/api/enhance-movies', {
     method: 'POST',
     body: JSON.stringify(body),
     headers: {
       'Content-Type': 'application/json',
+      ...headers,
     },
   });
 
@@ -34,6 +45,7 @@ describe('POST /api/enhance-movies', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
+    vi.mocked(applyRateLimit).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -48,6 +60,51 @@ describe('POST /api/enhance-movies', () => {
     expect(res.status).toBe(400);
     const json = await res.json();
     expect(json.error).toBe('Invalid request payload');
+  });
+
+  it('enforces max movies per request', async () => {
+    const movies = Array.from({ length: 21 }, (_, index) => ({
+      id: index + 1,
+      name: `Movie ${index + 1}`,
+      year: 2023,
+      similarity: 0.8,
+    }));
+
+    const req = makeRequest({ movies });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe('Invalid request payload');
+  });
+
+  it('returns rate limit response when throttled', async () => {
+    vi.mocked(applyRateLimit).mockResolvedValue(
+      new Response(JSON.stringify({ error: 'Too many requests' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+    const fetchSpy = vi.fn();
+    global.fetch = fetchSpy;
+
+    const req = makeRequest({
+      movies: [{ id: 1, name: 'Test Movie', year: 2023, similarity: 0.9 }],
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(429);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 when auth wrapper blocks the request', async () => {
+    const req = makeRequest(
+      { movies: [{ id: 1, name: 'Test Movie', year: 2023, similarity: 0.9 }] },
+      { 'x-test-auth': 'deny' },
+    );
+    const res = await POST(req);
+
+    expect(res.status).toBe(401);
   });
 
   it('returns original movies when TMDB_API_KEY is missing', async () => {
@@ -99,6 +156,26 @@ describe('POST /api/enhance-movies', () => {
     expect(global.fetch).toHaveBeenCalled();
   });
 
+  it('returns original movies on invalid TMDB response payload', async () => {
+    process.env.TMDB_API_KEY = 'test-tmdb-key';
+
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          results: [{ id: 101, poster_path: '/poster.jpg' }],
+        }),
+    } as Response);
+
+    const movies = [{ id: 1, name: 'Test Movie', year: 2023, similarity: 0.9 }];
+    const req = makeRequest({ movies });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.enhancedMovies).toEqual(movies);
+  });
+
   it('enhances movies successfully when TMDB API succeeds', async () => {
     process.env.TMDB_API_KEY = 'test-tmdb-key';
 
@@ -140,5 +217,17 @@ describe('POST /api/enhance-movies', () => {
     expect(enhancedMovie.description).toContain('90% match');
     expect(enhancedMovie.description).toContain('Test overview');
     expect(enhancedMovie.description).toContain('TMDB: 8.5/10');
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/search/movie?query='),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-tmdb-key',
+        }),
+      }),
+    );
+    expect(global.fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('api_key='),
+      expect.anything(),
+    );
   });
 });
