@@ -1,8 +1,7 @@
-import { isIP } from 'node:net';
-
 import { createClient } from 'redis';
 
 import logger from '@/lib/logger';
+import { getClientIp } from '@/lib/requestIp';
 
 type RedisClient = ReturnType<typeof createClient>;
 
@@ -43,32 +42,8 @@ function getRedisClient(): Promise<RedisClient | null> {
 const RATE_LIMIT = 10;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 
-export async function applyRateLimit(req: Request): Promise<Response | null> {
-  // 1. Use NextRequest.ip if available (Next.js populates this from trusted headers)
-  let ip = (req as { ip?: string }).ip;
-
-  // 2. Fall back to X-Real-IP (often set by edge proxies like Railway/Vercel)
-  if (!ip) {
-    const realIp = req.headers.get('x-real-ip')?.trim();
-    if (realIp && isIP(realIp) !== 0) {
-      ip = realIp;
-    }
-  }
-
-  // 3. Fall back to X-Forwarded-For (take the LAST ip, which is appended by trusted proxies)
-  if (!ip) {
-    const forwardedFor = req.headers.get('x-forwarded-for');
-    if (forwardedFor) {
-      const ips = forwardedFor.split(',').map((s) => s.trim());
-      for (let i = ips.length - 1; i >= 0; i--) {
-        const candidate = ips[i];
-        if (candidate && isIP(candidate) !== 0) {
-          ip = candidate;
-          break;
-        }
-      }
-    }
-  }
+export async function applyRateLimit(req: Request & { ip?: string }): Promise<Response | null> {
+  const ip = getClientIp(req);
 
   // Skip rate limiting when the client IP cannot be determined or is not a
   // valid IP address, to avoid unbounded key cardinality from malformed headers
