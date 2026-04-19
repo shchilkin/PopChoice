@@ -150,6 +150,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.error(err, '\n❌ Unexpected error');
+  logger.error({ err }, '\n❌ Unexpected error');
   process.exit(1);
 });

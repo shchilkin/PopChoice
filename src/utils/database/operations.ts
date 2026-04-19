@@ -81,7 +81,7 @@ export async function insertMovies(
         } catch (singleError) {
           const errorMessage =
             singleError instanceof Error ? singleError.message : JSON.stringify(singleError);
-          logger.error({ err: errorMessage }, `❌ Insert error for record ${i}`);
+          logger.error({ err: singleError }, `❌ Insert error for record ${i}`);
           errors.push({
             index: i,
             error: errorMessage,
