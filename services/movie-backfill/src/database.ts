@@ -43,6 +43,17 @@ function getPool(): InstanceType<typeof Pool> {
 }
 
 /**
+ * Check if a table exists in the database.
+ */
+export async function checkTableExists(tableName: string): Promise<boolean> {
+  const result = await getPool().query(
+    'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
+    [tableName]
+  );
+  return result.rows[0].exists;
+}
+
+/**
  * Fetch movies where duration = 0 (missing runtime).
  * Pass limit = 0 to fetch all.
  */
