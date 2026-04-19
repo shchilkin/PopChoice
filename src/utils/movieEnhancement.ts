@@ -72,10 +72,7 @@ export async function enhanceMovieWithPoster(
 
     return movie;
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      `Failed to enhance movie "${movie.name}":`,
-    );
+    logger.warn(`Failed to enhance movie "${movie.name}":`, error);
     return movie;
   }
 }
@@ -208,10 +205,7 @@ export async function searchMovieByTitle(
     const data = await response.json();
     return data.results?.[0] || null;
   } catch (error) {
-    logger.warn(
-      { err: error instanceof Error ? error.message : String(error) },
-      `Failed to search for movie "${title}":`,
-    );
+    logger.warn(`Failed to search for movie "${title}":`, error);
     return null;
   }
 }

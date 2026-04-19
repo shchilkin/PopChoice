@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
-import { getCsrfToken } from '@/lib/csrfClient';
-import { useRecommendationStore } from '@/store/recommendationStore';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
@@ -101,11 +99,7 @@ export default function ResultsPage() {
       const requestPayload = quizData.length === 1 ? quizData[0] : quizData;
       const res = await fetch('/api/more-tmdb-picks', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept-Language': locale,
-          'X-CSRF-Token': getCsrfToken(),
-        },
+        headers: { 'Content-Type': 'application/json', 'Accept-Language': locale },
         body: JSON.stringify({
           quizData: requestPayload,
           page: 2,

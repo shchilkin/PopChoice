@@ -6,7 +6,6 @@ import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
-import { withAuth } from '@/lib/withAuth';
 import {
   ALWAYS_BLOCK_CATEGORIES,
   checkForPromptInjection,
@@ -74,7 +73,7 @@ async function withTimeout<T>(
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
-async function postHandler(req: NextRequest): Promise<Response> {
+export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
@@ -284,7 +283,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
               if (error instanceof EnqueueTimeoutError) {
                 logger.warn(
                   { err: error, queuedMovies: tmdbMovies.length },
-                  'Timed out while enqueueing TMDB seeding job; skipping fallback since enqueue status is uncertain',
+                  'Timed out while enqueueing TMDB seeding job; skipping fallback to avoid duplicate seeding',
                 );
               } else {
                 logger.warn(
@@ -420,8 +419,6 @@ async function postHandler(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-export const POST = withAuth(postHandler);
 
 // ---------------------------------------------------------------------------
 // GET handler — API documentation

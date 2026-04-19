@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
-import { withAuth } from '@/lib/withAuth';
 
 export interface Movie {
   id: number;
@@ -21,7 +20,7 @@ export interface MoviesResponse {
   totalPages: number;
 }
 
-async function getHandler(request: NextRequest): Promise<NextResponse> {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -89,8 +88,6 @@ async function getHandler(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-export const GET = withAuth(getHandler);
 
 // Generate mock data for development/demo purposes
 function generateMockMovies(): Movie[] {

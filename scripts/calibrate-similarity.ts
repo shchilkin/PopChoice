@@ -1,5 +1,4 @@
 #!/usr/bin/env tsx
-import logger from '@/lib/logger';
 
 /**
  * Similarity threshold calibration tool for PopChoice hybrid search.

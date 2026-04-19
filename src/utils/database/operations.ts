@@ -81,7 +81,7 @@ export async function insertMovies(
         } catch (singleError) {
           const errorMessage =
             singleError instanceof Error ? singleError.message : JSON.stringify(singleError);
-          logger.error({ index: i, err: errorMessage }, 'Insert error for record');
+          logger.error(`❌ Insert error for record ${i}:`, errorMessage);
           errors.push({
             index: i,
             error: errorMessage,
@@ -140,10 +140,7 @@ export async function batchInsertMovies(
         `✅ Batch ${batchNumber}: ${result.success} successful, ${result.errors.length} errors`,
       );
     } catch (batchError) {
-      logger.error(
-        { batchNumber, err: batchError instanceof Error ? batchError.message : String(batchError) },
-        'Batch failed',
-      );
+      logger.error(`❌ Batch ${batchNumber} failed:`, batchError);
 
       // Mark all items in this batch as errors
       for (let j = 0; j < batch.length; j++) {

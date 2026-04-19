@@ -36,10 +36,7 @@ export async function enhanceMoviesWithPosters(
 
         return movie;
       } catch (error) {
-        logger.warn(
-          { err: error instanceof Error ? error.message : String(error) },
-          `Failed to fetch poster for movie: ${movie.name}`,
-        );
+        logger.warn(`Failed to fetch poster for movie: ${movie.name}`, error);
         return movie;
       }
     }),

@@ -1,7 +1,8 @@
+import { isIP } from 'node:net';
+
 import { createClient } from 'redis';
 
 import logger from '@/lib/logger';
-import { getClientIp } from '@/lib/requestIp';
 
 type RedisClient = ReturnType<typeof createClient>;
 
@@ -42,8 +43,16 @@ function getRedisClient(): Promise<RedisClient | null> {
 const RATE_LIMIT = 10;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 
-export async function applyRateLimit(req: Request & { ip?: string }): Promise<Response | null> {
-  const ip = getClientIp(req);
+export async function applyRateLimit(req: Request): Promise<Response | null> {
+  const forwardedFor = req.headers.get('x-forwarded-for');
+  const forwardedForClientIp = forwardedFor
+    ? (forwardedFor
+        .split(',')
+        .map((value) => value.trim())
+        .find((value) => value !== '' && isIP(value) !== 0) ?? null)
+    : null;
+  const realIp = req.headers.get('x-real-ip')?.trim() || null;
+  const ip = forwardedForClientIp || (realIp && isIP(realIp) !== 0 ? realIp : null);
 
   // Skip rate limiting when the client IP cannot be determined or is not a
   // valid IP address, to avoid unbounded key cardinality from malformed headers

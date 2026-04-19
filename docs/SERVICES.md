@@ -10,7 +10,6 @@ This document describes the background services that populate and maintain the m
 | ----------------- | --------- | --------------- | ------------ |
 | `movie-seed`      | One-shot  | Manual / CI     | `movies.txt` |
 | `movie-discovery` | Scheduled | Cron / One-shot | TMDB API     |
-| `movie-backfill`  | One-shot  | Manual          | TMDB API     |
 
 ---
 
@@ -112,46 +111,6 @@ npm run dev -- --once    # one-shot, development
 npm run build && npm start       # scheduled, production
 DRY_RUN=true npm run dev -- --once  # dry run
 npm test                 # run vitest tests
-```
-
----
-
-## `services/movie-backfill`
-
-**Purpose:** Backfills missing `duration` and `age_rating` data for movies already in the database that were seeded without runtime information, then re-generates their embeddings.
-
-**Location:** `services/movie-backfill/`
-
-### How it works
-
-1. Queries the database for all movies where `duration = 0` (missing runtime).
-2. Searches TMDB by title + year to find the TMDB movie ID.
-3. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
-4. Re-generates the embedding (since the embedding text includes duration and age_rating).
-5. Updates the database row with the new `duration`, `age_rating`, and `embedding`.
-
-Movies for which TMDB returns no runtime are skipped so the script never replaces a `0` with another `0`.
-
-### Environment Variables
-
-| Variable         | Required | Default | Description                                        |
-| ---------------- | -------- | ------- | -------------------------------------------------- |
-| `TMDB_API_KEY`   | ✅       | —       | TMDB v4 read access token (Bearer auth)            |
-| `OPENAI_API_KEY` | ✅       | —       | OpenAI API key for generating embeddings           |
-| `DATABASE_URL`   | ✅       | —       | PostgreSQL connection string (with pgvector)       |
-| `DRY_RUN`        | ❌       | `false` | Set to `true` to log changes without writing to DB |
-| `BATCH_SIZE`     | ❌       | `5`     | Number of parallel TMDB detail requests per batch  |
-| `MAX_MOVIES`     | ❌       | `0`     | Max movies to process; `0` means all               |
-
-> **Note:** `TMDB_API_KEY` must be a **TMDB v4 read access token** (not a v3 API key).
-
-### Running
-
-```bash
-cd services/movie-backfill
-npm install
-npx tsx src/index.ts              # run backfill
-DRY_RUN=true npx tsx src/index.ts # dry run
 ```
 
 ---

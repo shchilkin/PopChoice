@@ -16,7 +16,6 @@
 
 import { loadConfig } from './config.js';
 import {
-  checkTableExists,
   closeDatabase,
   getIncompleteMovies,
   initDatabase,
@@ -61,12 +60,6 @@ async function main(): Promise<void> {
   let totalSkipped = 0;
 
   try {
-    const tableExists = await checkTableExists('movies');
-    if (!tableExists) {
-      logger.info("Table 'movies' does not exist — skipping backfill");
-      return;
-    }
-
     const movies = await getIncompleteMovies(config.maxMovies);
     logger.info('Fetched incomplete movies from database', { count: movies.length });
 

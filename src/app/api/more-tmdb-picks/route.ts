@@ -48,9 +48,6 @@ const tmdbMovieSchema = z.object({
   overview: z.string(),
   release_date: z.string(),
   vote_average: z.number(),
-  vote_count: z.number().optional(),
-  genre_ids: z.array(z.number()).optional(),
-  popularity: z.number().optional(),
   poster_path: z.string().nullable(),
 });
 
@@ -152,7 +149,7 @@ function combineAllPeopleDataToString(allPeopleData: PersonFormData[]): string {
 // Main handler
 // ---------------------------------------------------------------------------
 
-async function postHandler(req: NextRequest): Promise<Response> {
+export async function POST(req: NextRequest) {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -217,8 +214,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
     }
 
     // Queue seeding job to persist TMDB movies in the local DB for future queries.
-    // Convert TMDB discover results → TMDBDiscoverMovie, preserving metadata and
-    // using safe defaults when fields are absent.
+    // Convert TMDB discover results → TMDBDiscoverMovie with defaults for missing fields.
     if (seedQueue) {
       const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
         id: m.id,
@@ -226,9 +222,9 @@ async function postHandler(req: NextRequest): Promise<Response> {
         overview: m.overview,
         release_date: m.release_date,
         vote_average: m.vote_average,
-        vote_count: m.vote_count ?? 100,
-        genre_ids: m.genre_ids ?? [],
-        popularity: m.popularity ?? 0,
+        vote_count: 100, // We filter by vote_count.gte=100, so this is the minimum
+        genre_ids: [], // Not used by seedMovies
+        popularity: 0, // Not used by seedMovies
         poster_path: m.poster_path,
       }));
       seedQueue
@@ -436,5 +432,3 @@ Respond in ${language} only.`;
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
-
-export const POST = withAuth(postHandler);
