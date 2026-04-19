@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import pg from 'pg';
 import { initDatabase, checkTableExists, closeDatabase } from './database.js';
 
-// Mock pg module
 vi.mock('pg', () => {
   const mPool = {
     query: vi.fn(),
@@ -22,7 +21,7 @@ describe('database', () => {
 
   beforeEach(() => {
     initDatabase('postgres://user:pass@localhost:5432/db');
-    poolMock = new pg.Pool(); // Get the mocked instance
+    poolMock = new pg.Pool();
   });
 
   afterEach(async () => {
@@ -37,12 +36,7 @@ describe('database', () => {
       const result = await checkTableExists('movies');
 
       expect(poolMock.query).toHaveBeenCalledWith(
-        `SELECT EXISTS (
-       SELECT 1
-       FROM pg_catalog.pg_class AS c
-       WHERE c.oid = pg_catalog.to_regclass($1)
-         AND c.relkind = 'r'
-     )`,
+        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
         ['movies'],
       );
       expect(result).toBe(true);
@@ -54,12 +48,7 @@ describe('database', () => {
       const result = await checkTableExists('non_existent_table');
 
       expect(poolMock.query).toHaveBeenCalledWith(
-        `SELECT EXISTS (
-       SELECT 1
-       FROM pg_catalog.pg_class AS c
-       WHERE c.oid = pg_catalog.to_regclass($1)
-         AND c.relkind = 'r'
-     )`,
+        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
         ['non_existent_table'],
       );
       expect(result).toBe(false);
