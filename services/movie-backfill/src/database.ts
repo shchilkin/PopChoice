@@ -48,7 +48,7 @@ function getPool(): InstanceType<typeof Pool> {
 export async function checkTableExists(tableName: string): Promise<boolean> {
   const result = await getPool().query(
     'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
-    [tableName]
+    [tableName],
   );
   return result.rows[0].exists;
 }

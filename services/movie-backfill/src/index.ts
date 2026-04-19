@@ -63,7 +63,7 @@ async function main(): Promise<void> {
   try {
     const tableExists = await checkTableExists('movies');
     if (!tableExists) {
-      logger.info('Table \'movies\' does not exist — skipping backfill');
+      logger.info("Table 'movies' does not exist — skipping backfill");
       return;
     }
 
