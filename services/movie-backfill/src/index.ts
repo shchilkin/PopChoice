@@ -40,6 +40,15 @@ interface PendingUpdate {
   embeddingText: string;
 }
 
+function isMissingMoviesTableError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === '42P01'
+  );
+}
+
 async function main(): Promise<void> {
   const config = loadConfig();
 
@@ -60,7 +69,17 @@ async function main(): Promise<void> {
   let totalSkipped = 0;
 
   try {
-    const movies = await getIncompleteMovies(config.maxMovies);
+    let movies: IncompleteMovie[];
+    try {
+      movies = await getIncompleteMovies(config.maxMovies);
+    } catch (error) {
+      if (isMissingMoviesTableError(error)) {
+        logger.warn('Movies table does not exist yet — skipping backfill run');
+        return;
+      }
+      throw error;
+    }
+
     logger.info('Fetched incomplete movies from database', { count: movies.length });
 
     if (movies.length === 0) {

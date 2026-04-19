@@ -13,14 +13,14 @@ const posterSize = z.enum(POSTER_SIZES).default('original');
 // TODO: Move to types after service is fully implemented
 export const TMDB_MovieDetailsSchema = z.object({
   adult: z.boolean(),
-  backdrop_path: z.string(),
+  backdrop_path: z.string().nullable(),
   genre_ids: z.array(z.number()),
   id: z.number(),
   original_language: z.string(),
   original_title: z.string(),
   overview: z.string(),
   popularity: z.number(),
-  poster_path: z.string(),
+  poster_path: z.string().nullable(),
   release_date: z.string(),
   title: z.string(),
   video: z.boolean(),
@@ -182,7 +182,11 @@ export class MovieService {
     }
   }
 
-  getPosterURL(posterPath: string, size: PosterSize): string {
+  getPosterURL(posterPath: string | null, size: PosterSize): string | undefined {
+    if (!posterPath) {
+      return undefined;
+    }
+
     const { success, data: parsedSize } = posterSize.safeParse(size);
     if (!success) {
       throw new Error(`Invalid poster size: ${size}. Available sizes: ${POSTER_SIZES.join(', ')}`);

@@ -1,4 +1,5 @@
 import { randomBytes, scrypt, scryptSync, timingSafeEqual } from 'node:crypto';
+import { isIP } from 'node:net';
 
 import logger from '@/lib/logger';
 
@@ -204,10 +205,20 @@ function getConfiguredDerivationSecret(): string | null {
 
 /** Best-effort extraction of the client IP for logging purposes. */
 function getRequestIp(req: Request): string | null {
+  const directIp = (req as Request & { ip?: string }).ip?.trim() ?? null;
+  if (directIp && isIP(directIp) !== 0) return directIp;
+
+  const realIp = req.headers.get('x-real-ip')?.trim() ?? null;
+  if (realIp && isIP(realIp) !== 0) return realIp;
+
   const forwardedFor = req.headers.get('x-forwarded-for');
   if (forwardedFor) {
-    const first = forwardedFor.split(',')[0].trim();
-    if (first) return first;
+    const lastValid = forwardedFor
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value !== '' && isIP(value) !== 0)
+      .at(-1);
+    if (lastValid) return lastValid;
   }
-  return req.headers.get('x-real-ip') ?? null;
+  return null;
 }

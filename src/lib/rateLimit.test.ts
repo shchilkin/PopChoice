@@ -28,6 +28,14 @@ function makeRequest(
   });
 }
 
+function makeRequestWithIp(
+  ip: string,
+  headers: Record<string, string> = {},
+  url = 'http://localhost/api/movie-recommendation',
+): Request & { ip?: string } {
+  return Object.assign(makeRequest(headers, url), { ip });
+}
+
 describe('applyRateLimit', () => {
   afterEach(async () => {
     vi.unstubAllEnvs();
@@ -72,18 +80,46 @@ describe('applyRateLimit', () => {
       expect(mockEval).not.toHaveBeenCalled();
     });
 
-    it('extracts client IP from x-forwarded-for (first valid)', async () => {
+    it('extracts client IP from x-forwarded-for (last valid)', async () => {
       mockEval.mockResolvedValue([1, 60]);
       await applyRateLimit(makeRequest({ 'x-forwarded-for': '10.0.0.1, 10.0.0.2, 10.0.0.3' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
-        expect.objectContaining({ keys: ['rl:api-movie-recommendation:10.0.0.1'] }),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:10.0.0.3'] }),
       );
     });
 
-    it('falls back to x-real-ip when x-forwarded-for is absent', async () => {
+    it('prefers x-real-ip over x-forwarded-for', async () => {
       mockEval.mockResolvedValue([1, 60]);
-      await applyRateLimit(makeRequest({ 'x-real-ip': '192.168.1.5' }));
+      await applyRateLimit(
+        makeRequest({
+          'x-real-ip': '192.168.1.5',
+          'x-forwarded-for': '10.0.0.1, 10.0.0.2',
+        }),
+      );
+      expect(mockEval).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:192.168.1.5'] }),
+      );
+    });
+
+    it('prefers req.ip over forwarded headers when valid', async () => {
+      mockEval.mockResolvedValue([1, 60]);
+      await applyRateLimit(
+        makeRequestWithIp('172.16.0.9', {
+          'x-real-ip': '192.168.1.5',
+          'x-forwarded-for': '10.0.0.1, 10.0.0.2',
+        }),
+      );
+      expect(mockEval).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ keys: ['rl:api-movie-recommendation:172.16.0.9'] }),
+      );
+    });
+
+    it('falls back to x-real-ip when req.ip is invalid', async () => {
+      mockEval.mockResolvedValue([1, 60]);
+      await applyRateLimit(makeRequestWithIp('invalid-ip', { 'x-real-ip': '192.168.1.5' }));
       expect(mockEval).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({ keys: ['rl:api-movie-recommendation:192.168.1.5'] }),
