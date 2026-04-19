@@ -1,7 +1,5 @@
 #!/usr/bin/env tsx
 
-import logger from '@/lib/logger';
-
 /**
  * Similarity threshold calibration tool for PopChoice hybrid search.
  *
@@ -19,6 +17,7 @@ import logger from '@/lib/logger';
 
 import { getOpenAIClient } from '../src/clients/openaiClient';
 import { createPgDbClient } from '../src/clients/pgClient';
+import logger from '../src/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Built-in calibration queries — cover diverse genres and era preferences.

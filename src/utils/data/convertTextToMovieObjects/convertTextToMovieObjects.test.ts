@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import logger from '@/lib/logger';
+import logger from "@/lib/logger";
+
 
 import { convertTextToMovieObjects } from './convertTextToMovieObjects';
 
@@ -217,10 +218,7 @@ describe('convertTextToMovieObjects', () => {
     const result = convertTextToMovieObjects(lines);
 
     expect(result).toEqual([]);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ err: expect.any(Object) }),
-      'Validation errors',
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith({ err: expect.any(Object) }, 'Validation errors:');
   });
 
   it('should handle movies with zero or negative duration and invalid ratings', () => {

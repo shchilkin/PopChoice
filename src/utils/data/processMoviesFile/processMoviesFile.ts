@@ -45,7 +45,7 @@ export async function processMoviesFile(filePath: string): Promise<MovieEntry[]>
   if (parseResult.success) {
     return parseResult.data;
   } else {
-    logger.error({ err: parseResult.error }, 'Validation errors');
+    logger.error({ err: parseResult.error }, 'Validation errors:');
     return [];
   }
 }

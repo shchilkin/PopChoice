@@ -143,7 +143,7 @@ export async function judgeForMoviePlatform(
     return { suitable: parsed?.suitable === true };
   } catch (err) {
     // Fail-safe: if the judge call fails for any reason (e.g. invalid model name), block the request.
-    logger.error({ err }, '[judgeForMoviePlatform] judge call failed, blocking as fail-safe');
+    logger.error({ err }, '[judgeForMoviePlatform] judge call failed, blocking as fail-safe:');
     return { suitable: false };
   }
 }

@@ -1,10 +1,11 @@
+
 import { unlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import logger from '@/lib/logger';
+import logger from "@/lib/logger";
 
 import { analyzeMovieChunks } from './analyzeMovieChunks';
 
@@ -13,13 +14,15 @@ import type { MovieChunk } from '@/utils/types';
 describe('analyzeMovieChunks', () => {
   let testFilePath: string;
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     // Create a unique test file path
     testFilePath = join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
 
-    // Spy on logger methods to capture output
+    // Spy on console methods to capture output
     consoleLogSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -30,8 +33,9 @@ describe('analyzeMovieChunks', () => {
       // File might not exist, ignore error
     }
 
-    // Restore logger methods
+    // Restore console methods
     consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   it('should analyze movie chunks and return sorted results', () => {
