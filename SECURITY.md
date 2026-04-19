@@ -90,7 +90,7 @@ This document outlines the security measures and vulnerability management for th
 
 1. Implement security headers
 2. Add proper error handling
-4. CSRF protection
+3. CSRF protection
 
 ### Phase 3 (Long-term - Additional Measures)
 

@@ -1,11 +1,10 @@
-
 import fs from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import logger from "@/lib/logger";
+import logger from '@/lib/logger';
 
 import { processMoviesFile } from './processMoviesFile';
 

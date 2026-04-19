@@ -1,11 +1,10 @@
-
 import { unlinkSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import logger from "@/lib/logger";
+import logger from '@/lib/logger';
 
 import { analyzeMovieChunks } from './analyzeMovieChunks';
 
