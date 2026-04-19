@@ -204,9 +204,8 @@ export default function ResultsPage() {
 
           const needPosters = mapped.filter((m) => !m.posterURL);
           if (needPosters.length > 0) {
-            const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
             try {
-              const enhanced = await enhanceMoviesWithPosters(needPosters, tmdbApiKey);
+              const enhanced = await enhanceMoviesWithPosters(needPosters);
               const final = mapped.map((m) => enhanced.find((em) => em.id === m.id) || m);
               setMovies(final);
             } catch {

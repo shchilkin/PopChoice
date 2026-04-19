@@ -36,7 +36,7 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 ## Environment Variables
 
 - Managed via `.env` and/or devcontainer (`.devcontainer/devcontainer.json`).
-- Key variables: `OPENAI_API_KEY`, `DATABASE_URL`, `TMDB_API_KEY`, `NEXT_PUBLIC_TMDB_API_KEY`.
+- Key variables: `OPENAI_API_KEY`, `DATABASE_URL`, `TMDB_API_KEY`.
 - For dev containers, variables are forwarded from local shell if set before VS Code launch.
 
 ## Patterns & Conventions
