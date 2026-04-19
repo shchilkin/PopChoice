@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
+import { useRecommendationStore } from '@/store/recommendationStore';
 import { palette } from '@/styles/designTokens';
 
 import { FilmReel } from './components/FilmReel';
@@ -27,9 +28,11 @@ export default function LoadingPage() {
   }>({});
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const quizData = useRecommendationStore((state) => state.quizData);
+  const setRecommendation = useRecommendationStore((state) => state.setRecommendation);
+
   const callApi = useCallback(() => {
-    const quizDataStr = localStorage.getItem('popchoice_quiz_data');
-    if (!quizDataStr) {
+    if (!quizData) {
       router.replace('/quiz');
       return;
     }
@@ -42,6 +45,7 @@ export default function LoadingPage() {
     // Clear previous intervals before creating new ones.
     clearInterval(intervalsRef.current.tip);
     clearInterval(intervalsRef.current.prog);
+    const requestPayload = quizData.length === 1 ? quizData[0] : quizData;
 
     setErrorState(null);
     setProgress(0);
@@ -63,7 +67,7 @@ export default function LoadingPage() {
         'Accept-Language': locale,
         'X-CSRF-Token': getCsrfToken(),
       },
-      body: quizDataStr,
+      body: JSON.stringify(requestPayload),
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -79,9 +83,7 @@ export default function LoadingPage() {
           return;
         }
         const data = await response.json();
-        localStorage.setItem('popchoice_recommendation', JSON.stringify(data));
-        // Keep popchoice_quiz_data alive — the results page needs it for 'Get more picks from TMDB'.
-        // It is cleaned up when the user clicks 'Try Again'.
+        setRecommendation(data);
         setProgress(100);
         setTimeout(() => router.push('/results'), 400);
       })
@@ -94,7 +96,7 @@ export default function LoadingPage() {
         retryCount.current += 1;
         setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });
-  }, [router, t.loading.tips.length, locale]);
+  }, [router, t.loading.tips.length, locale, quizData, setRecommendation]);
 
   useEffect(() => {
     callApi();

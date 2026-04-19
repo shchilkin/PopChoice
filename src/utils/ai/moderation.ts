@@ -2,6 +2,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
 import { getOpenAIClient } from '@/clients/openaiClient';
+import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 
 export type ModerationResult = { flagged: false } | { flagged: true; categories: string[] };
@@ -142,7 +143,10 @@ export async function judgeForMoviePlatform(
     return { suitable: parsed?.suitable === true };
   } catch (err) {
     // Fail-safe: if the judge call fails for any reason (e.g. invalid model name), block the request.
-    console.error('[judgeForMoviePlatform] judge call failed, blocking as fail-safe:', err);
+    logger.error(
+      { err: err instanceof Error ? err.message : String(err) },
+      'judgeForMoviePlatform judge call failed, blocking as fail-safe',
+    );
     return { suitable: false };
   }
 }

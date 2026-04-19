@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
+import { useRecommendationStore } from '@/store/recommendationStore';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
@@ -44,6 +45,11 @@ interface ApiResponse {
 export default function ResultsPage() {
   const router = useRouter();
   const { t, locale } = useLanguage();
+
+  const recommendation = useRecommendationStore((state) => state.recommendation);
+  const quizData = useRecommendationStore((state) => state.quizData);
+  const clearState = useRecommendationStore((state) => state.clearState);
+
   const [movies, setMovies] = useState<MovieRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [usedBroaderSearch, setUsedBroaderSearch] = useState(false);
@@ -87,12 +93,12 @@ export default function ResultsPage() {
   }
 
   const handleMorePicks = useCallback(async () => {
-    const quizDataStr = localStorage.getItem('popchoice_quiz_data');
-    if (!quizDataStr || isFetchingMore) return;
+    if (!quizData || isFetchingMore) return;
 
     setIsFetchingMore(true);
     try {
       const currentTmdbIds = movies.filter((m) => m.fromTMDB).map((m) => m.id);
+      const requestPayload = quizData.length === 1 ? quizData[0] : quizData;
       const res = await fetch('/api/more-tmdb-picks', {
         method: 'POST',
         headers: {
@@ -101,7 +107,7 @@ export default function ResultsPage() {
           'X-CSRF-Token': getCsrfToken(),
         },
         body: JSON.stringify({
-          quizData: JSON.parse(quizDataStr),
+          quizData: requestPayload,
           page: 2,
           excludeIds: currentTmdbIds,
         }),
@@ -165,18 +171,17 @@ export default function ResultsPage() {
     } finally {
       setIsFetchingMore(false);
     }
-  }, [isFetchingMore, locale, movies]);
+  }, [isFetchingMore, locale, movies, quizData]);
 
   useEffect(() => {
     async function init() {
-      const raw = localStorage.getItem('popchoice_recommendation');
-      if (!raw) {
+      if (!recommendation) {
         router.replace('/quiz');
         return;
       }
 
       try {
-        const parsed: ApiResponse = JSON.parse(raw);
+        const parsed: ApiResponse = recommendation;
 
         if (parsed.usedBroaderSearch) {
           setUsedBroaderSearch(true);
@@ -224,7 +229,7 @@ export default function ResultsPage() {
     }
 
     void init();
-  }, [router]);
+  }, [recommendation, router]);
 
   useEffect(() => {
     if (movies.length === 0 || isLoading) return;
@@ -574,8 +579,7 @@ export default function ResultsPage() {
       >
         <button
           onClick={() => {
-            localStorage.removeItem('popchoice_recommendation');
-            localStorage.removeItem('popchoice_quiz_data');
+            clearState();
             router.push('/quiz');
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
@@ -599,8 +603,7 @@ export default function ResultsPage() {
 
         <button
           onClick={() => {
-            localStorage.removeItem('popchoice_recommendation');
-            localStorage.removeItem('popchoice_quiz_data');
+            clearState();
             router.push('/quiz');
           }}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"

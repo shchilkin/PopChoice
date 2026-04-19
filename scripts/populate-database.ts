@@ -1,4 +1,13 @@
 #!/usr/bin/env tsx
+import path from 'node:path';
+
+import logger from '@/lib/logger';
+import { getMovieFileStats, splitMovieDocument } from '@/utils';
+
+import { createEmbeddingsWithProgress } from '../src/utils/ai/embeddings';
+import { getMovieStats } from '../src/utils/data/getMovieStats';
+
+import type { ChunkWithEmbedding, MovieDocument } from '../src/utils/types';
 
 /**
  * Standalone script to populate the PopChoice movie database
@@ -17,21 +26,12 @@
  *   # or with options:
  */
 
-import path from 'path';
-
-import { getMovieFileStats, splitMovieDocument } from '@/utils';
-
-import { createEmbeddingsWithProgress } from '../src/utils/ai/embeddings';
-import { getMovieStats } from '../src/utils/data/getMovieStats';
-
-import type { ChunkWithEmbedding, MovieDocument } from '../src/utils/types';
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 const help = args.includes('--help') || args.includes('-h');
 
 if (help) {
-  console.log(`
+  logger.info(`
 PopChoice Database Population Script
 
 Usage:
@@ -58,19 +58,19 @@ const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
 const hasPg = Boolean(process.env.DATABASE_URL);
 
 if (!hasOpenAI) {
-  console.error('❌ Missing required environment variable: OPENAI_API_KEY');
+  logger.error('❌ Missing required environment variable: OPENAI_API_KEY');
   process.exit(1);
 }
 
 if (!hasPg) {
-  console.error('❌ Missing required environment variable: DATABASE_URL');
-  console.error('   Set DATABASE_URL to your PostgreSQL connection string.');
+  logger.error('❌ Missing required environment variable: DATABASE_URL');
+  logger.error('   Set DATABASE_URL to your PostgreSQL connection string.');
   process.exit(1);
 }
 
 async function main() {
-  console.log('🎬 PopChoice Database Population Script');
-  console.log('=====================================\n');
+  logger.info('🎬 PopChoice Database Population Script');
+  logger.info('=====================================\n');
 
   // Resolve path to movies.txt
   const moviesPath = path.resolve(process.cwd(), 'services/movie-seed/movies.txt');
@@ -80,15 +80,15 @@ async function main() {
     const fs = await import('fs/promises');
     await fs.access(moviesPath);
   } catch {
-    console.error(`❌ Movies file not found: ${moviesPath}`);
-    console.error('Please ensure movies.txt exists at services/movie-seed/movies.txt.');
+    logger.error(`❌ Movies file not found: ${moviesPath}`);
+    logger.error('Please ensure movies.txt exists at services/movie-seed/movies.txt.');
     process.exit(1);
   }
 
   try {
     // Get original movie statistics
     const { movieCount } = getMovieStats(moviesPath);
-    console.log(`📖 Original movies: ${movieCount}`);
+    logger.info(`📖 Original movies: ${movieCount}`);
 
     // Split using custom movie-aware splitter
     const chunks: MovieDocument[] = await splitMovieDocument(moviesPath);
@@ -96,27 +96,27 @@ async function main() {
     // Get chunk statistics
     const stats = await getMovieFileStats(moviesPath);
 
-    console.log(`\n📊 Chunk Results:`);
-    console.log(`- Generated chunks: ${chunks.length}`);
-    console.log(`- Average chunk size: ${stats.avgChunkSize} characters`);
-    console.log(`- Max chunk size: ${stats.maxChunkSize} characters`);
-    console.log(`- Min chunk size: ${stats.minChunkSize} characters`);
+    logger.info(`\n📊 Chunk Results:`);
+    logger.info(`- Generated chunks: ${chunks.length}`);
+    logger.info(`- Average chunk size: ${stats.avgChunkSize} characters`);
+    logger.info(`- Max chunk size: ${stats.maxChunkSize} characters`);
+    logger.info(`- Min chunk size: ${stats.minChunkSize} characters`);
 
     // Validate perfect 1:1 mapping
     const isPerfectMapping = chunks.length === movieCount;
-    console.log(`- Perfect 1:1 mapping: ${isPerfectMapping ? '✅' : '❌'}`);
+    logger.info(`- Perfect 1:1 mapping: ${isPerfectMapping ? '✅' : '❌'}`);
 
     if (!isPerfectMapping) {
-      console.error(
+      logger.error(
         `\n❌ Data integrity error: Expected ${movieCount} chunks, got ${chunks.length}`,
       );
-      console.error('This indicates corrupted data. Please check movies.txt format.');
+      logger.error('This indicates corrupted data. Please check movies.txt format.');
       process.exit(1);
     }
 
     // Create embeddings for all movies
     // Note: We should check for duplicates BEFORE creating expensive embeddings
-    console.log(`\n🔍 Checking for duplicates before creating embeddings...`);
+    logger.info(`\n🔍 Checking for duplicates before creating embeddings...`);
 
     // Parse all movies first to check which ones are new
     const movieRecords: Array<{
@@ -158,9 +158,9 @@ async function main() {
       }
     }
 
-    console.log(`✅ Parsed ${movieRecords.length} movies successfully`);
+    logger.info(`✅ Parsed ${movieRecords.length} movies successfully`);
     if (parseErrors.length > 0) {
-      console.log(`⚠️ Failed to parse ${parseErrors.length} movies`);
+      logger.info(`⚠️ Failed to parse ${parseErrors.length} movies`);
     }
 
     // Check which movies already exist in database
@@ -168,7 +168,7 @@ async function main() {
     const newMovies: typeof movieRecords = [];
     const existingMovies: Array<{ name: string; year: number; index: number }> = [];
 
-    console.log('🔍 Checking database for existing movies...');
+    logger.info('🔍 Checking database for existing movies...');
     for (const record of movieRecords) {
       try {
         const exists = await movieExists(record.name, record.year);
@@ -188,16 +188,16 @@ async function main() {
       }
     }
 
-    console.log(`🆕 New movies to process: ${newMovies.length}`);
-    console.log(`🔄 Duplicate movies (will skip): ${existingMovies.length}`);
+    logger.info(`🆕 New movies to process: ${newMovies.length}`);
+    logger.info(`🔄 Duplicate movies (will skip): ${existingMovies.length}`);
 
     if (existingMovies.length > 0) {
-      console.log(`\n📋 Sample duplicates found:`);
+      logger.info(`\n📋 Sample duplicates found:`);
       existingMovies.slice(0, 5).forEach((duplicate) => {
-        console.log(`  - "${duplicate.name}" (${duplicate.year})`);
+        logger.info(`  - "${duplicate.name}" (${duplicate.year})`);
       });
       if (existingMovies.length > 5) {
-        console.log(`  ... and ${existingMovies.length - 5} more duplicates`);
+        logger.info(`  ... and ${existingMovies.length - 5} more duplicates`);
       }
     }
 
@@ -205,13 +205,13 @@ async function main() {
     const newMovieIndices = new Set(newMovies.map((movie) => movie.chunkIndex));
     const chunksToProcess = chunks.filter((_, index) => newMovieIndices.has(index));
 
-    console.log(`\n🧠 Creating embeddings for ${chunksToProcess.length} NEW movies only...`);
+    logger.info(`\n🧠 Creating embeddings for ${chunksToProcess.length} NEW movies only...`);
 
     if (chunksToProcess.length === 0) {
-      console.log(`\n🎉 No new movies to process - all movies already exist in database!`);
-      console.log(`✅ Successfully inserted: 0 movies`);
-      console.log(`🔄 Skipped duplicates: ${existingMovies.length} movies`);
-      console.log(`❌ Failed insertions: ${parseErrors.length} movies`);
+      logger.info(`\n🎉 No new movies to process - all movies already exist in database!`);
+      logger.info(`✅ Successfully inserted: 0 movies`);
+      logger.info(`🔄 Skipped duplicates: ${existingMovies.length} movies`);
+      logger.info(`❌ Failed insertions: ${parseErrors.length} movies`);
       process.exit(parseErrors.length > 0 ? 1 : 0);
     }
 
@@ -219,7 +219,7 @@ async function main() {
     const estimatedTokens = chunksToProcess.length * 400;
     const estimatedCost = (estimatedTokens / 1000000) * 0.13; // $0.13 per 1M tokens
 
-    console.log(
+    logger.info(
       `💰 Estimated cost: ~$${estimatedCost.toFixed(4)} USD (assuming ~400 tokens/movie)`,
     );
 
@@ -230,75 +230,75 @@ async function main() {
         logProgress: true,
       });
 
-    console.log(`✅ Created ${chunksWithEmbeddings.length} embeddings`);
+    logger.info(`✅ Created ${chunksWithEmbeddings.length} embeddings`);
 
     // Insert into database (skip duplicate check since we already filtered)
-    console.log(`\n💾 Inserting movies into database...`);
+    logger.info(`\n💾 Inserting movies into database...`);
     const { batchInsertMovies } = await import('../src/utils/database/operations');
     const insertResult = await batchInsertMovies(chunksWithEmbeddings, 100);
 
     // Final summary
-    console.log(`\n🎉 Database Population Complete!`);
-    console.log(`=====================================`);
-    console.log(`✅ Successfully inserted: ${insertResult.totalSuccess} movies`);
-    console.log(`🔄 Skipped duplicates: ${existingMovies.length} movies`);
-    console.log(`❌ Failed insertions: ${insertResult.totalErrors + parseErrors.length} movies`);
+    logger.info(`\n🎉 Database Population Complete!`);
+    logger.info(`=====================================`);
+    logger.info(`✅ Successfully inserted: ${insertResult.totalSuccess} movies`);
+    logger.info(`🔄 Skipped duplicates: ${existingMovies.length} movies`);
+    logger.info(`❌ Failed insertions: ${insertResult.totalErrors + parseErrors.length} movies`);
 
     if (insertResult.totalErrors > 0 || parseErrors.length > 0) {
-      console.log(`\n❌ Error Summary:`);
+      logger.info(`\n❌ Error Summary:`);
       [...insertResult.errorDetails, ...parseErrors].slice(0, 3).forEach((error) => {
-        console.log(`  - Index ${error.index}: ${error.error}`);
+        logger.info(`  - Index ${error.index}: ${error.error}`);
       });
       const totalErrors = insertResult.totalErrors + parseErrors.length;
       if (totalErrors > 3) {
-        console.log(`  ... and ${totalErrors - 3} more errors`);
+        logger.info(`  ... and ${totalErrors - 3} more errors`);
       }
     }
 
-    console.log(`\n📊 Final Statistics:`);
-    console.log(`- Total movies processed: ${movieCount}`);
-    console.log(`- Embeddings created: ${chunksWithEmbeddings.length}`);
-    console.log(`- Database insertions: ${insertResult.totalSuccess}`);
-    console.log(`- Skipped (duplicates): ${existingMovies.length}`);
+    logger.info(`\n📊 Final Statistics:`);
+    logger.info(`- Total movies processed: ${movieCount}`);
+    logger.info(`- Embeddings created: ${chunksWithEmbeddings.length}`);
+    logger.info(`- Database insertions: ${insertResult.totalSuccess}`);
+    logger.info(`- Skipped (duplicates): ${existingMovies.length}`);
 
     if (insertResult.totalSuccess > 0) {
       // Calculate actual cost based on estimated tokens per chunk
       const actualTokens = chunksWithEmbeddings.length * 400; // ~400 tokens per movie chunk
       const actualCost = (actualTokens / 1000000) * 0.13; // $0.13 per 1M tokens
 
-      console.log(
+      logger.info(
         `\n💰 Approximate cost: $${actualCost.toFixed(4)} USD (${chunksWithEmbeddings.length} movies × ~400 tokens)`,
       );
     }
 
     process.exit(insertResult.totalErrors + parseErrors.length > 0 ? 1 : 0);
   } catch (error) {
-    console.error(`\n❌ Fatal error during database population:`);
+    logger.error(`\n❌ Fatal error during database population:`);
 
-    console.error(error instanceof Error ? error.message : 'Unknown error');
+    logger.error(error instanceof Error ? error.message : 'Unknown error');
 
-    console.error(`\nStack trace:`);
+    logger.error(`\nStack trace:`);
 
-    console.error(error instanceof Error ? error.stack : 'No stack trace available');
+    logger.error(error instanceof Error ? error.stack : 'No stack trace available');
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-  console.log(`\n\n⏹️  Process interrupted by user`);
+  logger.info(`\n\n⏹️  Process interrupted by user`);
 
-  console.log(`Database may be in partial state - safe to re-run script`);
+  logger.info(`Database may be in partial state - safe to re-run script`);
   process.exit(130);
 });
 
 process.on('SIGTERM', () => {
-  console.log(`\n\n⏹️  Process terminated`);
+  logger.info(`\n\n⏹️  Process terminated`);
   process.exit(143);
 });
 
 // Run the main function
 main().catch((error) => {
-  console.error('❌ Unhandled error:', error);
+  logger.error('❌ Unhandled error:', error);
   process.exit(1);
 });

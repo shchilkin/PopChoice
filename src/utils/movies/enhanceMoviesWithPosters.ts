@@ -1,3 +1,5 @@
+import logger from '@/lib/logger';
+
 import { MovieService } from '../../services';
 
 const movieService = new MovieService();
@@ -34,7 +36,10 @@ export async function enhanceMoviesWithPosters(
 
         return movie;
       } catch (error) {
-        console.warn(`Failed to fetch poster for movie: ${movie.name}`, error);
+        logger.warn(
+          { err: error instanceof Error ? error.message : String(error) },
+          `Failed to fetch poster for movie: ${movie.name}`,
+        );
         return movie;
       }
     }),

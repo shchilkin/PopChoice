@@ -5,11 +5,13 @@ import { Queue } from 'bullmq';
 import express from 'express';
 import IORedis from 'ioredis';
 
+import logger from '@/lib/logger';
+
 const PORT = Number(process.env.PORT ?? process.env.BULL_BOARD_PORT ?? 3001);
 const REDIS_URL = process.env.REDIS_URL;
 
 if (!REDIS_URL) {
-  console.error('Error: REDIS_URL is not set. Add it to your .env file.');
+  logger.error('Error: REDIS_URL is not set. Add it to your .env file.');
   process.exit(1);
 }
 
@@ -29,5 +31,5 @@ const app = express();
 app.use('/', serverAdapter.getRouter());
 
 app.listen(PORT, () => {
-  console.log(`Bull Board running at http://localhost:${PORT}`);
+  logger.info(`Bull Board running at http://localhost:${PORT}`);
 });

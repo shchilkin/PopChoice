@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import logger from '@/lib/logger';
+
 import { convertTextToMovieObjects } from './convertTextToMovieObjects';
 
 describe('convertTextToMovieObjects', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -215,7 +217,7 @@ describe('convertTextToMovieObjects', () => {
     const result = convertTextToMovieObjects(lines);
 
     expect(result).toEqual([]);
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Validation errors:', expect.any(Object));
+    expect(consoleErrorSpy).toHaveBeenCalledWith({ err: expect.any(String) }, 'Validation errors');
   });
 
   it('should handle movies with zero or negative duration and invalid ratings', () => {

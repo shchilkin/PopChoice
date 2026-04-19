@@ -1,4 +1,5 @@
 import { getOpenAIClient } from '@/clients/openaiClient';
+import logger from '@/lib/logger';
 
 import type { ChunkWithEmbedding, EmbeddableChunk } from '../types';
 
@@ -46,7 +47,7 @@ export async function createEmbeddingsWithProgress<T extends EmbeddableChunk>(
   const { model = 'text-embedding-3-large', batchSize = 50, logProgress = true } = options;
 
   if (logProgress) {
-    console.log(`\n🚀 Creating embeddings for ${chunks.length} chunks...`);
+    logger.info(`\n🚀 Creating embeddings for ${chunks.length} chunks...`);
   }
 
   const results: ChunkWithEmbedding<T>[] = [];
@@ -58,12 +59,12 @@ export async function createEmbeddingsWithProgress<T extends EmbeddableChunk>(
     results.push(...batchResults);
 
     if (logProgress) {
-      console.log(`✅ Processed ${Math.min(i + batchSize, chunks.length)}/${chunks.length} chunks`);
+      logger.info(`✅ Processed ${Math.min(i + batchSize, chunks.length)}/${chunks.length} chunks`);
     }
   }
 
   if (logProgress) {
-    console.log(`🎉 Created ${results.length} embeddings successfully!`);
+    logger.info(`🎉 Created ${results.length} embeddings successfully!`);
   }
 
   return results;

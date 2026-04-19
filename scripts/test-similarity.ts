@@ -3,6 +3,8 @@
 import OpenAI from 'openai';
 import pg from 'pg';
 
+import logger from '@/lib/logger';
+
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -37,12 +39,12 @@ for (const { label, input } of queries) {
   );
 
   const highQuality = rows.filter((r) => Number(r.similarity) >= SIMILARITY_THRESHOLD);
-  console.log(`\n=== ${label} ===`);
-  console.log(`    High-quality (>=${SIMILARITY_THRESHOLD}): ${highQuality.length}/10`);
+  logger.info(`\n=== ${label} ===`);
+  logger.info(`    High-quality (>=${SIMILARITY_THRESHOLD}): ${highQuality.length}/10`);
   rows.forEach((r) => {
     const sim = Number(r.similarity);
     const marker = sim >= SIMILARITY_THRESHOLD ? '✓' : '✗';
-    console.log(`  ${marker} ${sim.toFixed(4)}  ${r.name} (${r.year})`);
+    logger.info(`  ${marker} ${sim.toFixed(4)}  ${r.name} (${r.year})`);
   });
 }
 

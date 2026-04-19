@@ -4,6 +4,8 @@ import path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import logger from '@/lib/logger';
+
 import { processMoviesFile } from './processMoviesFile';
 
 describe('processMoviesFile', () => {
@@ -14,8 +16,8 @@ describe('processMoviesFile', () => {
     // Create a unique test file path
     testFilePath = path.join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
 
-    // Spy on console.error to capture validation error logs
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Spy on logger.error to capture validation error logs
+    consoleErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
   });
 
   afterEach(async () => {
@@ -26,7 +28,7 @@ describe('processMoviesFile', () => {
       // File might not exist, ignore error
     }
 
-    // Restore console.error
+    // Restore logger.error
     consoleErrorSpy.mockRestore();
   });
 
@@ -255,7 +257,7 @@ Another description`;
     const result = await processMoviesFile(testFilePath);
 
     expect(result).toEqual([]);
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Validation errors:', expect.any(Object));
+    expect(consoleErrorSpy).toHaveBeenCalledWith({ err: expect.any(String) }, 'Validation errors');
   });
 
   it('should handle movies with zero or negative duration', async () => {

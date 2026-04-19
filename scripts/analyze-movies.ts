@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-
+import logger from '@/lib/logger';
 import { analyzeMovieChunks } from '@/utils/data';
 
 /**
@@ -17,16 +17,16 @@ function main() {
   // Get file path from command line argument or use default
   const filePath = process.argv[2] || './movies.txt';
 
-  console.log('🎬 Starting movie chunk analysis...');
-  console.log(`📁 Analyzing file: ${filePath}`);
-  console.log('='.repeat(80));
+  logger.info('🎬 Starting movie chunk analysis...');
+  logger.info(`📁 Analyzing file: ${filePath}`);
+  logger.info('='.repeat(80));
 
   try {
     const movieChunks = analyzeMovieChunks(filePath);
 
-    console.log('\n' + '='.repeat(80));
-    console.log('✅ Analysis completed successfully!');
-    console.log(`📊 Processed ${movieChunks.length} movie entries`);
+    logger.info('\n' + '='.repeat(80));
+    logger.info('✅ Analysis completed successfully!');
+    logger.info(`📊 Processed ${movieChunks.length} movie entries`);
 
     if (movieChunks.length > 0) {
       const avgChunkSize = Math.round(
@@ -35,12 +35,12 @@ function main() {
       const maxChunkSize = Math.max(...movieChunks.map((chunk) => chunk.chunkSize));
       const minChunkSize = Math.min(...movieChunks.map((chunk) => chunk.chunkSize));
 
-      console.log(`📈 Average chunk size: ${avgChunkSize} characters`);
-      console.log(`📊 Size range: ${minChunkSize} - ${maxChunkSize} characters`);
+      logger.info(`📈 Average chunk size: ${avgChunkSize} characters`);
+      logger.info(`📊 Size range: ${minChunkSize} - ${maxChunkSize} characters`);
     }
   } catch (error) {
-    console.error('\n❌ Analysis failed:');
-    console.error(error instanceof Error ? error.message : String(error));
+    logger.error('\n❌ Analysis failed:');
+    logger.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

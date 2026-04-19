@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
+import { useRecommendationStore } from '@/store/recommendationStore';
 
 import {
   BetweenPersons,
@@ -47,6 +48,8 @@ export default function QuizPage() {
   const currentStepIdx = questionsStep ? STEP_KEYS.indexOf(questionsStep) : -1;
   const isLastStep = questionsStep === 'favoriteActor';
 
+  const setQuizData = useRecommendationStore((state) => state.setQuizData);
+
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
     if (!isSubmitting) return;
@@ -55,10 +58,10 @@ export default function QuizPage() {
         ? people.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p))
         : people;
     const apiData = resolved.map(toApiFormat);
-    const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
-    localStorage.setItem('popchoice_quiz_data', JSON.stringify(dataToSend));
+    const dataToSend = apiData.length === 1 ? [apiData[0]] : apiData;
+    setQuizData(dataToSend);
     router.push('/loading');
-  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router]);
+  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router, setQuizData]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     send({ type: 'UPDATE_PERSON', updates });

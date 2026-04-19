@@ -1,3 +1,5 @@
+import logger from '@/lib/logger';
+
 import { movieChunksArraySchema } from '../../schemas/movieSchemas';
 import { parseMovieChunks } from '../parseMovieChunks';
 
@@ -24,9 +26,9 @@ export function analyzeMovieChunks(filePath: string): MovieChunk[] {
   const validationResult = movieChunksArraySchema.safeParse(rawMovieChunks);
 
   if (!validationResult.success) {
-    console.error('Validation errors found in movie chunks:');
+    logger.error('Validation errors found in movie chunks:');
     validationResult.error.issues.forEach((issue) => {
-      console.error(`- ${issue.path.join('.')}: ${issue.message}`);
+      logger.error(`- ${issue.path.join('.')}: ${issue.message}`);
     });
     throw new Error('Movie chunk validation failed. Check the data format.');
   }
@@ -36,31 +38,31 @@ export function analyzeMovieChunks(filePath: string): MovieChunk[] {
   // Sort by chunk size (largest first)
   movieChunks.sort((a, b) => b.chunkSize - a.chunkSize);
 
-  console.log(`Total movies found: ${movieChunks.length}`);
+  logger.info(`Total movies found: ${movieChunks.length}`);
 
   if (movieChunks.length === 0) {
     return movieChunks;
   }
 
-  console.log(`\nTop 10 largest chunks by size (characters):`);
-  console.log('-'.repeat(80));
+  logger.info(`\nTop 10 largest chunks by size (characters):`);
+  logger.info('-'.repeat(80));
 
   movieChunks.slice(0, 10).forEach((movie, i) => {
-    console.log(
+    logger.info(
       `${(i + 1).toString().padStart(2)}. ${movie.name.padEnd(50)} | ${movie.chunkSize.toString().padStart(4)} chars | ${movie.lineCount.toString().padStart(2)} lines`,
     );
   });
 
   const biggest = movieChunks[0];
-  console.log(`\nLargest chunk:`);
-  console.log('='.repeat(80));
-  console.log(`Movie: ${biggest.name}`);
-  console.log(`Size: ${biggest.chunkSize} characters`);
-  console.log(`Lines: ${biggest.lineCount}`);
-  console.log(`Chunk number: ${biggest.chunkNumber}`);
-  console.log(`\nContent:`);
-  console.log('-'.repeat(40));
-  console.log(biggest.content);
+  logger.info(`\nLargest chunk:`);
+  logger.info('='.repeat(80));
+  logger.info(`Movie: ${biggest.name}`);
+  logger.info(`Size: ${biggest.chunkSize} characters`);
+  logger.info(`Lines: ${biggest.lineCount}`);
+  logger.info(`Chunk number: ${biggest.chunkNumber}`);
+  logger.info(`\nContent:`);
+  logger.info('-'.repeat(40));
+  logger.info(biggest.content);
 
   return movieChunks;
 }

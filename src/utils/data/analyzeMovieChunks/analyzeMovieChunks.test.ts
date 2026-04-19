@@ -4,6 +4,8 @@ import { join } from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import logger from '@/lib/logger';
+
 import { analyzeMovieChunks } from './analyzeMovieChunks';
 
 import type { MovieChunk } from '@/utils/types';
@@ -18,7 +20,7 @@ describe('analyzeMovieChunks', () => {
     testFilePath = join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
 
     // Spy on console methods to capture output
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleLogSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 

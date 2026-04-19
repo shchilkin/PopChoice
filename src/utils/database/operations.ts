@@ -1,4 +1,5 @@
 import { getDbClient } from '@/clients/dbClient';
+import logger from '@/lib/logger';
 import { convertTextToMovieObjects, parseMovieNameAndYear } from '@/utils/data';
 
 import { filterExistingMovies, getMovieCount } from './validation';
@@ -80,7 +81,7 @@ export async function insertMovies(
         } catch (singleError) {
           const errorMessage =
             singleError instanceof Error ? singleError.message : JSON.stringify(singleError);
-          console.error(`❌ Insert error for record ${i}:`, errorMessage);
+          logger.error({ index: i, err: errorMessage }, 'Insert error for record');
           errors.push({
             index: i,
             error: errorMessage,
@@ -112,7 +113,7 @@ export async function batchInsertMovies(
   let totalSuccess = 0;
   const allErrors: Array<{ index: number; error: string }> = [];
 
-  console.log(`\n📝 Inserting ${chunksWithEmbeddings.length} movies into database...`);
+  logger.info(`\n📝 Inserting ${chunksWithEmbeddings.length} movies into database...`);
 
   // Process in batches
   for (let i = 0; i < chunksWithEmbeddings.length; i += batchSize) {
@@ -120,7 +121,7 @@ export async function batchInsertMovies(
     const batchNumber = Math.floor(i / batchSize) + 1;
     const totalBatches = Math.ceil(chunksWithEmbeddings.length / batchSize);
 
-    console.log(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} movies)`);
+    logger.info(`📦 Processing batch ${batchNumber}/${totalBatches} (${batch.length} movies)`);
 
     try {
       const result = await insertMovies(batch);
@@ -135,11 +136,14 @@ export async function batchInsertMovies(
 
       allErrors.push(...adjustedErrors);
 
-      console.log(
+      logger.info(
         `✅ Batch ${batchNumber}: ${result.success} successful, ${result.errors.length} errors`,
       );
     } catch (batchError) {
-      console.error(`❌ Batch ${batchNumber} failed:`, batchError);
+      logger.error(
+        { batchNumber, err: batchError instanceof Error ? batchError.message : String(batchError) },
+        'Batch failed',
+      );
 
       // Mark all items in this batch as errors
       for (let j = 0; j < batch.length; j++) {
@@ -151,17 +155,17 @@ export async function batchInsertMovies(
     }
   }
 
-  console.log(`\n🎉 Insertion complete!`);
-  console.log(`✅ Successfully inserted: ${totalSuccess} movies`);
-  console.log(`❌ Failed insertions: ${allErrors.length} movies`);
+  logger.info(`\n🎉 Insertion complete!`);
+  logger.info(`✅ Successfully inserted: ${totalSuccess} movies`);
+  logger.info(`❌ Failed insertions: ${allErrors.length} movies`);
 
   if (allErrors.length > 0) {
-    console.log(`\n❌ Error details:`);
+    logger.info(`\n❌ Error details:`);
     allErrors.slice(0, 5).forEach((error) => {
-      console.log(`  - Index ${error.index}: ${error.error}`);
+      logger.info(`  - Index ${error.index}: ${error.error}`);
     });
     if (allErrors.length > 5) {
-      console.log(`  ... and ${allErrors.length - 5} more errors`);
+      logger.info(`  ... and ${allErrors.length - 5} more errors`);
     }
   }
 
@@ -189,11 +193,11 @@ export async function batchInsertMoviesWithDuplicateCheck(
   errorDetails: Array<{ index: number; error: string }>;
   duplicates: Array<{ name: string; year: number; index: number }>;
 }> {
-  console.log(`\n🔍 Checking for duplicates among ${chunksWithEmbeddings.length} movies...`);
+  logger.info(`\n🔍 Checking for duplicates among ${chunksWithEmbeddings.length} movies...`);
 
   // First, get current database count
   const initialCount = await getMovieCount();
-  console.log(`📊 Current movies in database: ${initialCount}`);
+  logger.info(`📊 Current movies in database: ${initialCount}`);
 
   if (!skipDuplicateCheck && chunksWithEmbeddings.length > 0) {
     // Parse all movies first to check for duplicates
@@ -233,24 +237,24 @@ export async function batchInsertMoviesWithDuplicateCheck(
       }
     }
 
-    console.log(`✅ Parsed ${movieRecords.length} movies successfully`);
+    logger.info(`✅ Parsed ${movieRecords.length} movies successfully`);
     if (parseErrors.length > 0) {
-      console.log(`⚠️ Failed to parse ${parseErrors.length} movies`);
+      logger.info(`⚠️ Failed to parse ${parseErrors.length} movies`);
     }
 
     // Filter out existing movies
     const { newMovies, existingMovies } = await filterExistingMovies(movieRecords);
 
-    console.log(`🆕 New movies to insert: ${newMovies.length}`);
-    console.log(`🔄 Duplicate movies (will skip): ${existingMovies.length}`);
+    logger.info(`🆕 New movies to insert: ${newMovies.length}`);
+    logger.info(`🔄 Duplicate movies (will skip): ${existingMovies.length}`);
 
     if (existingMovies.length > 0) {
-      console.log(`\n📋 Sample duplicates found:`);
+      logger.info(`\n📋 Sample duplicates found:`);
       existingMovies.slice(0, 5).forEach((duplicate) => {
-        console.log(`  - "${duplicate.name}" (${duplicate.year})`);
+        logger.info(`  - "${duplicate.name}" (${duplicate.year})`);
       });
       if (existingMovies.length > 5) {
-        console.log(`  ... and ${existingMovies.length - 5} more duplicates`);
+        logger.info(`  ... and ${existingMovies.length - 5} more duplicates`);
       }
     }
 
@@ -283,7 +287,7 @@ export async function batchInsertMoviesWithDuplicateCheck(
         }
       }
 
-      console.log(
+      logger.info(
         `📦 Sending ${newChunks.length} chunks to database (${newMovies.length} records expected)`,
       );
 

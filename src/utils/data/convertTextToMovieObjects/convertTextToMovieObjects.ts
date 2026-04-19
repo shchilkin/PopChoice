@@ -1,3 +1,5 @@
+import logger from '@/lib/logger';
+
 import { moviesArraySchema } from '../../schemas/movieSchemas';
 import { MovieEntry, RawMovieEntry } from '../../types';
 
@@ -34,7 +36,7 @@ export function convertTextToMovieObjects(lines: string[]): MovieEntry[] {
   if (parseResult.success) {
     return parseResult.data;
   } else {
-    console.error('Validation errors:', parseResult.error);
+    logger.error({ err: parseResult.error.message }, 'Validation errors');
     return [];
   }
 }

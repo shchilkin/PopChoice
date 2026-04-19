@@ -56,20 +56,7 @@ const eslintConfig = [
 
       // Prevent duplicate imports
       'import/no-duplicates': 'error',
-      'no-console': process.env.CI ? 'error' : 'warn',
-    },
-  },
-
-  // Allow console logs in server-side utils
-  {
-    files: [
-      'src/utils/**/*.{ts,js}',
-      'src/app/api/**/*.{ts,js}',
-      'src/lib/**/*.{ts,js}',
-      'scripts/**/*.{ts,js}',
-    ],
-    rules: {
-      'no-console': 'off',
+      'no-console': 'error',
     },
   },
 ];

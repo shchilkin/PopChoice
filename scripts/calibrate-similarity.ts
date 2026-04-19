@@ -1,4 +1,6 @@
 #!/usr/bin/env tsx
+import logger from '@/lib/logger';
+
 /**
  * Similarity threshold calibration tool for PopChoice hybrid search.
  *
@@ -49,7 +51,7 @@ const MATCH_COUNT = 5;
 // ---------------------------------------------------------------------------
 
 function printSeparator() {
-  console.log('─'.repeat(62));
+  logger.info('─'.repeat(62));
 }
 
 async function embedQuery(text: string): Promise<number[]> {
@@ -63,34 +65,34 @@ async function embedQuery(text: string): Promise<number[]> {
 async function main() {
   // Validate env
   if (!process.env.OPENAI_API_KEY) {
-    console.error('❌ Missing required environment variable: OPENAI_API_KEY');
+    logger.error('❌ Missing required environment variable: OPENAI_API_KEY');
     process.exit(1);
   }
   if (!process.env.DATABASE_URL) {
-    console.error('❌ Missing required environment variable: DATABASE_URL');
+    logger.error('❌ Missing required environment variable: DATABASE_URL');
     process.exit(1);
   }
 
   const db = createPgDbClient();
 
-  console.log('\n🎬 PopChoice — Similarity Threshold Calibration');
+  logger.info('\n🎬 PopChoice — Similarity Threshold Calibration');
   printSeparator();
-  console.log(`Model : text-embedding-3-large`);
-  console.log(`Top-N : ${MATCH_COUNT} results per query`);
-  console.log(`Queries: ${QUERIES.length}`);
+  logger.info(`Model : text-embedding-3-large`);
+  logger.info(`Top-N : ${MATCH_COUNT} results per query`);
+  logger.info(`Queries: ${QUERIES.length}`);
   printSeparator();
 
   const bestScores: number[] = [];
 
   for (const query of QUERIES) {
-    console.log(`\nQuery: ${query.label}`);
-    console.log(`  "${query.text}"`);
+    logger.info(`\nQuery: ${query.label}`);
+    logger.info(`  "${query.text}"`);
 
     let embedding: number[];
     try {
       embedding = await embedQuery(query.text);
     } catch (err) {
-      console.error(`  ❌ Embedding failed: ${(err as Error).message}`);
+      logger.error(`  ❌ Embedding failed: ${(err as Error).message}`);
       continue;
     }
 
@@ -101,12 +103,12 @@ async function main() {
     });
 
     if (error || !data) {
-      console.error(`  ❌ DB query failed: ${error?.message ?? 'no data'}`);
+      logger.error(`  ❌ DB query failed: ${error?.message ?? 'no data'}`);
       continue;
     }
 
     if (data.length === 0) {
-      console.log('  (no results above match_threshold = 0.1)');
+      logger.info('  (no results above match_threshold = 0.1)');
       continue;
     }
 
@@ -117,7 +119,7 @@ async function main() {
     rows.forEach((row, i) => {
       const marker = i === 0 ? ' ← ceiling' : '';
       const year = row.year ? ` (${row.year})` : '';
-      console.log(`  ${row.similarity.toFixed(4)}  ${row.name}${year}${marker}`);
+      logger.info(`  ${row.similarity.toFixed(4)}  ${row.name}${year}${marker}`);
     });
   }
 
@@ -127,26 +129,26 @@ async function main() {
     const suggested = Math.round(((ceiling * 2) / 3) * 100) / 100;
 
     printSeparator();
-    console.log('\nSummary');
-    console.log(`  Highest observed score : ${ceiling.toFixed(4)}`);
-    console.log(`  Suggested threshold    : ~${suggested.toFixed(2)}  (≈ 2/3 of ceiling)`);
-    console.log(`  Current threshold      : 0.40  (SIMILARITY_THRESHOLD in route.ts)`);
+    logger.info('\nSummary');
+    logger.info(`  Highest observed score : ${ceiling.toFixed(4)}`);
+    logger.info(`  Suggested threshold    : ~${suggested.toFixed(2)}  (≈ 2/3 of ceiling)`);
+    logger.info(`  Current threshold      : 0.40  (SIMILARITY_THRESHOLD in route.ts)`);
 
     if (Math.abs(suggested - 0.4) >= 0.05) {
-      console.log(`\n⚠️  Suggested threshold differs from current by ≥ 0.05.`);
-      console.log(
+      logger.info(`\n⚠️  Suggested threshold differs from current by ≥ 0.05.`);
+      logger.info(
         `   Consider updating SIMILARITY_THRESHOLD in src/app/api/movie-recommendation/route.ts`,
       );
-      console.log(`   and the calibration table in docs/SERVICES.md.`);
+      logger.info(`   and the calibration table in docs/SERVICES.md.`);
     } else {
-      console.log(`\n✅ Current threshold looks appropriate.`);
+      logger.info(`\n✅ Current threshold looks appropriate.`);
     }
   }
 
-  console.log('');
+  logger.info('');
 }
 
 main().catch((err) => {
-  console.error('\n❌ Unexpected error:', err);
+  logger.error('\n❌ Unexpected error:', err);
   process.exit(1);
 });
