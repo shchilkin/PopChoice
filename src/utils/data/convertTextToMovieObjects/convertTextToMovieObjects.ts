@@ -36,7 +36,7 @@ export function convertTextToMovieObjects(lines: string[]): MovieEntry[] {
   if (parseResult.success) {
     return parseResult.data;
   } else {
-    logger.error('Validation errors:', parseResult.error);
+    logger.error({ err: parseResult.error }, 'Validation errors');
     return [];
   }
 }

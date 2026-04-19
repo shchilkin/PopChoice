@@ -1,5 +1,7 @@
 #!/usr/bin/env tsx
 
+import logger from '@/lib/logger';
+
 /**
  * Similarity threshold calibration tool for PopChoice hybrid search.
  *
@@ -148,6 +150,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  logger.error('\n❌ Unexpected error:', err);
+  logger.error(err, '\n❌ Unexpected error');
   process.exit(1);
 });

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
+import { useRecommendationStore } from '@/store/recommendationStore';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
