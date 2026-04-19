@@ -15,7 +15,7 @@ export const TMDB_MovieDetailsSchema = z.object({
   original_title: z.string(),
   overview: z.string(),
   popularity: z.number(),
-  poster_path: z.string().nullable(),
+  poster_path: z.string(),
   release_date: z.string(),
   title: z.string(),
   video: z.boolean(),
