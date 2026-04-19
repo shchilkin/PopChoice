@@ -2,71 +2,52 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import logger from '@/lib/logger';
-import { applyRateLimit } from '@/lib/rateLimit';
 import { withAuth } from '@/lib/withAuth';
 
 import type { MovieRecommendation } from '@/utils/client';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
-const MAX_MOVIES_PER_REQUEST = 20;
 
 const requestBodySchema = z.object({
-  movies: z
-    .array(
-      z.object({
-        id: z.number(),
-        name: z.string(),
-        year: z.number(),
-        similarity: z.number(),
-        age_rating: z.string().optional(),
-        duration: z.number().optional(),
-        score_rating: z.number().optional(),
-        posterURL: z.string().optional(),
-        description: z.string().optional(),
-        localizedName: z.string().optional(),
-        isMainRecommendation: z.boolean().optional(),
-        fromTMDB: z.boolean().optional(),
-      }),
-    )
-    .min(1, 'At least one movie is required')
-    .max(MAX_MOVIES_PER_REQUEST, `A maximum of ${MAX_MOVIES_PER_REQUEST} movies is allowed`),
+  movies: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      year: z.number(),
+      similarity: z.number(),
+      age_rating: z.string().optional(),
+      duration: z.number().optional(),
+      score_rating: z.number().optional(),
+      posterURL: z.string().optional(),
+      description: z.string().optional(),
+      localizedName: z.string().optional(),
+      isMainRecommendation: z.boolean().optional(),
+      fromTMDB: z.boolean().optional(),
+    }),
+  ),
 });
 
 interface TMDBMovieData {
   id: number;
   title: string;
-  poster_path?: string | null;
+  poster_path?: string;
   overview?: string;
   release_date?: string;
   vote_average?: number;
   vote_count?: number;
 }
 
-const tmdbMovieDataSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  poster_path: z.string().nullable().optional(),
-  overview: z.string().optional(),
-  release_date: z.string().optional(),
-  vote_average: z.number().optional(),
-  vote_count: z.number().optional(),
-});
-
-const tmdbSearchResponseSchema = z.object({
-  results: z.array(tmdbMovieDataSchema),
-});
-
 function createEnhancedDescription(movie: MovieRecommendation, tmdbData: TMDBMovieData): string {
   const details = [];
 
   // Add our similarity score
-  if (Number.isFinite(movie.similarity)) {
+  if (movie.similarity) {
     details.push(`${Math.round(movie.similarity * 100)}% match`);
   }
 
   // Add release year
-  if (Number.isFinite(movie.year) && movie.year > 0) {
+  if (movie.year) {
     details.push(`Released: ${movie.year}`);
   }
 
@@ -76,21 +57,17 @@ function createEnhancedDescription(movie: MovieRecommendation, tmdbData: TMDBMov
   }
 
   // Add duration
-  if (typeof movie.duration === 'number' && Number.isFinite(movie.duration) && movie.duration > 0) {
+  if (movie.duration) {
     details.push(`Duration: ${movie.duration} min`);
   }
 
   // Add our score rating
-  if (Number.isFinite(movie.score_rating)) {
+  if (movie.score_rating) {
     details.push(`Score: ${movie.score_rating}/10`);
   }
 
   // Add TMDB vote average if available
-  if (
-    typeof tmdbData.vote_average === 'number' &&
-    Number.isFinite(tmdbData.vote_average) &&
-    tmdbData.vote_average > 0
-  ) {
+  if (tmdbData.vote_average && tmdbData.vote_average > 0) {
     details.push(`TMDB: ${tmdbData.vote_average.toFixed(1)}/10`);
   }
 
@@ -114,12 +91,11 @@ async function enhanceMovieWithPoster(
 ): Promise<MovieRecommendation> {
   try {
     const searchQuery = encodeURIComponent(`${movie.name} ${movie.year}`);
-    const searchUrl = `${TMDB_BASE_URL}/search/movie?query=${searchQuery}&year=${movie.year}`;
+    const searchUrl = `${TMDB_BASE_URL}/search/movie?query=${searchQuery}&year=${movie.year}&api_key=${tmdbApiKey}`;
 
     const response = await fetch(searchUrl, {
       headers: {
         Accept: 'application/json',
-        Authorization: `Bearer ${tmdbApiKey}`,
       },
     });
 
@@ -131,14 +107,10 @@ async function enhanceMovieWithPoster(
       return movie;
     }
 
-    const data = tmdbSearchResponseSchema.safeParse(await response.json());
-    if (!data.success) {
-      logger.warn({ movieTitle: movie.name }, 'Invalid TMDB response payload during enhancement');
-      return movie;
-    }
+    const data = await response.json();
 
-    if (data.data.results.length > 0) {
-      const movieData = data.data.results[0];
+    if (data.results && data.results.length > 0) {
+      const movieData = data.results[0];
 
       const posterURL = movieData.poster_path
         ? `${TMDB_IMAGE_BASE_URL}/w500${movieData.poster_path}`
@@ -160,11 +132,8 @@ async function enhanceMovieWithPoster(
   }
 }
 
-async function postHandler(request: NextRequest): Promise<Response> {
+async function postHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const rateLimitResponse = await applyRateLimit(request);
-    if (rateLimitResponse) return rateLimitResponse;
-
     const tmdbApiKey = process.env.TMDB_API_KEY;
 
     // We parse the body to extract the movies array

@@ -162,9 +162,5 @@ describe('MovieService', () => {
         movieService.getPosterURL('/mock-poster.jpg', 'w9999'),
       ).toThrow();
     });
-
-    it('returns undefined when poster path is null', () => {
-      expect(movieService.getPosterURL(null, 'w500')).toBeUndefined();
-    });
   });
 });

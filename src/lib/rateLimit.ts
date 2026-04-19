@@ -43,28 +43,16 @@ function getRedisClient(): Promise<RedisClient | null> {
 const RATE_LIMIT = 10;
 const RATE_LIMIT_WINDOW_SECONDS = 60;
 
-function getClientIp(req: Request & { ip?: string }): string | null {
-  const directIp = req.ip?.trim();
-  const trustedDirectIp = directIp && isIP(directIp) !== 0 ? directIp : null;
-  if (trustedDirectIp) return trustedDirectIp;
-
-  const realIp = req.headers.get('x-real-ip')?.trim() || null;
-  const trustedRealIp = realIp && isIP(realIp) !== 0 ? realIp : null;
-  if (trustedRealIp) return trustedRealIp;
-
+export async function applyRateLimit(req: Request): Promise<Response | null> {
   const forwardedFor = req.headers.get('x-forwarded-for');
   const forwardedForClientIp = forwardedFor
     ? (forwardedFor
         .split(',')
         .map((value) => value.trim())
-        .filter((value) => value !== '' && isIP(value) !== 0)
-        .at(-1) ?? null)
+        .find((value) => value !== '' && isIP(value) !== 0) ?? null)
     : null;
-  return forwardedForClientIp;
-}
-
-export async function applyRateLimit(req: Request & { ip?: string }): Promise<Response | null> {
-  const ip = getClientIp(req);
+  const realIp = req.headers.get('x-real-ip')?.trim() || null;
+  const ip = forwardedForClientIp || (realIp && isIP(realIp) !== 0 ? realIp : null);
 
   // Skip rate limiting when the client IP cannot be determined or is not a
   // valid IP address, to avoid unbounded key cardinality from malformed headers
