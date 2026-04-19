@@ -11,12 +11,31 @@ interface LogEntry {
   [key: string]: unknown;
 }
 
+const SENSITIVE_KEYS = new Set([
+  'apikey',
+  'api_key',
+  'password',
+  'token',
+  'secret',
+  'authorization',
+]);
+
+function redactSensitiveFields(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      key,
+      SENSITIVE_KEYS.has(key.toLowerCase()) ? '[REDACTED]' : value,
+    ]),
+  );
+}
+
 function formatEntry(level: LogLevel, message: string, extra?: Record<string, unknown>): string {
+  const safeExtra = extra !== undefined ? redactSensitiveFields(extra) : undefined;
   const entry: LogEntry = {
     timestamp: new Date().toISOString(),
     level,
     message,
-    ...extra,
+    ...safeExtra,
   };
   return JSON.stringify(entry);
 }

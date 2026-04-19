@@ -1,0 +1,40 @@
+name: Movie Backfill CI
+
+on:
+  pull_request:
+    branches: ['development']
+    paths:
+      - 'services/movie-backfill/**'
+      - '.github/workflows/movie-backfill-ci.yml'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  movie-backfill-ci:
+    name: Movie Backfill CI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: services/movie-backfill
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: services/movie-backfill/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
