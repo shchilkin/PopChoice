@@ -22,9 +22,10 @@ describe('getPersonColors', () => {
     expect(getPersonColors(largeIndex)).toBe(COLOR_PAIRS[largeIndex % COLOR_PAIRS.length]);
   });
 
-  it('should return undefined for negative indices (current behavior)', () => {
+  it('should handle negative indices according to current implementation', () => {
     // In JavaScript, -1 % 10 is -1, and COLOR_PAIRS[-1] is undefined
     expect(getPersonColors(-1)).toBeUndefined();
-    expect(getPersonColors(-10)).toBeUndefined();
+    // In JavaScript, -10 % 10 is -0, and COLOR_PAIRS[-0] is the same as COLOR_PAIRS[0]
+    expect(getPersonColors(-10)).toBe(COLOR_PAIRS[0]);
   });
 });
