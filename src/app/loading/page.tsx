@@ -25,6 +25,7 @@ export default function LoadingPage() {
     tip?: ReturnType<typeof setInterval>;
     prog?: ReturnType<typeof setInterval>;
   }>({});
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const callApi = useCallback(() => {
     const quizDataStr = localStorage.getItem('popchoice_quiz_data');
@@ -33,16 +34,27 @@ export default function LoadingPage() {
       return;
     }
 
+    // Abort any in-flight request before starting a new one.
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // Clear previous intervals before creating new ones.
+    clearInterval(intervalsRef.current.tip);
+    clearInterval(intervalsRef.current.prog);
+
     setErrorState(null);
     setProgress(0);
 
-    intervalsRef.current.tip = setInterval(() => {
+    // Capture interval IDs locally so each invocation only clears its own timers.
+    const tipInterval = setInterval(() => {
       setTipIndex((i) => (i + 1) % t.loading.tips.length);
     }, 1400);
-
-    intervalsRef.current.prog = setInterval(() => {
+    const progInterval = setInterval(() => {
       setProgress((p) => (p >= 85 ? 85 : p + 1));
     }, 60);
+    intervalsRef.current.tip = tipInterval;
+    intervalsRef.current.prog = progInterval;
 
     fetch('/api/movie-recommendation', {
       method: 'POST',
@@ -52,10 +64,11 @@ export default function LoadingPage() {
         'X-CSRF-Token': getCsrfToken(),
       },
       body: quizDataStr,
+      signal: controller.signal,
     })
       .then(async (response) => {
-        clearInterval(intervalsRef.current.tip);
-        clearInterval(intervalsRef.current.prog);
+        clearInterval(tipInterval);
+        clearInterval(progInterval);
         if (response.status === 422) {
           setErrorState('moderated');
           return;
@@ -73,8 +86,9 @@ export default function LoadingPage() {
         setTimeout(() => router.push('/results'), 400);
       })
       .catch((err) => {
-        clearInterval(intervalsRef.current.tip);
-        clearInterval(intervalsRef.current.prog);
+        if ((err as Error).name === 'AbortError') return;
+        clearInterval(tipInterval);
+        clearInterval(progInterval);
         // eslint-disable-next-line no-console
         console.error('API error:', err);
         retryCount.current += 1;
@@ -88,6 +102,7 @@ export default function LoadingPage() {
     return () => {
       clearInterval(intervals.tip);
       clearInterval(intervals.prog);
+      abortControllerRef.current?.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
