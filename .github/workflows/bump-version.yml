@@ -1,0 +1,76 @@
+name: Bump Version
+
+on:
+  push:
+    branches: ['development']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bump-version-development
+  cancel-in-progress: false
+
+jobs:
+  bump-version:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Configure git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version
+        run: npm version patch --no-git-tag-version
+
+      - name: Commit and push version update
+        run: |
+          MAX_ATTEMPTS=3
+
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: bump version [skip ci]"
+            push_succeeded=false
+            resync_failed=false
+
+            for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
+              if git push origin HEAD:development; then
+                echo "Push succeeded on attempt ${attempt}"
+                push_succeeded=true
+                break
+              fi
+
+              if [ "${attempt}" -lt "${MAX_ATTEMPTS}" ]; then
+                echo "Push failed due to remote updates, resyncing with origin/development"
+                git fetch origin development
+                if ! git rebase origin/development; then
+                  git rebase --abort || true
+                  echo "Rebase failed on attempt ${attempt} of ${MAX_ATTEMPTS}. Automatic retries cannot continue."
+                  resync_failed=true
+                  break
+                fi
+              fi
+            done
+
+            if [ "${push_succeeded}" != "true" ]; then
+              if [ "${resync_failed}" = "true" ]; then
+                echo "Manual resolution may be required after rebase conflict."
+              fi
+              echo "Push failed after ${MAX_ATTEMPTS} attempts"
+              exit 1
+            fi
+          fi
