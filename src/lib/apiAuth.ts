@@ -1,6 +1,7 @@
 import { randomBytes, scrypt, scryptSync, timingSafeEqual } from 'node:crypto';
 
 import logger from '@/lib/logger';
+import { getClientIp } from '@/lib/requestIp';
 
 /**
  * Validates an API key extracted from a request's Authorization or X-API-Key header.
@@ -204,10 +205,5 @@ function getConfiguredDerivationSecret(): string | null {
 
 /** Best-effort extraction of the client IP for logging purposes. */
 function getRequestIp(req: Request): string | null {
-  const forwardedFor = req.headers.get('x-forwarded-for');
-  if (forwardedFor) {
-    const first = forwardedFor.split(',')[0].trim();
-    if (first) return first;
-  }
-  return req.headers.get('x-real-ip') ?? null;
+  return getClientIp(req);
 }
