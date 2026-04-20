@@ -1,6 +1,7 @@
 import logger from '@/lib/logger';
+import { parseTMDBReleaseYear } from '@/lib/tmdb';
 
-import { POSTER_SIZES, posterSizeSchema, PosterSize, TMDB_MovieEntry } from './types';
+import { POSTER_SIZES, PosterSize, posterSizeSchema, TMDB_MovieEntry } from './types';
 
 export const API_BASE_URL = 'https://api.themoviedb.org/3';
 export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
@@ -110,7 +111,7 @@ export class MovieService {
         // Prefer the entry whose release year matches when a year is provided.
         if (year) {
           const yearMatch = pool.find((m) => {
-            const releaseYear = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+            const releaseYear = parseTMDBReleaseYear(m.release_date);
             return Math.abs(releaseYear - year) <= 1; // ±1 year tolerance for release-date shifts
           });
           if (yearMatch) return yearMatch;

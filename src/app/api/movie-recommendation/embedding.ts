@@ -1,4 +1,4 @@
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 
@@ -79,7 +79,7 @@ export async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promi
   const rawText = whyTexts.join(' ');
 
   try {
-    const response = await openAIClient.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: MODELS.MINI,
       messages: [
         { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
@@ -132,7 +132,7 @@ export async function createEmbedding(
       ? buildEmbeddingInputWithRefinedTags(allPeopleData, refinedQueryTags)
       : combineAllPeopleDataToString(allPeopleData);
 
-    const embeddingResponse = await openAIClient.embeddings.create({
+    const embeddingResponse = await getOpenAIClient().embeddings.create({
       model: MODELS.EMBEDDING,
       input: embeddingInput,
     });

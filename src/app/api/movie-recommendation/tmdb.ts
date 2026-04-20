@@ -1,6 +1,6 @@
 import z from 'zod';
 
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
@@ -210,7 +210,7 @@ export async function scoreAndConvertTMDBMovies(
 
   let rawEmbeddings: number[][] = [];
   try {
-    const response = await openAIClient.embeddings.create({
+    const response = await getOpenAIClient().embeddings.create({
       model: MODELS.EMBEDDING,
       input: texts,
     });
@@ -376,7 +376,7 @@ export async function seedMovies(
           `Description: ${movie.overview || ''}`,
         ].join('\n');
 
-        const embeddingResponse = await openAIClient.embeddings.create({
+        const embeddingResponse = await getOpenAIClient().embeddings.create({
           model: MODELS.EMBEDDING,
           input: embeddingText,
         });

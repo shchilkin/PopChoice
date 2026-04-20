@@ -1,4 +1,4 @@
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';
 import logger from '@/lib/logger';
@@ -102,7 +102,7 @@ export async function getRecommendation(similarMovies: EnhancedMovieMatch[], loc
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
 
-    const recommendation = await openAIClient.chat.completions.create({
+    const recommendation = await getOpenAIClient().chat.completions.create({
       model: MODELS.RECOMMENDATION,
       messages: [
         { role: 'system', content: buildPrompt(locale) },
@@ -180,7 +180,7 @@ Plot: ${movie.description}
 
 Remember: respond in ${language} only.`;
 
-          const descriptionResponse = await openAIClient.chat.completions.create({
+          const descriptionResponse = await getOpenAIClient().chat.completions.create({
             model: MODELS.MINI,
             messages: [
               { role: 'system', content: descriptionPrompt },

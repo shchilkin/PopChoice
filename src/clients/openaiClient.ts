@@ -57,14 +57,3 @@ export function setOpenAIClient(client: OpenAIClientLike): void {
 export function resetOpenAIClient(): void {
   _openAIClient = null;
 }
-
-/**
- * Backward-compatible named export — proxied to the injectable client so
- * existing call sites (`openAIClient.chat.completions.create(…)`) keep working
- * without modification.
- */
-export const openAIClient: OpenAI = new Proxy({} as OpenAI, {
-  get(_target, prop) {
-    return (getOpenAIClient() as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});

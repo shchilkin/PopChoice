@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
@@ -262,8 +262,8 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const similarityMap = new Map<number, number>();
     try {
       const [queryEmbedRes, movieEmbedRes] = await Promise.all([
-        openAIClient.embeddings.create({ model: MODELS.EMBEDDING, input: queryText }),
-        openAIClient.embeddings.create({ model: MODELS.EMBEDDING, input: candidateTexts }),
+        getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: queryText }),
+        getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: candidateTexts }),
       ]);
       const queryEmbedding = queryEmbedRes.data[0]?.embedding;
       if (queryEmbedding && queryEmbedding.length > 0) {
@@ -351,7 +351,7 @@ Respond in ${language} only.`;
           let aiDescription: string;
           try {
             const movieContext = `Movie: ${localizedTitle} (${year})\nScore: ${score}/10\nPlot: ${localizedOverview}\n\nRemember: respond in ${language} only.`;
-            const res = await openAIClient.chat.completions.create({
+            const res = await getOpenAIClient().chat.completions.create({
               model: MODELS.MINI,
               messages: [
                 { role: 'system', content: descriptionSystemPrompt },
@@ -380,7 +380,7 @@ Respond in ${language} only.`;
             // Fall back: for non-English locales, attempt a minimal translation of the localized TMDB overview.
             if (locale !== 'en' && localizedOverview) {
               try {
-                const translationResponse = await openAIClient.chat.completions.create({
+                const translationResponse = await getOpenAIClient().chat.completions.create({
                   model: MODELS.MINI,
                   messages: [
                     {
