@@ -1,8 +1,10 @@
 # Development Guide
 
+For ongoing code health reviews, use the **[Maintainability Checklist](./MAINTAINABILITY-CHECKLIST.md)**.
+
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 24+ and npm (match the version required by the `package.json` `engines` field)
 - Git
 - VS Code (recommended)
 
