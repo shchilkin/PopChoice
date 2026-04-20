@@ -1,6 +1,5 @@
 'use client';
 
-import axios from 'axios';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,6 +25,7 @@ export default function LoadingPage() {
     tip?: ReturnType<typeof setInterval>;
     prog?: ReturnType<typeof setInterval>;
   }>({});
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const callApi = useCallback(() => {
     const quizDataStr = localStorage.getItem('popchoice_quiz_data');
@@ -34,39 +34,63 @@ export default function LoadingPage() {
       return;
     }
 
+    // Abort any in-flight request before starting a new one.
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    // Clear previous intervals before creating new ones.
+    clearInterval(intervalsRef.current.tip);
+    clearInterval(intervalsRef.current.prog);
+
     setErrorState(null);
     setProgress(0);
 
-    intervalsRef.current.tip = setInterval(() => {
+    // Capture interval IDs locally so each invocation only clears its own timers.
+    const tipInterval = setInterval(() => {
       setTipIndex((i) => (i + 1) % t.loading.tips.length);
     }, 1400);
-
-    intervalsRef.current.prog = setInterval(() => {
+    const progInterval = setInterval(() => {
       setProgress((p) => (p >= 85 ? 85 : p + 1));
     }, 60);
+    intervalsRef.current.tip = tipInterval;
+    intervalsRef.current.prog = progInterval;
 
-    axios
-      .post('/api/movie-recommendation', JSON.parse(quizDataStr), {
-        headers: { 'Accept-Language': locale, 'X-CSRF-Token': getCsrfToken() },
-      })
-      .then((response) => {
-        clearInterval(intervalsRef.current.tip);
-        clearInterval(intervalsRef.current.prog);
-        localStorage.setItem('popchoice_recommendation', JSON.stringify(response.data));
+    fetch('/api/movie-recommendation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': locale,
+        'X-CSRF-Token': getCsrfToken(),
+      },
+      body: quizDataStr,
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        clearInterval(tipInterval);
+        clearInterval(progInterval);
+        if (response.status === 422) {
+          setErrorState('moderated');
+          return;
+        }
+        if (!response.ok) {
+          retryCount.current += 1;
+          setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
+          return;
+        }
+        const data = await response.json();
+        localStorage.setItem('popchoice_recommendation', JSON.stringify(data));
         // Keep popchoice_quiz_data alive — the results page needs it for 'Get more picks from TMDB'.
         // It is cleaned up when the user clicks 'Try Again'.
         setProgress(100);
         setTimeout(() => router.push('/results'), 400);
       })
       .catch((err) => {
-        clearInterval(intervalsRef.current.tip);
-        clearInterval(intervalsRef.current.prog);
+        if ((err as Error).name === 'AbortError') return;
+        clearInterval(tipInterval);
+        clearInterval(progInterval);
         // eslint-disable-next-line no-console
         console.error('API error:', err);
-        if (err.response?.status === 422) {
-          setErrorState('moderated');
-          return;
-        }
         retryCount.current += 1;
         setErrorState(retryCount.current >= MAX_RETRIES ? 'fatal' : 'retryable');
       });
@@ -78,6 +102,7 @@ export default function LoadingPage() {
     return () => {
       clearInterval(intervals.tip);
       clearInterval(intervals.prog);
+      abortControllerRef.current?.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

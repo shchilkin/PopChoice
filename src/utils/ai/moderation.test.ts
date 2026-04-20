@@ -4,7 +4,7 @@ const mockModerationsCreate = vi.fn();
 const mockChatCompletionsParse = vi.fn();
 
 vi.mock('@/clients/openaiClient', () => ({
-  openAIClient: {
+  getOpenAIClient: () => ({
     moderations: {
       create: mockModerationsCreate,
     },
@@ -13,7 +13,7 @@ vi.mock('@/clients/openaiClient', () => ({
         parse: mockChatCompletionsParse,
       },
     },
-  },
+  }),
 }));
 
 const { moderateInput, checkForPromptInjection, judgeForMoviePlatform, ALWAYS_BLOCK_CATEGORIES } =
