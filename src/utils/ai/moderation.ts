@@ -1,7 +1,8 @@
 import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
-import { openAIClient } from '@/clients/openaiClient';
+import { getOpenAIClient } from '@/clients/openaiClient';
+import { MODELS } from '@/lib/models';
 
 export type ModerationResult = { flagged: false } | { flagged: true; categories: string[] };
 
@@ -43,7 +44,7 @@ export function checkForPromptInjection(text: string): boolean {
  * @returns A ModerationResult with all flagged categories.
  */
 export async function moderateInput(input: string | string[]): Promise<ModerationResult> {
-  const response = await openAIClient.moderations.create({
+  const response = await getOpenAIClient().moderations.create({
     model: 'omni-moderation-latest',
     input,
   });
@@ -124,8 +125,8 @@ export async function judgeForMoviePlatform(
   const inputSummary = labeledInputs.map(({ field, value }) => `${field}: "${value}"`).join('\n');
 
   try {
-    const response = await openAIClient.chat.completions.parse({
-      model: 'gpt-5.4-mini',
+    const response = await getOpenAIClient().chat.completions.parse({
+      model: MODELS.MINI,
       messages: [
         { role: 'system', content: JUDGE_SYSTEM_PROMPT },
         {

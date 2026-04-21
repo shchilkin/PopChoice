@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
+import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
+import { MODELS } from '@/lib/models';
 import { applyRateLimit } from '@/lib/rateLimit';
+import {
+  GENRE_LABEL_TO_TMDB_ID,
+  cosineSimilarity,
+  normalizeGenreLabel,
+  parseTMDBReleaseYear,
+} from '@/lib/tmdb';
 import { withAuth } from '@/lib/withAuth';
 import { IMAGE_BASE_URL } from '@/services';
 
@@ -14,19 +22,6 @@ const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const RESULTS_PER_PAGE = 6;
 const TMDB_DISCOVER_FETCH_TIMEOUT_MS = 8_000;
 const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 5_000;
-
-const GENRE_LABEL_TO_TMDB_ID: Record<string, number> = {
-  action: 28,
-  adventure: 12,
-  animation: 16,
-  comedy: 35,
-  drama: 18,
-  horror: 27,
-  romance: 10749,
-  scifi: 878,
-  thriller: 53,
-  documentary: 99,
-};
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -72,16 +67,8 @@ const tmdbMovieDetailSchema = z.object({
 });
 
 // ---------------------------------------------------------------------------
-// Helpers (self-contained — mirrors logic from movie-recommendation/route.ts)
+// Helpers
 // ---------------------------------------------------------------------------
-
-function normalizeGenreLabel(label: string): string {
-  return label.toLowerCase().replace(/[^a-z]/g, '');
-}
-
-function parseTMDBReleaseYear(releaseDate: string | null | undefined): number {
-  return releaseDate ? parseInt(releaseDate.substring(0, 4), 10) : 0;
-}
 
 function extractTMDBParams(allPeopleData: PersonFormData[]) {
   const moodCounts: Record<string, number> = {};
@@ -163,32 +150,6 @@ function combineAllPeopleDataToString(allPeopleData: PersonFormData[]): string {
   return combined.trim();
 }
 
-const LOCALE_LANGUAGE: Record<string, string> = {
-  en: 'English',
-  ru: 'Russian',
-  fi: 'Finnish',
-};
-
-const LOCALE_TO_TMDB_LANG: Record<string, string> = {
-  en: 'en-US',
-  ru: 'ru-RU',
-  fi: 'fi-FI',
-};
-
-// ---------------------------------------------------------------------------
-// Similarity helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Dot product of two unit-norm vectors equals cosine similarity.
- * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
- */
-function cosineSimilarity(a: number[], b: number[]): number {
-  let dot = 0;
-  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return Number.isFinite(dot) ? dot : 0;
-}
-
 // ---------------------------------------------------------------------------
 // Main handler
 // ---------------------------------------------------------------------------
@@ -197,9 +158,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const acceptLanguage = req.headers.get('accept-language') ?? 'en';
-  const primaryLang = acceptLanguage.split(',')[0].split(';')[0].split('-')[0].toLowerCase();
-  const locale = ['en', 'ru', 'fi'].includes(primaryLang) ? primaryLang : 'en';
+  const locale = parseLocaleFromRequest(req);
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   const tmdbLang = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
 
@@ -321,8 +280,8 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const similarityMap = new Map<number, number>();
     try {
       const [queryEmbedRes, movieEmbedRes] = await Promise.all([
-        openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: queryText }),
-        openAIClient.embeddings.create({ model: 'text-embedding-3-large', input: candidateTexts }),
+        getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: queryText }),
+        getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: candidateTexts }),
       ]);
       const queryEmbedding = queryEmbedRes.data[0]?.embedding;
       if (queryEmbedding && queryEmbedding.length > 0) {
@@ -422,8 +381,8 @@ Respond in ${language} only.`;
           let aiDescription: string;
           try {
             const movieContext = `Movie: ${localizedTitle} (${year})\nScore: ${score}/10\nPlot: ${localizedOverview}\n\nRemember: respond in ${language} only.`;
-            const res = await openAIClient.chat.completions.create({
-              model: 'gpt-5.4-mini',
+            const res = await getOpenAIClient().chat.completions.create({
+              model: MODELS.MINI,
               messages: [
                 { role: 'system', content: descriptionSystemPrompt },
                 { role: 'user', content: movieContext },
@@ -451,8 +410,8 @@ Respond in ${language} only.`;
             // Fall back: for non-English locales, attempt a minimal translation of the localized TMDB overview.
             if (locale !== 'en' && localizedOverview) {
               try {
-                const translationResponse = await openAIClient.chat.completions.create({
-                  model: 'gpt-5.4-mini',
+                const translationResponse = await getOpenAIClient().chat.completions.create({
+                  model: MODELS.MINI,
                   messages: [
                     {
                       role: 'system',

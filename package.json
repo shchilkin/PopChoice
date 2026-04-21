@@ -34,8 +34,7 @@
     "@bull-board/api": "^7.0.0",
     "@bull-board/express": "^7.0.0",
     "@langchain/core": "^1.1.40",
-    "axios": "^1.15.0",
-    "bullmq": "^5.74.1",
+    "bullmq": "^5.75.2",
     "canvas-confetti": "^1.9.4",
     "express": "^5.2.1",
     "ioredis": "^5.10.1",
@@ -87,7 +86,7 @@
     "sort-package-json": "^3.6.1",
     "storybook": "^10",
     "tailwindcss": "^4",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^4.1.4"
   },
   "engines": {

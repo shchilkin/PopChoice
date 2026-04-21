@@ -1,13 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/clients', () => ({
-  openAIClient: {
-    embeddings: {
-      create: vi.fn(),
-    },
-  },
-}));
-
 vi.mock('@/clients/dbClient', () => ({
   getDbClient: vi.fn(() => ({
     isConfigured: vi.fn(() => false),

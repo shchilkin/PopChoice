@@ -1,4 +1,4 @@
-import { openAIClient } from '@/clients/openaiClient';
+import { getOpenAIClient } from '@/clients/openaiClient';
 
 import type { ChunkWithEmbedding, EmbeddableChunk } from '../types';
 
@@ -17,7 +17,7 @@ export async function createEmbeddingsForChunks<T extends EmbeddableChunk>(
 ): Promise<ChunkWithEmbedding<T>[]> {
   return Promise.all(
     chunks.map(async (chunk) => {
-      const embeddingResponse = await openAIClient.embeddings.create({
+      const embeddingResponse = await getOpenAIClient().embeddings.create({
         model,
         input: chunk.pageContent,
       });
