@@ -34,7 +34,7 @@
     "@bull-board/api": "^7.0.0",
     "@bull-board/express": "^7.0.0",
     "@langchain/core": "^1.1.40",
-    "bullmq": "^5.74.1",
+    "bullmq": "^5.75.2",
     "canvas-confetti": "^1.9.4",
     "express": "^5.2.1",
     "ioredis": "^5.10.1",
