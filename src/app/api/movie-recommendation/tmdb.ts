@@ -1,8 +1,15 @@
 import z from 'zod';
 
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import logger from '@/lib/logger';
+import { MODELS } from '@/lib/models';
+import {
+  GENRE_LABEL_TO_TMDB_ID,
+  cosineSimilarity,
+  normalizeGenreLabel,
+  parseTMDBReleaseYear,
+} from '@/lib/tmdb';
 import { IMAGE_BASE_URL } from '@/services';
 
 import type { EnhancedMovieMatch, PersonFormData } from './types';
@@ -35,40 +42,9 @@ const tmdbDiscoverResponseSchema = z.object({
   results: z.array(tmdbDiscoverMovieSchema).optional(),
 });
 
-/**
- * Mapping from stable genre IDs to TMDB genre IDs.
- * The quiz sends genre *labels* (e.g. "Sci-Fi") via toApiFormat. We normalize
- * labels to IDs by stripping non-alpha chars and lowercasing before lookup.
- */
-const GENRE_LABEL_TO_TMDB_ID: Record<string, number> = {
-  action: 28,
-  adventure: 12,
-  animation: 16,
-  comedy: 35,
-  drama: 18,
-  horror: 27,
-  romance: 10749,
-  scifi: 878,
-  thriller: 53,
-  documentary: 99,
-};
-
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Normalize a quiz genre label to a stable genre key.
- * Strips non-alpha characters and lowercases so "Sci-Fi" → "scifi", "Action" → "action".
- */
-function normalizeGenreLabel(label: string): string {
-  return label.toLowerCase().replace(/[^a-z]/g, '');
-}
-
-/** Extract a 4-digit year from a TMDB `release_date` string ("YYYY-MM-DD"), defaulting to 0. */
-export function parseTMDBReleaseYear(releaseDate: string | null | undefined): number {
-  return releaseDate ? parseInt(releaseDate.substring(0, 4), 10) : 0;
-}
 
 /**
  * Derive TMDB /discover/movie query parameters from user quiz preferences.
@@ -210,22 +186,8 @@ export async function fetchTMDBDiscoverMovies(
 // Similarity scoring
 // ---------------------------------------------------------------------------
 
-/**
- * Dot product of two unit-norm vectors equals their cosine similarity.
- * OpenAI embeddings (text-embedding-3-large) are L2-normalised, so this is exact.
- */
-export function cosineSimilarity(a: number[], b: number[]): number {
-  if (a.length !== b.length) {
-    logger.warn(
-      { aLength: a.length, bLength: b.length },
-      'Skipping cosine similarity for mismatched embedding lengths',
-    );
-    return 0;
-  }
-  let dot = 0;
-  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return Number.isFinite(dot) ? dot : 0;
-}
+// Re-export for backward-compatible imports from this module (e.g. route.ts).
+export { cosineSimilarity, parseTMDBReleaseYear } from '@/lib/tmdb';
 
 /**
  * Embed every TMDB movie in a single batched API call, compute real cosine similarity
@@ -248,8 +210,8 @@ export async function scoreAndConvertTMDBMovies(
 
   let rawEmbeddings: number[][] = [];
   try {
-    const response = await openAIClient.embeddings.create({
-      model: 'text-embedding-3-large',
+    const response = await getOpenAIClient().embeddings.create({
+      model: MODELS.EMBEDDING,
       input: texts,
     });
     rawEmbeddings = response.data.map((d) => d.embedding);
@@ -264,7 +226,9 @@ export async function scoreAndConvertTMDBMovies(
   const matches = movies.map((movie, i) => {
     const movieEmbedding = rawEmbeddings[i];
     if (movieEmbedding) embeddingsMap.set(movie.id, movieEmbedding);
-    const similarity = movieEmbedding ? cosineSimilarity(queryEmbedding, movieEmbedding) : 0.35;
+    const similarity = movieEmbedding
+      ? cosineSimilarity(queryEmbedding, movieEmbedding, (msg) => logger.warn(msg))
+      : 0.35;
     return tmdbMovieToEnhancedMatch(movie, similarity);
   });
 
@@ -412,8 +376,8 @@ export async function seedMovies(
           `Description: ${movie.overview || ''}`,
         ].join('\n');
 
-        const embeddingResponse = await openAIClient.embeddings.create({
-          model: 'text-embedding-3-large',
+        const embeddingResponse = await getOpenAIClient().embeddings.create({
+          model: MODELS.EMBEDDING,
           input: embeddingText,
         });
         embedding = embeddingResponse.data[0]?.embedding;

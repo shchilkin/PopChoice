@@ -56,7 +56,6 @@ updates:
         patterns:
           - 'canvas-confetti'
           - 'react-canvas-confetti'
-          - 'axios'
           - 'zod'
           - 'serve'
           - '@vercel/*'

@@ -1,47 +1,31 @@
-import axios, { AxiosInstance } from 'axios';
-import z from 'zod';
-
 import logger from '@/lib/logger';
+import { parseTMDBReleaseYear } from '@/lib/tmdb';
 
-const POSTER_SIZES = ['w92', 'w154', 'w185', 'w342', 'w500', 'w780', 'original'] as const;
+import { POSTER_SIZES, PosterSize, posterSizeSchema, TMDB_MovieEntry } from './types';
 
 export const API_BASE_URL = 'https://api.themoviedb.org/3';
 export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
-const posterSize = z.enum(POSTER_SIZES).default('original');
-
-// TODO: Move to types after service is fully implemented
-export const TMDB_MovieDetailsSchema = z.object({
-  adult: z.boolean(),
-  backdrop_path: z.string(),
-  genre_ids: z.array(z.number()),
-  id: z.number(),
-  original_language: z.string(),
-  original_title: z.string(),
-  overview: z.string(),
-  popularity: z.number(),
-  poster_path: z.string(),
-  release_date: z.string(),
-  title: z.string(),
-  video: z.boolean(),
-  vote_average: z.number(),
-  vote_count: z.number(),
-});
-
-export type TMDB_MovieEntry = z.infer<typeof TMDB_MovieDetailsSchema>;
-
-// TODO: Move to types after service is fully implemented
-type PosterSize = z.infer<typeof posterSize>;
+type Fetcher = typeof globalThis.fetch;
 
 export class MovieService {
-  private axiosClient: AxiosInstance;
-  private imageURLBase: string;
-  private apiURLBase: string;
+  constructor(
+    private fetcher: Fetcher = globalThis.fetch,
+    private apiURLBase = API_BASE_URL,
+    private imageURLBase = IMAGE_BASE_URL,
+  ) {}
 
-  constructor() {
-    this.axiosClient = axios.create();
-    this.imageURLBase = IMAGE_BASE_URL;
-    this.apiURLBase = API_BASE_URL;
+  private async tmdbGet(path: string, params: Record<string, string>): Promise<Response> {
+    const url = new URL(`${this.apiURLBase}${path}`);
+    for (const [key, value] of Object.entries(params)) {
+      url.searchParams.set(key, value);
+    }
+    return this.fetcher(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
+        Accept: 'application/json',
+      },
+    });
   }
 
   /**
@@ -50,14 +34,12 @@ export class MovieService {
    */
   async getMovieById(tmdbId: number): Promise<TMDB_MovieEntry | undefined> {
     try {
-      const response = await this.axiosClient({
-        method: 'GET',
-        url: `${this.apiURLBase}/movie/${tmdbId}`,
-        responseType: 'json',
-        headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` },
-        params: { language: 'en-US' },
-      });
-      return response.data as TMDB_MovieEntry;
+      const response = await this.tmdbGet(`/movie/${tmdbId}`, { language: 'en-US' });
+      if (!response.ok) {
+        logger.warn({ status: response.status, tmdbId }, 'TMDB direct ID lookup failed');
+        return undefined;
+      }
+      return (await response.json()) as TMDB_MovieEntry;
     } catch (error) {
       logger.warn({ err: error, tmdbId }, 'TMDB direct ID lookup failed');
       return undefined;
@@ -80,20 +62,25 @@ export class MovieService {
 
     const searchOnce = async (withYear: boolean): Promise<TMDB_MovieEntry | undefined> => {
       try {
-        const response = await this.axiosClient({
-          method: 'GET',
-          url: `${this.apiURLBase}/search/movie`,
-          responseType: 'json',
-          headers: { Authorization: `Bearer ${process.env.TMDB_API_KEY}` },
-          params: {
-            query: cleanedTitle,
-            language: 'en-US',
-            include_adult: false,
-            ...(withYear && year ? { year } : {}),
-          },
-        });
+        const params: Record<string, string> = {
+          query: cleanedTitle,
+          language: 'en-US',
+          include_adult: 'false',
+        };
+        if (withYear && year) {
+          params['year'] = String(year);
+        }
+        const response = await this.tmdbGet('/search/movie', params);
+        if (!response.ok) {
+          logger.warn(
+            { status: response.status, movieTitle: cleanedTitle, withYear },
+            'TMDB search request failed',
+          );
+          return undefined;
+        }
 
-        const results: TMDB_MovieEntry[] = response.data.results ?? [];
+        const data = (await response.json()) as { results?: TMDB_MovieEntry[] };
+        const results: TMDB_MovieEntry[] = data.results ?? [];
         if (results.length === 0) return undefined;
 
         // 1. Exact title match (case-insensitive)
@@ -124,7 +111,7 @@ export class MovieService {
         // Prefer the entry whose release year matches when a year is provided.
         if (year) {
           const yearMatch = pool.find((m) => {
-            const releaseYear = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
+            const releaseYear = parseTMDBReleaseYear(m.release_date);
             return Math.abs(releaseYear - year) <= 1; // ±1 year tolerance for release-date shifts
           });
           if (yearMatch) return yearMatch;
@@ -162,19 +149,20 @@ export class MovieService {
     language: string,
   ): Promise<{ title: string; poster_path: string | null; overview?: string } | undefined> {
     try {
-      const response = await this.axiosClient({
-        method: 'GET',
-        url: `${this.apiURLBase}/movie/${movieId}`,
-        responseType: 'json',
-        headers: {
-          Authorization: `Bearer ${process.env.TMDB_API_KEY}`,
-        },
-        params: { language },
-      });
+      const response = await this.tmdbGet(`/movie/${movieId}`, { language });
+      if (!response.ok) {
+        logger.warn({ status: response.status, movieId }, 'Failed to fetch localized movie info');
+        return undefined;
+      }
+      const data = (await response.json()) as {
+        title: string;
+        poster_path: string | null;
+        overview?: string;
+      };
       return {
-        title: response.data.title,
-        poster_path: response.data.poster_path,
-        overview: response.data.overview as string | undefined,
+        title: data.title,
+        poster_path: data.poster_path,
+        overview: data.overview,
       };
     } catch (error) {
       logger.warn({ movieId, err: error }, 'Failed to fetch localized movie info');
@@ -182,8 +170,11 @@ export class MovieService {
     }
   }
 
-  getPosterURL(posterPath: string, size: PosterSize): string {
-    const { success, data: parsedSize } = posterSize.safeParse(size);
+  getPosterURL(posterPath: string | null, size: PosterSize): string | undefined {
+    if (!posterPath) {
+      return undefined;
+    }
+    const { success, data: parsedSize } = posterSizeSchema.safeParse(size);
     if (!success) {
       throw new Error(`Invalid poster size: ${size}. Available sizes: ${POSTER_SIZES.join(', ')}`);
     }

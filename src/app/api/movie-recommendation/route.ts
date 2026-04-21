@@ -3,6 +3,7 @@ import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
+import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { withAuth } from '@/lib/withAuth';
@@ -86,10 +87,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const validatedBody = requestBodySchema.parse(body);
 
     // Read locale from Accept-Language header, default to English
-    // Parse real-world values like "ru-RU,ru;q=0.9,en-US;q=0.8" by taking the first language tag
-    const acceptLanguage = req.headers.get('accept-language') ?? 'en';
-    const primaryLang = acceptLanguage.split(',')[0].split(';')[0].split('-')[0].toLowerCase();
-    const locale = ['en', 'ru', 'fi'].includes(primaryLang) ? primaryLang : 'en';
+    const locale = parseLocaleFromRequest(req);
 
     // Normalize to array format for consistent processing
     const allPeopleData: PersonFormData[] = Array.isArray(validatedBody)

@@ -40,19 +40,6 @@ const mockChatCompletionsCreate = vi.fn<
     ],
   }),
 );
-vi.mock('@/clients', () => ({
-  openAIClient: {
-    embeddings: {
-      create: (...args: Parameters<typeof mockEmbeddingsCreate>) => mockEmbeddingsCreate(...args),
-    },
-    chat: {
-      completions: {
-        create: (...args: Parameters<typeof mockChatCompletionsCreate>) =>
-          mockChatCompletionsCreate(...args),
-      },
-    },
-  },
-}));
 
 // Mock DB client
 vi.mock('@/clients/dbClient', () => ({
@@ -91,9 +78,32 @@ vi.mock('@/services', () => ({
   }),
 }));
 
+import { resetOpenAIClient, setOpenAIClient, type OpenAIClientLike } from '@/clients/openaiClient';
+
 import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import { POST } from './route';
 import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
+
+// Inject the mock OpenAI client before each test and reset after.
+beforeEach(() => {
+  setOpenAIClient({
+    embeddings: {
+      create: (...args: Parameters<typeof mockEmbeddingsCreate>) => mockEmbeddingsCreate(...args),
+    },
+    chat: {
+      completions: {
+        create: (...args: Parameters<typeof mockChatCompletionsCreate>) =>
+          mockChatCompletionsCreate(...args),
+        parse: vi.fn(),
+      },
+    },
+    moderations: { create: vi.fn() },
+  } as unknown as OpenAIClientLike);
+});
+
+afterEach(() => {
+  resetOpenAIClient();
+});
 
 const validBody = {
   favoriteMovie: 'The Dark Knight',

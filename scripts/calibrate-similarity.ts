@@ -14,7 +14,7 @@
  *   DATABASE_URL     Required — PostgreSQL connection string
  */
 
-import { openAIClient } from '../src/clients/openaiClient';
+import { getOpenAIClient } from '../src/clients/openaiClient';
 import { createPgDbClient } from '../src/clients/pgClient';
 
 // ---------------------------------------------------------------------------
@@ -53,7 +53,7 @@ function printSeparator() {
 }
 
 async function embedQuery(text: string): Promise<number[]> {
-  const res = await openAIClient.embeddings.create({
+  const res = await getOpenAIClient().embeddings.create({
     model: 'text-embedding-3-large',
     input: text,
   });
