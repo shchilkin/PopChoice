@@ -1,7 +1,7 @@
 import logger from '@/lib/logger';
 import { parseTMDBReleaseYear } from '@/lib/tmdb';
 
-import { POSTER_SIZES, PosterSize, posterSizeSchema, TMDB_MovieEntry } from './types';
+import { POSTER_SIZES, PosterSize, posterSize, TMDB_MovieEntry } from './types';
 
 export const API_BASE_URL = 'https://api.themoviedb.org/3';
 export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';

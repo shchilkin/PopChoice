@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
-import { getCsrfToken } from '@/lib/csrfClient';
 import { useRecommendationStore } from '@/store/recommendationStore';
 import { palette } from '@/styles/designTokens';
 
@@ -65,7 +64,6 @@ export default function LoadingPage() {
       headers: {
         'Content-Type': 'application/json',
         'Accept-Language': locale,
-        'X-CSRF-Token': getCsrfToken(),
       },
       body: JSON.stringify(requestPayload),
       signal: controller.signal,
