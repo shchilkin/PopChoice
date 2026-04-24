@@ -27,6 +27,9 @@ const MAX_JIT_SEED_MOVIES = 5;
 /** TMDB API base URL (v3). */
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 
+/** Timeout for TMDB discover requests in the main recommendation route. */
+const TMDB_DISCOVER_FETCH_TIMEOUT_MS = 8_000;
+
 const tmdbDiscoverMovieSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -163,6 +166,7 @@ export async function fetchTMDBDiscoverMovies(
         Authorization: `Bearer ${tmdbApiKey}`,
         Accept: 'application/json',
       },
+      signal: AbortSignal.timeout(TMDB_DISCOVER_FETCH_TIMEOUT_MS),
     });
 
     if (!response.ok) {
@@ -177,6 +181,10 @@ export async function fetchTMDBDiscoverMovies(
     }
     return (parsedResponse.data.results ?? []).slice(0, MAX_TOTAL_MOVIES);
   } catch (error) {
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+      logger.warn({ timeoutMs: TMDB_DISCOVER_FETCH_TIMEOUT_MS }, 'TMDB discover request timed out');
+      return [];
+    }
     logger.warn({ err: error }, 'Error fetching movies from TMDB discover');
     return [];
   }
