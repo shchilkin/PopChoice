@@ -46,7 +46,7 @@ export function parseTMDBReleaseYear(releaseDate: string | null | undefined): nu
 export function cosineSimilarity(
   a: number[],
   b: number[],
-  warn: (message: string) => void = console.warn,
+  warn: (message: string) => void = () => {},
 ): number {
   if (a.length !== b.length) {
     warn(
