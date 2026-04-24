@@ -3,18 +3,20 @@
 import { Play, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 
-const CINEMA_BG =
-  'https://images.unsplash.com/photo-1759230766134-e3ff1c27d20e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkYXJrJTIwY2luZW1hJTIwdGhlYXRlciUyMHNlYXRzJTIwZHJhbWF0aWN8ZW58MXx8fHwxNzc0ODk0MzUxfDA&ixlib=rb-4.1.0&q=80&w=1080';
-
 // Loaded client-side only so Math.random() does not cause hydration mismatches
 const FilmParticles = dynamic(() => import('./FilmParticles'), { ssr: false });
+
+// Poster grid is client-only: localStorage cache + TMDB fetch happen post-hydration
+const PosterBackground = dynamic(
+  () => import('./PosterBackground').then((m) => m.PosterBackground),
+  { ssr: false },
+);
 
 export function HeroSection() {
   const router = useRouter();
@@ -27,19 +29,11 @@ export function HeroSection() {
 
   return (
     <section className="relative min-h-[92vh] flex flex-col items-center justify-center px-5 overflow-hidden">
-      {/* Background image */}
-      <div className="absolute inset-0">
-        <Image
-          src={CINEMA_BG}
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover"
-          style={{ opacity: isDark ? 0.18 : 0.1 }}
-          priority
-        />
-        <div className="absolute inset-0" style={{ background: heroOverlay }} />
-      </div>
+      {/* Poster background grid + overlay */}
+      <PosterBackground />
+
+      {/* Theme-aware gradient: gold tint at center, page colour fade at top/bottom */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: heroOverlay }} />
 
       <FilmParticles />
 
