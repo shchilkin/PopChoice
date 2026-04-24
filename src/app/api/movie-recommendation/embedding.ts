@@ -1,5 +1,6 @@
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import logger from '@/lib/logger';
+import { MODELS } from '@/lib/models';
 
 import type { PersonFormData } from './types';
 
@@ -78,8 +79,8 @@ export async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promi
   const rawText = whyTexts.join(' ');
 
   try {
-    const response = await openAIClient.chat.completions.create({
-      model: 'gpt-5.4-mini',
+    const response = await getOpenAIClient().chat.completions.create({
+      model: MODELS.MINI,
       messages: [
         { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
         { role: 'user', content: rawText },
@@ -131,8 +132,8 @@ export async function createEmbedding(
       ? buildEmbeddingInputWithRefinedTags(allPeopleData, refinedQueryTags)
       : combineAllPeopleDataToString(allPeopleData);
 
-    const embeddingResponse = await openAIClient.embeddings.create({
-      model: 'text-embedding-3-large',
+    const embeddingResponse = await getOpenAIClient().embeddings.create({
+      model: MODELS.EMBEDDING,
       input: embeddingInput,
     });
     if (!embeddingResponse?.data?.[0]?.embedding) {

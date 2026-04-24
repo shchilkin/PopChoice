@@ -1,6 +1,8 @@
-import { openAIClient } from '@/clients';
+import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
+import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';
 import logger from '@/lib/logger';
+import { MODELS } from '@/lib/models';
 import { MovieService } from '@/services';
 
 import { combineAllPeopleDataToString } from './embedding';
@@ -12,18 +14,6 @@ import type { EnhancedMovieMatch, PersonFormData } from './types';
 // Locale helpers
 // ---------------------------------------------------------------------------
 
-const LOCALE_LANGUAGE: Record<string, string> = {
-  en: 'English',
-  ru: 'Russian',
-  fi: 'Finnish',
-};
-
-const TMDB_LOCALE: Record<string, string> = {
-  en: 'en-US',
-  ru: 'ru-RU',
-  fi: 'fi-FI',
-};
-
 const recommendationResponseFormat = {
   type: 'json_schema' as const,
   json_schema: {
@@ -33,7 +23,7 @@ const recommendationResponseFormat = {
   },
 };
 
-const buildPrompt = (locale: string) => {
+const buildPrompt = (locale: Locale) => {
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   return `You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
@@ -107,13 +97,13 @@ export async function getSimilarMovies(embedding: number[]): Promise<EnhancedMov
 // ---------------------------------------------------------------------------
 
 /** Ask OpenAI to pick the single best movie from the candidates. */
-export async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: string) {
+export async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: Locale) {
   try {
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
 
-    const recommendation = await openAIClient.chat.completions.create({
-      model: 'gpt-5.4',
+    const recommendation = await getOpenAIClient().chat.completions.create({
+      model: MODELS.RECOMMENDATION,
       messages: [
         { role: 'system', content: buildPrompt(locale) },
         { role: 'user', content: moviesContext },
@@ -143,7 +133,7 @@ export async function generateMovieDescriptions(
     localizedOverview?: string;
   })[],
   userPreferences: PersonFormData[],
-  locale: string,
+  locale: Locale,
 ): Promise<
   (EnhancedMovieMatch & {
     posterURL?: string;
@@ -190,8 +180,8 @@ Plot: ${movie.description}
 
 Remember: respond in ${language} only.`;
 
-          const descriptionResponse = await openAIClient.chat.completions.create({
-            model: 'gpt-5.4-mini',
+          const descriptionResponse = await getOpenAIClient().chat.completions.create({
+            model: MODELS.MINI,
             messages: [
               { role: 'system', content: descriptionPrompt },
               { role: 'user', content: movieContext },
@@ -248,7 +238,7 @@ Remember: respond in ${language} only.`;
  */
 export async function getMovieInfo(
   movieTitle: string,
-  locale: string,
+  locale: Locale,
   year?: number,
   tmdbId?: number, // When provided (TMDB-sourced movies), skips title search entirely
 ): Promise<{ posterURL?: string; localizedName?: string; localizedOverview?: string }> {
@@ -265,7 +255,7 @@ export async function getMovieInfo(
 
     if (locale === 'en') return { posterURL: enPosterURL };
 
-    const tmdbLocale = TMDB_LOCALE[locale] ?? 'en-US';
+    const tmdbLocale = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
     const localized = await movieService.getLocalizedMovieInfo(enDetails.id, tmdbLocale);
 
     const posterURL = localized?.poster_path
@@ -290,7 +280,7 @@ export async function getMovieInfo(
 /** Batch-fetch poster URLs and localized info for all similar movies. */
 export async function enhanceSimilarMoviesWithPosters(
   similarMovies: EnhancedMovieMatch[],
-  locale: string,
+  locale: Locale,
   batchSize: number = 3,
 ): Promise<
   (EnhancedMovieMatch & {
