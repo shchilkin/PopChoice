@@ -149,7 +149,7 @@ function combineAllPeopleDataToString(allPeopleData: PersonFormData[]): string {
 // Main handler
 // ---------------------------------------------------------------------------
 
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -432,3 +432,5 @@ Respond in ${language} only.`;
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuth(postHandler);

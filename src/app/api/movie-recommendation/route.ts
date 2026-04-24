@@ -6,6 +6,7 @@ import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { withAuth } from '@/lib/withAuth';
 import {
   ALWAYS_BLOCK_CATEGORIES,
   checkForPromptInjection,
@@ -73,7 +74,7 @@ async function withTimeout<T>(
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
-export async function POST(req: NextRequest) {
+async function postHandler(req: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   try {
@@ -419,6 +420,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuth(postHandler);
 
 // ---------------------------------------------------------------------------
 // GET handler — API documentation
