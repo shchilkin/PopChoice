@@ -170,8 +170,11 @@ export class MovieService {
     }
   }
 
-  getPosterURL(posterPath: string, size: PosterSize): string {
-    const { success, data: parsedSize } = posterSize.safeParse(size);
+  getPosterURL(posterPath: string | null, size: PosterSize): string | undefined {
+    if (!posterPath) {
+      return undefined;
+    }
+    const { success, data: parsedSize } = posterSizeSchema.safeParse(size);
     if (!success) {
       throw new Error(`Invalid poster size: ${size}. Available sizes: ${POSTER_SIZES.join(', ')}`);
     }
