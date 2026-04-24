@@ -5,9 +5,6 @@ import logger from '@/lib/logger';
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w300';
 
-// Cache the route response at the edge for 24 hours
-export const revalidate = 86400;
-
 export interface PosterUrlsResponse {
   posters: string[];
 }
