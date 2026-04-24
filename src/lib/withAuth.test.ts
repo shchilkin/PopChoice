@@ -65,24 +65,40 @@ describe('withAuth', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('allows CSRF fallback when Origin is absent but fetch headers indicate same-origin', async () => {
-    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
-    const wrapped = withAuth(handler);
+  it.each([
+    [
+      'with Sec-Fetch-Mode',
+      {
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-Mode': 'cors',
+      },
+    ],
+    [
+      'without Sec-Fetch-Mode',
+      {
+        'Sec-Fetch-Site': 'same-origin',
+      },
+    ],
+  ])(
+    'allows CSRF fallback when Origin is absent but fetch headers indicate same-origin (%s)',
+    async (_caseName, fetchHeaders) => {
+      const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+      const wrapped = withAuth(handler);
 
-    const response = await wrapped(
-      new NextRequest('http://localhost/api/movies', {
-        headers: {
-          'Sec-Fetch-Site': 'same-origin',
-          'Sec-Fetch-Mode': 'cors',
-          'X-CSRF-Token': 'csrf-token',
-          Cookie: '__csrf=csrf-token',
-        },
-      }),
-    );
+      const response = await wrapped(
+        new NextRequest('http://localhost/api/movies', {
+          headers: {
+            ...fetchHeaders,
+            'X-CSRF-Token': 'csrf-token',
+            Cookie: '__csrf=csrf-token',
+          },
+        }),
+      );
 
-    expect(response.status).toBe(200);
-    expect(handler).toHaveBeenCalledOnce();
-  });
+      expect(response.status).toBe(200);
+      expect(handler).toHaveBeenCalledOnce();
+    },
+  );
 
   it('allows request when API key is valid', async () => {
     const handler = vi.fn(async () => NextResponse.json({ ok: true }));
