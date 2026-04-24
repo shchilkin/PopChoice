@@ -1,4 +1,4 @@
-import { createTestModel } from '@xstate/test';
+import { createTestModel } from '@xstate/graph';
 import { describe, expect, it } from 'vitest';
 import { createActor } from 'xstate';
 

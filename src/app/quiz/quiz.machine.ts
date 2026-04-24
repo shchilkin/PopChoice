@@ -26,7 +26,6 @@ export const quizMachine = setup({
     events: {} as QuizEvent,
   },
   guards: {
-    isLastPerson: ({ context }) => context.currentPersonIdx >= context.people.length - 1,
     isNotLastPerson: ({ context }) => context.currentPersonIdx < context.people.length - 1,
     isGroupMode: ({ context }) => context.mode === 'group',
     isFirstPerson: ({ context }) => context.currentPersonIdx === 0,

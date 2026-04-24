@@ -58,7 +58,7 @@ export default function QuizPage() {
     const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
     localStorage.setItem('popchoice_quiz_data', JSON.stringify(dataToSend));
     router.push('/loading');
-  }, [isSubmitting]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     send({ type: 'UPDATE_PERSON', updates });
@@ -103,6 +103,9 @@ export default function QuizPage() {
       />
     );
   }
+
+  // ── SUBMITTING ── redirect is in flight via useEffect above
+  if (state.matches('submitting')) return null;
 
   // ── BETWEEN PERSONS ──
   if (state.matches('betweenPersons')) {

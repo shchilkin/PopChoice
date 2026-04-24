@@ -89,7 +89,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
             />
           </button>
 
-          {/* Group */}
+          {/* Group — disabled until multi-person flow ships */}
           <button
             disabled
             onClick={onStartGroup}
