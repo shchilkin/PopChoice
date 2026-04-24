@@ -45,8 +45,22 @@ function getPool(): InstanceType<typeof Pool> {
 /**
  * Fetch movies where duration = 0 (missing runtime).
  * Pass limit = 0 to fetch all.
+ * Returns an empty array if the movies table does not exist yet.
  */
 export async function getIncompleteMovies(limit: number): Promise<IncompleteMovie[]> {
+  // Check whether the movies table exists before querying to fail gracefully
+  // on a fresh or partially-initialised database.
+  const tableCheck = await getPool().query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM information_schema.tables
+       WHERE table_schema = 'public' AND table_name = 'movies'
+     ) AS exists`,
+  );
+  if (!tableCheck.rows[0]?.exists) {
+    logger.warn('movies table does not exist — skipping backfill. Run the schema setup first.');
+    return [];
+  }
+
   const query =
     limit > 0
       ? 'SELECT id, name, year, score_rating, description FROM movies WHERE duration = 0 ORDER BY id LIMIT $1'

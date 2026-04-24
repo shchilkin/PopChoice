@@ -19,9 +19,9 @@ describe('analyzeMovieChunks', () => {
     // Create a unique test file path
     testFilePath = join(tmpdir(), `test-movies-${crypto.randomUUID()}.txt`);
 
-    // Spy on console methods to capture output
+    // Spy on logger methods to capture output
     consoleLogSpy = vi.spyOn(logger, 'info').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -32,7 +32,7 @@ describe('analyzeMovieChunks', () => {
       // File might not exist, ignore error
     }
 
-    // Restore console methods
+    // Restore logger methods
     consoleLogSpy.mockRestore();
     consoleErrorSpy.mockRestore();
   });

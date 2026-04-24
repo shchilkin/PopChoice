@@ -59,6 +59,14 @@ const eslintConfig = [
       'no-console': 'error',
     },
   },
+
+  // Allow console usage in tests where spies/assertions target console APIs
+  {
+    files: ['**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;

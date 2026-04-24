@@ -40,9 +40,17 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 
    ```bash
    cp .env.example .env
-   # Edit .env with your OpenAI and TMDB API keys
-   # Optional for background TMDB seeding jobs: REDIS_URL
+   # Edit .env with your API keys
    ```
+
+   Key variables (see `.env.example` for the full list):
+
+   | Variable                   | Required | Description                           |
+   | -------------------------- | -------- | ------------------------------------- |
+   | `OPENAI_API_KEY`           | ✅       | OpenAI API key for embeddings         |
+   | `TMDB_API_KEY`             | ✅       | TMDB v4 read access token             |
+   | `NEXT_PUBLIC_TMDB_API_KEY` | ✅       | TMDB key for client-side use          |
+   | `DATABASE_URL`             | ❌       | Set automatically by `setup:local-db` |
 
 3. **Start local PostgreSQL** (requires Docker)
 

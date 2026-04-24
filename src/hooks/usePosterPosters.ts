@@ -100,13 +100,17 @@ export function usePosterPosters(initialPosters?: string[]): string[] {
     if (initialPostersRef.current && initialPostersRef.current.length > 0) return;
     if (readCache()) return;
 
-    fetchPosterURLs().then((urls) => {
-      if (urls.length >= 8) {
-        setPosters(urls);
-        writeCache(urls);
-      }
-      // Fewer than 8 results → keep showing fallback SVGs
-    });
+    fetchPosterURLs()
+      .then((urls) => {
+        if (urls.length >= 8) {
+          setPosters(urls);
+          writeCache(urls);
+        }
+        // Fewer than 8 results → keep showing fallback SVGs
+      })
+      .catch(() => {
+        // Keep the existing fallback posters when the API is unreachable.
+      });
   }, []); // Intentionally empty: fetch once on mount only
 
   return posters;

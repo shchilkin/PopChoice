@@ -73,10 +73,11 @@ describe('cosineSimilarity', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('3 !== 2'));
   });
 
-  it('uses console.warn by default when lengths mismatch', () => {
+  it('silently returns 0 by default when lengths mismatch (no-op warn)', () => {
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    cosineSimilarity([1], [1, 2]);
-    expect(consoleSpy).toHaveBeenCalledOnce();
+    const result = cosineSimilarity([1], [1, 2]);
+    expect(result).toBe(0);
+    expect(consoleSpy).not.toHaveBeenCalled();
     consoleSpy.mockRestore();
   });
 

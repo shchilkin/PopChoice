@@ -1,5 +1,3 @@
-import logger from '@/lib/logger';
-
 /**
  * Client-side movie enhancement utilities
  * These functions work in the browser and provide better movie search/poster experiences
@@ -36,7 +34,8 @@ export async function enhanceMovieWithPoster(
   tmdbApiKey?: string,
 ): Promise<MovieRecommendation> {
   if (!tmdbApiKey) {
-    logger.warn('TMDB API key not provided, skipping poster enhancement');
+    // eslint-disable-next-line no-console
+    console.warn('TMDB API key not provided, skipping poster enhancement');
     return movie;
   }
 
@@ -72,7 +71,8 @@ export async function enhanceMovieWithPoster(
 
     return movie;
   } catch (error) {
-    logger.warn({ err: error }, `Failed to enhance movie "${movie.name}":`);
+    // eslint-disable-next-line no-console
+    console.warn(`Failed to enhance movie "${movie.name}":`, error);
     return movie;
   }
 }
@@ -205,7 +205,8 @@ export async function searchMovieByTitle(
     const data = await response.json();
     return data.results?.[0] || null;
   } catch (error) {
-    logger.warn({ err: error }, `Failed to search for movie "${title}":`);
+    // eslint-disable-next-line no-console
+    console.warn(`Failed to search for movie "${title}":`, error);
     return null;
   }
 }
