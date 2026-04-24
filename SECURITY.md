@@ -20,10 +20,12 @@ This document outlines the security measures and vulnerability management for th
   - [x] Add rate limiting for expensive operations (OpenAI API calls via `/api/movie-recommendation`)
   - [x] Configure appropriate 429 responses (returns `Retry-After: 60`)
 
-- [ ] **Authentication & Authorization**
-  - [ ] Add CSRF protection for state-changing operations
+- [x] **Authentication & Authorization**
+  - [x] Add CSRF protection for state-changing operations
   - [ ] Implement session management
-  - [ ] Add request origin validation
+  - [x] Add request origin validation
+  - [x] Add API key authentication for external callers
+  - [x] Implement API key rotation procedures (keys are hashed with scrypt; rotate by updating VALID_API_KEYS without touching code)
 
 - [ ] **Request Size & Timeout Management**
   - [ ] Set maximum request body size limits
