@@ -9,6 +9,7 @@ export const ru: Translations = {
     switchLanguage: 'Переключить язык',
     openMenu: 'Открыть меню',
     closeMenu: 'Закрыть меню',
+    styleGuide: 'Гайдлайн',
   },
   footer: {
     builtBy: 'Сделал',
