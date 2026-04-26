@@ -447,8 +447,7 @@ export default function StyleGuideComponentsPage() {
         <div className="mb-4">
           <Link
             href="/style-guide"
-            className="text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
-            style={{ color: 'var(--pc-t3)' }}
+            className="text-(--pc-t3) text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
           >
             ← Style Guide
           </Link>
@@ -919,8 +918,7 @@ export default function StyleGuideComponentsPage() {
           <span>PopChoice Components</span>
           <Link
             href="/style-guide"
-            className="text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
-            style={{ color: 'var(--pc-t3)' }}
+            className="text-(--pc-t3) text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
           >
             ← Back to Style Guide
           </Link>

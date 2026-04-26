@@ -557,8 +557,7 @@ export default function StyleGuidePage() {
           <span>PopChoice Style Guide &mdash; design tokens &amp; components</span>
           <Link
             href="/style-guide/components"
-            className="text-xs uppercase tracking-widest font-semibold transition-colors"
-            style={{ color: 'var(--pc-t3)' }}
+            className="text-(--pc-t3) text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
           >
             Components →
           </Link>
