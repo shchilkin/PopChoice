@@ -24,8 +24,8 @@ export function HeroSection() {
   const { t } = useLanguage();
 
   const heroOverlay = isDark
-    ? 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245,197,24,0.06) 0%, transparent 70%), linear-gradient(180deg, #09090F 0%, rgba(9,9,15,0.4) 30%, rgba(9,9,15,0.6) 70%, #09090F 100%)'
-    : 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(196,149,10,0.06) 0%, transparent 70%), linear-gradient(180deg, #F7F5EE 0%, rgba(247,245,238,0.35) 30%, rgba(247,245,238,0.55) 70%, #F7F5EE 100%)';
+    ? 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245,197,24,0.06) 0%, transparent 70%), linear-gradient(180deg, #09090F 0%, rgba(9,9,15,0.58) 30%, rgba(9,9,15,0.78) 70%, #09090F 100%)'
+    : 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(196,149,10,0.06) 0%, transparent 70%), linear-gradient(180deg, #F7F5EE 0%, rgba(247,245,238,0.72) 30%, rgba(247,245,238,0.86) 70%, #F7F5EE 100%)';
 
   return (
     <section className="relative min-h-[92vh] flex flex-col items-center justify-center px-5 overflow-hidden">
@@ -102,7 +102,11 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mb-10 max-w-lg"
-          style={{ color: 'var(--pc-t2)', fontSize: '1.1rem', lineHeight: 1.7 }}
+          style={{
+            color: isDark ? 'var(--pc-t2)' : 'var(--pc-t1)',
+            fontSize: '1.1rem',
+            lineHeight: 1.7,
+          }}
         >
           {t.hero.descriptionPre}{' '}
           <span style={{ color: 'var(--pc-gold-text)' }}>{t.hero.perfectMovie}</span>{' '}
@@ -165,7 +169,7 @@ export function HeroSection() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.6 }}
           className="mt-8 text-xs"
-          style={{ color: 'var(--pc-t4)' }}
+          style={{ color: isDark ? 'var(--pc-t4)' : 'var(--pc-t2)' }}
         >
           {t.hero.noSignup}
         </motion.p>
