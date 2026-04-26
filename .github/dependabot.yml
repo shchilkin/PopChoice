@@ -63,6 +63,14 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+      prod-misc:
+        applies-to: version-updates
+        dependency-type: 'production'
+        patterns:
+          - '*'
+        update-types:
+          - 'minor'
+          - 'patch'
       typescript-types:
         applies-to: version-updates
         dependency-type: 'development'
