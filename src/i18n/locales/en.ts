@@ -7,6 +7,7 @@ export const en = {
     switchLanguage: 'Switch language',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
+    styleGuide: 'Style Guide',
   },
   footer: {
     builtBy: 'Built by',

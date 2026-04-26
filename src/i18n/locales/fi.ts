@@ -9,6 +9,7 @@ export const fi: Translations = {
     switchLanguage: 'Vaihda kieli',
     openMenu: 'Avaa valikko',
     closeMenu: 'Sulje valikko',
+    styleGuide: 'Tyyliopas',
   },
   footer: {
     builtBy: 'Rakentanut',
