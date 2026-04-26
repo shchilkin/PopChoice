@@ -1,6 +1,7 @@
 'use client';
 
 import { Sparkles, Play, Users, Zap, Smile, Moon, Clock, Clapperboard } from 'lucide-react';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { QuizNavigation } from '@/app/quiz/components';
@@ -250,10 +251,12 @@ function EraOption({
 // ── Text Input ─────────────────────────────────────────────────────────────────
 
 function StyledInput({ placeholder, label }: { placeholder: string; label?: string }) {
+  const inputId = label ? `input-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined;
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
         <label
+          htmlFor={inputId}
           className="text-xs font-semibold uppercase tracking-wider"
           style={{ color: 'var(--pc-t3)' }}
         >
@@ -261,6 +264,7 @@ function StyledInput({ placeholder, label }: { placeholder: string; label?: stri
         </label>
       )}
       <input
+        id={inputId}
         placeholder={placeholder}
         className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-200 text-sm"
         style={{
@@ -480,15 +484,13 @@ export default function StyleGuideComponentsPage() {
       <div className="mx-auto max-w-5xl px-6 py-16">
         {/* Header */}
         <div className="mb-4">
-          <a
+          <Link
             href="/style-guide"
-            className="text-xs uppercase tracking-widest font-semibold transition-colors"
+            className="text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
             style={{ color: 'var(--pc-t3)' }}
-            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--pc-gold)')}
-            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--pc-t3)')}
           >
             ← Style Guide
-          </a>
+          </Link>
         </div>
         <div className="mb-16">
           <p
@@ -527,8 +529,8 @@ export default function StyleGuideComponentsPage() {
             <div className="pt-4">
               <p className="text-xs" style={{ color: 'var(--pc-t3)' }}>
                 Click the mascot to trigger confetti. Accepts{' '}
-                <code className="text-(--pc-gold)">width</code> and{' '}
-                <code className="text-(--pc-gold)">height</code> props.
+                <code style={{ color: 'var(--pc-gold)' }}>width</code> and{' '}
+                <code style={{ color: 'var(--pc-gold)' }}>height</code> props.
               </p>
             </div>
           </Card>
@@ -609,7 +611,7 @@ export default function StyleGuideComponentsPage() {
             <div className="pt-3">
               <p className="text-xs" style={{ color: 'var(--pc-t3)' }}>
                 Neutral pill used in movie cards. For semantic color ratings use{' '}
-                <code className="text-(--pc-gold)">AgeRatingChip</code>.
+                <code style={{ color: 'var(--pc-gold)' }}>AgeRatingChip</code>.
               </p>
             </div>
           </Card>
@@ -620,8 +622,8 @@ export default function StyleGuideComponentsPage() {
           <div className="mb-4">
             <p className="text-xs mb-4" style={{ color: 'var(--pc-t3)' }}>
               Click to toggle active state.{' '}
-              <code className="text-(--pc-gold)">SmallSuggestionCard</code> is used in the results
-              scroll row.
+              <code style={{ color: 'var(--pc-gold)' }}>SmallSuggestionCard</code> is used in the
+              results scroll row.
             </p>
             <div className="flex gap-4 flex-wrap">
               {MOCK_MOVIES.map((movie, i) => (
@@ -642,8 +644,8 @@ export default function StyleGuideComponentsPage() {
           <div className="space-y-6">
             <div>
               <p className="text-xs mb-3" style={{ color: 'var(--pc-t3)' }}>
-                <code className="text-(--pc-gold)">MoviesTableSkeleton</code> — shown while table
-                data loads
+                <code style={{ color: 'var(--pc-gold)' }}>MoviesTableSkeleton</code> — shown while
+                table data loads
               </p>
               <MoviesTableSkeleton />
             </div>
@@ -725,7 +727,7 @@ export default function StyleGuideComponentsPage() {
           <Card>
             <p className="text-xs mb-4" style={{ color: 'var(--pc-t3)' }}>
               Multi-select. Click to toggle genres. Used in{' '}
-              <code className="text-(--pc-gold)">MoodStep</code>.
+              <code style={{ color: 'var(--pc-gold)' }}>MoodStep</code>.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {GENRES.map((g) => (
@@ -752,7 +754,7 @@ export default function StyleGuideComponentsPage() {
           <Card>
             <p className="text-xs mb-4" style={{ color: 'var(--pc-t3)' }}>
               Single-select. Click to choose a tone. Used in{' '}
-              <code className="text-(--pc-gold)">ToneStep</code>.
+              <code style={{ color: 'var(--pc-gold)' }}>ToneStep</code>.
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {TONES.map((tone) => (
@@ -777,7 +779,7 @@ export default function StyleGuideComponentsPage() {
           <Card>
             <p className="text-xs mb-4" style={{ color: 'var(--pc-t3)' }}>
               Single-select. Click to pick a film era. Used in{' '}
-              <code className="text-(--pc-gold)">EraStep</code>.
+              <code style={{ color: 'var(--pc-gold)' }}>EraStep</code>.
             </p>
             <div className="flex flex-col gap-3 max-w-sm">
               {ERAS.map((era) => (
@@ -835,7 +837,8 @@ export default function StyleGuideComponentsPage() {
             </ComponentRow>
             <div className="pt-3">
               <p className="text-xs" style={{ color: 'var(--pc-t3)' }}>
-                Used in <code className="text-(--pc-gold)">GroupSetup</code> to label participants.
+                Used in <code style={{ color: 'var(--pc-gold)' }}>GroupSetup</code> to label
+                participants.
               </p>
             </div>
           </Card>
@@ -953,15 +956,13 @@ export default function StyleGuideComponentsPage() {
           style={{ borderTop: '1px solid var(--pc-bd1)', color: 'var(--pc-footer)' }}
         >
           <span>PopChoice Components</span>
-          <a
+          <Link
             href="/style-guide"
-            className="text-xs uppercase tracking-widest font-semibold transition-colors"
+            className="text-xs uppercase tracking-widest font-semibold transition-colors hover:text-(--pc-gold)"
             style={{ color: 'var(--pc-t3)' }}
-            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--pc-gold)')}
-            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--pc-t3)')}
           >
             ← Back to Style Guide
-          </a>
+          </Link>
         </div>
       </div>
     </div>

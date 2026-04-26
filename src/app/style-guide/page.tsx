@@ -1,4 +1,4 @@
-'use client';
+import Link from 'next/link';
 
 import { AgeRatingChip } from '@/components/AgeRatingChip';
 import { Button } from '@/components/Button';
@@ -88,7 +88,7 @@ function TokenRow({ token, description }: { token: string; description: string }
         className="h-8 w-8 shrink-0 rounded-md border"
         style={{ background: `var(${token})`, borderColor: 'var(--pc-bd2)' }}
       />
-      <code className="min-w-55 text-xs" style={{ color: 'var(--pc-gold)' }}>
+      <code className="min-w-56 text-xs" style={{ color: 'var(--pc-gold)' }}>
         {token}
       </code>
       <span className="text-sm" style={{ color: 'var(--pc-t2)' }}>
@@ -131,7 +131,7 @@ export default function StyleGuidePage() {
             Design tokens, components, and patterns that make up the PopChoice visual language.
           </p>
           <div className="mt-6 flex gap-3">
-            <a
+            <Link
               href="/style-guide/components"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
               style={{
@@ -141,7 +141,7 @@ export default function StyleGuidePage() {
               }}
             >
               Components →
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -591,15 +591,13 @@ export default function StyleGuidePage() {
           style={{ borderTop: '1px solid var(--pc-bd1)', color: 'var(--pc-footer)' }}
         >
           <span>PopChoice Style Guide &mdash; design tokens &amp; components</span>
-          <a
+          <Link
             href="/style-guide/components"
             className="text-xs uppercase tracking-widest font-semibold transition-colors"
             style={{ color: 'var(--pc-t3)' }}
-            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--pc-gold)')}
-            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--pc-t3)')}
           >
             Components →
-          </a>
+          </Link>
         </div>
       </div>
     </div>

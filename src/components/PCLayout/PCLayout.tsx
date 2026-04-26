@@ -80,8 +80,10 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               href={link.href}
               className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
               style={{
-                color: pathname === link.href ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
-                background: pathname === link.href ? 'var(--pc-gold-subtle)' : 'transparent',
+                color: pathname.startsWith(link.href) ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+                background: pathname.startsWith(link.href)
+                  ? 'var(--pc-gold-subtle)'
+                  : 'transparent',
               }}
             >
               {link.label}
@@ -181,9 +183,11 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2.5 rounded-xl text-sm transition-colors duration-200"
               style={{
-                color: pathname === link.href ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-                background: pathname === link.href ? 'var(--pc-gold-subtle)' : 'transparent',
-                fontWeight: pathname === link.href ? 600 : 400,
+                color: pathname.startsWith(link.href) ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+                background: pathname.startsWith(link.href)
+                  ? 'var(--pc-gold-subtle)'
+                  : 'transparent',
+                fontWeight: pathname.startsWith(link.href) ? 600 : 400,
               }}
             >
               {link.label}
