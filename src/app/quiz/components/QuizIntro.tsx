@@ -3,6 +3,7 @@
 import { ChevronRight, User, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { Mascot } from '@/components/Mascot';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
@@ -23,7 +24,7 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
         className="w-full max-w-md"
       >
         <div className="text-center mb-10">
-          <div className="text-4xl mb-4">🍿</div>
+          <Mascot width={64} height={64} />
           <h1
             className="mb-2"
             style={{
@@ -88,17 +89,20 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
             />
           </button>
 
-          {/* Group */}
+          {/* Group — disabled until multi-person flow ships */}
           <button
+            disabled
             onClick={onStartGroup}
-            className="group flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
+            className="disabled:opacity-50 disabled:cursor-not-allowed group flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
             style={{
               background: 'var(--pc-surface)',
               border: '1px solid var(--pc-bd2)',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
-              (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
+              if (!(e.currentTarget as HTMLButtonElement).disabled) {
+                (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
+                (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
+              }
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';

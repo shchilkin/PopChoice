@@ -1,8 +1,9 @@
 'use client';
 
+import { useMachine } from '@xstate/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -18,36 +19,37 @@ import {
   QuizNavigation,
   ToneStep,
 } from './components';
-import { emptyPerson, slideVariants, toApiFormat } from './constants';
+import { slideVariants, toApiFormat } from './constants';
+import { quizMachine } from './quiz.machine';
 
-import type { PersonAnswers, Phase } from './types';
+import type { PersonAnswers } from './types';
+
+const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
+type StepKey = (typeof STEP_KEYS)[number];
 
 export default function QuizPage() {
+  const [state, send] = useMachine(quizMachine);
   const router = useRouter();
   const { t } = useLanguage();
 
-  const [phase, setPhase] = useState<Phase>('intro');
-  const [mode, setMode] = useState<'solo' | 'group'>('solo');
-  const [people, setPeople] = useState<PersonAnswers[]>([emptyPerson(t.quiz.intro.youLabel)]);
-  const [currentPersonIdx, setCurrentPersonIdx] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [dir, setDir] = useState(1);
+  // groupNames is transient UI state only needed during GroupSetup
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const { people, currentPersonIdx, dir, mode } = state.context;
   const currentPerson = people[currentPersonIdx];
+  const isSubmitting = state.matches('submitting');
 
-  // Keep solo person's name in sync with the current locale
-  // Derived at submit time rather than synced via effect — see submitToApi below.
+  // Derive which step we're on from the state value (no counter in context)
+  const questionsStep =
+    typeof state.value === 'object' && 'questions' in state.value
+      ? (state.value as { questions: StepKey }).questions
+      : null;
+  const currentStepIdx = questionsStep ? STEP_KEYS.indexOf(questionsStep) : -1;
+  const isLastStep = questionsStep === 'favoriteActor';
 
-  function updateCurrentPerson(updates: Partial<PersonAnswers>) {
-    setPeople((prev) => prev.map((p, i) => (i === currentPersonIdx ? { ...p, ...updates } : p)));
-  }
-
-  function submitToApi() {
-    setIsSubmitting(true);
-    // For solo mode always use the current locale label so the name stays correct
-    // even if the user switched languages during the quiz.
+  // Trigger submit side-effect when machine reaches the final state
+  useEffect(() => {
+    if (!isSubmitting) return;
     const resolved =
       mode === 'solo'
         ? people.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p))
@@ -56,101 +58,64 @@ export default function QuizPage() {
     const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
     localStorage.setItem('popchoice_quiz_data', JSON.stringify(dataToSend));
     router.push('/loading');
-  }
+  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router]);
 
-  function goNext() {
-    setDir(1);
-    if (currentStep < 4) {
-      setCurrentStep((s) => s + 1);
-    } else {
-      if (currentPersonIdx < people.length - 1) {
-        setPhase('between-persons');
-      } else {
-        submitToApi();
-      }
-    }
-  }
-
-  function goBack() {
-    setDir(-1);
-    if (currentStep > 0) {
-      setCurrentStep((s) => s - 1);
-    } else {
-      if (mode === 'group' && currentPersonIdx > 0) {
-        setCurrentPersonIdx((i) => i - 1);
-        setCurrentStep(4);
-      } else if (mode === 'group') {
-        setPhase('group-setup');
-      } else {
-        setPhase('intro');
-      }
-    }
+  function updateCurrentPerson(updates: Partial<PersonAnswers>) {
+    send({ type: 'UPDATE_PERSON', updates });
   }
 
   function canProceed(): boolean {
     if (!currentPerson) return false;
-    if (currentStep === 0) return currentPerson.favoriteMovie.trim().length >= 1;
-    if (currentStep === 1) return currentPerson.era !== '';
-    if (currentStep === 2) return currentPerson.moods.length >= 1;
-    if (currentStep === 3) return currentPerson.tone !== '';
-    if (currentStep === 4) return true;
-    return false;
-  }
-
-  function startSolo() {
-    setMode('solo');
-    setPeople([emptyPerson(t.quiz.intro.youLabel)]);
-    setCurrentPersonIdx(0);
-    setCurrentStep(0);
-    setPhase('questions');
-  }
-
-  function startGroupSetup() {
-    setMode('group');
-    setPhase('group-setup');
-  }
-
-  function startGroupQuestions() {
-    const valid = groupNames.filter((n) => n.trim().length > 0);
-    const names = valid.length >= 2 ? valid : ['Person 1', 'Person 2'];
-    setPeople(names.map((n) => emptyPerson(n)));
-    setCurrentPersonIdx(0);
-    setCurrentStep(0);
-    setPhase('questions');
-  }
-
-  function nextPerson() {
-    setCurrentPersonIdx((i) => i + 1);
-    setCurrentStep(0);
-    setDir(1);
-    setPhase('questions');
+    switch (questionsStep) {
+      case 'favoriteMovie':
+        return currentPerson.favoriteMovie.trim().length >= 1;
+      case 'era':
+        return currentPerson.era !== '';
+      case 'mood':
+        return currentPerson.moods.length >= 1;
+      case 'tone':
+        return currentPerson.tone !== '';
+      case 'favoriteActor':
+        return true;
+      default:
+        return false;
+    }
   }
 
   // ── INTRO ──
-  if (phase === 'intro') {
-    return <QuizIntro onStartSolo={startSolo} onStartGroup={startGroupSetup} />;
-  }
-
-  // ── GROUP SETUP ──
-  if (phase === 'group-setup') {
+  if (state.matches('intro')) {
     return (
-      <GroupSetup
-        groupNames={groupNames}
-        onGroupNamesChange={setGroupNames}
-        onBack={() => setPhase('intro')}
-        onStart={startGroupQuestions}
+      <QuizIntro
+        onStartSolo={() => send({ type: 'START_SOLO', youLabel: t.quiz.intro.youLabel })}
+        onStartGroup={() => send({ type: 'START_GROUP' })}
       />
     );
   }
 
+  // ── GROUP SETUP ──
+  if (state.matches('groupSetup')) {
+    return (
+      <GroupSetup
+        groupNames={groupNames}
+        onGroupNamesChange={setGroupNames}
+        onBack={() => send({ type: 'BACK' })}
+        onStart={() => send({ type: 'START_GROUP_QUESTIONS', names: groupNames })}
+      />
+    );
+  }
+
+  // ── SUBMITTING ── redirect is in flight via useEffect above
+  if (state.matches('submitting')) return null;
+
   // ── BETWEEN PERSONS ──
-  if (phase === 'between-persons') {
-    const nextName = people[currentPersonIdx + 1]?.name || 'Next person';
+  if (state.matches('betweenPersons')) {
+    const donePersonName = people[currentPersonIdx]?.name ?? '';
+    const nextPersonName = people[currentPersonIdx + 1]?.name ?? '';
     return (
       <BetweenPersons
-        currentPersonName={currentPerson.name}
-        nextPersonName={nextName}
-        onNext={nextPerson}
+        currentPersonName={donePersonName}
+        nextPersonName={nextPersonName}
+        onNext={() => send({ type: 'CONTINUE' })}
       />
     );
   }
@@ -159,6 +124,7 @@ export default function QuizPage() {
   const totalPeople = people.length;
   const personLabel =
     totalPeople > 1 ? t.quiz.nav.personTurn.replace('{name}', currentPerson.name) : null;
+  const isLastPerson = currentPersonIdx === people.length - 1;
 
   return (
     <div className="flex-1 flex flex-col min-h-[80vh]">
@@ -192,10 +158,10 @@ export default function QuizPage() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ProgressDots current={currentStep} total={5} />
+            <ProgressDots current={currentStepIdx} total={5} />
             <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
               {t.quiz.nav.ofTotal
-                .replace('{current}', String(currentStep + 1))
+                .replace('{current}', String(currentStepIdx + 1))
                 .replace('{total}', '5')}
             </span>
           </div>
@@ -212,7 +178,7 @@ export default function QuizPage() {
             textTransform: 'uppercase',
           }}
         >
-          {t.quiz.labels[currentStep]}
+          {t.quiz.labels[currentStepIdx]}
         </div>
       </div>
 
@@ -220,7 +186,7 @@ export default function QuizPage() {
       <div className="flex-1 flex flex-col px-5 max-w-xl mx-auto w-full overflow-hidden">
         <AnimatePresence mode="wait" custom={dir}>
           <motion.div
-            key={`${currentPersonIdx}-${currentStep}`}
+            key={`${currentPersonIdx}-${questionsStep}`}
             custom={dir}
             variants={slideVariants}
             initial="enter"
@@ -229,40 +195,41 @@ export default function QuizPage() {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="flex-1"
           >
-            {currentStep === 0 && (
+            {questionsStep === 'favoriteMovie' && (
               <FavoriteMovieStep
                 person={currentPerson}
                 onUpdate={updateCurrentPerson}
-                onSubmit={goNext}
+                onSubmit={() => send({ type: 'NEXT' })}
                 canProceed={canProceed()}
               />
             )}
-            {currentStep === 1 && <EraStep person={currentPerson} onUpdate={updateCurrentPerson} />}
-            {currentStep === 2 && (
+            {questionsStep === 'era' && (
+              <EraStep person={currentPerson} onUpdate={updateCurrentPerson} />
+            )}
+            {questionsStep === 'mood' && (
               <MoodStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
-            {currentStep === 3 && (
+            {questionsStep === 'tone' && (
               <ToneStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
-            {currentStep === 4 && (
+            {questionsStep === 'favoriteActor' && (
               <FavoriteActorStep
                 person={currentPerson}
                 onUpdate={updateCurrentPerson}
-                onSubmit={goNext}
+                onSubmit={() => send({ type: 'NEXT' })}
               />
             )}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Nav buttons */}
       <QuizNavigation
-        onBack={goBack}
-        onNext={goNext}
+        onBack={() => send({ type: 'BACK' })}
+        onNext={() => send({ type: 'NEXT' })}
         canProceed={canProceed()}
         isSubmitting={isSubmitting}
-        isLastStep={currentStep === 4}
-        isLastPerson={currentPersonIdx === people.length - 1}
+        isLastStep={isLastStep}
+        isLastPerson={isLastPerson}
       />
     </div>
   );
