@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, Play, Users, Zap, Smile, Moon, Clock, Clapperboard } from 'lucide-react';
+import { Clapperboard, Clock, Moon, Play, Smile, Sparkles, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
