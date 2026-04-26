@@ -5,43 +5,7 @@ import { Button } from '@/components/Button';
 import { ProgressDots } from '@/components/ProgressDots';
 import { palette } from '@/styles/designTokens';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-16">
-      <h2
-        className="mb-6 text-xs font-bold uppercase tracking-[0.2em]"
-        style={{ color: 'var(--pc-gold)', fontFamily: "var(--font-oswald), 'Oswald', sans-serif" }}
-      >
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-xl p-6 ${className}`}
-      style={{
-        background: 'var(--pc-surface)',
-        border: '1px solid var(--pc-bd2)',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mt-2 text-xs" style={{ color: 'var(--pc-t3)', fontFamily: 'monospace' }}>
-      {children}
-    </p>
-  );
-}
+import { Card, Label, Section } from './_components';
 
 // ── Color Swatch ──────────────────────────────────────────────────────────────
 

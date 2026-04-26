@@ -16,42 +16,11 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { TMDBAttribution } from '@/components/TMDBAttribution';
 import { palette } from '@/styles/designTokens';
 
+import { Card, Label, Section } from '../_components';
+
 import type { MovieRecommendation } from '@/utils/client';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-16">
-      <h2
-        className="mb-6 text-xs font-bold uppercase tracking-[0.2em]"
-        style={{ color: 'var(--pc-gold)', fontFamily: "var(--font-oswald), 'Oswald', sans-serif" }}
-      >
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-xl p-6 ${className}`}
-      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="mt-2 text-xs" style={{ color: 'var(--pc-t3)', fontFamily: 'monospace' }}>
-      {children}
-    </p>
-  );
-}
 
 function ComponentRow({
   label,
@@ -135,6 +104,7 @@ function GenreChip({
 }) {
   return (
     <button
+      type="button"
       onClick={onToggle}
       className="flex items-center gap-3 p-3.5 rounded-xl text-left transition-all duration-200"
       style={{
@@ -179,6 +149,7 @@ function ToneCard({
 }) {
   return (
     <button
+      type="button"
       onClick={onSelect}
       className="flex flex-col items-start gap-3 p-4 rounded-2xl text-left transition-all duration-200"
       style={{
@@ -227,6 +198,7 @@ function EraOption({
 }) {
   return (
     <button
+      type="button"
       onClick={onSelect}
       className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 w-full"
       style={{
@@ -266,20 +238,7 @@ function StyledInput({ placeholder, label }: { placeholder: string; label?: stri
       <input
         id={inputId}
         placeholder={placeholder}
-        className="w-full px-4 py-3 rounded-xl outline-none transition-all duration-200 text-sm"
-        style={{
-          background: 'var(--pc-bg)',
-          border: '1px solid var(--pc-bd2)',
-          color: 'var(--pc-t1)',
-        }}
-        onFocus={(e) => {
-          (e.target as HTMLInputElement).style.borderColor = 'var(--pc-gold-bd)';
-          (e.target as HTMLInputElement).style.boxShadow = 'var(--pc-gold-ring)';
-        }}
-        onBlur={(e) => {
-          (e.target as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
-          (e.target as HTMLInputElement).style.boxShadow = 'none';
-        }}
+        className="w-full rounded-xl border border-(--pc-bd2) bg-(--pc-bg) px-4 py-3 text-sm text-(--pc-t1) outline-none transition-all duration-200 focus-visible:border-(--pc-gold-bd) focus-visible:shadow-(--pc-gold-ring)"
       />
     </div>
   );
@@ -386,6 +345,86 @@ function AIBlock({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ── Static demo data (hoisted to avoid recreation on every render) ─────────────
+
+const MOCK_MOVIES: MovieRecommendation[] = [
+  {
+    id: 1,
+    name: 'Inception',
+    year: 2010,
+    similarity: 0.97,
+    score_rating: 8.8,
+    age_rating: 'PG-13',
+    duration: 148,
+  },
+  {
+    id: 2,
+    name: 'Interstellar',
+    year: 2014,
+    similarity: 0.94,
+    score_rating: 8.6,
+    age_rating: 'PG-13',
+    duration: 169,
+  },
+  {
+    id: 3,
+    name: 'The Dark Knight',
+    year: 2008,
+    similarity: 0.91,
+    score_rating: 9.0,
+    age_rating: 'PG-13',
+    duration: 152,
+  },
+];
+
+const GENRES = [
+  { id: 'action', label: 'Action', icon: Zap, color: palette.amber },
+  { id: 'comedy', label: 'Comedy', icon: Smile, color: palette.gold },
+  { id: 'drama', label: 'Drama', icon: Play, color: palette.purple },
+  { id: 'scifi', label: 'Sci-Fi', icon: Sparkles, color: palette.teal },
+];
+
+const TONES = [
+  {
+    id: 'light',
+    label: 'Light & Fun',
+    desc: 'Easy going, uplifting',
+    icon: Sparkles,
+    color: palette.gold,
+    grad: `linear-gradient(135deg, ${palette.gold}18, ${palette.amber}18)`,
+  },
+  {
+    id: 'balanced',
+    label: 'Balanced',
+    desc: 'Mix of everything',
+    icon: Play,
+    color: palette.teal,
+    grad: `linear-gradient(135deg, ${palette.teal}18, ${palette.blue}18)`,
+  },
+  {
+    id: 'serious',
+    label: 'Serious',
+    desc: 'Deep and meaningful',
+    icon: Moon,
+    color: palette.purple,
+    grad: `linear-gradient(135deg, ${palette.purple}18, ${palette.purpleLight}18)`,
+  },
+  {
+    id: 'dark',
+    label: 'Dark',
+    desc: 'Intense and gritty',
+    icon: Moon,
+    color: palette.gray,
+    grad: `linear-gradient(135deg, ${palette.gray}18, ${palette.red}18)`,
+  },
+];
+
+const ERAS = [
+  { id: 'new', emoji: '✨', title: 'New Releases', desc: 'Post-2010', color: palette.teal },
+  { id: 'classic', emoji: '🎞️', title: 'Classics', desc: 'Pre-2000', color: palette.gold },
+  { id: 'both', emoji: '🎬', title: 'Any Era', desc: 'No preference', color: palette.purple },
+];
+
 // ── Number Badge (GroupSetup) ──────────────────────────────────────────────────
 
 export default function StyleGuideComponentsPage() {
@@ -394,84 +433,6 @@ export default function StyleGuideComponentsPage() {
   const [selectedTone, setSelectedTone] = useState<string>('light');
   const [selectedEra, setSelectedEra] = useState<string>('both');
   const [activeCard, setActiveCard] = useState<number>(0);
-
-  const MOCK_MOVIES: MovieRecommendation[] = [
-    {
-      id: 1,
-      name: 'Inception',
-      year: 2010,
-      similarity: 0.97,
-      score_rating: 8.8,
-      age_rating: 'PG-13',
-      duration: 148,
-    },
-    {
-      id: 2,
-      name: 'Interstellar',
-      year: 2014,
-      similarity: 0.94,
-      score_rating: 8.6,
-      age_rating: 'PG-13',
-      duration: 169,
-    },
-    {
-      id: 3,
-      name: 'The Dark Knight',
-      year: 2008,
-      similarity: 0.91,
-      score_rating: 9.0,
-      age_rating: 'PG-13',
-      duration: 152,
-    },
-  ];
-
-  const GENRES = [
-    { id: 'action', label: 'Action', icon: Zap, color: palette.amber },
-    { id: 'comedy', label: 'Comedy', icon: Smile, color: palette.gold },
-    { id: 'drama', label: 'Drama', icon: Play, color: palette.purple },
-    { id: 'scifi', label: 'Sci-Fi', icon: Sparkles, color: palette.teal },
-  ];
-
-  const TONES = [
-    {
-      id: 'light',
-      label: 'Light & Fun',
-      desc: 'Easy going, uplifting',
-      icon: Sparkles,
-      color: palette.gold,
-      grad: `linear-gradient(135deg, ${palette.gold}18, ${palette.amber}18)`,
-    },
-    {
-      id: 'balanced',
-      label: 'Balanced',
-      desc: 'Mix of everything',
-      icon: Play,
-      color: palette.teal,
-      grad: `linear-gradient(135deg, ${palette.teal}18, ${palette.blue}18)`,
-    },
-    {
-      id: 'serious',
-      label: 'Serious',
-      desc: 'Deep and meaningful',
-      icon: Moon,
-      color: palette.purple,
-      grad: `linear-gradient(135deg, ${palette.purple}18, ${palette.purpleLight}18)`,
-    },
-    {
-      id: 'dark',
-      label: 'Dark',
-      desc: 'Intense and gritty',
-      icon: Moon,
-      color: palette.gray,
-      grad: `linear-gradient(135deg, ${palette.gray}18, ${palette.red}18)`,
-    },
-  ];
-
-  const ERAS = [
-    { id: 'new', emoji: '✨', title: 'New Releases', desc: 'Post-2010', color: palette.teal },
-    { id: 'classic', emoji: '🎞️', title: 'Classics', desc: 'Pre-2000', color: palette.gold },
-    { id: 'both', emoji: '🎬', title: 'Any Era', desc: 'No preference', color: palette.purple },
-  ];
 
   return (
     <div
