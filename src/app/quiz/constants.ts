@@ -77,6 +77,7 @@ export const QUESTION_LABELS = [
   'Favorite film',
   'Old or new?',
   'Your mood',
+  'What to avoid?',
   'Pick a tone',
   'Favorite actor',
 ];
@@ -88,6 +89,7 @@ export function emptyPerson(name = ''): PersonAnswers {
     favoriteMovieWhy: '',
     era: '',
     moods: [],
+    dislikedGenres: [],
     tone: '',
     favoriteActor: '',
   };
@@ -110,6 +112,9 @@ export function toApiFormat(person: PersonAnswers) {
     ...(person.favoriteMovieWhy.trim() && { favoriteMovieWhy: person.favoriteMovieWhy.trim() }),
     newVsClassic: eraMap[person.era] || person.era,
     moodPreference: person.moods.map((m) => GENRES.find((g) => g.id === m)?.label || m),
+    ...(person.dislikedGenres.length > 0 && {
+      dislikedGenres: person.dislikedGenres.map((m) => GENRES.find((g) => g.id === m)?.label || m),
+    }),
     tonePreference: toneMap[person.tone] || person.tone,
     ...(person.favoriteActor.trim() && { favoriteActor: person.favoriteActor.trim() }),
   };

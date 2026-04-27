@@ -10,6 +10,7 @@ import { useLanguage } from '@/i18n';
 
 import {
   BetweenPersons,
+  DislikedMoodStep,
   EraStep,
   FavoriteActorStep,
   FavoriteMovieStep,
@@ -24,7 +25,14 @@ import { quizMachine } from './quiz.machine';
 
 import type { PersonAnswers } from './types';
 
-const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
+const STEP_KEYS = [
+  'favoriteMovie',
+  'era',
+  'mood',
+  'dislikedMood',
+  'tone',
+  'favoriteActor',
+] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 
 export default function QuizPage() {
@@ -73,6 +81,8 @@ export default function QuizPage() {
         return currentPerson.era !== '';
       case 'mood':
         return currentPerson.moods.length >= 1;
+      case 'dislikedMood':
+        return true;
       case 'tone':
         return currentPerson.tone !== '';
       case 'favoriteActor':
@@ -158,11 +168,11 @@ export default function QuizPage() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ProgressDots current={currentStepIdx} total={5} />
+            <ProgressDots current={currentStepIdx} total={STEP_KEYS.length} />
             <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
               {t.quiz.nav.ofTotal
                 .replace('{current}', String(currentStepIdx + 1))
-                .replace('{total}', '5')}
+                .replace('{total}', String(STEP_KEYS.length))}
             </span>
           </div>
           {personLabel && (
@@ -208,6 +218,9 @@ export default function QuizPage() {
             )}
             {questionsStep === 'mood' && (
               <MoodStep person={currentPerson} onUpdate={updateCurrentPerson} />
+            )}
+            {questionsStep === 'dislikedMood' && (
+              <DislikedMoodStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
             {questionsStep === 'tone' && (
               <ToneStep person={currentPerson} onUpdate={updateCurrentPerson} />

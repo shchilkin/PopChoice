@@ -14,11 +14,12 @@ import {
   moderateInput,
 } from '@/utils/ai/moderation';
 
-import { createEmbedding, refineQueryWithLLM } from './embedding';
+import { createEmbedding, createEmbeddingsForPeople, refineQueryWithLLM } from './embedding';
 import { SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import {
   enhanceSimilarMoviesWithPosters,
   generateMovieDescriptions,
+  getGroupSimilarMovies,
   getMovieInfo,
   getRecommendation,
   getSimilarMovies,
@@ -42,6 +43,21 @@ class EnqueueTimeoutError extends Error {
     super(message);
     this.name = 'EnqueueTimeoutError';
   }
+}
+
+function averageEmbeddings(embeddings: number[][]): number[] {
+  if (embeddings.length === 0) return [];
+  if (embeddings.length === 1) return embeddings[0];
+
+  const dims = embeddings[0].length;
+  const sum = new Array<number>(dims).fill(0);
+  for (const vector of embeddings) {
+    for (let i = 0; i < dims; i += 1) {
+      sum[i] += vector[i];
+    }
+  }
+
+  return sum.map((value) => value / embeddings.length);
 }
 
 async function withTimeout<T>(
@@ -124,6 +140,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
         p.tonePreference,
         p.favoriteMovieWhy,
         ...p.moodPreference,
+        ...(p.dislikedGenres ?? []),
       ].filter((text): text is string => typeof text === 'string' && text.length > 0),
     );
     const moderationResult = await moderateInput(textsToModerate);
@@ -156,6 +173,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
         { field: 'newVsClassic', value: p.newVsClassic },
         { field: 'tonePreference', value: p.tonePreference },
         ...p.moodPreference.map((m) => ({ field: 'moodPreference', value: m })),
+        ...(p.dislikedGenres ?? []).map((m) => ({ field: 'dislikedGenres', value: m })),
         ...(p.favoriteMovieWhy ? [{ field: 'favoriteMovieWhy', value: p.favoriteMovieWhy }] : []),
       ]);
       const judgeResult = await judgeForMoviePlatform(labeledInputs, moderationResult.categories);
@@ -185,7 +203,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
     // while the DB movie count is fetched in parallel (both are independent of each other).
     // Falls back gracefully to raw text if the LLM call fails or the field is empty.
     const [refinedQueryTags, dbMovieCountResult] = await Promise.all([
-      refineQueryWithLLM(allPeopleData),
+      allPeopleData.length === 1 ? refineQueryWithLLM(allPeopleData) : Promise.resolve(null),
       (async () => {
         try {
           const db = getDbClient();
@@ -198,13 +216,22 @@ async function postHandler(req: NextRequest): Promise<Response> {
       })(),
     ]);
 
-    // Step 1: Create embedding (sequential after enrichment — depends on refinedQueryTags).
-    // DB count was already fetched in parallel above, so this only adds embedding latency.
-    const embedding = await createEmbedding(allPeopleData, refinedQueryTags ?? undefined);
-    logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
+    // Step 1: Create embedding(s) for retrieval.
+    const perPersonEmbeddings =
+      allPeopleData.length === 1
+        ? [await createEmbedding(allPeopleData, refinedQueryTags ?? undefined)]
+        : await createEmbeddingsForPeople(allPeopleData);
+    const embedding = averageEmbeddings(perPersonEmbeddings);
+    logger.info(
+      { dbMovieCount: dbMovieCountResult, personCount: allPeopleData.length },
+      'Embedding(s) created, DB count fetched',
+    );
 
     // Step 2: Find similar movies (local vector search)
-    let similarMovies = await getSimilarMovies(embedding);
+    let similarMovies =
+      allPeopleData.length === 1
+        ? await getSimilarMovies(perPersonEmbeddings[0])
+        : await getGroupSimilarMovies(perPersonEmbeddings);
 
     // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
     let usedBroaderSearch = false;
@@ -312,7 +339,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
     }
 
     // Step 4: Get recommendation from OpenAI
-    const responseMessage = await getRecommendation(similarMovies, locale);
+    const responseMessage = await getRecommendation(similarMovies, locale, allPeopleData);
     logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
 
     // Step 5: Get localized poster + name for main recommendation

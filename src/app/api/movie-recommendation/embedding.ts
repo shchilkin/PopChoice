@@ -144,3 +144,17 @@ export async function createEmbedding(
     throw new Error(`Failed to create embedding: ${error}`);
   }
 }
+
+/** Create one embedding per person for group-mode retrieval. */
+export async function createEmbeddingsForPeople(
+  allPeopleData: PersonFormData[],
+): Promise<number[][]> {
+  if (allPeopleData.length === 0) return [];
+
+  if (allPeopleData.length === 1) {
+    return [await createEmbedding(allPeopleData)];
+  }
+
+  const embeddings = await Promise.all(allPeopleData.map((person) => createEmbedding([person])));
+  return embeddings;
+}

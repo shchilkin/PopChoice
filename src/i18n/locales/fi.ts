@@ -88,7 +88,14 @@ export const fi: Translations = {
       ofTotal: '{current} / {total}',
       personTurn: '{name}n vuoro',
     },
-    labels: ['Lempifilmi', 'Vanha vai uusi?', 'Tunnelmasi', 'Valitse sävy', 'Lempinäyttelijä'],
+    labels: [
+      'Lempifilmi',
+      'Vanha vai uusi?',
+      'Tunnelmasi',
+      'Vältettävät genret',
+      'Valitse sävy',
+      'Lempinäyttelijä',
+    ],
     favoriteMovie: {
       title: 'Mikä on lempifilmisi?',
       hint: 'Tämä auttaa meitä ymmärtämään makuasi. Mikä tahansa elokuva, joka on jäänyt mieleen.',
@@ -115,6 +122,13 @@ export const fi: Translations = {
       pickOne: 'Valitse yksi tai useampi',
       selectedSingular: '✓ {n} genre valittu',
       selectedPlural: '✓ {n} genreä valittu',
+    },
+    dislikedMood: {
+      title: 'Onko genrejä, joita haluat välttää?',
+      pickAny: 'Valinnainen: valitse genret, joita et halua tänä iltana',
+      selectedSingular: '✗ {n} vältettävä genre',
+      selectedPlural: '✗ {n} vältettävää genreä',
+      skip: 'Ohita tämä kysymys',
     },
     tone: {
       title: 'Millaista sävyä etsit?',

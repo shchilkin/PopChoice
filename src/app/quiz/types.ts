@@ -7,6 +7,7 @@ export interface PersonAnswers {
   favoriteMovieWhy: string;
   era: Era | '';
   moods: string[];
+  dislikedGenres: string[];
   tone: Tone | '';
   favoriteActor: string;
 }

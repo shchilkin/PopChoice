@@ -85,7 +85,14 @@ export const en = {
       ofTotal: '{current} of {total}',
       personTurn: "{name}'s turn",
     },
-    labels: ['Favorite film', 'Old or new?', 'Your mood', 'Pick a tone', 'Favorite actor'],
+    labels: [
+      'Favorite film',
+      'Old or new?',
+      'Your mood',
+      'Avoid genres',
+      'Pick a tone',
+      'Favorite actor',
+    ],
     favoriteMovie: {
       title: "What's your favorite movie?",
       hint: 'This helps us understand your taste. Any film that made an impression on you.',
@@ -109,6 +116,13 @@ export const en = {
       pickOne: 'Pick one or more',
       selectedSingular: '✓ {n} genre selected',
       selectedPlural: '✓ {n} genres selected',
+    },
+    dislikedMood: {
+      title: 'Any genres you want to avoid?',
+      pickAny: 'Optional: pick anything you do not want tonight',
+      selectedSingular: '✗ {n} genre to avoid',
+      selectedPlural: '✗ {n} genres to avoid',
+      skip: 'Skip this question',
     },
     tone: {
       title: 'What tone are you after?',

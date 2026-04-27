@@ -29,6 +29,16 @@ export const personFormDataSchema = z.object({
     )
     .min(1, 'At least one mood preference is required')
     .max(10, 'No more than 10 mood preferences allowed'),
+  dislikedGenres: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1, 'Disliked genre cannot be empty')
+        .max(100, 'Each disliked genre must be 100 characters or fewer'),
+    )
+    .max(10, 'No more than 10 disliked genres allowed')
+    .optional(),
   tonePreference: z
     .string()
     .trim()

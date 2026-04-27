@@ -122,14 +122,20 @@ export const quizMachine = setup({
         },
         mood: {
           on: {
-            NEXT: { target: 'tone', actions: 'setDirForward' },
+            NEXT: { target: 'dislikedMood', actions: 'setDirForward' },
             BACK: { target: 'era', actions: 'setDirBackward' },
+          },
+        },
+        dislikedMood: {
+          on: {
+            NEXT: { target: 'tone', actions: 'setDirForward' },
+            BACK: { target: 'mood', actions: 'setDirBackward' },
           },
         },
         tone: {
           on: {
             NEXT: { target: 'favoriteActor', actions: 'setDirForward' },
-            BACK: { target: 'mood', actions: 'setDirBackward' },
+            BACK: { target: 'dislikedMood', actions: 'setDirBackward' },
           },
         },
         favoriteActor: {

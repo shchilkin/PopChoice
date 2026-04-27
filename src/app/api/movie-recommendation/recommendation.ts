@@ -23,8 +23,17 @@ const recommendationResponseFormat = {
   },
 };
 
-const buildPrompt = (locale: Locale) => {
+const buildPrompt = (locale: Locale, isGroup: boolean) => {
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
+  const groupExtra = isGroup
+    ? `
+For multiple people:
+- Use the provided "Group analysis" section to identify overlap and conflicts.
+- Prioritize strong common ground first.
+- Treat listed disliked genres as strict avoid constraints.
+- If there are conflicts, choose a movie that still gives each person at least one meaningful reason to enjoy it.
+`
+    : '';
   return `You are PopChoice, a friendly and enthusiastic movie expert who loves helping people discover the perfect film for their mood and situation. 
 You will receive two pieces of information: 
 1. Context about available movies (including their plots, ratings, and vibes).
@@ -36,11 +45,7 @@ For single person:
 - Start with a warm greeting or a fun comment.
 - Clearly state your top recommendation and why it fits their preferences.
 
-For multiple people:
-- Start with a fun comment about finding a movie for the group.
-- Analyze the common themes and preferences across all group members.
-- Recommend a movie that best satisfies the group's combined preferences.
-- Mention how it appeals to different members' tastes.
+${groupExtra}
 
 - Mention a couple of relevant details about the movie (genre, mood, why it's a good fit).
 - Do not suggest alternatives. Only provide one best match.
@@ -58,12 +63,15 @@ const movieService = new MovieService();
 // Vector DB search
 // ---------------------------------------------------------------------------
 
-async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch[] | null> {
+async function findNearestMatch(
+  embedding: number[],
+  matchCount: number = 6,
+): Promise<EnhancedMovieMatch[] | null> {
   const db = getDbClient();
   const { error, data } = await db.rpc('match_movies', {
     query_embedding: embedding,
     match_threshold: 0.1,
-    match_count: 6, // Get 6 movies: 1 main recommendation + 5 additional movies
+    match_count: matchCount,
   });
 
   if (error) {
@@ -80,9 +88,12 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
 }
 
 /** Find similar movies in the local vector store. Returns an empty array if none found or DB unavailable. */
-export async function getSimilarMovies(embedding: number[]): Promise<EnhancedMovieMatch[]> {
+export async function getSimilarMovies(
+  embedding: number[],
+  matchCount: number = 6,
+): Promise<EnhancedMovieMatch[]> {
   try {
-    const similarMovies = await findNearestMatch(embedding);
+    const similarMovies = await findNearestMatch(embedding, matchCount);
     const result = similarMovies ?? [];
     logger.info({ count: result.length }, 'Local similar movies found');
     return result;
@@ -92,21 +103,154 @@ export async function getSimilarMovies(embedding: number[]): Promise<EnhancedMov
   }
 }
 
+type ScoredMovie = EnhancedMovieMatch & {
+  avgSimilarity: number;
+  minSimilarity: number;
+};
+
+/** Movies that appear in every person's top-N list, ranked by average similarity. */
+export function intersectResults(perPersonResults: EnhancedMovieMatch[][]): EnhancedMovieMatch[] {
+  if (perPersonResults.length === 0) return [];
+  if (perPersonResults.length === 1) return [...perPersonResults[0]];
+
+  const indexed = perPersonResults.map(
+    (results) => new Map(results.map((movie) => [movie.id, movie] as const)),
+  );
+  const firstResults = perPersonResults[0];
+
+  const intersection: ScoredMovie[] = [];
+  for (const movie of firstResults) {
+    const matches = indexed.map((m) => m.get(movie.id)).filter(Boolean) as EnhancedMovieMatch[];
+    if (matches.length !== perPersonResults.length) continue;
+
+    const sum = matches.reduce((acc, item) => acc + item.similarity, 0);
+    const avgSimilarity = sum / matches.length;
+    const minSimilarity = Math.min(...matches.map((item) => item.similarity));
+
+    intersection.push({ ...movie, similarity: avgSimilarity, avgSimilarity, minSimilarity });
+  }
+
+  return intersection.sort((a, b) => b.avgSimilarity - a.avgSimilarity);
+}
+
+/**
+ * Fallback ranking across union of per-person results.
+ * Score = highest worst-case similarity (max-min fairness).
+ */
+export function maxMinFallback(perPersonResults: EnhancedMovieMatch[][]): EnhancedMovieMatch[] {
+  if (perPersonResults.length === 0) return [];
+
+  const indexed = perPersonResults.map(
+    (results) => new Map(results.map((movie) => [movie.id, movie] as const)),
+  );
+  const unionMap = new Map<number, EnhancedMovieMatch>();
+
+  for (const results of perPersonResults) {
+    for (const movie of results) {
+      const existing = unionMap.get(movie.id);
+      if (!existing || movie.similarity > existing.similarity) {
+        unionMap.set(movie.id, movie);
+      }
+    }
+  }
+
+  const ranked: ScoredMovie[] = [];
+  for (const movie of unionMap.values()) {
+    const perPersonSimilarity = indexed.map((m) => m.get(movie.id)?.similarity ?? 0);
+    const minSimilarity = Math.min(...perPersonSimilarity);
+    const avgSimilarity =
+      perPersonSimilarity.reduce((acc, value) => acc + value, 0) / perPersonSimilarity.length;
+    ranked.push({ ...movie, similarity: minSimilarity, minSimilarity, avgSimilarity });
+  }
+
+  return ranked.sort((a, b) => {
+    if (b.minSimilarity !== a.minSimilarity) return b.minSimilarity - a.minSimilarity;
+    return b.avgSimilarity - a.avgSimilarity;
+  });
+}
+
+/** Group retrieval strategy: intersection first, then max-min fallback. */
+export async function getGroupSimilarMovies(embeddings: number[][]): Promise<EnhancedMovieMatch[]> {
+  const perPersonResults = await Promise.all(
+    embeddings.map((embedding) => getSimilarMovies(embedding, 15)),
+  );
+
+  const intersected = intersectResults(perPersonResults);
+  if (intersected.length >= 3) {
+    return intersected.slice(0, 6);
+  }
+
+  const fallback = maxMinFallback(perPersonResults);
+  return fallback.slice(0, 6);
+}
+
+function uniqueValues(values: (string | undefined)[]): string[] {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim()))));
+}
+
+export function buildGroupAnalysis(allPeopleData: PersonFormData[]): string {
+  if (allPeopleData.length <= 1) return '';
+
+  const moodSets = allPeopleData.map((person) => new Set(person.moodPreference));
+  const commonMoods = allPeopleData[0].moodPreference.filter((mood) =>
+    moodSets.every((set) => set.has(mood)),
+  );
+
+  const moodCounts = new Map<string, number>();
+  for (const person of allPeopleData) {
+    const uniqueMoods = new Set(person.moodPreference);
+    for (const mood of uniqueMoods) {
+      moodCounts.set(mood, (moodCounts.get(mood) ?? 0) + 1);
+    }
+  }
+  const conflictingMoods = Array.from(moodCounts.entries())
+    .filter(([, count]) => count > 0 && count < allPeopleData.length)
+    .map(([mood]) => mood);
+
+  const toneValues = uniqueValues(allPeopleData.map((person) => person.tonePreference));
+  const eraValues = uniqueValues(allPeopleData.map((person) => person.newVsClassic));
+  const hardConstraints = uniqueValues(
+    allPeopleData.flatMap((person) => person.dislikedGenres ?? []),
+  );
+
+  const lines = [
+    `Group size: ${allPeopleData.length}`,
+    `Common moods: ${commonMoods.length > 0 ? commonMoods.join(', ') : 'none'}`,
+    `Conflicting moods: ${conflictingMoods.length > 0 ? conflictingMoods.join(', ') : 'none'}`,
+    `Tone agreement: ${toneValues.length === 1 ? toneValues[0] : toneValues.join(' | ')}`,
+    `Era agreement: ${eraValues.length === 1 ? eraValues[0] : eraValues.join(' | ')}`,
+    `Hard avoid genres: ${hardConstraints.length > 0 ? hardConstraints.join(', ') : 'none'}`,
+  ];
+
+  return lines.join('\n');
+}
+
 // ---------------------------------------------------------------------------
 // OpenAI recommendation
 // ---------------------------------------------------------------------------
 
 /** Ask OpenAI to pick the single best movie from the candidates. */
-export async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: Locale) {
+export async function getRecommendation(
+  similarMovies: EnhancedMovieMatch[],
+  locale: Locale,
+  allPeopleData: PersonFormData[],
+) {
   try {
-    // Convert enhanced movie data to formatted string for AI consumption
+    const isGroup = allPeopleData.length > 1;
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
+    const preferencesContext = combineAllPeopleDataToString(allPeopleData);
+    const groupAnalysis = isGroup ? buildGroupAnalysis(allPeopleData) : '';
+    const userContext = [
+      `Movies context:\n${moviesContext}`,
+      `User preferences:\n${preferencesContext}`,
+      ...(groupAnalysis ? [`Group analysis:\n${groupAnalysis}`] : []),
+    ].join('\n\n');
 
     const recommendation = await getOpenAIClient().chat.completions.create({
       model: MODELS.RECOMMENDATION,
       messages: [
-        { role: 'system', content: buildPrompt(locale) },
-        { role: 'user', content: moviesContext },
+        { role: 'system', content: buildPrompt(locale, isGroup) },
+        { role: 'user', content: userContext },
       ],
       response_format: recommendationResponseFormat,
     });

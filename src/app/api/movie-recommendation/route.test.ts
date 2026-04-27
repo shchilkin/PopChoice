@@ -71,9 +71,24 @@ vi.mock('@/services', () => ({
   IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
   MovieService: vi.fn(function () {
     return {
-      getMovieDetails: vi.fn(() =>
-        Promise.resolve({ posterURL: undefined, localizedName: undefined }),
+      getMovieByTitle: vi.fn(() =>
+        Promise.resolve({
+          id: 1,
+          title: 'Test Movie',
+          poster_path: null,
+          overview: 'A test movie.',
+        }),
       ),
+      getMovieById: vi.fn(() =>
+        Promise.resolve({
+          id: 1,
+          title: 'Test Movie',
+          poster_path: null,
+          overview: 'A test movie.',
+        }),
+      ),
+      getLocalizedMovieInfo: vi.fn(() => Promise.resolve(null)),
+      getPosterURL: vi.fn(() => undefined),
     };
   }),
 }));

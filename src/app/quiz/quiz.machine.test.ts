@@ -69,6 +69,10 @@ describe('quiz machine – forward paths (model-based)', () => {
             expect(actor.getSnapshot().matches({ questions: 'mood' })).toBe(true);
           },
 
+          '#quiz.questions.dislikedMood': () => {
+            expect(actor.getSnapshot().matches({ questions: 'dislikedMood' })).toBe(true);
+          },
+
           '#quiz.questions.tone': () => {
             expect(actor.getSnapshot().matches({ questions: 'tone' })).toBe(true);
           },
@@ -146,7 +150,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob'] });
 
-    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' }); // complete person 0
+    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' }); // complete person 0
     actor.send({ type: 'CONTINUE' }); // → person 1, favoriteMovie
 
     actor.send({ type: 'BACK' }); // → betweenPersons
@@ -161,7 +165,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob'] });
 
-    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' }); // → betweenPersons
+    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' }); // → betweenPersons
 
     actor.send({ type: 'BACK' }); // → questions.favoriteActor, person 0
 

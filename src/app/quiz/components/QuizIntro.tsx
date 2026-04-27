@@ -89,20 +89,17 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
             />
           </button>
 
-          {/* Group — disabled until multi-person flow ships */}
+          {/* Group */}
           <button
-            disabled
             onClick={onStartGroup}
-            className="disabled:opacity-50 disabled:cursor-not-allowed group flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
+            className="group flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
             style={{
               background: 'var(--pc-surface)',
               border: '1px solid var(--pc-bd2)',
             }}
             onMouseEnter={(e) => {
-              if (!(e.currentTarget as HTMLButtonElement).disabled) {
-                (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
-                (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
-              }
+              (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
+              (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';
