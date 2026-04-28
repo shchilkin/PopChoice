@@ -123,7 +123,7 @@ export const fi: Translations = {
       selectedSingular: '✓ {n} genre valittu',
       selectedPlural: '✓ {n} genreä valittu',
     },
-    dislikedMood: {
+    avoidGenres: {
       title: 'Onko genrejä, joita haluat välttää?',
       pickAny: 'Valinnainen: valitse genret, joita et halua tänä iltana',
       selectedSingular: '✗ {n} vältettävä genre',

@@ -120,7 +120,7 @@ export const ru: Translations = {
       selectedSingular: '✓ Выбран {n} жанр',
       selectedPlural: '✓ Выбрано {n} жанра',
     },
-    dislikedMood: {
+    avoidGenres: {
       title: 'Какие жанры исключить?',
       pickAny: 'Необязательно: отметьте жанры, которые вы точно не хотите сегодня',
       selectedSingular: '✗ Исключён {n} жанр',

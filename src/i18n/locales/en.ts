@@ -117,7 +117,7 @@ export const en = {
       selectedSingular: '✓ {n} genre selected',
       selectedPlural: '✓ {n} genres selected',
     },
-    dislikedMood: {
+    avoidGenres: {
       title: 'Any genres you want to avoid?',
       pickAny: 'Optional: pick anything you do not want tonight',
       selectedSingular: '✗ {n} genre to avoid',

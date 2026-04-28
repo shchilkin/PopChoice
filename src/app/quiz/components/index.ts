@@ -3,7 +3,7 @@ export { GroupSetup } from './GroupSetup';
 export { QuizIntro } from './QuizIntro';
 export { QuizNavigation } from './QuizNavigation';
 export {
-  DislikedMoodStep,
+  AvoidGenresStep,
   EraStep,
   FavoriteActorStep,
   FavoriteMovieStep,

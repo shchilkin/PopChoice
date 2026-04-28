@@ -10,7 +10,7 @@ import { useLanguage } from '@/i18n';
 
 import {
   BetweenPersons,
-  DislikedMoodStep,
+  AvoidGenresStep,
   EraStep,
   FavoriteActorStep,
   FavoriteMovieStep,
@@ -25,14 +25,7 @@ import { quizMachine } from './quiz.machine';
 
 import type { PersonAnswers } from './types';
 
-const STEP_KEYS = [
-  'favoriteMovie',
-  'era',
-  'mood',
-  'dislikedMood',
-  'tone',
-  'favoriteActor',
-] as const;
+const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'avoidGenres', 'tone', 'favoriteActor'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 
 export default function QuizPage() {
@@ -81,7 +74,7 @@ export default function QuizPage() {
         return currentPerson.era !== '';
       case 'mood':
         return currentPerson.moods.length >= 1;
-      case 'dislikedMood':
+      case 'avoidGenres':
         return true;
       case 'tone':
         return currentPerson.tone !== '';
@@ -219,8 +212,8 @@ export default function QuizPage() {
             {questionsStep === 'mood' && (
               <MoodStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
-            {questionsStep === 'dislikedMood' && (
-              <DislikedMoodStep person={currentPerson} onUpdate={updateCurrentPerson} />
+            {questionsStep === 'avoidGenres' && (
+              <AvoidGenresStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
             {questionsStep === 'tone' && (
               <ToneStep person={currentPerson} onUpdate={updateCurrentPerson} />

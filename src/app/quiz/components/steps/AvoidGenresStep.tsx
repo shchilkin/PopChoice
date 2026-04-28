@@ -8,12 +8,12 @@ import { GENRES } from '../../constants';
 
 import type { PersonAnswers } from '../../types';
 
-interface DislikedMoodStepProps {
+interface AvoidGenresStepProps {
   person: PersonAnswers;
   onUpdate: (updates: Partial<PersonAnswers>) => void;
 }
 
-export function DislikedMoodStep({ person, onUpdate }: DislikedMoodStepProps) {
+export function AvoidGenresStep({ person, onUpdate }: AvoidGenresStepProps) {
   const { t } = useLanguage();
 
   return (
@@ -40,7 +40,7 @@ export function DislikedMoodStep({ person, onUpdate }: DislikedMoodStepProps) {
               lineHeight: 1.1,
             }}
           >
-            {t.quiz.dislikedMood.title}
+            {t.quiz.avoidGenres.title}
           </h2>
           <p
             style={{
@@ -49,7 +49,7 @@ export function DislikedMoodStep({ person, onUpdate }: DislikedMoodStepProps) {
               marginTop: 2,
             }}
           >
-            {t.quiz.dislikedMood.pickAny}
+            {t.quiz.avoidGenres.pickAny}
           </p>
         </div>
       </div>
@@ -105,7 +105,7 @@ export function DislikedMoodStep({ person, onUpdate }: DislikedMoodStepProps) {
           background: 'transparent',
         }}
       >
-        {t.quiz.dislikedMood.skip}
+        {t.quiz.avoidGenres.skip}
       </button>
 
       {person.dislikedGenres.length > 0 && (
@@ -117,11 +117,11 @@ export function DislikedMoodStep({ person, onUpdate }: DislikedMoodStepProps) {
           }}
         >
           {person.dislikedGenres.length === 1
-            ? t.quiz.dislikedMood.selectedSingular.replace(
+            ? t.quiz.avoidGenres.selectedSingular.replace(
                 '{n}',
                 String(person.dislikedGenres.length),
               )
-            : t.quiz.dislikedMood.selectedPlural.replace(
+            : t.quiz.avoidGenres.selectedPlural.replace(
                 '{n}',
                 String(person.dislikedGenres.length),
               )}

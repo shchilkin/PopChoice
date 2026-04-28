@@ -69,8 +69,8 @@ describe('quiz machine – forward paths (model-based)', () => {
             expect(actor.getSnapshot().matches({ questions: 'mood' })).toBe(true);
           },
 
-          '#quiz.questions.dislikedMood': () => {
-            expect(actor.getSnapshot().matches({ questions: 'dislikedMood' })).toBe(true);
+          '#quiz.questions.avoidGenres': () => {
+            expect(actor.getSnapshot().matches({ questions: 'avoidGenres' })).toBe(true);
           },
 
           '#quiz.questions.tone': () => {

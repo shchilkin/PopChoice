@@ -1,4 +1,4 @@
-export { DislikedMoodStep } from './DislikedMoodStep';
+export { AvoidGenresStep } from './AvoidGenresStep';
 export { EraStep } from './EraStep';
 export { FavoriteActorStep } from './FavoriteActorStep';
 export { FavoriteMovieStep } from './FavoriteMovieStep';

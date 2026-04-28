@@ -145,7 +145,7 @@ export async function createEmbedding(
   }
 }
 
-/** Create one embedding per person for group-mode retrieval. */
+/** Create one embedding per person for group-mode retrieval (single batched API call). */
 export async function createEmbeddingsForPeople(
   allPeopleData: PersonFormData[],
 ): Promise<number[][]> {
@@ -155,6 +155,26 @@ export async function createEmbeddingsForPeople(
     return [await createEmbedding(allPeopleData)];
   }
 
-  const embeddings = await Promise.all(allPeopleData.map((person) => createEmbedding([person])));
-  return embeddings;
+  try {
+    const embeddingInputs = allPeopleData.map((person) => combineAllPeopleDataToString([person]));
+
+    const embeddingResponse = await getOpenAIClient().embeddings.create({
+      model: MODELS.EMBEDDING,
+      input: embeddingInputs,
+    });
+
+    const embeddings = embeddingResponse.data.map((item) => item.embedding);
+
+    if (embeddings.length !== allPeopleData.length || embeddings.some((embedding) => !embedding)) {
+      throw new Error('Missing embeddings returned from OpenAI.');
+    }
+
+    return embeddings;
+  } catch (error) {
+    logger.error(
+      { error, peopleCount: allPeopleData.length },
+      'Failed to create batched embeddings for people',
+    );
+    throw new Error(`Failed to create embeddings for people: ${error}`);
+  }
 }

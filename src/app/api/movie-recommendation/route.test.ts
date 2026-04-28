@@ -87,7 +87,7 @@ vi.mock('@/services', () => ({
           overview: 'A test movie.',
         }),
       ),
-      getLocalizedMovieInfo: vi.fn(() => Promise.resolve(null)),
+      getLocalizedMovieInfo: vi.fn(() => Promise.resolve(undefined)),
       getPosterURL: vi.fn(() => undefined),
     };
   }),

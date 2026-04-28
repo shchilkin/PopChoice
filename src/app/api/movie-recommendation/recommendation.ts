@@ -169,19 +169,48 @@ export function maxMinFallback(perPersonResults: EnhancedMovieMatch[][]): Enhanc
   });
 }
 
-/** Group retrieval strategy: intersection first, then max-min fallback. */
-export async function getGroupSimilarMovies(embeddings: number[][]): Promise<EnhancedMovieMatch[]> {
-  const perPersonResults = await Promise.all(
-    embeddings.map((embedding) => getSimilarMovies(embedding, 15)),
-  );
+export const GROUP_PER_PERSON_LIMIT = 15;
+export const GROUP_INTERSECTION_MIN_RESULTS = 3;
+export const GROUP_RECOMMENDATION_LIMIT = 6;
+
+export type SimilarMoviesRetriever = (
+  embedding: number[],
+  limit: number,
+) => Promise<EnhancedMovieMatch[]>;
+
+/**
+ * Pure group ranking policy so intersection/fallback behavior can be tested
+ * independently from the retrieval layer.
+ */
+export function selectGroupSimilarMoviesFromResults(
+  perPersonResults: EnhancedMovieMatch[][],
+  options: {
+    intersectionMinResults?: number;
+    limit?: number;
+  } = {},
+): EnhancedMovieMatch[] {
+  const intersectionMinResults = options.intersectionMinResults ?? GROUP_INTERSECTION_MIN_RESULTS;
+  const limit = options.limit ?? GROUP_RECOMMENDATION_LIMIT;
 
   const intersected = intersectResults(perPersonResults);
-  if (intersected.length >= 3) {
-    return intersected.slice(0, 6);
+  if (intersected.length >= intersectionMinResults) {
+    return intersected.slice(0, limit);
   }
 
   const fallback = maxMinFallback(perPersonResults);
-  return fallback.slice(0, 6);
+  return fallback.slice(0, limit);
+}
+
+/** Group retrieval strategy: intersection first, then max-min fallback. */
+export async function getGroupSimilarMovies(
+  embeddings: number[][],
+  similarMoviesRetriever: SimilarMoviesRetriever = getSimilarMovies,
+): Promise<EnhancedMovieMatch[]> {
+  const perPersonResults = await Promise.all(
+    embeddings.map((embedding) => similarMoviesRetriever(embedding, GROUP_PER_PERSON_LIMIT)),
+  );
+
+  return selectGroupSimilarMoviesFromResults(perPersonResults);
 }
 
 function uniqueValues(values: (string | undefined)[]): string[] {
