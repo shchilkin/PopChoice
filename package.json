@@ -10,7 +10,7 @@
   "scripts": {
     "analyze-movies": "tsx scripts/analyze-movies.ts",
     "build": "next build",
-    "build:services": "npm run build --workspaces --if-present",
+    "build:services": "turbo run build --filter=./services/*",
     "build-storybook": "storybook build",
     "bull-board": "tsx --env-file=.env scripts/bull-board.ts",
     "calibrate-similarity": "tsx --env-file=.env scripts/calibrate-similarity.ts",
@@ -32,7 +32,7 @@
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
     "test:server": "vitest --project=server",
-    "test:services": "npm run test --workspaces --if-present",
+    "test:services": "turbo run test --filter=./services/*",
     "pretest:storybook": "npx playwright install && npx playwright install-deps",
     "test:storybook": "vitest --project=storybook run",
     "type-check": "tsc --noEmit"
@@ -97,9 +97,11 @@
     "sort-package-json": "^3.6.1",
     "storybook": "^10",
     "tailwindcss": "^4",
+    "turbo": "^2.9.6",
     "typescript": "6.0.3",
     "vitest": "^4.1.4"
   },
+  "packageManager": "npm@11.6.2",
   "engines": {
     "node": ">=24",
     "npm": ">=11"
