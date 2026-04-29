@@ -1,0 +1,5 @@
+[build]
+buildCommand = "npm ci && npm run build --workspace=services/movie-backfill"
+
+[deploy]
+startCommand = "npm run start --workspace=services/movie-backfill"
