@@ -1,6 +1,2 @@
 [build]
-command = "npm ci"
-
-[deploy]
-startCommand = "npm run start:workers --workspace=apps/web"
-runtime = "NODE"
+dockerfilePath = "apps/web/workers.Dockerfile"

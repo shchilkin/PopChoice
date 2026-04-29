@@ -1,5 +1,2 @@
 [build]
-command = "npm ci"
-
-[deploy]
-startCommand = "npm run bull-board --workspace=apps/web"
+dockerfilePath = "apps/web/bull-board.Dockerfile"

@@ -1,5 +1,2 @@
 [build]
-buildCommand = "npm ci && npm run build --workspace=apps/web"
-
-[deploy]
-startCommand = "npm run start --workspace=apps/web"
+dockerfilePath = "apps/web/Dockerfile"
