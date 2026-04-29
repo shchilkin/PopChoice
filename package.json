@@ -10,10 +10,12 @@
   "scripts": {
     "analyze-movies": "tsx scripts/analyze-movies.ts",
     "build": "next build",
+    "build:services": "npm run build --workspaces --if-present",
     "build-storybook": "storybook build",
     "bull-board": "tsx --env-file=.env scripts/bull-board.ts",
     "calibrate-similarity": "tsx --env-file=.env scripts/calibrate-similarity.ts",
     "dev": "next dev",
+    "dev:shared": "npm run dev --workspace=packages/shared",
     "fix": "npm run lint:fix && npm run format:write && npm run format:package",
     "format:check": "prettier --check .",
     "format:package": "sort-package-json",
@@ -30,6 +32,7 @@
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
     "test:server": "vitest --project=server",
+    "test:services": "npm run test --workspaces --if-present",
     "pretest:storybook": "npx playwright install && npx playwright install-deps",
     "test:storybook": "vitest --project=storybook run",
     "type-check": "tsc --noEmit"
