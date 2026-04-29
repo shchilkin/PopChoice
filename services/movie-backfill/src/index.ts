@@ -23,7 +23,7 @@ import {
   updateMovie,
   type IncompleteMovie,
 } from './database.js';
-import { createEmbeddings, createOpenAIClient } from './embeddings.js';
+import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
 import {
   extractUSCertification,
@@ -51,9 +51,6 @@ async function main(): Promise<void> {
   });
 
   initDatabase(config.databaseUrl);
-
-  // Create a single OpenAI client to reuse across all embedding calls
-  const openaiClient = createOpenAIClient(config.openaiApiKey);
 
   let totalProcessed = 0;
   let totalUpdated = 0;
@@ -174,7 +171,7 @@ async function main(): Promise<void> {
       let embeddings: number[][];
       try {
         embeddings = await createEmbeddings(
-          openaiClient,
+          config.openaiApiKey,
           pendingUpdates.map((u) => u.embeddingText),
         );
       } catch (err) {

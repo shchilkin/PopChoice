@@ -8,7 +8,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 const eslintConfig = [
   // Ignore build output, public assets, and service sub-packages
   {
-    ignores: ['storybook-static/**', 'public/**', 'services/**', '.next/**', 'node_modules/**'],
+    ignores: ['storybook-static/**', 'public/**', '.next/**', 'node_modules/**'],
   },
   ...nextConfig,
   prettierConfig,

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -76,10 +77,7 @@ export default function GlobalError({
           >
             Try again
           </button>
-          {/* global-error renders when the root layout throws, so the Next.js
-              router may be unavailable — use a plain anchor for safe navigation. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a
+          <Link
             href="/"
             style={{
               padding: '0.75rem 1.5rem',
@@ -92,7 +90,7 @@ export default function GlobalError({
             }}
           >
             Go home
-          </a>
+          </Link>
         </div>
         {error.digest && (
           <p style={{ marginTop: '2rem', color: '#52525b', fontSize: '0.72rem' }}>
