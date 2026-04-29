@@ -22,7 +22,10 @@
     "lint:fix": "npm run lint:fix --workspace=apps/web",
     "prepare": "husky || true",
     "test": "npm run test --workspace=apps/web",
-    "test:services": "turbo run test --filter=./services/*"
+    "test:server": "npm run test:server --workspace=apps/web",
+    "test:services": "turbo run test --filter=./services/*",
+    "test:storybook": "npm run test:storybook --workspace=apps/web",
+    "type-check": "npm run type-check --workspace=apps/web"
   },
   "devDependencies": {
     "husky": "^9.1.7",

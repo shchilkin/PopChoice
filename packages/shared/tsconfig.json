@@ -9,7 +9,9 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "composite": true,
     "declaration": true,
+    "declarationMap": true,
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
