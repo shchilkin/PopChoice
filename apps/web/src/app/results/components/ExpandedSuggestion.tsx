@@ -13,7 +13,6 @@ import { StarRating } from './StarRating';
 
 import type { MovieRecommendation } from '@/utils/client';
 
-
 export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
   const { t } = useLanguage();
   const score = movie.score_rating ?? 0;

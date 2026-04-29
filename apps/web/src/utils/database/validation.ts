@@ -2,7 +2,6 @@ import { getDbClient } from '@/clients/dbClient';
 
 import type { MovieRecord } from '../types';
 
-
 /**
  * Check if a movie already exists in the database
  * @param name - Movie name

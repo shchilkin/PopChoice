@@ -5,7 +5,6 @@ import { getDbClient } from '@/clients/dbClient';
 
 import { GET } from './route';
 
-
 // Mock the dbClient module
 const mockMovies = [
   {

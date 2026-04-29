@@ -8,7 +8,6 @@ import type {
   TMDBDiscoverMovie,
 } from '@/app/api/movie-recommendation/tmdb';
 
-
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 
 export type MovieSeedJobData = {

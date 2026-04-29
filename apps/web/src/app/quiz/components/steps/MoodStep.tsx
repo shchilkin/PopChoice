@@ -8,7 +8,6 @@ import { GENRES } from '../../constants';
 
 import type { PersonAnswers } from '../../types';
 
-
 interface MoodStepProps {
   person: PersonAnswers;
   onUpdate: (updates: Partial<PersonAnswers>) => void;

@@ -2,8 +2,6 @@
 
 import { z } from 'zod';
 
-
-
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useLanguage } from '@/i18n';
 import { ageRatings } from '@/utils/schemas/movieSchemas';

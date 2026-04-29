@@ -1,6 +1,5 @@
 import { Worker } from 'bullmq';
 
-
 import { deserializeTMDBEmbeddings, seedMovies } from '@/app/api/movie-recommendation/tmdb';
 import {
   MOVIE_SEED_JOB_OPTIONS,

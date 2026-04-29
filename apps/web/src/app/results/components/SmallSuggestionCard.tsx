@@ -5,7 +5,6 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useState } from 'react';
 
-
 import { palette } from '@/styles/designTokens';
 import { scaleSimilarity } from '@/utils/ui';
 

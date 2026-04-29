@@ -18,7 +18,6 @@ import { palette } from '@/styles/designTokens';
 
 import type { PersonAnswers, Tone } from './types';
 
-
 export const GENRES = [
   { id: 'action', label: 'Action', icon: Zap, color: palette.amber },
   { id: 'comedy', label: 'Comedy', icon: Smile, color: palette.gold },

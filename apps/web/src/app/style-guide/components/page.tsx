@@ -4,8 +4,6 @@ import { Clapperboard, Clock, Moon, Play, Smile, Sparkles, Users, Zap } from 'lu
 import Link from 'next/link';
 import { useState } from 'react';
 
-
-
 import { QuizNavigation } from '@/app/quiz/components';
 import { AgeRatingPill } from '@/app/results/components/AgeRatingPill';
 import { SimilarityBadge } from '@/app/results/components/SimilarityBadge';

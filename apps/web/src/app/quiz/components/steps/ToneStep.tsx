@@ -8,7 +8,6 @@ import { TONES } from '../../constants';
 
 import type { PersonAnswers, Tone } from '../../types';
 
-
 interface ToneStepProps {
   person: PersonAnswers;
   onUpdate: (updates: Partial<PersonAnswers>) => void;

@@ -3,7 +3,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-
 import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';

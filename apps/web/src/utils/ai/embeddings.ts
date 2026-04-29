@@ -2,7 +2,6 @@ import { getOpenAIClient } from '@/clients/openaiClient';
 
 import type { ChunkWithEmbedding, EmbeddableChunk } from '../types';
 
-
 // Re-export types for convenience
 export type { ChunkWithEmbedding, EmbeddableChunk };
 

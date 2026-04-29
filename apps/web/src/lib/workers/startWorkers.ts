@@ -2,7 +2,6 @@ import logger from '@/lib/logger';
 
 import { createMovieSeedWorker } from './movieSeedWorker';
 
-
 const movieSeedWorker = createMovieSeedWorker();
 
 if (!movieSeedWorker) {

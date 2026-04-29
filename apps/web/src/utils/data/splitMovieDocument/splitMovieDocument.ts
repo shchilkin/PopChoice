@@ -6,7 +6,6 @@ import { movieMetadataSchema } from '@/utils/schemas';
 
 import type { LangChainMovieDocument, MovieMetadata } from '@/utils/types';
 
-
 /**
  * Custom movie splitter that preserves movie boundaries
  * Each movie becomes exactly one chunk

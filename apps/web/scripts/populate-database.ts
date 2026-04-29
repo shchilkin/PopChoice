@@ -26,7 +26,6 @@ import { getMovieStats } from '../src/utils/data/getMovieStats';
 
 import type { ChunkWithEmbedding, MovieDocument } from '../src/utils/types';
 
-
 // Parse command line arguments
 const args = process.argv.slice(2);
 const help = args.includes('--help') || args.includes('-h');

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
-
 import { getOpenAIClient } from '@/clients';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, parseLocaleFromRequest } from '@/lib/locale';

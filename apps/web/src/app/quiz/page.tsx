@@ -24,7 +24,6 @@ import { quizMachine } from './quiz.machine';
 
 import type { PersonAnswers } from './types';
 
-
 const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
 

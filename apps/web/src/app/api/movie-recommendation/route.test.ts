@@ -84,7 +84,6 @@ import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } fr
 import { POST } from './route';
 import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
-
 // Inject the mock OpenAI client before each test and reset after.
 beforeEach(() => {
   setOpenAIClient({

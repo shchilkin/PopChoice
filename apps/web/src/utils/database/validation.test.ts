@@ -7,7 +7,6 @@ import { filterExistingMovies, clearAllMovies } from './validation';
 import type { MovieRecord } from '../types';
 import type { DbClient, QueryFilter, QueryResult, QuerySelect } from '@/clients/dbClient';
 
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

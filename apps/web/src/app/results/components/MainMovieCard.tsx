@@ -16,7 +16,6 @@ import { StarRating } from './StarRating';
 
 import type { MovieRecommendation } from '@/utils/client';
 
-
 export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
   const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);

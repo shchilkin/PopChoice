@@ -1,5 +1,3 @@
-
-
 import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';

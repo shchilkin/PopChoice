@@ -2,7 +2,6 @@
 
 import { Clock } from 'lucide-react';
 
-
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 

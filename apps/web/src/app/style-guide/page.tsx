@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-
 import { AgeRatingChip } from '@/components/AgeRatingChip';
 import { Button } from '@/components/Button';
 import { ProgressDots } from '@/components/ProgressDots';

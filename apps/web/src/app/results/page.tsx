@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';

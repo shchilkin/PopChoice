@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
-
-
 import { getDbClient } from '@/clients/dbClient';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { parseLocaleFromRequest } from '@/lib/locale';

@@ -6,7 +6,6 @@ import { useLanguage } from '@/i18n';
 
 import type { PersonAnswers } from '../../types';
 
-
 interface FavoriteMovieStepProps {
   person: PersonAnswers;
   onUpdate: (updates: Partial<PersonAnswers>) => void;

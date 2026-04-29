@@ -4,7 +4,6 @@ import { Brain, Play } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 
-
 import { TMDBAttribution } from '@/components';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';

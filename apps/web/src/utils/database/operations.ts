@@ -5,7 +5,6 @@ import { filterExistingMovies, getMovieCount } from './validation';
 
 import type { ChunkWithEmbedding, MovieDocument, MovieRecord } from '../types';
 
-
 /**
  * Insert movies into the database
  * @param chunksWithEmbeddings - Array of chunks with embeddings

@@ -4,7 +4,6 @@ import { LanguageSwitcher } from './LanguageSwitcher';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-
 const meta: Meta<typeof LanguageSwitcher> = {
   title: 'Components/LanguageSwitcher',
   component: LanguageSwitcher,
