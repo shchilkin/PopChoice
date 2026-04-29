@@ -2,25 +2,25 @@
 #
 # This file is the single source of truth for Railway deployment settings.
 # It defines shared build/deploy defaults and the environment variables
-# consumed across all services. Individual service overrides (build command,
-# start command, Dockerfile path) are set per-service in the Railway dashboard
-# because each service in the monorepo has a different entry point.
+# consumed across all services. Every service is built from its own Dockerfile;
+# set `dockerfilePath` per-service in the Railway dashboard because each
+# service in the monorepo has a different Dockerfile path.
 #
-# Services deployed on Railway:
-#   • Web App          — apps/web/Dockerfile
-#   • Bull Dashboard   — apps/web/bull-board.Dockerfile
+# Services deployed on Railway and their Dockerfiles:
+#   • Web App           — apps/web/Dockerfile
+#   • Bull Dashboard    — apps/web/bull-board.Dockerfile
 #   • movie-seed worker — apps/web/workers.Dockerfile
-#   • Storybook        — apps/web/storybook.Dockerfile
-#   • movie-discovery  — services/movie-discovery (Railpack, npm workspace)
-#   • movie-seed       — services/movie-seed      (Railpack, npm workspace)
-#   • movie-backfill   — services/movie-backfill  (Railpack, npm workspace)
+#   • Storybook         — apps/web/storybook.Dockerfile
+#   • movie-discovery   — services/movie-discovery/Dockerfile
+#   • movie-seed        — services/movie-seed/Dockerfile
+#   • movie-backfill    — no Dockerfile yet; set up build in the dashboard
 
 [build]
-# Railpack is the default builder. Services that use a Dockerfile set
-# `dockerfilePath` in the Railway dashboard (or in their own railway.toml).
-# The workspace install command is shared by all Railpack-built services.
-builder = "RAILPACK"
-buildCommand = "npm ci"
+# All services are built from their own Dockerfiles.
+# Set `dockerfilePath` for each service individually in the Railway dashboard
+# (Service Settings → Build → Dockerfile Path) since each service in this
+# monorepo has a different Dockerfile location.
+builder = "DOCKERFILE"
 
 [deploy]
 # Default health-check and restart policy applied to all long-running services.
