@@ -1,9 +1,10 @@
+import { getDbClient } from '@/clients/dbClient';
+import { convertTextToMovieObjects, parseMovieNameAndYear } from '@/utils/data';
+
 import { filterExistingMovies, getMovieCount } from './validation';
 
 import type { ChunkWithEmbedding, MovieDocument, MovieRecord } from '../types';
 
-import { getDbClient } from '@/clients/dbClient';
-import { convertTextToMovieObjects, parseMovieNameAndYear } from '@/utils/data';
 
 /**
  * Insert movies into the database

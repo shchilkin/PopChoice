@@ -1,12 +1,13 @@
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 
+import logger from '@/lib/logger';
+
 import type {
   SerializableTMDBEmbeddings,
   TMDBDiscoverMovie,
 } from '@/app/api/movie-recommendation/tmdb';
 
-import logger from '@/lib/logger';
 
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 

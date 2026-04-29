@@ -2,13 +2,15 @@
 
 import { z } from 'zod';
 
-import { AgeRatingChip } from '../AgeRatingChip';
 
-import type { Movie } from '@/app/api/movies/route';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useLanguage } from '@/i18n';
 import { ageRatings } from '@/utils/schemas/movieSchemas';
+
+import { AgeRatingChip } from '../AgeRatingChip';
+
+import type { Movie } from '@/app/api/movies/route';
 
 /**
  * Animated table skeleton shown while movie data is loading or while the

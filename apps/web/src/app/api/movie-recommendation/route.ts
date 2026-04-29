@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
+
+
+import { getDbClient } from '@/clients/dbClient';
+import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
+import { parseLocaleFromRequest } from '@/lib/locale';
+import logger from '@/lib/logger';
+import { applyRateLimit } from '@/lib/rateLimit';
+import { withAuth } from '@/lib/withAuth';
+import {
+  ALWAYS_BLOCK_CATEGORIES,
+  checkForPromptInjection,
+  judgeForMoviePlatform,
+  moderateInput,
+} from '@/utils/ai/moderation';
+
 import { createEmbedding, refineQueryWithLLM } from './embedding';
 import { SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import {
@@ -21,19 +36,6 @@ import {
 import { apiResponseSchema, requestBodySchema } from './types';
 
 import type { ApiResponse, PersonFormData } from './types';
-
-import { getDbClient } from '@/clients/dbClient';
-import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
-import { parseLocaleFromRequest } from '@/lib/locale';
-import logger from '@/lib/logger';
-import { applyRateLimit } from '@/lib/rateLimit';
-import { withAuth } from '@/lib/withAuth';
-import {
-  ALWAYS_BLOCK_CATEGORIES,
-  checkForPromptInjection,
-  judgeForMoviePlatform,
-  moderateInput,
-} from '@/utils/ai/moderation';
 
 const MOVIE_SEED_ENQUEUE_TIMEOUT_MS = 1500;
 

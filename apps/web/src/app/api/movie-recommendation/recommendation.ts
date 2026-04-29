@@ -1,7 +1,4 @@
-import { combineAllPeopleDataToString } from './embedding';
-import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
-import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
@@ -9,6 +6,11 @@ import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale'
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 import { MovieService } from '@/services';
+
+import { combineAllPeopleDataToString } from './embedding';
+import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
+
+import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // Locale helpers

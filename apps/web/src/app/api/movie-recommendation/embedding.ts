@@ -1,8 +1,9 @@
-import type { PersonFormData } from './types';
 
 import { getOpenAIClient } from '@/clients';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
+
+import type { PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // String helpers

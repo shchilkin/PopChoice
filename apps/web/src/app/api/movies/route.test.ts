@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi } from 'vitest';
 
+import { getDbClient } from '@/clients/dbClient';
+
 import { GET } from './route';
 
-import { getDbClient } from '@/clients/dbClient';
 
 // Mock the dbClient module
 const mockMovies = [

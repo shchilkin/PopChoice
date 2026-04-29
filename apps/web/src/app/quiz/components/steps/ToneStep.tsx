@@ -2,11 +2,12 @@
 
 import { Moon } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 import { TONES } from '../../constants';
 
 import type { PersonAnswers, Tone } from '../../types';
 
-import { useLanguage } from '@/i18n';
 
 interface ToneStepProps {
   person: PersonAnswers;

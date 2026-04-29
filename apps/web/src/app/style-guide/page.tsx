@@ -1,11 +1,12 @@
 import Link from 'next/link';
 
-import { Card, Label, Section } from './_components';
 
 import { AgeRatingChip } from '@/components/AgeRatingChip';
 import { Button } from '@/components/Button';
 import { ProgressDots } from '@/components/ProgressDots';
 import { palette } from '@/styles/designTokens';
+
+import { Card, Label, Section } from './_components';
 
 // ── Color Swatch ──────────────────────────────────────────────────────────────
 

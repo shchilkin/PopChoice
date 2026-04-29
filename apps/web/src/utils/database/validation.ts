@@ -1,6 +1,7 @@
+import { getDbClient } from '@/clients/dbClient';
+
 import type { MovieRecord } from '../types';
 
-import { getDbClient } from '@/clients/dbClient';
 
 /**
  * Check if a movie already exists in the database

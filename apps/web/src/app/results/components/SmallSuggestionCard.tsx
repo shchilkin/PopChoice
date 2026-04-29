@@ -5,10 +5,11 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useState } from 'react';
 
-import type { MovieRecommendation } from '@/utils/client';
 
 import { palette } from '@/styles/designTokens';
 import { scaleSimilarity } from '@/utils/ui';
+
+import type { MovieRecommendation } from '@/utils/client';
 
 interface SmallSuggestionCardProps {
   movie: MovieRecommendation;

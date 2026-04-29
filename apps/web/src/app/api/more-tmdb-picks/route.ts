@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
-import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/tmdb';
 
 import { getOpenAIClient } from '@/clients';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
@@ -17,6 +16,8 @@ import {
 } from '@/lib/tmdb';
 import { withAuth } from '@/lib/withAuth';
 import { IMAGE_BASE_URL } from '@/services';
+
+import type { TMDBDiscoverMovie } from '@/app/api/movie-recommendation/tmdb';
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const RESULTS_PER_PAGE = 6;

@@ -1,6 +1,5 @@
 import z from 'zod';
 
-import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 import { getOpenAIClient } from '@/clients';
 import { getDbClient } from '@/clients/dbClient';
@@ -13,6 +12,8 @@ import {
   parseTMDBReleaseYear,
 } from '@/lib/tmdb';
 import { IMAGE_BASE_URL } from '@/services';
+
+import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // Constants

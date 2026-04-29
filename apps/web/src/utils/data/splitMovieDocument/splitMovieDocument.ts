@@ -2,9 +2,10 @@ import { readFile } from 'fs/promises';
 
 import { Document } from '@langchain/core/documents';
 
+import { movieMetadataSchema } from '@/utils/schemas';
+
 import type { LangChainMovieDocument, MovieMetadata } from '@/utils/types';
 
-import { movieMetadataSchema } from '@/utils/schemas';
 
 /**
  * Custom movie splitter that preserves movie boundaries

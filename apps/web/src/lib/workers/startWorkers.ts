@@ -1,6 +1,7 @@
+import logger from '@/lib/logger';
+
 import { createMovieSeedWorker } from './movieSeedWorker';
 
-import logger from '@/lib/logger';
 
 const movieSeedWorker = createMovieSeedWorker();
 

@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
+import { setDbClient, resetDbClient } from '@/clients/dbClient';
+
 import { filterExistingMovies, clearAllMovies } from './validation';
 
 import type { MovieRecord } from '../types';
 import type { DbClient, QueryFilter, QueryResult, QuerySelect } from '@/clients/dbClient';
 
-import { setDbClient, resetDbClient } from '@/clients/dbClient';
 
 // ---------------------------------------------------------------------------
 // Helpers

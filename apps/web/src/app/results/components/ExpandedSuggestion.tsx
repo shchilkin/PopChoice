@@ -4,14 +4,15 @@ import { Clock, Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 
+import { useLanguage } from '@/i18n';
+import { palette } from '@/styles/designTokens';
+
 import { MarkdownText } from './MarkdownText';
 import { SimilarityBadge } from './SimilarityBadge';
 import { StarRating } from './StarRating';
 
 import type { MovieRecommendation } from '@/utils/client';
 
-import { useLanguage } from '@/i18n';
-import { palette } from '@/styles/designTokens';
 
 export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
   const { t } = useLanguage();

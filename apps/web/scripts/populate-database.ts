@@ -19,12 +19,13 @@
 
 import path from 'path';
 
+import { getMovieFileStats, splitMovieDocument } from '@/utils';
+
 import { createEmbeddingsWithProgress } from '../src/utils/ai/embeddings';
 import { getMovieStats } from '../src/utils/data/getMovieStats';
 
 import type { ChunkWithEmbedding, MovieDocument } from '../src/utils/types';
 
-import { getMovieFileStats, splitMovieDocument } from '@/utils';
 
 // Parse command line arguments
 const args = process.argv.slice(2);

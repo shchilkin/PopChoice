@@ -14,9 +14,10 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { palette } from '@/styles/designTokens';
+
 import type { PersonAnswers, Tone } from './types';
 
-import { palette } from '@/styles/designTokens';
 
 export const GENRES = [
   { id: 'action', label: 'Action', icon: Zap, color: palette.amber },

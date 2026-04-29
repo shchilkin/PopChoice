@@ -2,9 +2,10 @@
 
 import { User } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 import type { PersonAnswers } from '../../types';
 
-import { useLanguage } from '@/i18n';
 
 interface FavoriteActorStepProps {
   person: PersonAnswers;

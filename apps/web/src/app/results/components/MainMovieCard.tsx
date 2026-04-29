@@ -5,6 +5,10 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { useLanguage } from '@/i18n';
+import { palette } from '@/styles/designTokens';
+import { scaleSimilarity } from '@/utils/ui';
+
 import { AgeRatingPill } from './AgeRatingPill';
 import { MarkdownText } from './MarkdownText';
 import { SimilarityBadge } from './SimilarityBadge';
@@ -12,9 +16,6 @@ import { StarRating } from './StarRating';
 
 import type { MovieRecommendation } from '@/utils/client';
 
-import { useLanguage } from '@/i18n';
-import { palette } from '@/styles/designTokens';
-import { scaleSimilarity } from '@/utils/ui';
 
 export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
   const { t } = useLanguage();

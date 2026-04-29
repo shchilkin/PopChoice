@@ -2,10 +2,11 @@
 
 import { Clock } from 'lucide-react';
 
-import type { Era, PersonAnswers } from '../../types';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
+
+import type { Era, PersonAnswers } from '../../types';
 
 interface EraStepProps {
   person: PersonAnswers;

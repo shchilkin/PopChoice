@@ -2,11 +2,12 @@
 
 import { Smile } from 'lucide-react';
 
+import { useLanguage } from '@/i18n';
+
 import { GENRES } from '../../constants';
 
 import type { PersonAnswers } from '../../types';
 
-import { useLanguage } from '@/i18n';
 
 interface MoodStepProps {
   person: PersonAnswers;

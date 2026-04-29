@@ -4,14 +4,15 @@ import { Brain, Play } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 
-import { FAQSection } from './components/FAQSection';
-import { HowItWorksSection } from './components/HowItWorksSection';
-import { TechStackSection } from './components/TechStackSection';
 
 import { TMDBAttribution } from '@/components';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
+
+import { FAQSection } from './components/FAQSection';
+import { HowItWorksSection } from './components/HowItWorksSection';
+import { TechStackSection } from './components/TechStackSection';
 
 export default function AboutPage() {
   const { isDark } = usePCTheme();

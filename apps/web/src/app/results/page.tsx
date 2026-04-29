@@ -5,12 +5,13 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from './components';
 
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
+
+import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from './components';
 
 interface ApiResponse {
   title: string;

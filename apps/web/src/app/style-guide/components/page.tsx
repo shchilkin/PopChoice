@@ -4,9 +4,7 @@ import { Clapperboard, Clock, Moon, Play, Smile, Sparkles, Users, Zap } from 'lu
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { Card, Label, Section } from '../_components';
 
-import type { MovieRecommendation } from '@/utils/client';
 
 import { QuizNavigation } from '@/app/quiz/components';
 import { AgeRatingPill } from '@/app/results/components/AgeRatingPill';
@@ -19,6 +17,10 @@ import { MoviesTableSkeleton } from '@/components/MoviesTable';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { TMDBAttribution } from '@/components/TMDBAttribution';
 import { palette } from '@/styles/designTokens';
+
+import { Card, Label, Section } from '../_components';
+
+import type { MovieRecommendation } from '@/utils/client';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

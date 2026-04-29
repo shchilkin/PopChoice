@@ -1,6 +1,5 @@
 import { Worker } from 'bullmq';
 
-import type { MovieSeedJobData } from '@/lib/jobQueue';
 
 import { deserializeTMDBEmbeddings, seedMovies } from '@/app/api/movie-recommendation/tmdb';
 import {
@@ -9,6 +8,8 @@ import {
   createBullMQConnection,
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+
+import type { MovieSeedJobData } from '@/lib/jobQueue';
 
 const MAX_MOVIE_SEED_ATTEMPTS = MOVIE_SEED_JOB_OPTIONS.attempts;
 

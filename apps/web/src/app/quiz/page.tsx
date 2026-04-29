@@ -5,6 +5,9 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { ProgressDots } from '@/components/ProgressDots';
+import { useLanguage } from '@/i18n';
+
 import {
   BetweenPersons,
   EraStep,
@@ -21,8 +24,6 @@ import { quizMachine } from './quiz.machine';
 
 import type { PersonAnswers } from './types';
 
-import { ProgressDots } from '@/components/ProgressDots';
-import { useLanguage } from '@/i18n';
 
 const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
 type StepKey = (typeof STEP_KEYS)[number];

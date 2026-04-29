@@ -3,11 +3,12 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { Movie, MoviesResponse } from '../api/movies/route';
 
 import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
+
+import type { Movie, MoviesResponse } from '../api/movies/route';
 
 export default function AvailableMoviesPage() {
   const { t } = useLanguage();
