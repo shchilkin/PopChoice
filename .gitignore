@@ -47,3 +47,6 @@ storybook-static
 
 # Aider
 .aider*
+
+# Turborepo
+.turbo

@@ -1,5 +1,9 @@
 const lintStagedConfig = {
-  '*.{js,jsx,ts,tsx,mjs}': ['eslint --fix', 'prettier --write'],
+  'apps/web/**/*.{js,jsx,ts,tsx,mjs}': [
+    'eslint --config apps/web/eslint.config.mjs --fix',
+    'prettier --write',
+  ],
+  '!(apps/web)/**/*.{js,jsx,ts,tsx,mjs}': ['prettier --write'],
   '*.{json,css,md,yml,yaml}': ['prettier --write'],
   'package.json': ['sort-package-json', 'prettier --write'],
 };
