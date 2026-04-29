@@ -6,8 +6,11 @@ FROM node:24.11-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-COPY packages/shared/package.json ./packages/shared/package.json
-COPY apps/web/package.json ./apps/web/package.json
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/web/package.json ./apps/web/
+COPY services/movie-backfill/package.json ./services/movie-backfill/
+COPY services/movie-discovery/package.json ./services/movie-discovery/
+COPY services/movie-seed/package.json ./services/movie-seed/
 RUN npm ci
 
 COPY packages/shared/tsconfig.json ./packages/shared/
