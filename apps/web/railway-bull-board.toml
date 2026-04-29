@@ -1,0 +1,5 @@
+[build]
+command = "npm ci"
+
+[deploy]
+startCommand = "npm run bull-board --workspace=apps/web"
