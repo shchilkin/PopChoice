@@ -1,22 +1,35 @@
+# Build context: repo root
+# docker build -f services/movie-discovery/Dockerfile .
+
 FROM node:24-slim AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY services/movie-discovery/package.json ./services/movie-discovery/package.json
+
 RUN npm ci
 
-COPY tsconfig.json ./
-COPY src/ ./src/
+COPY packages/shared/tsconfig.json ./packages/shared/
+COPY packages/shared/src/ ./packages/shared/src/
+RUN npm run build --workspace=packages/shared
 
-RUN npm run build
+COPY services/movie-discovery/tsconfig.json ./services/movie-discovery/
+COPY services/movie-discovery/src/ ./services/movie-discovery/src/
+RUN npm run build --workspace=services/movie-discovery
 
 FROM node:24-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY services/movie-discovery/package.json ./services/movie-discovery/package.json
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/services/movie-discovery/dist ./services/movie-discovery/dist
 
+WORKDIR /app/services/movie-discovery
 CMD ["node", "dist/index.js"]
