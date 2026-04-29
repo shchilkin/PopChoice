@@ -1,5 +1,0 @@
-[build]
-command = "npm run build-storybook --workspace=apps/web"
-
-[deploy]
-startCommand = "npm run start:storybook --workspace=apps/web"

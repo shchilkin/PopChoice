@@ -1,5 +1,0 @@
-[build]
-buildCommand = "npm ci && npm run build --workspace=services/movie-seed"
-
-[deploy]
-startCommand = "npm run start --workspace=services/movie-seed"
