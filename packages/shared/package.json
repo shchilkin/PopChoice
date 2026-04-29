@@ -11,8 +11,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
-    "prepare": "tsc"
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "openai": "^6.34.0",
