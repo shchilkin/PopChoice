@@ -50,3 +50,4 @@ storybook-static
 
 # Turborepo
 .turbo
+**/.turbo
