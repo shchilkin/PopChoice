@@ -11,6 +11,7 @@
   "scripts": {
     "build": "npm run build --workspace=apps/web",
     "build:services": "turbo run build --filter=./services/*",
+    "copy:env": "bash scripts/copy-env.sh",
     "dev": "npm run dev --workspace=apps/web",
     "dev:shared": "npm run dev --workspace=packages/shared",
     "fix": "npm run lint:fix && npm run format:write && npm run format:package",
