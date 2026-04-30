@@ -194,11 +194,16 @@ export const en = {
     morePicksEmpty: 'No more picks available right now.',
   },
   about: {
-    badge: 'How PopChoice works',
     title: 'AI that gets your taste',
-    descriptionPre: "PopChoice isn't just a genre filter. It reads what makes a film feel right to",
-    you: 'you',
-    descriptionPost: '— then finds movies that genuinely match that feeling.',
+    originDescription:
+      'Started as a Scrimba AI engineering course project. After finishing the course I kept building — turning it into a real full-stack system to learn the parts that tutorials skip: vector databases, background job pipelines, monorepo tooling, and containerized deployments. The movie recommendations are real.',
+    sourceCode: "This project's source code is available",
+    sourceCodeLink: 'here',
+    whatItDoesLabel: 'What it does',
+    whatItDoesDescription:
+      "PopChoice takes a 5-question taste quiz — favorite film, preferred era, current mood, tone, and a favorite actor — and transforms your answers into a vector embedding using the OpenAI API. That embedding is compared against a curated library of 400+ pre-analyzed films stored in PostgreSQL with the pgvector extension. If the local collection doesn't yield a high-quality match, the system automatically falls back to a broader search across the TMDb database. The closest matches surface as recommendations, each with a GPT-generated explanation of why it fits your specific taste profile. Genre is just one dimension; the system captures cinematographic style, narrative complexity, and emotional tone.",
+    backgroundNote:
+      'All of this runs in the background. What you see: a 60-second quiz and a film worth watching.',
     ctaTitle: "Ready to find tonight's film?",
     ctaSubtitle: '60 seconds. 5 questions. The perfect movie.',
     ctaButton: 'Start the Quiz',
@@ -225,19 +230,43 @@ export const en = {
     },
     techStack: {
       title: 'Under the hood',
-      items: [
-        { name: 'Vector Search', desc: 'Semantic similarity matching across 400+ films' },
+      linkText: 'Full stack breakdown →',
+      groups: [
         {
-          name: 'AI Language Model',
-          desc: 'Generates personalized recommendations for each user',
+          label: 'Frontend',
+          items: [
+            {
+              why: 'App Router and server components for streaming renders and full-stack TypeScript',
+            },
+            { why: 'Concurrent rendering and Actions for a highly responsive quiz experience' },
+            {
+              why: 'Quiz logic modeled as a formal state machine — predictable flow, zero if-spaghetti',
+            },
+            { why: 'Utility-first styling driven by CSS custom property design tokens' },
+          ],
         },
         {
-          name: 'Film Database',
-          desc: 'Curated metadata including tone, themes & cinematography',
+          label: 'AI + Data',
+          items: [
+            {
+              why: 'Taste profile encoding into 3072-dimensional vectors for high-signal semantic search',
+            },
+            { why: 'Fast, cost-effective generation of personalized recommendation explanations' },
+            { why: 'Primary database for 400+ curated films, metadata, and vectors' },
+            {
+              why: 'Self-hosted vector similarity search with automatic fallback to TMDb for broader discovery',
+            },
+          ],
         },
         {
-          name: 'Real-time Processing',
-          desc: 'Fast results — from submission to recommendations in seconds',
+          label: 'Infrastructure',
+          items: [
+            { why: 'High-performance coordination layer for job queues and API rate limiting' },
+            { why: 'Background job processing for the movie data backfill and discovery pipeline' },
+            { why: 'Cloud platform hosting containerized web app, worker services, and databases' },
+            { why: 'Monorepo build system with high-performance caching and task orchestration' },
+            { why: 'Containerized deployment for consistent environments across all services' },
+          ],
         },
       ],
     },
@@ -262,6 +291,159 @@ export const en = {
         },
       ],
     },
+  },
+  techStackPage: {
+    breadcrumbAbout: 'About',
+    breadcrumbStack: 'Stack',
+    title: 'Under the Hood',
+    intro:
+      'Every choice here was made to learn the parts that course projects skip: self-hosted vector search, background job pipelines, monorepo tooling, and containerized multi-service deployments. The decisions below explain the reasoning, not just the result.',
+    backToAbout: '← Back to About',
+    tryQuiz: 'Try the quiz →',
+    groups: [
+      {
+        label: 'Frontend',
+        items: [
+          {
+            role: 'Full-stack framework',
+            rationale:
+              'Next.js 16 and the App Router provide the backbone of the application. Server components allow for streaming renders and layout-level data fetching, while full-stack TypeScript eliminates API contract drift.',
+            detail:
+              'The results page uses server components to fetch and stream movie data without client-side waterfalls — the UI renders progressively as recommendations arrive.',
+          },
+          {
+            role: 'UI Library',
+            rationale:
+              'React 19 concurrent features keep the quiz UI responsive during heavy async operations. The use of Actions simplifies form handling and state transitions throughout the application.',
+            detail: null,
+          },
+          {
+            role: 'State Management',
+            rationale:
+              'The 5-question quiz is modeled as a formal state machine. This prevents illegal state transitions and provides a clear, predictable flow for the complex branching logic.',
+            detail:
+              'Using @xstate/react allows the UI to react to machine state changes, handling loading states and transitions with zero "if (loading)" spaghetti code.',
+          },
+          {
+            role: 'Styling layer',
+            rationale:
+              'Utility-first styling with CSS custom property design tokens as the source of truth. Tailwind 4 generates classes dynamically, while tokens carry the semantic meaning for themes.',
+            detail:
+              'All theme-adaptive colors (light/dark mode) live in CSS custom properties. This means a single className can respond to the theme without JavaScript.',
+          },
+          {
+            role: 'Animations',
+            rationale:
+              'Formerly Framer Motion, this library handles all spring-based transitions and entrance animations, ensuring the UI feels "alive" and responsive to user input.',
+            detail: null,
+          },
+          {
+            role: 'Icon Set',
+            rationale:
+              'A clean, consistent icon library that is fully tree-shakeable and optimized for modern React environments.',
+            detail: null,
+          },
+        ],
+      },
+      {
+        label: 'AI + Data',
+        items: [
+          {
+            role: 'Taste encoding',
+            rationale:
+              'Quiz answers are assembled into structured prompts and encoded into 3072-dimension vectors. This captures deep semantic meaning: "family dynamics" and "moral complexity" land near each other in embedding space.',
+            detail:
+              'The embedding request is the only AI call that blocks the user. Everything else runs asynchronously in background workers.',
+          },
+          {
+            role: 'Explanation generation',
+            rationale:
+              'Generates personalized explanations for each recommendation. gpt-5.4-mini provides an exceptional balance of speed and reasoning quality for real-time applications.',
+            detail:
+              'At 6 explanations per quiz submission, using the full gpt-5.4 model would increase latency. The "mini" variant provides near-instant results.',
+          },
+          {
+            role: 'Primary Movie Database',
+            rationale:
+              'Serves as the central repository for 400+ curated films, metadata, and vectors. Storing everything in a single relational database simplifies data integrity and cross-referencing.',
+            detail: null,
+          },
+          {
+            role: 'Vector Search',
+            rationale:
+              'A PostgreSQL extension that enables vector similarity search directly in our database. This avoids the overhead of managing a separate vector database like Pinecone or Weaviate.',
+            detail:
+              "Cosine similarity search finds the nearest neighbors to the user's taste vector with sub-100ms performance at scale.",
+          },
+        ],
+      },
+      {
+        label: 'Infrastructure',
+        items: [
+          {
+            role: 'Data Store',
+            rationale:
+              'Acts as the job store for our background tasks and the coordination layer for global rate limiting across our AI pipeline.',
+            detail:
+              'Redis ensures that even with multiple worker instances, we never exceed our OpenAI API token-per-minute or request-per-minute quotas.',
+          },
+          {
+            role: 'Job Queue',
+            rationale:
+              'Handles the heavy lifting of background job scheduling, retries, and failure recovery for the movie data backfill and discovery pipeline.',
+            detail: null,
+          },
+          {
+            role: 'Deployment Platform',
+            rationale:
+              'The production environment for our multi-service architecture. Railway orchestrates the Next.js app, worker services, PostgreSQL, and Redis in a unified pipeline.',
+            detail:
+              "The repository is connected via Railway's GitHub integration, which automatically deploys the monorepo whenever changes are pushed to main.",
+          },
+          {
+            role: 'Build System',
+            rationale:
+              'Manages monorepo builds with high-performance caching. It ensures that shared packages are built correctly before the apps that consume them.',
+            detail: null,
+          },
+          {
+            role: 'Containerization',
+            rationale:
+              'Ensures consistent environments from local development to production. Multi-stage Dockerfiles keep the final production images lean and secure.',
+            detail: null,
+          },
+        ],
+      },
+      {
+        label: 'Quality',
+        items: [
+          {
+            role: 'Testing Framework',
+            rationale:
+              'A Vite-native testing framework that provides near-instant feedback during development. It handles unit and integration tests across the entire monorepo.',
+            detail: null,
+          },
+          {
+            role: 'E2E Testing',
+            rationale:
+              'Ensures the critical path from quiz submission to movie recommendations works flawlessly across all modern browser engines.',
+            detail: null,
+          },
+          {
+            role: 'Component Lab',
+            rationale:
+              'Allows for isolated development and testing of UI components, ensuring visual consistency and accessibility before they are integrated into the app.',
+            detail: null,
+          },
+          {
+            role: 'API Mocking',
+            rationale:
+              'Mock Service Worker intercepts network requests at the browser level, allowing the UI to be developed against realistic API responses without a live backend.',
+            detail: null,
+          },
+        ],
+      },
+    ],
   },
   moviesPage: {
     title: 'Available Movies',

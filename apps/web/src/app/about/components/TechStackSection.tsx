@@ -3,77 +3,18 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 
-const TECH_GROUPS = [
-  {
-    label: 'Frontend',
-    items: [
-      {
-        name: 'Next.js 16',
-        why: 'App Router and server components for streaming renders and full-stack TypeScript',
-      },
-      {
-        name: 'React 19',
-        why: 'Concurrent rendering and Actions for a highly responsive quiz experience',
-      },
-      {
-        name: 'XState',
-        why: 'Quiz logic modeled as a formal state machine for predictable flow and zero "if-spaghetti"',
-      },
-      {
-        name: 'Tailwind CSS 4',
-        why: 'Utility-first styling driven by CSS custom property design tokens',
-      },
-    ],
-  },
-  {
-    label: 'AI + Data',
-    items: [
-      {
-        name: 'OpenAI text-embedding-3-large',
-        why: 'Taste profile encoding into 3072-dimensional vectors for high-signal semantic search',
-      },
-      {
-        name: 'gpt-5.4-mini',
-        why: 'Fast, cost-effective generation of personalized recommendation explanations',
-      },
-      {
-        name: 'PostgreSQL',
-        why: 'Primary database for 400+ curated films, metadata, and vectors',
-      },
-      {
-        name: 'pgvector',
-        why: 'Self-hosted vector similarity search with automatic fallback to TMDb for broader discovery',
-      },
-    ],
-  },
-  {
-    label: 'Infrastructure',
-    items: [
-      {
-        name: 'Redis',
-        why: 'High-performance coordination layer for job queues and API rate limiting',
-      },
-      {
-        name: 'BullMQ',
-        why: 'Background job processing for the movie data backfill and discovery pipeline',
-      },
-      {
-        name: 'Railway',
-        why: 'Cloud platform hosting containerized web app, worker services, and databases',
-      },
-      {
-        name: 'Turborepo',
-        why: 'Monorepo build system with high-performance caching and task orchestration',
-      },
-      {
-        name: 'Docker',
-        why: 'Containerized deployment for consistent environments across all services',
-      },
-    ],
-  },
+import { useLanguage } from '@/i18n';
+
+const TECH_ITEM_NAMES = [
+  ['Next.js 16', 'React 19', 'XState', 'Tailwind CSS 4'],
+  ['OpenAI text-embedding-3-large', 'gpt-5.4-mini', 'PostgreSQL', 'pgvector'],
+  ['Redis', 'BullMQ', 'Railway', 'Turborepo', 'Docker'],
 ] as const;
 
 export function TechStackSection() {
+  const { t } = useLanguage();
+  const { title, linkText, groups } = t.about.techStack;
+
   return (
     <section className="mb-16">
       <h2
@@ -87,12 +28,12 @@ export function TechStackSection() {
           color: 'var(--pc-t1)',
         }}
       >
-        Under the hood
+        {title}
       </h2>
 
       <div className="flex flex-col gap-10">
-        {TECH_GROUPS.map((group, gi) => (
-          <div key={group.label}>
+        {groups.map((group, gi) => (
+          <div key={gi}>
             <p
               className="mb-3"
               style={{
@@ -106,14 +47,10 @@ export function TechStackSection() {
             >
               {group.label}
             </p>
-            <div
-              style={{
-                borderTop: '1px solid var(--pc-bd1)',
-              }}
-            >
+            <div style={{ borderTop: '1px solid var(--pc-bd1)' }}>
               {group.items.map((item, ii) => (
                 <motion.div
-                  key={item.name}
+                  key={ii}
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -130,7 +67,7 @@ export function TechStackSection() {
                       minWidth: '14rem',
                     }}
                   >
-                    {item.name}
+                    {TECH_ITEM_NAMES[gi]?.[ii]}
                   </span>
                   <span style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', lineHeight: 1.6 }}>
                     {item.why}
@@ -144,11 +81,11 @@ export function TechStackSection() {
 
       <div className="mt-6">
         <Link
-          href="/tech-stack"
+          href="/about/tech-stack"
           className="inline-flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-70"
           style={{ color: 'var(--pc-t3)', fontSize: '0.835rem' }}
         >
-          Full stack breakdown →
+          {linkText}
         </Link>
       </div>
     </section>

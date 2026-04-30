@@ -199,12 +199,16 @@ export const fi: Translations = {
     morePicksEmpty: 'Ei enempää tuloksia juuri nyt.',
   },
   about: {
-    badge: 'Miten PopChoice toimii',
     title: 'Tekoäly, joka ymmärtää makuasi',
-    descriptionPre:
-      'PopChoice ei ole pelkkä genresuodatin. Se tunnistaa, mikä tekee elokuvasta oikean juuri',
-    you: 'sinulle',
-    descriptionPost: '— ja löytää elokuvia, jotka aidosti vastaavat tätä tunnetta.',
+    originDescription:
+      'Alkoi Scrimba AI -insinöörikurssin harjoitustyönä. Kurssin jälkeen jatkoin kehitystä — muutin sen oikeaksi full-stack-järjestelmäksi oppiakseni osat, joita tutoriaalit sivuuttavat: vektoritietokannat, taustatyöjonot, monorepositorio-työkalut ja kontitetut käyttöönotot. Elokuvasuositukset ovat aitoja.',
+    sourceCode: 'Tämän projektin lähdekoodi on saatavilla',
+    sourceCodeLink: 'täällä',
+    whatItDoesLabel: 'Mitä se tekee',
+    whatItDoesDescription:
+      'PopChoice tarjoaa 5 kysymyksen makutestin — lempifilmi, suosittu aikakausi, nykyinen tunnelma, sävy ja lempinäyttelijä — ja muuntaa vastauksesi vektorirepresentaatioksi OpenAI-rajapinnan avulla. Tätä vertaillaan yli 400 ennalta analysoituun elokuvaan PostgreSQL:ssä pgvector-laajennuksella. Jos paikallisesta kokoelmasta ei löydy laadukasta vastaavuutta, järjestelmä laajentaa hakua automaattisesti TMDb-tietokantaan. Läheisimmät vastaavuudet esitetään suosituksina, joista jokaiselle on GPT:n luoma selitys siitä, miksi se sopii juuri sinulle. Genre on vain yksi ulottuvuus — järjestelmä tunnistaa myös elokuvallisen tyylin, kerronnallisen monimutkaisuuden ja tunnesävyn.',
+    backgroundNote:
+      'Kaikki tämä tapahtuu taustalla. Sinulle näkyy: 60 sekunnin testi ja elokuva, jota kannattaa katsoa.',
     ctaTitle: 'Valmis löytämään tämän illan elokuvan?',
     ctaSubtitle: '60 sekuntia. 5 kysymystä. Täydellinen elokuva.',
     ctaButton: 'Aloita testi',
@@ -225,28 +229,53 @@ export const fi: Translations = {
         },
         {
           title: 'Saat harkitut tulokset',
-          desc: 'Näytämme parhaan vastauksesi sekä 5 muuta hienoa vaihtoehtoa, joista jokaisen kohdalla on personoitu tekoälyn kirjoittama selitys siitä, miksi se sopii makuusi tänä iltana.',
+          desc: 'Näytämme parhaan vastauksesi sekä 5 muuta hienoa vaihtoehtoa, joista jokaisen kohdalla on personoitu tekoälyn kirjoittama selitys siitä, miksi se sopii makuusi.',
         },
       ],
     },
     techStack: {
       title: 'Konepellin alla',
-      items: [
+      linkText: 'Täydellinen teknologiapurku →',
+      groups: [
         {
-          name: 'Vektorihaku',
-          desc: 'Semanttinen samankaltaisuusvastaavuus yli 10 000 elokuvassa',
+          label: 'Frontend',
+          items: [
+            {
+              why: 'App Router ja palvelinkomponentit streaming-renderöintiä ja full-stack TypeScriptia varten',
+            },
+            { why: 'Rinnakkainen renderöinti ja Actions responsiiviseen testikokemukseen' },
+            { why: 'Testilogiikka formaaliksi tilakoneeksi — ennustettava kulku, ei if-spagettia' },
+            { why: 'Utility-first-tyylittely CSS-muuttujien design-tokeneilla' },
+          ],
         },
         {
-          name: 'Tekoälyn kielimalli',
-          desc: 'Luo personoituja suosituksia jokaiselle käyttäjälle',
+          label: 'Tekoäly + Data',
+          items: [
+            {
+              why: 'Makuprofiilin enkoodaus 3072-ulotteisiksi vektoreiksi semanttista hakua varten',
+            },
+            { why: 'Nopea ja kustannustehokas personoitujen suositusselitysten generointi' },
+            {
+              why: 'Ensisijainen tietokanta 400+ kuratoitua elokuvaa, metatietoa ja vektoreita varten',
+            },
+            { why: 'Itse isännöity vektorihaku automaattisella varavalintatoiminnolla TMDb:hen' },
+          ],
         },
         {
-          name: 'Elokuvatietokanta',
-          desc: 'Kuratoitua metatietoa, mukaan lukien sävy, teemat ja elokuvakerronnan tyyli',
-        },
-        {
-          name: 'Reaaliaikainen käsittely',
-          desc: 'Nopeat tulokset — lähetyksestä suosituksiin sekunneissa',
+          label: 'Infrastruktuuri',
+          items: [
+            {
+              why: 'Korkean suorituskyvyn koordinaatiokerros työjonoille ja API-nopeusrajoitukselle',
+            },
+            { why: 'Taustatyöprosessointi elokuvatietojen täydennys- ja löytämisputkea varten' },
+            {
+              why: 'Pilvisovellusalusta kontitetulle web-sovellukselle, worker-palveluille ja tietokannoille',
+            },
+            {
+              why: 'Monorepositorio-rakennusjärjestelmä korkean suorituskyvyn välimuistilla ja tehtäväorkestroinnilla',
+            },
+            { why: 'Kontitettu käyttöönotto yhtenäistä ympäristöä varten kaikissa palveluissa' },
+          ],
         },
       ],
     },
@@ -263,7 +292,7 @@ export const fi: Translations = {
         },
         {
           q: 'Kuinka tarkkoja suositukset ovat?',
-          a: 'Tekoäly analysoi elokuvan useita ominaisuuksia — ei vain genreä — mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Tietenkin elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa!',
+          a: 'Tekoäly analysoi elokuvan useita ominaisuuksia — ei vain genreä — mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa.',
         },
         {
           q: 'Mistä elokuvatiedot tulevat?',
@@ -271,6 +300,159 @@ export const fi: Translations = {
         },
       ],
     },
+  },
+  techStackPage: {
+    breadcrumbAbout: 'Tietoja',
+    breadcrumbStack: 'Pino',
+    title: 'Konepellin alla',
+    intro:
+      'Jokainen valinta on tehty oppiakseni osat, joita kurssiprojektit sivuuttavat: itse isännöity vektorihaku, taustatyöjonot, monorepositorio-työkalut ja kontitetut monipalvelukäyttöönotot. Alla olevat päätökset selittävät perustelut, eivät vain lopputuloksen.',
+    backToAbout: '← Takaisin tietoihin',
+    tryQuiz: 'Kokeile testiä →',
+    groups: [
+      {
+        label: 'Frontend',
+        items: [
+          {
+            role: 'Full-stack-kehys',
+            rationale:
+              'Next.js 16 ja App Router tarjoavat sovelluksen rungon. Palvelinkomponentit mahdollistavat streaming-renderöinnin ja layout-tason datan haun, kun taas full-stack TypeScript eliminoi API-sopimusten epäyhtenäisyydet.',
+            detail:
+              'Tulokset-sivu käyttää palvelinkomponentteja elokuvatietojen hakemiseen ja suoratoistoon ilman asiakaspuolen ketjuja — käyttöliittymä renderöityy asteittain suositusten saapuessa.',
+          },
+          {
+            role: 'Käyttöliittymäkirjasto',
+            rationale:
+              'React 19:n rinnakkaiset ominaisuudet pitävät testin käyttöliittymän responsiivisena raskaiden asynkronisten operaatioiden aikana. Actionien käyttö yksinkertaistaa lomakkeiden käsittelyä ja tilasiirtymiä koko sovelluksessa.',
+            detail: null,
+          },
+          {
+            role: 'Tilanhallinta',
+            rationale:
+              '5 kysymyksen testi on mallinnettu formaaliksi tilakoneeksi. Tämä estää laittomia tilasiirtymiä ja tarjoaa selkeän, ennustettavan kulun monimutkaiselle haarautumislogiikalle.',
+            detail:
+              '@xstate/react:n käyttö mahdollistaa UI:n reagoinnin koneen tilamuutoksiin, käsitellen lataustilat ja siirtymät ilman yhtäkään "if (loading)" spagettikoodia.',
+          },
+          {
+            role: 'Tyylikerros',
+            rationale:
+              'Utility-first-tyylittely CSS-muuttujien design-tokeneilla totuuden lähteenä. Tailwind 4 generoi luokat dynaamisesti, kun taas tokenit kantavat semanttisen merkityksen teemoille.',
+            detail:
+              'Kaikki teemaan mukautuvat värit (vaalea/tumma tila) elävät CSS-muuttujissa. Yksittäinen className voi reagoida teemaan ilman JavaScriptia.',
+          },
+          {
+            role: 'Animaatiot',
+            rationale:
+              'Entinen Framer Motion -kirjasto käsittelee kaikki jousipohjaiset siirtymät ja sisääntuloanimaatiot, varmistaen että käyttöliittymä tuntuu elävältä ja reagoivalta.',
+            detail: null,
+          },
+          {
+            role: 'Ikonisarja',
+            rationale:
+              'Puhdas, yhtenäinen ikonkirjasto, joka on täysin tree-shakeable ja optimoitu moderneille React-ympäristöille.',
+            detail: null,
+          },
+        ],
+      },
+      {
+        label: 'Tekoäly + Data',
+        items: [
+          {
+            role: 'Makuprofiilin koodaus',
+            rationale:
+              'Testivastaukset kootaan rakenteellisiksi syötteiksi ja koodataan 3072-ulotteisiksi vektoreiksi. Tämä tallentaa syvän semanttisen merkityksen: "perheen dynamiikka" ja "moraalinen monimutkaisuus" sijoittuvat lähelle toisiaan vektoriavaruudessa.',
+            detail:
+              'Vektorointipyyntö on ainoa AI-kutsu, joka estää käyttäjää. Kaikki muu suoritetaan asynkronisesti taustatyöntekijöissä.',
+          },
+          {
+            role: 'Selitysten generointi',
+            rationale:
+              'Generoi personoituja selityksiä jokaiselle suositukselle. gpt-5.4-mini tarjoaa poikkeuksellisen tasapainon nopeuden ja päättelylaadun välillä reaaliaikaisiin sovelluksiin.',
+            detail:
+              '6 selitystä per testilähety — koko gpt-5.4-mallin käyttö lisäisi latenssia. "Mini"-versio tarjoaa lähes välittömät tulokset.',
+          },
+          {
+            role: 'Elokuvatietokanta',
+            rationale:
+              'Toimii 400+ kuratoidun elokuvan, metatietojen ja vektorien keskusvarastona. Kaiken tallentaminen yhteen relaatiotietokantaan yksinkertaistaa tietojen eheyttä ja ristiviittauksia.',
+            detail: null,
+          },
+          {
+            role: 'Vektorihaku',
+            rationale:
+              'PostgreSQL-laajennus, joka mahdollistaa vektorisamankaltaisuushaun suoraan tietokannassamme. Tämä välttää erillisen vektoritietokannan hallinnan ylimääräiset kustannukset.',
+            detail:
+              'Kosinisamankaltaisuushaku löytää lähimmät naapurit käyttäjän makuvektorille alle 100ms suorituskyvyllä skaalassa.',
+          },
+        ],
+      },
+      {
+        label: 'Infrastruktuuri',
+        items: [
+          {
+            role: 'Tietovarasto',
+            rationale:
+              'Toimii taustatyötehtäviemme työvarastona ja globaalin nopeusrajoituksen koordinaatiokerroksena AI-putkilinjassamme.',
+            detail:
+              'Redis varmistaa, että jopa useilla worker-instansseilla emme koskaan ylitä OpenAI API:n token-per-minuutti- tai pyyntö-per-minuutti-kiintiöitä.',
+          },
+          {
+            role: 'Työjono',
+            rationale:
+              'Käsittelee taustatyön aikataulutuksen, uudelleenyritykset ja vikasietoisuuden elokuvatietojen täydennys- ja löytämisputkelle.',
+            detail: null,
+          },
+          {
+            role: 'Käyttöönottofoorumi',
+            rationale:
+              'Tuotantoympäristö monisovellusarkkitehtuurillemme. Railway orkestroi Next.js-sovelluksen, worker-palvelut, PostgreSQL:n ja Redisin yhtenäisessä putkilinjassa.',
+            detail:
+              'Repositorio on yhdistetty Railwayn GitHub-integraation kautta, joka käyttää automaattisesti monorepon aina kun muutoksia työnnetään päähaaraan.',
+          },
+          {
+            role: 'Rakennusjärjestelmä',
+            rationale:
+              'Hallinnoi monorepon rakennuksia korkean suorituskyvyn välimuistilla. Varmistaa, että jaetut paketit rakennetaan oikein ennen niitä kuluttavia sovelluksia.',
+            detail: null,
+          },
+          {
+            role: 'Kontitus',
+            rationale:
+              'Varmistaa yhtenäiset ympäristöt paikallisesta kehityksestä tuotantoon. Monivaiheiset Dockerfilet pitävät lopulliset tuotantokuvat kevyinä ja turvallisina.',
+            detail: null,
+          },
+        ],
+      },
+      {
+        label: 'Laatu',
+        items: [
+          {
+            role: 'Testikehys',
+            rationale:
+              'Vite-natiivi testikehys, joka tarjoaa lähes välittömän palautteen kehityksen aikana. Käsittelee yksikkö- ja integraatiotestit koko monorepon laajuudella.',
+            detail: null,
+          },
+          {
+            role: 'E2E-testaus',
+            rationale:
+              'Varmistaa, että kriittinen polku testilähtyksestä elokuvasuosituksiin toimii moitteettomasti kaikissa moderneissa selainmoottoreissa.',
+            detail: null,
+          },
+          {
+            role: 'Komponenttilaboratorio',
+            rationale:
+              'Mahdollistaa käyttöliittymäkomponenttien eristetyn kehityksen ja testauksen, varmistaen visuaalisen johdonmukaisuuden ja saavutettavuuden ennen integraatiota.',
+            detail: null,
+          },
+          {
+            role: 'API-simulointi',
+            rationale:
+              'Mock Service Worker sieppaa verkkopyyntöjä selaintasolla, mahdollistaen käyttöliittymän kehittämisen realististen API-vastausten perusteella ilman live-backendiä.',
+            detail: null,
+          },
+        ],
+      },
+    ],
   },
   moviesPage: {
     title: 'Saatavilla olevat elokuvat',
