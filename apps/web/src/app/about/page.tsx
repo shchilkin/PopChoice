@@ -29,11 +29,11 @@ export default function AboutPage() {
           className="mb-3"
           style={{
             fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            fontWeight: '500',
+            fontWeight: '600',
             textTransform: 'uppercase',
             fontSize: '0.75rem',
             letterSpacing: '0.12em',
-            color: 'var(--pc-t4)',
+            color: 'var(--pc-t3)',
           }}
         >
           Why this exists
@@ -109,11 +109,11 @@ export default function AboutPage() {
           className="mb-3"
           style={{
             fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            fontWeight: '500',
+            fontWeight: '600',
             textTransform: 'uppercase',
             fontSize: '0.75rem',
             letterSpacing: '0.12em',
-            color: 'var(--pc-t4)',
+            color: 'var(--pc-t3)',
           }}
         >
           What it does
@@ -145,6 +145,18 @@ export default function AboutPage() {
       {/* Stack — tools and rationale */}
       <TechStackSection />
 
+      <motion.p
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.4 }}
+        className="text-center mb-10"
+        style={{ color: 'var(--pc-t3)', fontSize: '0.875rem', letterSpacing: '0.01em' }}
+      >
+        All of this runs in the background. What you see: a 60-second quiz and a film worth
+        watching.
+      </motion.p>
+
       {/* CTA */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -154,8 +166,8 @@ export default function AboutPage() {
         className="text-center p-8 rounded-3xl mb-8"
         style={{
           background: isDark
-            ? `linear-gradient(135deg, ${palette.gold}14 0%, ${palette.purple}14 100%)`
-            : `linear-gradient(135deg, rgba(196,149,10,0.07) 0%, ${palette.purple}12 100%)`,
+            ? `linear-gradient(135deg, ${palette.gold}14 0%, ${palette.amber}08 100%)`
+            : `linear-gradient(135deg, rgba(196,149,10,0.07) 0%, rgba(255,159,28,0.03) 100%)`,
           border: '1px solid',
           borderColor: 'var(--pc-ai-bd)',
         }}
@@ -173,12 +185,12 @@ export default function AboutPage() {
         >
           {t.about.ctaTitle}
         </h3>
-        <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
+        <p className="mb-6" style={{ color: 'var(--pc-t2)', fontSize: '0.88rem' }}>
           {t.about.ctaSubtitle}
         </p>
         <Link
           href="/quiz"
-          className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl transition-all duration-200 active:scale-95"
+          className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl transition-all duration-200 hover:opacity-90 active:scale-95"
           style={{
             background: 'var(--pc-cta)',
             color: 'var(--pc-cta-text)',

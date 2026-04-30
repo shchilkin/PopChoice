@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
+import Link from 'next/link';
 
 const TECH_GROUPS = [
   {
@@ -72,11 +73,11 @@ export function TechStackSection() {
               className="mb-3"
               style={{
                 fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-                fontWeight: '500',
+                fontWeight: '600',
                 textTransform: 'uppercase',
                 fontSize: '0.75rem',
                 letterSpacing: '0.12em',
-                color: 'var(--pc-t4)',
+                color: 'var(--pc-t3)',
               }}
             >
               {group.label}
@@ -115,6 +116,16 @@ export function TechStackSection() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-6">
+        <Link
+          href="/tech-stack"
+          className="inline-flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-70"
+          style={{ color: 'var(--pc-t3)', fontSize: '0.835rem' }}
+        >
+          Full stack breakdown →
+        </Link>
       </div>
     </section>
   );

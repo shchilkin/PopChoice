@@ -10,6 +10,7 @@ export const fi: Translations = {
     openMenu: 'Avaa valikko',
     closeMenu: 'Sulje valikko',
     styleGuide: 'Tyyliopas',
+    techStack: 'Teknologia',
   },
   footer: {
     builtBy: 'Rakentanut',

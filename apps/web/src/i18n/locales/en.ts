@@ -8,6 +8,7 @@ export const en = {
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     styleGuide: 'Style Guide',
+    techStack: 'Stack',
   },
   footer: {
     builtBy: 'Built by',

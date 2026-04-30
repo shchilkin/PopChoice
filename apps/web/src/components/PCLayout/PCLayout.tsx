@@ -27,6 +27,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: '/about', label: t.nav.howItWorks },
+    { href: '/tech-stack', label: t.nav.techStack },
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/style-guide', label: t.nav.styleGuide },
   ];

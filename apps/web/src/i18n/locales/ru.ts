@@ -10,6 +10,7 @@ export const ru: Translations = {
     openMenu: 'Открыть меню',
     closeMenu: 'Закрыть меню',
     styleGuide: 'Гайдлайн',
+    techStack: 'Стек',
   },
   footer: {
     builtBy: 'Сделал',
