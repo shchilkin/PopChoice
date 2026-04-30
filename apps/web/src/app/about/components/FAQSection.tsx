@@ -1,7 +1,5 @@
 'use client';
 
-import { motion } from 'motion/react';
-
 import { useLanguage } from '@/i18n';
 
 export function FAQSection() {
@@ -22,25 +20,51 @@ export function FAQSection() {
       >
         {t.about.faq.title}
       </h2>
-      <div className="flex flex-col gap-4">
+      <div
+        style={{
+          borderTop: '1px solid var(--pc-bd1)',
+        }}
+      >
         {t.about.faq.items.map((item, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: i * 0.07 }}
-            className="p-5 rounded-2xl"
-            style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd1)' }}
-          >
-            <h4
-              className="mb-2"
+          <details key={i} style={{ borderBottom: '1px solid var(--pc-bd1)' }} className="group">
+            <summary
+              className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none select-none"
               style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '0.9rem' }}
             >
-              {item.q}
-            </h4>
-            <p style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', lineHeight: 1.7 }}>{item.a}</p>
-          </motion.div>
+              <span>{item.q}</span>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                style={{
+                  color: 'var(--pc-t4)',
+                  flexShrink: 0,
+                  transition: 'transform 0.2s ease-out',
+                }}
+                className="group-open:rotate-180"
+              >
+                <path
+                  d="M4 6l4 4 4-4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </summary>
+            <p
+              className="pb-4"
+              style={{
+                color: 'var(--pc-t3)',
+                fontSize: '0.85rem',
+                lineHeight: 1.7,
+                paddingRight: '2rem',
+              }}
+            >
+              {item.a}
+            </p>
+          </details>
         ))}
       </div>
     </section>

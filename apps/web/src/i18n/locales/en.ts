@@ -210,7 +210,7 @@ export const en = {
         },
         {
           title: 'We build your taste profile',
-          desc: 'Your answers are transformed into a rich taste profile that captures the nuances of your preferences — not just genres, but cinematographic style, narrative complexity, and emotional tone.',
+          desc: 'Your answers are transformed into a rich taste profile that captures nuances beyond genres: cinematographic style, narrative complexity, and emotional tone.',
         },
         {
           title: 'AI searches our film database',
@@ -249,11 +249,11 @@ export const en = {
         },
         {
           q: 'How does group mode work?',
-          a: "Each person answers the 5 questions on the same device — just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
+          a: "Each person answers the 5 questions on the same device. Just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
         },
         {
           q: 'How accurate are the recommendations?',
-          a: "The AI analyzes multiple film attributes — not just genre — which leads to surprisingly accurate taste matching. Of course, movie taste is subjective — that's why we give you 6 options!",
+          a: 'The AI analyzes multiple film attributes (not just genre), which leads to surprisingly accurate taste matching. Movie taste is subjective, so we give you 6 options.',
         },
         {
           q: 'Where does the film data come from?',
