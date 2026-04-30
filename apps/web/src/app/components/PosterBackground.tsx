@@ -1,6 +1,7 @@
 'use client';
 
-import { motion } from 'motion/react';
+import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
+import { useCallback, useEffect } from 'react';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePosterPosters } from '@/hooks/usePosterPosters';
@@ -17,11 +18,15 @@ interface PosterBackgroundProps {
 /**
  * Full-viewport movie poster grid for the hero section background.
  *
- * Three absolutely-positioned layers:
- *  1. Grid layer   — animated (y drift), no CSS filter (Safari GPU fix).
+ * Four absolutely-positioned layers:
+ *  1. Grid layer   — animated (y drift + cursor-driven 3D tilt), no CSS filter (Safari GPU fix).
  *  2. Blur layer   — static backdrop-filter sibling; blurs/dims the grid at
  *                    compositing time so Safari never re-rasterises per frame.
  *  3. Overlay div  — radial gradient; fades edges to background colour.
+ *
+ * Cursor tilt: normalised mouse position drives rotateX/rotateY via spring-smoothed
+ * motion values. Defaults to 0.5 (no tilt) — mobile and reduced-motion users never
+ * see a tilt since the listener is never attached.
  */
 export function PosterBackground({ posters: initialPosters }: PosterBackgroundProps) {
   const posters = usePosterPosters(initialPosters);
@@ -31,17 +36,53 @@ export function PosterBackground({ posters: initialPosters }: PosterBackgroundPr
 
   const cells = Array.from({ length: CELL_COUNT }, (_, i) => posters[i % posters.length]);
 
+  // Normalised cursor position: 0 = left/top, 1 = right/bottom, 0.5 = center (no tilt)
+  const cursorX = useMotionValue(0.5);
+  const cursorY = useMotionValue(0.5);
+
+  // Spring config: low stiffness = fluid lag, not instant tracking
+  const springCfg = { stiffness: 50, damping: 18, mass: 1.2 };
+  const smoothX = useSpring(cursorX, springCfg);
+  const smoothY = useSpring(cursorY, springCfg);
+
+  // Map normalised position → degrees. Asymmetric: Y tilt is gentler than X.
+  const rotateY = useTransform(smoothX, [0, 1], [-5, 5]);
+  const rotateX = useTransform(smoothY, [0, 1], [3, -3]);
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      cursorX.set(e.clientX / window.innerWidth);
+      cursorY.set(e.clientY / window.innerHeight);
+    },
+    [cursorX, cursorY],
+  );
+
+  useEffect(() => {
+    if (mobile) return;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (motionQuery.matches) return;
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mobile, handleMouseMove]);
+
   return (
     <>
       {/* Layer 1: grid — zero CSS filters on the animated element.
           Chrome/Safari can promote this to a GPU layer and move it without
-          any per-frame rasterisation. */}
-      <div aria-hidden="true" className="absolute -inset-5 pointer-events-none">
+          any per-frame rasterisation. perspective on the parent establishes
+          the 3D context for cursor-driven tilt. */}
+      <div
+        aria-hidden="true"
+        className="absolute -inset-5 pointer-events-none"
+        style={{ perspective: '1200px' }}
+      >
         <motion.div
           className="w-full grid grid-cols-5 sm:grid-cols-8"
           style={{
             rotate: mobile ? 0 : -4,
             scale: mobile ? 1 : 1.15,
+            rotateX,
+            rotateY,
             willChange: 'transform',
           }}
           animate={{ y: -20 }}
