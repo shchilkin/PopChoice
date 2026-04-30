@@ -202,7 +202,7 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    ```
 
 > **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
-> To reset the database from scratch, run `docker compose down -v` (removes the volume) then `npm run setup:local-db` again.
+> To reset the database from scratch, run `npm run cleanup:local-db` (stops containers and removes the volume) then `npm run setup:local-db` again.
 
 ## Railway PostgreSQL Setup
 
