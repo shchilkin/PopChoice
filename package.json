@@ -11,6 +11,8 @@
   "scripts": {
     "build": "npm run build --workspace=apps/web",
     "build:services": "turbo run build --filter=./services/*",
+    "cleanup:local-db": "bash scripts/cleanup-local-db.sh",
+    "copy:env": "bash scripts/copy-env.sh",
     "dev": "npm run dev --workspace=apps/web",
     "dev:shared": "npm run dev --workspace=packages/shared",
     "fix": "npm run lint:fix && npm run format:write && npm run format:package",
@@ -20,7 +22,9 @@
     "lint": "npm run lint --workspace=apps/web",
     "lint:check": "npm run lint:check --workspace=apps/web",
     "lint:fix": "npm run lint:fix --workspace=apps/web",
+    "populate-db": "npm run dev --workspace=services/movie-seed",
     "prepare": "husky || true",
+    "setup:local-db": "bash scripts/setup-local-db.sh",
     "test": "npm run test --workspace=apps/web",
     "test:server": "npm run test:server --workspace=apps/web",
     "test:services": "turbo run test --filter=./services/*",
