@@ -130,11 +130,13 @@ export default function AboutPage() {
           >
             PopChoice takes a 5-question taste quiz — favorite film, preferred era, current mood,
             tone, and a favorite actor — and transforms your answers into a vector embedding using
-            the OpenAI API. That embedding is compared against 10,000+ pre-analyzed films stored in
-            PostgreSQL with the pgvector extension. The closest matches surface as recommendations,
+            the OpenAI API. That embedding is compared against a curated library of 400+
+            pre-analyzed films stored in PostgreSQL with the pgvector extension. If the local
+            collection doesn't yield a high-quality match, the system automatically falls back to a
+            broader search across the TMDb database. The closest matches surface as recommendations,
             each with a GPT-generated explanation of why it fits your specific taste profile. Genre
-            is one dimension. The system captures cinematographic style, narrative complexity, and
-            emotional tone.
+            is just one dimension; the system captures cinematographic style, narrative complexity,
+            and emotional tone.
           </p>
         </div>
       </motion.section>

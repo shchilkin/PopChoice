@@ -90,9 +90,11 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Repertory House"**
+# PopChoice — AI Movie Finder
 
-The neighborhood cinema where the staff loves movies as much as you do. Not a multiplex algorithm churning thumbnails, not a streaming service with 10,000 options — a room with good chairs, warm light, and a poster on the wall that makes you feel something before the lights even go down. PopChoice occupies this space: confident, curated, quietly thrilled about film.
+### The Vibe
+
+The neighborhood cinema where the staff loves movies as much as you do. Not a multiplex algorithm churning thumbnails, not a streaming service with 400+ options — a room with good chairs, warm light, and a poster on the wall that makes you feel something before the lights even go down. PopChoice occupies this space: confident, curated, quietly thrilled about film.
 
 The system operates in two modes — warm parchment light and cool midnight dark — both theater-appropriate, both treated as equals. Neither is an afterthought. The interface uses Oswald's cinematic authority for headlines and Manrope's warm approachability for everything conversational. Gold appears where it counts: on what you should do next, on what's been chosen, on what matters. Everywhere else, it rests.
 

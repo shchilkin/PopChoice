@@ -8,8 +8,16 @@ const TECH_GROUPS = [
     label: 'Frontend',
     items: [
       {
-        name: 'Next.js 15 + React 19',
-        why: 'App Router, server components, full-stack TypeScript in a single repo',
+        name: 'Next.js 16',
+        why: 'App Router and server components for streaming renders and full-stack TypeScript',
+      },
+      {
+        name: 'React 19',
+        why: 'Concurrent rendering and Actions for a highly responsive quiz experience',
+      },
+      {
+        name: 'XState',
+        why: 'Quiz logic modeled as a formal state machine for predictable flow and zero "if-spaghetti"',
       },
       {
         name: 'Tailwind CSS 4',
@@ -21,12 +29,20 @@ const TECH_GROUPS = [
     label: 'AI + Data',
     items: [
       {
-        name: 'OpenAI API',
-        why: 'Embeddings encode taste profiles; GPT generates personalized recommendation explanations',
+        name: 'OpenAI text-embedding-3-large',
+        why: 'Taste profile encoding into 3072-dimensional vectors for high-signal semantic search',
       },
       {
-        name: 'pgvector (PostgreSQL)',
-        why: 'Self-hosted vector similarity search — no external vector DB, just a PostgreSQL extension',
+        name: 'gpt-5.4-mini',
+        why: 'Fast, cost-effective generation of personalized recommendation explanations',
+      },
+      {
+        name: 'PostgreSQL',
+        why: 'Primary database for 400+ curated films, metadata, and vectors',
+      },
+      {
+        name: 'pgvector',
+        why: 'Self-hosted vector similarity search with automatic fallback to TMDb for broader discovery',
       },
     ],
   },
@@ -34,16 +50,24 @@ const TECH_GROUPS = [
     label: 'Infrastructure',
     items: [
       {
-        name: 'Redis + BullMQ',
-        why: 'Background job queue for the movie data backfill and discovery pipeline',
+        name: 'Redis',
+        why: 'High-performance coordination layer for job queues and API rate limiting',
+      },
+      {
+        name: 'BullMQ',
+        why: 'Background job processing for the movie data backfill and discovery pipeline',
+      },
+      {
+        name: 'Railway',
+        why: 'Cloud platform hosting containerized web app, worker services, and databases',
       },
       {
         name: 'Turborepo',
-        why: 'Monorepo spanning the web app, shared packages, and worker services',
+        why: 'Monorepo build system with high-performance caching and task orchestration',
       },
       {
         name: 'Docker',
-        why: 'Containerized deployment across all services',
+        why: 'Containerized deployment for consistent environments across all services',
       },
     ],
   },

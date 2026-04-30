@@ -145,7 +145,7 @@ export const en = {
     errorTitle: 'Oops…',
     tips: [
       'Decoding your cinematic DNA… 🧠',
-      'Scanning 10,000+ films for the perfect match… 🎬',
+      'Scanning 400+ curated films for the perfect match… 🎬',
       'Matching vibes, not just genres… ✨',
       'Filtering out movies your friends already spoiled… 🤫',
       'Calculating the perfect runtime for your evening… ⏱️',
@@ -226,7 +226,7 @@ export const en = {
     techStack: {
       title: 'Under the hood',
       items: [
-        { name: 'Vector Search', desc: 'Semantic similarity matching across 10k+ films' },
+        { name: 'Vector Search', desc: 'Semantic similarity matching across 400+ films' },
         {
           name: 'AI Language Model',
           desc: 'Generates personalized recommendations for each user',

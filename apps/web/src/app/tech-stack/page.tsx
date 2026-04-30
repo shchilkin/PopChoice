@@ -11,26 +11,48 @@ const STACK = [
     color: palette.gold,
     items: [
       {
-        name: 'Next.js 15 + React 19',
+        name: 'Next.js 16',
         role: 'Full-stack framework',
         rationale:
-          'App Router with server components for streaming renders and layout-level data fetching. React 19 concurrent features keep the quiz UI responsive during async operations. Full-stack TypeScript in a single repo eliminates the API contract drift that plagues separate frontend/backend setups.',
+          'Next.js 16 and the App Router provide the backbone of the application. Server components allow for streaming renders and layout-level data fetching, while full-stack TypeScript eliminates API contract drift.',
         detail:
           'The results page uses server components to fetch and stream movie data without client-side waterfalls — the UI renders progressively as recommendations arrive.',
+      },
+      {
+        name: 'React 19',
+        role: 'UI Library',
+        rationale:
+          'React 19 concurrent features keep the quiz UI responsive during heavy async operations. The use of Actions simplifies form handling and state transitions throughout the application.',
+        detail: null,
+      },
+      {
+        name: 'XState',
+        role: 'State Management',
+        rationale:
+          'The 5-question quiz is modeled as a formal state machine. This prevents illegal state transitions and provides a clear, predictable flow for the complex branching logic.',
+        detail:
+          'Using @xstate/react allows the UI to react to machine state changes, handling loading states and transitions with zero "if (loading)" spaghetti code.',
       },
       {
         name: 'Tailwind CSS 4',
         role: 'Styling layer',
         rationale:
-          'Utility-first styling with CSS custom property design tokens as the source of truth. Tailwind generates classes; tokens carry semantic meaning (--pc-gold, --pc-surface, --pc-t1). The two systems compose cleanly: tokens handle theme switching, Tailwind handles layout and spacing.',
+          'Utility-first styling with CSS custom property design tokens as the source of truth. Tailwind 4 generates classes dynamically, while tokens carry the semantic meaning for themes.',
         detail:
-          'All theme-adaptive colors (light/dark mode) live in CSS custom properties, not Tailwind config. This means a single className can respond to the theme without JS.',
+          'All theme-adaptive colors (light/dark mode) live in CSS custom properties. This means a single className can respond to the theme without JavaScript.',
       },
       {
-        name: 'TypeScript',
-        role: 'Type system',
+        name: 'Motion',
+        role: 'Animations',
         rationale:
-          'End-to-end types from database schema to UI props. The translation i18n system, quiz state machine, and API response shapes are all typed — catching shape mismatches at compile time rather than runtime.',
+          'Formerly Framer Motion, this library handles all spring-based transitions and entrance animations, ensuring the UI feels "alive" and responsive to user input.',
+        detail: null,
+      },
+      {
+        name: 'Lucide React',
+        role: 'Icon Set',
+        rationale:
+          'A clean, consistent icon library that is fully tree-shakeable and optimized for modern React environments.',
         detail: null,
       },
     ],
@@ -40,28 +62,35 @@ const STACK = [
     color: palette.purple,
     items: [
       {
-        name: 'OpenAI Embeddings API',
-        role: 'Taste profile encoding',
+        name: 'OpenAI text-embedding-3-large',
+        role: 'Taste encoding',
         rationale:
-          'Quiz answers (favorite film, mood, tone, era, actor) are assembled into a structured prompt and encoded into a 1536-dimension vector via text-embedding-3-small. This captures semantic meaning rather than keyword matching — "I love The Godfather because of the family dynamics" and "Crime dramas with moral complexity" land near each other in embedding space.',
+          'Quiz answers are assembled into structured prompts and encoded into 3072-dimension vectors. This captures deep semantic meaning: "family dynamics" and "moral complexity" land near each other in embedding space.',
         detail:
-          'The embedding request is the only AI call that blocks the user. Everything else (movie pre-analysis, explanation generation) runs asynchronously in background workers.',
+          'The embedding request is the only AI call that blocks the user. Everything else runs asynchronously in background workers.',
       },
       {
-        name: 'GPT-4o-mini',
-        role: 'Recommendation explanations',
+        name: 'gpt-5.4-mini',
+        role: 'Explanation generation',
         rationale:
-          "After vector search surfaces candidate films, GPT-4o-mini generates a personalized explanation for each result: why this specific film matches this specific taste profile. The prompt includes the user's quiz answers and the film's pre-analyzed metadata.",
+          'Generates personalized explanations for each recommendation. gpt-5.4-mini provides an exceptional balance of speed and reasoning quality for real-time applications.',
         detail:
-          'Model choice was deliberate: GPT-4o for quality, mini for latency and cost. At 6 explanations per quiz submission, full GPT-4o would make the results page noticeably slow.',
+          'At 6 explanations per quiz submission, using the full gpt-5.4 model would increase latency. The "mini" variant provides near-instant results.',
       },
       {
-        name: 'pgvector (PostgreSQL)',
-        role: 'Vector similarity search',
+        name: 'PostgreSQL',
+        role: 'Primary Movie Database',
         rationale:
-          "Self-hosted vector search via the pgvector PostgreSQL extension — no external vector database (no Pinecone, Weaviate, or Qdrant). 10,000+ films are stored with their embedding vectors in the same Postgres instance as the rest of the application data. Cosine similarity search finds the nearest neighbors to the user's taste vector.",
+          'Serves as the central repository for 400+ curated films, metadata, and vectors. Storing everything in a single relational database simplifies data integrity and cross-referencing.',
+        detail: null,
+      },
+      {
+        name: 'pgvector',
+        role: 'Vector Search',
+        rationale:
+          'A PostgreSQL extension that enables vector similarity search directly in our database. This avoids the overhead of managing a separate vector database like Pinecone or Weaviate.',
         detail:
-          "The decision to avoid a dedicated vector DB reduced operational complexity significantly. pgvector's performance at this scale (10k vectors, sub-100ms queries) made an external service unnecessary.",
+          "Cosine similarity search finds the nearest neighbors to the user's taste vector with sub-100ms performance at scale.",
       },
     ],
   },
@@ -70,28 +99,75 @@ const STACK = [
     color: palette.teal,
     items: [
       {
-        name: 'Redis + BullMQ',
-        role: 'Background job queue',
+        name: 'Redis',
+        role: 'Data Store',
         rationale:
-          'The movie data backfill pipeline (fetching metadata, generating embeddings, storing vectors) runs as background jobs rather than blocking web requests. BullMQ handles job scheduling, retries, concurrency limits, and failure recovery. Redis is the queue backend.',
+          'Acts as the job store for our background tasks and the coordination layer for global rate limiting across our AI pipeline.',
         detail:
-          "Rate limiting the OpenAI embedding API calls required a concurrency-aware queue. BullMQ's rate limiter feature handles this cleanly — jobs self-throttle without manual sleep loops.",
+          'Redis ensures that even with multiple worker instances, we never exceed our OpenAI API token-per-minute or request-per-minute quotas.',
+      },
+      {
+        name: 'BullMQ',
+        role: 'Job Queue',
+        rationale:
+          'Handles the heavy lifting of background job scheduling, retries, and failure recovery for the movie data backfill and discovery pipeline.',
+        detail: null,
+      },
+      {
+        name: 'Railway',
+        role: 'Deployment Platform',
+        rationale:
+          'The production environment for our multi-service architecture. Railway orchestrates the Next.js app, worker services, PostgreSQL, and Redis in a unified pipeline.',
+        detail:
+          'The repository is connected via Railway’s GitHub integration, which automatically deploys the monorepo whenever changes are pushed to main.',
       },
       {
         name: 'Turborepo',
-        role: 'Monorepo build system',
+        role: 'Build System',
         rationale:
-          'The project spans three packages: the Next.js web app, a shared TypeScript package (types, utilities), and the BullMQ worker service. Turborepo caches build artifacts and runs tasks in dependency order — building shared packages before the apps that consume them.',
-        detail:
-          "Moving from a single-package repo to a monorepo was the most significant architectural lift in the project. Turborepo's remote caching meant CI times stayed manageable despite the added complexity.",
+          'Manages monorepo builds with high-performance caching. It ensures that shared packages are built correctly before the apps that consume them.',
+        detail: null,
       },
       {
-        name: 'Docker + Docker Compose',
-        role: 'Containerized deployment',
+        name: 'Docker',
+        role: 'Containerization',
         rationale:
-          'All services (web app, worker, PostgreSQL, Redis) run in containers. Docker Compose defines the full stack for local development and production deployment. Multi-stage Dockerfiles keep production images lean.',
-        detail:
-          'Containerizing the worker service separately from the web app allows independent scaling — the embedding pipeline can run at full concurrency without competing with web request handling.',
+          'Ensures consistent environments from local development to production. Multi-stage Dockerfiles keep the final production images lean and secure.',
+        detail: null,
+      },
+    ],
+  },
+  {
+    group: 'Quality',
+    color: palette.amber,
+    items: [
+      {
+        name: 'Vitest',
+        role: 'Testing Framework',
+        rationale:
+          'A Vite-native testing framework that provides near-instant feedback during development. It handles unit and integration tests across the entire monorepo.',
+        detail: null,
+      },
+      {
+        name: 'Playwright',
+        role: 'E2E Testing',
+        rationale:
+          'Ensures the critical path from quiz submission to movie recommendations works flawlessly across all modern browser engines.',
+        detail: null,
+      },
+      {
+        name: 'Storybook',
+        role: 'Component Lab',
+        rationale:
+          'Allows for isolated development and testing of UI components, ensuring visual consistency and accessibility before they are integrated into the app.',
+        detail: null,
+      },
+      {
+        name: 'MSW',
+        role: 'API Mocking',
+        rationale:
+          'Mock Service Worker intercepts network requests at the browser level, allowing the UI to be developed against realistic API responses without a live backend.',
+        detail: null,
       },
     ],
   },
