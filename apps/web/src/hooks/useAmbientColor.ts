@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 
 interface RGB {
   r: number;
@@ -16,7 +16,7 @@ export function useAmbientColor(posterURL: string | undefined): RGB | null {
 
   useEffect(() => {
     if (!posterURL) {
-      setColor(null);
+      startTransition(() => setColor(null));
       return;
     }
 

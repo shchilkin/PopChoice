@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight, Loader2, RotateCcw, Sparkles, Users } from '
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
 import { flushSync } from 'react-dom';
 
 import { useAmbientColor } from '@/hooks/useAmbientColor';
