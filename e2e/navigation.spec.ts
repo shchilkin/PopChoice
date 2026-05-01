@@ -104,8 +104,25 @@ test.describe('/available-movies page', () => {
   });
 
   test('/available-movies table shows column headers', async ({ page }) => {
-    // Mock the API so the test is DB-independent in CI.
-    await page.route('**/api/movies*', (route) =>
+    // Stub matchMedia so useIsMobile() resolves to `false` (desktop) on first
+    // render — no null skeleton phase, no timing races across environments.
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: (query: string) => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        }),
+      });
+    });
+    // Mock the API so the test is DB-independent.
+    await page.route(/\/api\/movies/, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -127,7 +144,7 @@ test.describe('/available-movies page', () => {
         }),
       }),
     );
-    await page.goto('/available-movies');
+    await Promise.all([page.waitForResponse(/\/api\/movies/), page.goto('/available-movies')]);
     // t.moviesPage.columns — Name, Age Rating, Duration, Score
     await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Age Rating' })).toBeVisible();
