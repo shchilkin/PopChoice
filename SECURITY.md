@@ -9,10 +9,10 @@ This document outlines the security measures and vulnerability management for th
 ### 🚨 **Critical Security Issues**
 
 - [x] **Input Validation & Sanitization**
-  - [x] Add Zod validation schemas for all API endpoints (`requestBodySchema.parse(body)` in `/api/movie-recommendation` and `/api/more-tmdb-picks`)
+  - [x] Add Zod validation schemas for externally-facing POST endpoints (`requestBodySchema.parse(body)` in `/api/movie-recommendation` and `/api/more-tmdb-picks`)
   - [x] Validate user input in `/api/movie-recommendation` route
   - [x] Sanitize form data before processing (prompt injection detection via `checkForPromptInjection()` in `src/utils/ai/moderation.ts`; OpenAI Moderation API via `moderateInput()`; LLM-as-judge via `judgeForMoviePlatform()`)
-  - [ ] Implement input length limits (favoriteMovie: 500 chars, preferences: 200 chars)
+  - [ ] Align documented input length limits with implementation: `/api/movie-recommendation` already enforces Zod max lengths (`favoriteMovie`: 200 chars, `favoriteMovieWhy`: 300 chars, etc.); the specific 500/200-char targets listed here are still pending if desired, and `/api/more-tmdb-picks` does not currently apply max-length constraints
 
 - [x] **Rate Limiting**
   - [x] Implement a route-level rate-limit guard in `/api/movie-recommendation` using the helper in `src/lib/rateLimit.ts` (Redis-backed, per-IP)
@@ -29,7 +29,7 @@ This document outlines the security measures and vulnerability management for th
 - [ ] **Request Size & Timeout Management**
   - [ ] Set maximum request body size limits
   - [x] Configure API timeouts for TMDB (`AbortSignal.timeout()` with 504 response in `more-tmdb-picks/route.ts`)
-  - [ ] Configure API timeouts for OpenAI (no `AbortSignal` on `openai.chat.completions.create()` calls)
+  - [ ] Improve OpenAI timeout handling (default client timeout is configured in `apps/web/src/clients/openaiClient.ts`, but per-call/route-specific timeouts, cancellation via `AbortSignal`, and mapping timeout failures to HTTP 504 responses are still missing)
   - [ ] Implement retry logic with exponential backoff
 
 ### ⚠️ **Medium Priority Security Issues**
@@ -43,7 +43,7 @@ This document outlines the security measures and vulnerability management for th
 - [ ] **Error Handling & Information Disclosure**
   - [ ] Remove sensitive information from error responses
   - [ ] Implement generic error messages for clients
-  - [x] Remove console.log statements in production (replaced with structured pino logger via `src/lib/logger.ts` throughout the codebase)
+  - [x] Use structured pino logger in API routes (`src/lib/logger.ts`) instead of `console.log` in those paths
   - [ ] Add proper error logging without exposing internals
 
 - [x] **HTTP Security Headers**
