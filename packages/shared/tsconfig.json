@@ -8,12 +8,12 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "typeRoots": ["./node_modules/@types"],
     "resolveJsonModule": true,
+    "composite": true,
     "declaration": true,
+    "declarationMap": true,
     "sourceMap": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../../packages/shared" }]
+  "exclude": ["node_modules", "dist"]
 }

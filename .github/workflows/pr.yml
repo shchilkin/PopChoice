@@ -119,7 +119,7 @@ jobs:
         if: always()
         with:
           name: coverage-report
-          path: coverage/
+          path: apps/web/coverage/
           retention-days: 30
 
   storybook-tests:
@@ -189,16 +189,13 @@ jobs:
           NEXT_FONT_GOOGLE_DISABLE: 1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
-  movie-seed-ci:
-    name: Movie Seed CI
+  services-ci:
+    name: Services CI
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: services/movie-seed
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -208,13 +205,12 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          cache-dependency-path: services/movie-seed/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npm run build
+      - name: Build and test services
+        run: npm run test:services
 
   dependency-review:
     name: Dependency Review
@@ -240,7 +236,7 @@ jobs:
       - server-tests
       - storybook-tests
       - build
-      - movie-seed-ci
+      - services-ci
       - dependency-review
     runs-on: ubuntu-latest
     permissions:
@@ -252,7 +248,7 @@ jobs:
       SERVER_TESTS_RESULT: ${{ needs.server-tests.result }}
       STORYBOOK_TESTS_RESULT: ${{ needs.storybook-tests.result }}
       BUILD_RESULT: ${{ needs.build.result }}
-      MOVIE_SEED_RESULT: ${{ needs.movie-seed-ci.result }}
+      SERVICES_CI_RESULT: ${{ needs.services-ci.result }}
       DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
     steps:
       - name: Validate workflow outcome
@@ -269,7 +265,7 @@ jobs:
           [[ "$SERVER_TESTS_RESULT" == "success" ]] || failures+=("Server Tests: $SERVER_TESTS_RESULT")
           [[ "$STORYBOOK_TESTS_RESULT" == "success" ]] || failures+=("Storybook Tests: $STORYBOOK_TESTS_RESULT")
           [[ "$BUILD_RESULT" == "success" ]] || failures+=("Build: $BUILD_RESULT")
-          [[ "$MOVIE_SEED_RESULT" == "success" ]] || failures+=("Movie Seed CI: $MOVIE_SEED_RESULT")
+          [[ "$SERVICES_CI_RESULT" == "success" ]] || failures+=("Services CI: $SERVICES_CI_RESULT")
           [[ "$DEPENDENCY_REVIEW_RESULT" == "success" ]] || failures+=("Dependency Review: $DEPENDENCY_REVIEW_RESULT")
 
           if [[ ${#failures[@]} -gt 0 ]]; then
