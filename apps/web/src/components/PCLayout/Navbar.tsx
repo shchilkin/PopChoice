@@ -28,6 +28,7 @@ export function Navbar() {
     { href: '/about', label: t.nav.howItWorks },
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/design-system', label: t.nav.styleGuide },
+    { href: '/login', label: t.nav.logIn },
     { href: '/register', label: t.nav.signUp },
   ];
 
