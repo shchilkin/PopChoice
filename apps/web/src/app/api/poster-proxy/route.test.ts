@@ -75,4 +75,26 @@ describe('GET /api/poster-proxy', () => {
 
     expect(res.status).toBe(404);
   });
+
+  it('strips auth credentials from the URL before fetching (SSRF hardening)', async () => {
+    const fetchSpy = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'image/jpeg' },
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    } as unknown as Response);
+    global.fetch = fetchSpy;
+
+    const urlWithAuth = encodeURIComponent(
+      'https://user:secret@image.tmdb.org/t/p/w500/poster.jpg',
+    );
+    const req = new NextRequest(`http://localhost/api/poster-proxy?url=${urlWithAuth}`);
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    const fetchedUrl = fetchSpy.mock.calls[0][0] as string;
+    expect(fetchedUrl).not.toContain('user');
+    expect(fetchedUrl).not.toContain('secret');
+    expect(fetchedUrl).toBe('https://image.tmdb.org/t/p/w500/poster.jpg');
+  });
 });

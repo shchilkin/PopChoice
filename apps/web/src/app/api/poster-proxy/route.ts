@@ -29,7 +29,11 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  const res = await fetch(url, {
+  // Reconstruct URL from validated parsed components so the fetch target is never
+  // derived from raw user input (addresses SSRF: any auth, port, or fragment is dropped).
+  const safeUrl = new URL(`https://${ALLOWED_HOST}${parsed.pathname}${parsed.search}`).toString();
+
+  const res = await fetch(safeUrl, {
     next: { revalidate: 86400 },
     redirect: 'error',
   });

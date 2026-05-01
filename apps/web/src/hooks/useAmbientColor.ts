@@ -28,10 +28,14 @@ export function useAmbientColor(posterURL: string | undefined): RGB | null {
     let proxyUrl: string;
     try {
       const parsed = new URL(posterURL);
-      proxyUrl =
-        parsed.hostname === 'image.tmdb.org'
-          ? `/api/poster-proxy?url=${encodeURIComponent(posterURL)}`
-          : posterURL;
+      if (parsed.hostname === 'image.tmdb.org' && parsed.protocol === 'https:') {
+        // Reconstruct from validated parsed components (strips auth, port, fragment)
+        // so only a canonical https://image.tmdb.org path is forwarded to the proxy.
+        const reconstructed = `https://image.tmdb.org${parsed.pathname}${parsed.search}`;
+        proxyUrl = `/api/poster-proxy?url=${encodeURIComponent(reconstructed)}`;
+      } else {
+        proxyUrl = posterURL;
+      }
     } catch {
       return;
     }
