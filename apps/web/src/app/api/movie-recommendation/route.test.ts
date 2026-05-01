@@ -185,6 +185,23 @@ describe('POST /api/movie-recommendation — moderation', () => {
     expect(response.status).toBe(400);
     expect(data).toHaveProperty('error');
   });
+
+  it('returns 413 when Content-Length exceeds 16 KB', async () => {
+    const req = new NextRequest('http://localhost/api/movie-recommendation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': 'en',
+        'content-length': String(16 * 1024 + 1),
+      },
+      body: JSON.stringify(validBody),
+    });
+    const response = await POST(req);
+    const data = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(data).toHaveProperty('error');
+  });
 });
 
 // ---------------------------------------------------------------------------

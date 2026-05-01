@@ -22,6 +22,11 @@ const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 const RESULTS_PER_PAGE = 6;
 const TMDB_DISCOVER_FETCH_TIMEOUT_MS = 8_000;
 const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 5_000;
+const OPENAI_EMBEDDING_TIMEOUT_MS = 10_000;
+const OPENAI_DESCRIPTION_TIMEOUT_MS = 20_000;
+
+/** Maximum request body size (16 KB). Requests larger than this are rejected with 413. */
+const MAX_BODY_SIZE_BYTES = 16 * 1024;
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -158,6 +163,13 @@ async function postHandler(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
+  // Reject oversized request bodies before parsing JSON to prevent DoS.
+  const contentLength = req.headers.get('content-length');
+  if (contentLength !== null && parseInt(contentLength, 10) > MAX_BODY_SIZE_BYTES) {
+    logger.warn({ contentLength }, 'more-tmdb-picks: Request body too large');
+    return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+  }
+
   const locale = parseLocaleFromRequest(req);
   const language = LOCALE_LANGUAGE[locale] ?? 'English';
   const tmdbLang = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
@@ -280,8 +292,14 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const similarityMap = new Map<number, number>();
     try {
       const [queryEmbedRes, movieEmbedRes] = await Promise.all([
-        getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: queryText }),
-        getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: candidateTexts }),
+        getOpenAIClient().embeddings.create(
+          { model: MODELS.EMBEDDING, input: queryText },
+          { signal: AbortSignal.timeout(OPENAI_EMBEDDING_TIMEOUT_MS) },
+        ),
+        getOpenAIClient().embeddings.create(
+          { model: MODELS.EMBEDDING, input: candidateTexts },
+          { signal: AbortSignal.timeout(OPENAI_EMBEDDING_TIMEOUT_MS) },
+        ),
       ]);
       const queryEmbedding = queryEmbedRes.data[0]?.embedding;
       if (queryEmbedding && queryEmbedding.length > 0) {
@@ -381,14 +399,17 @@ Respond in ${language} only.`;
           let aiDescription: string;
           try {
             const movieContext = `Movie: ${localizedTitle} (${year})\nScore: ${score}/10\nPlot: ${localizedOverview}\n\nRemember: respond in ${language} only.`;
-            const res = await getOpenAIClient().chat.completions.create({
-              model: MODELS.MINI,
-              messages: [
-                { role: 'system', content: descriptionSystemPrompt },
-                { role: 'user', content: movieContext },
-              ],
-              max_completion_tokens: 150,
-            });
+            const res = await getOpenAIClient().chat.completions.create(
+              {
+                model: MODELS.MINI,
+                messages: [
+                  { role: 'system', content: descriptionSystemPrompt },
+                  { role: 'user', content: movieContext },
+                ],
+                max_completion_tokens: 150,
+              },
+              { signal: AbortSignal.timeout(OPENAI_DESCRIPTION_TIMEOUT_MS) },
+            );
             aiDescription = res.choices[0]?.message?.content?.trim() ?? tmdb.overview;
           } catch (error) {
             const isRateLimit =
@@ -410,17 +431,20 @@ Respond in ${language} only.`;
             // Fall back: for non-English locales, attempt a minimal translation of the localized TMDB overview.
             if (locale !== 'en' && localizedOverview) {
               try {
-                const translationResponse = await getOpenAIClient().chat.completions.create({
-                  model: MODELS.MINI,
-                  messages: [
-                    {
-                      role: 'system',
-                      content: `Translate the following movie description to ${language}. Return only the translated text, nothing else.`,
-                    },
-                    { role: 'user', content: localizedOverview },
-                  ],
-                  max_completion_tokens: 150,
-                });
+                const translationResponse = await getOpenAIClient().chat.completions.create(
+                  {
+                    model: MODELS.MINI,
+                    messages: [
+                      {
+                        role: 'system',
+                        content: `Translate the following movie description to ${language}. Return only the translated text, nothing else.`,
+                      },
+                      { role: 'user', content: localizedOverview },
+                    ],
+                    max_completion_tokens: 150,
+                  },
+                  { signal: AbortSignal.timeout(OPENAI_DESCRIPTION_TIMEOUT_MS) },
+                );
                 const translated = translationResponse.choices[0]?.message?.content?.trim();
                 aiDescription = translated || localizedOverview;
               } catch {

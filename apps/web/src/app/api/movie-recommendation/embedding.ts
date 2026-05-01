@@ -2,6 +2,16 @@ import { getOpenAIClient } from '@/clients';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 
+// ---------------------------------------------------------------------------
+// Timeout constants
+// ---------------------------------------------------------------------------
+
+/** Timeout for query-enrichment LLM calls (15 s). */
+const OPENAI_ENRICHMENT_TIMEOUT_MS = 15_000;
+
+/** Timeout for embedding creation calls (10 s). */
+const OPENAI_EMBEDDING_TIMEOUT_MS = 10_000;
+
 import type { PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
@@ -79,15 +89,18 @@ export async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promi
   const rawText = whyTexts.join(' ');
 
   try {
-    const response = await getOpenAIClient().chat.completions.create({
-      model: MODELS.MINI,
-      messages: [
-        { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
-        { role: 'user', content: rawText },
-      ],
-      max_completion_tokens: 200,
-      temperature: 0,
-    });
+    const response = await getOpenAIClient().chat.completions.create(
+      {
+        model: MODELS.MINI,
+        messages: [
+          { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
+          { role: 'user', content: rawText },
+        ],
+        max_completion_tokens: 200,
+        temperature: 0,
+      },
+      { signal: AbortSignal.timeout(OPENAI_ENRICHMENT_TIMEOUT_MS) },
+    );
 
     const refinedTags = response.choices[0]?.message?.content?.trim();
 
@@ -132,10 +145,13 @@ export async function createEmbedding(
       ? buildEmbeddingInputWithRefinedTags(allPeopleData, refinedQueryTags)
       : combineAllPeopleDataToString(allPeopleData);
 
-    const embeddingResponse = await getOpenAIClient().embeddings.create({
-      model: MODELS.EMBEDDING,
-      input: embeddingInput,
-    });
+    const embeddingResponse = await getOpenAIClient().embeddings.create(
+      {
+        model: MODELS.EMBEDDING,
+        input: embeddingInput,
+      },
+      { signal: AbortSignal.timeout(OPENAI_EMBEDDING_TIMEOUT_MS) },
+    );
     if (!embeddingResponse?.data?.[0]?.embedding) {
       throw new Error('No embedding returned from OpenAI.');
     }

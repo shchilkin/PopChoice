@@ -5,6 +5,16 @@ import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 import { MovieService } from '@/services';
 
+// ---------------------------------------------------------------------------
+// Timeout constants
+// ---------------------------------------------------------------------------
+
+/** Timeout for OpenAI recommendation chat completion calls (30 s). */
+const OPENAI_RECOMMENDATION_TIMEOUT_MS = 30_000;
+
+/** Timeout for individual AI movie description generation calls (20 s). */
+const OPENAI_DESCRIPTION_TIMEOUT_MS = 20_000;
+
 import { combineAllPeopleDataToString } from './embedding';
 import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
@@ -102,14 +112,17 @@ export async function getRecommendation(similarMovies: EnhancedMovieMatch[], loc
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
 
-    const recommendation = await getOpenAIClient().chat.completions.create({
-      model: MODELS.RECOMMENDATION,
-      messages: [
-        { role: 'system', content: buildPrompt(locale) },
-        { role: 'user', content: moviesContext },
-      ],
-      response_format: recommendationResponseFormat,
-    });
+    const recommendation = await getOpenAIClient().chat.completions.create(
+      {
+        model: MODELS.RECOMMENDATION,
+        messages: [
+          { role: 'system', content: buildPrompt(locale) },
+          { role: 'user', content: moviesContext },
+        ],
+        response_format: recommendationResponseFormat,
+      },
+      { signal: AbortSignal.timeout(OPENAI_RECOMMENDATION_TIMEOUT_MS) },
+    );
     if (!recommendation.choices[0].message.content) {
       throw new Error('No output text from OpenAI.');
     }
@@ -180,14 +193,17 @@ Plot: ${movie.description}
 
 Remember: respond in ${language} only.`;
 
-          const descriptionResponse = await getOpenAIClient().chat.completions.create({
-            model: MODELS.MINI,
-            messages: [
-              { role: 'system', content: descriptionPrompt },
-              { role: 'user', content: movieContext },
-            ],
-            max_completion_tokens: 150,
-          });
+          const descriptionResponse = await getOpenAIClient().chat.completions.create(
+            {
+              model: MODELS.MINI,
+              messages: [
+                { role: 'system', content: descriptionPrompt },
+                { role: 'user', content: movieContext },
+              ],
+              max_completion_tokens: 150,
+            },
+            { signal: AbortSignal.timeout(OPENAI_DESCRIPTION_TIMEOUT_MS) },
+          );
 
           const aiDescription =
             descriptionResponse.choices[0]?.message?.content?.trim() || movie.description;

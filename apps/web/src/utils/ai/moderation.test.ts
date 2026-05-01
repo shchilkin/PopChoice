@@ -60,10 +60,10 @@ describe('moderateInput', () => {
     const result = await moderateInput('The Dark Knight');
 
     expect(result).toEqual({ flagged: false });
-    expect(mockModerationsCreate).toHaveBeenCalledWith({
-      model: 'omni-moderation-latest',
-      input: 'The Dark Knight',
-    });
+    expect(mockModerationsCreate).toHaveBeenCalledWith(
+      { model: 'omni-moderation-latest', input: 'The Dark Knight' },
+      expect.objectContaining({ signal: expect.anything() }),
+    );
   });
 
   it('returns flagged: true with ALL categories including violence (no filtering)', async () => {
@@ -101,10 +101,10 @@ describe('moderateInput', () => {
     const result = await moderateInput(['action', 'comedy', 'light']);
 
     expect(result).toEqual({ flagged: false });
-    expect(mockModerationsCreate).toHaveBeenCalledWith({
-      model: 'omni-moderation-latest',
-      input: ['action', 'comedy', 'light'],
-    });
+    expect(mockModerationsCreate).toHaveBeenCalledWith(
+      { model: 'omni-moderation-latest', input: ['action', 'comedy', 'light'] },
+      expect.objectContaining({ signal: expect.anything() }),
+    );
   });
 
   it('deduplicates flagged categories across multiple results', async () => {
@@ -280,6 +280,7 @@ describe('judgeForMoviePlatform', () => {
           }),
         ]),
       }),
+      expect.objectContaining({ signal: expect.anything() }),
     );
   });
 

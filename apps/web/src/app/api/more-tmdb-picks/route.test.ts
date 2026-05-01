@@ -123,6 +123,23 @@ describe('POST /api/more-tmdb-picks — timeout handling', () => {
     expect(data).toHaveProperty('error');
   });
 
+  it('returns 413 when Content-Length exceeds 16 KB', async () => {
+    const req = new NextRequest('http://localhost/api/more-tmdb-picks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': 'en',
+        'content-length': String(16 * 1024 + 1),
+      },
+      body: JSON.stringify(validBody),
+    });
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(413);
+    expect(data).toHaveProperty('error');
+  });
+
   it('returns movies even when localized detail fetch times out (falls back to discover values)', async () => {
     // First fetch: TMDB discover succeeds
     vi.mocked(fetch).mockResolvedValueOnce({

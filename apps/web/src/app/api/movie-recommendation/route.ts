@@ -37,6 +37,9 @@ import type { ApiResponse, PersonFormData } from './types';
 
 const MOVIE_SEED_ENQUEUE_TIMEOUT_MS = 1500;
 
+/** Maximum request body size (16 KB). Requests larger than this are rejected with 413. */
+const MAX_BODY_SIZE_BYTES = 16 * 1024;
+
 class EnqueueTimeoutError extends Error {
   constructor(message: string) {
     super(message);
@@ -80,6 +83,13 @@ async function postHandler(req: NextRequest): Promise<Response> {
   try {
     const rateLimitResponse = await applyRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
+
+    // Reject oversized request bodies before parsing JSON to prevent DoS.
+    const contentLength = req.headers.get('content-length');
+    if (contentLength !== null && parseInt(contentLength, 10) > MAX_BODY_SIZE_BYTES) {
+      logger.warn({ contentLength }, 'Request body too large');
+      return NextResponse.json({ error: 'Request body too large' }, { status: 413 });
+    }
 
     const body = await req.json();
 
@@ -402,22 +412,11 @@ async function postHandler(req: NextRequest): Promise<Response> {
 
     logger.error({ err: error }, 'Error in movie recommendation API');
 
-    // Handle other known errors
-    if (error instanceof Error) {
-      // Return more specific error messages based on error content
-      if (error.message.includes('embedding')) {
-        return NextResponse.json({ error: 'Failed to process preferences' }, { status: 500 });
-      }
-      if (error.message.includes('similar movies')) {
-        return NextResponse.json({ error: 'Failed to find matching movies' }, { status: 500 });
-      }
-      if (error.message.includes('OpenAI')) {
-        return NextResponse.json({ error: 'Failed to generate recommendation' }, { status: 500 });
-      }
-    }
-
-    // Generic error response
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Return a generic error message — never expose internal error details to the client.
+    return NextResponse.json(
+      { error: 'An unexpected error occurred. Please try again.' },
+      { status: 500 },
+    );
   }
 }
 
