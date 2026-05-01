@@ -104,6 +104,29 @@ test.describe('/available-movies page', () => {
   });
 
   test('/available-movies table shows column headers', async ({ page }) => {
+    // Mock the API so the test is DB-independent in CI.
+    await page.route('**/api/movies*', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          movies: [
+            {
+              id: 1,
+              name: 'Test Movie',
+              age_rating: 'PG',
+              duration: 120,
+              score_rating: 8.5,
+              year: 2020,
+            },
+          ],
+          totalCount: 1,
+          page: 1,
+          pageSize: 50,
+          totalPages: 1,
+        }),
+      }),
+    );
     await page.goto('/available-movies');
     // t.moviesPage.columns — Name, Age Rating, Duration, Score
     await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
