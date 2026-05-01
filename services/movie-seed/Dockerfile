@@ -14,11 +14,11 @@ COPY services/movie-seed/package.json ./services/movie-seed/
 RUN npm ci
 
 COPY packages/shared/tsconfig.json ./packages/shared/
-COPY packages/shared/src/ ./packages/shared/src/
+COPY packages/shared/src ./packages/shared/src
 RUN npm run build --workspace=packages/shared
 
 COPY services/movie-seed/tsconfig.json ./services/movie-seed/
-COPY services/movie-seed/src/ ./services/movie-seed/src/
+COPY services/movie-seed/src ./services/movie-seed/src
 RUN npm run build --workspace=services/movie-seed
 
 FROM node:24-slim

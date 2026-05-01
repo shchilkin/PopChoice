@@ -44,7 +44,7 @@ test.describe('Navigation', () => {
               name: 'Test Movie',
               year: 2024,
               similarity: 0.95,
-              posterURL: 'https://image.tmdb.org/t/p/w500/test.jpg',
+              posterURL: null,
               isMainRecommendation: true,
             },
           ],
