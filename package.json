@@ -22,6 +22,7 @@
     "lint": "npm run lint --workspace=apps/web",
     "lint:check": "npm run lint:check --workspace=apps/web",
     "lint:fix": "npm run lint:fix --workspace=apps/web",
+    "migrate:db": "bash scripts/migrate-db.sh",
     "populate-db": "npm run dev --workspace=services/movie-seed",
     "prepare": "husky || true",
     "setup:local-db": "bash scripts/setup-local-db.sh",

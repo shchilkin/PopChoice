@@ -19,8 +19,11 @@ const registerSchema = z.object({
 // POST handler
 // ---------------------------------------------------------------------------
 
+// Auth endpoints are expensive (scrypt) — use a tighter limit than the default.
+const AUTH_RATE_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
+
 export async function POST(req: NextRequest): Promise<Response> {
-  const rateLimitResponse = await applyRateLimit(req);
+  const rateLimitResponse = await applyRateLimit(req, AUTH_RATE_LIMIT);
   if (rateLimitResponse) return rateLimitResponse;
 
   let body: unknown;
@@ -47,18 +50,9 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
   }
 
-  // Check for duplicate email
-  const existing = await db.from('users').select('id').eq('email', normalizedEmail).limit(1);
-  if (existing.error) {
-    logger.error({ error: existing.error.message }, 'Failed to query users table');
-    return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
-  }
-  if (existing.data && existing.data.length > 0) {
-    return NextResponse.json({ error: 'email_taken' }, { status: 409 });
-  }
-
   const passwordHash = await hashPassword(password);
 
+  // Let the DB unique index be the authoritative guard — no pre-check SELECT needed.
   const result = await db
     .from('users')
     .insert({ email: normalizedEmail, password_hash: passwordHash })

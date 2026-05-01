@@ -27,11 +27,6 @@ import type { DbClient } from '@/clients/dbClient';
 // ---------------------------------------------------------------------------
 
 function makeMockDb(overrides: Record<string, unknown> = {}): DbClient {
-  const selectChain = {
-    eq: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnValue(Promise.resolve({ data: [], error: null })),
-  };
-
   const insertChain = {
     select: vi.fn().mockReturnValue(Promise.resolve({ data: [{ id: 1 }], error: null })),
   };
@@ -39,11 +34,10 @@ function makeMockDb(overrides: Record<string, unknown> = {}): DbClient {
   const fromMock = vi.fn((table: string) => {
     if (table === 'users') {
       return {
-        select: vi.fn(() => selectChain),
         insert: vi.fn(() => insertChain),
       };
     }
-    return { select: vi.fn(), insert: vi.fn() };
+    return { insert: vi.fn() };
   });
 
   return {
@@ -126,26 +120,7 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 409 when email is already taken (pre-check)', async () => {
-    const selectChain = {
-      eq: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnValue(Promise.resolve({ data: [{ id: 99 }], error: null })),
-    };
-    const db = makeMockDb({
-      from: vi.fn(() => ({
-        select: vi.fn(() => selectChain),
-        insert: vi.fn(),
-      })),
-    });
-    vi.mocked(getDbClient).mockReturnValue(db);
-
-    const res = await POST(makeRequest(validBody));
-    expect(res.status).toBe(409);
-    const data = await res.json();
-    expect(data).toEqual({ error: 'email_taken' });
-  });
-
-  it('returns 409 when insert fails with unique-constraint violation (race condition)', async () => {
+  it('returns 409 when insert fails with unique-constraint violation', async () => {
     const insertChain = {
       select: vi.fn().mockReturnValue(
         Promise.resolve({
@@ -154,13 +129,8 @@ describe('POST /api/auth/register', () => {
         }),
       ),
     };
-    const selectChain = {
-      eq: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnValue(Promise.resolve({ data: [], error: null })),
-    };
     const db = makeMockDb({
       from: vi.fn(() => ({
-        select: vi.fn(() => selectChain),
         insert: vi.fn(() => insertChain),
       })),
     });
@@ -178,25 +148,6 @@ describe('POST /api/auth/register', () => {
       from: vi.fn(),
       rpc: vi.fn(),
     });
-
-    const res = await POST(makeRequest(validBody));
-    expect(res.status).toBe(503);
-  });
-
-  it('returns 503 when the pre-check query fails', async () => {
-    const selectChain = {
-      eq: vi.fn().mockReturnThis(),
-      limit: vi
-        .fn()
-        .mockReturnValue(Promise.resolve({ data: null, error: { message: 'connection refused' } })),
-    };
-    const db = makeMockDb({
-      from: vi.fn(() => ({
-        select: vi.fn(() => selectChain),
-        insert: vi.fn(),
-      })),
-    });
-    vi.mocked(getDbClient).mockReturnValue(db);
 
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(503);
