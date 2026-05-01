@@ -841,6 +841,26 @@ export const en = {
       generic: 'Something went wrong. Please try again.',
     },
   },
+  deleteAccount: {
+    title: 'Delete account',
+    subtitle: 'This action is permanent and cannot be undone.',
+    emailLabel: 'Email address',
+    emailPlaceholder: 'you@example.com',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'Your current password',
+    submitButton: 'Delete my account',
+    submitting: 'Deleting account…',
+    successTitle: 'Account deleted',
+    successMessage: 'Your account and all associated data have been permanently deleted.',
+    backToHome: 'Back to home',
+    errors: {
+      emailRequired: 'Email is required.',
+      emailInvalid: 'Please enter a valid email address.',
+      passwordRequired: 'Password is required.',
+      invalidCredentials: 'Invalid email or password.',
+      generic: 'Something went wrong. Please try again.',
+    },
+  },
 };
 
 export type Translations = typeof en;

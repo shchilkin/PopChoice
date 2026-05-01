@@ -76,6 +76,7 @@ export interface QueryInsert<T = unknown> extends PromiseLike<QueryResult<T>> {
 
 /** Delete step. */
 export interface QueryDelete<T = unknown> {
+  eq: (column: string, value: unknown) => PromiseLike<QueryResult<T>>;
   neq: (column: string, value: unknown) => PromiseLike<QueryResult<T>>;
 }
 

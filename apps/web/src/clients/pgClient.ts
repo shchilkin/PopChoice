@@ -437,25 +437,28 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
 // ---------------------------------------------------------------------------
 
 function createDelete<T>(pool: PgPool, table: string): QueryDelete<T> {
+  function makeDeleteByColumn(column: string, op: '=' | '!=', value: unknown): PromiseLike<QueryResult<T>> {
+    assertSafeIdentifier(column, 'column name');
+    const sql = `DELETE FROM "${table}" WHERE "${column}" ${op} $1`;
+    return {
+      then: (onfulfilled, onrejected) =>
+        pool
+          .query(sql, [value])
+          .then(() => ({ data: [] as T[], error: null }) as QueryResult<T>)
+          .catch(
+            (err: unknown) =>
+              ({
+                data: null,
+                error: { message: err instanceof Error ? err.message : String(err) },
+              }) as QueryResult<T>,
+          )
+          .then(onfulfilled, onrejected),
+    } as PromiseLike<QueryResult<T>>;
+  }
+
   return {
-    neq: (column: string, value: unknown) => {
-      assertSafeIdentifier(column, 'column name');
-      const sql = `DELETE FROM "${table}" WHERE "${column}" != $1`;
-      return {
-        then: (onfulfilled, onrejected) =>
-          pool
-            .query(sql, [value])
-            .then(() => ({ data: [] as T[], error: null }) as QueryResult<T>)
-            .catch(
-              (err: unknown) =>
-                ({
-                  data: null,
-                  error: { message: err instanceof Error ? err.message : String(err) },
-                }) as QueryResult<T>,
-            )
-            .then(onfulfilled, onrejected),
-      } as PromiseLike<QueryResult<T>>;
-    },
+    eq: (column: string, value: unknown) => makeDeleteByColumn(column, '=', value),
+    neq: (column: string, value: unknown) => makeDeleteByColumn(column, '!=', value),
   };
 }
 

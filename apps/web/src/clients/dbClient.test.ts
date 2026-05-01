@@ -42,6 +42,7 @@ function createMockDbClient(overrides?: Partial<DbClient>): DbClient {
         ...makeThenable(defaultResult),
       }),
       delete: () => ({
+        eq: () => makeThenable(defaultResult),
         neq: () => makeThenable(defaultResult),
       }),
     } as unknown as TableRef<T>;
