@@ -146,12 +146,19 @@ test.describe('/available-movies page', () => {
     );
     await page.goto('/available-movies');
     // Both skeleton variants (loading state + useIsMobile null phase) have aria-hidden="true",
-    // so getByRole('table') only resolves once the real accessible table is in the DOM.
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10_000 });
-    // t.moviesPage.columns — Name, Age Rating, Duration, Score
-    await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Age Rating' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Duration' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Score' })).toBeVisible();
+    // so getByRole('columnheader') only resolves once the real accessible table is in the DOM.
+    // Use a longer timeout to absorb the loading → data → isMobile=false render cycle in CI.
+    await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('columnheader', { name: 'Age Rating' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('columnheader', { name: 'Duration' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('columnheader', { name: 'Score' })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

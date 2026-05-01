@@ -147,24 +147,28 @@ export function MoviesTable({ movies }: MoviesTableProps) {
         <thead>
           <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
             <th
+              scope="col"
               className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
               style={{ color: 'var(--pc-t4)' }}
             >
               {t.moviesPage.columns.name}
             </th>
             <th
+              scope="col"
               className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
               style={{ color: 'var(--pc-t4)' }}
             >
               {t.moviesPage.columns.ageRating}
             </th>
             <th
+              scope="col"
               className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
               style={{ color: 'var(--pc-t4)' }}
             >
               {t.moviesPage.columns.duration}
             </th>
             <th
+              scope="col"
               className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
               style={{ color: 'var(--pc-t4)' }}
             >
