@@ -65,7 +65,11 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   // Always run the password verification to avoid a timing-based user-enumeration
   // attack: if no user is found we verify against a dummy hash that will always fail.
-  const DUMMY_HASH = 'deadbeef:deadbeef';
+  // The dummy is formatted identically to real hashes (32-byte hex salt : 32-byte hex hash)
+  // so that scrypt runs the same key derivation path and length comparison reaches
+  // `timingSafeEqual` rather than short-circuiting early on a length mismatch.
+  const DUMMY_HASH =
+    '00000000000000000000000000000000:0000000000000000000000000000000000000000000000000000000000000000';
   const storedHash = user?.password_hash ?? DUMMY_HASH;
   const passwordValid = await verifyPassword(password, storedHash);
 
