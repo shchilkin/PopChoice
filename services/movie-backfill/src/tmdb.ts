@@ -1,6 +1,9 @@
 import { logger } from './logger.js';
+import z from 'zod';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_SEARCH_FETCH_TIMEOUT_MS = 8_000;
+const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 8_000;
 
 export interface TMDBMovieDetails {
   id: number;
@@ -20,15 +23,17 @@ export interface TMDBMovieDetails {
   };
 }
 
-interface TMDBSearchResult {
-  id: number;
-  title: string;
-  release_date: string;
-}
+const tmdbSearchResultSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  release_date: z.string(),
+});
 
-interface TMDBSearchResponse {
-  results: TMDBSearchResult[];
-}
+type TMDBSearchResult = z.infer<typeof tmdbSearchResultSchema>;
+
+const tmdbSearchResponseSchema = z.object({
+  results: z.array(tmdbSearchResultSchema),
+});
 
 /** Year tolerance (in years) when disambiguating TMDB search results. */
 const YEAR_TOLERANCE = 1;
@@ -63,19 +68,42 @@ async function tmdbSearch(
     url.searchParams.set('year', String(year));
   }
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(TMDB_SEARCH_FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+      logger.warn('TMDB search request timed out', {
+        title,
+        year,
+        timeoutMs: TMDB_SEARCH_FETCH_TIMEOUT_MS,
+      });
+      throw new Error(`TMDB search timeout after ${TMDB_SEARCH_FETCH_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     throw new Error(`TMDB search API error: ${response.status} ${response.statusText}`);
   }
 
-  const data = (await response.json()) as TMDBSearchResponse;
-  return data.results ?? [];
+  const parsedSearchResponse = tmdbSearchResponseSchema.safeParse(await response.json());
+  if (!parsedSearchResponse.success) {
+    logger.warn('TMDB search response validation failed', {
+      title,
+      year,
+      zodError: parsedSearchResponse.error,
+    });
+    return [];
+  }
+
+  return parsedSearchResponse.data.results;
 }
 
 /**
@@ -120,12 +148,25 @@ export async function fetchMovieDetails(
   url.searchParams.set('append_to_response', 'release_dates');
   url.searchParams.set('language', 'en-US');
 
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+      logger.warn('TMDB movie details request timed out, returning null', {
+        movieId,
+        timeoutMs: TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS,
+      });
+      return null;
+    }
+    throw error;
+  }
 
   if (!response.ok) {
     logger.warn('TMDB movie details fetch failed', {

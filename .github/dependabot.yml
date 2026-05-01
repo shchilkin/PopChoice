@@ -56,11 +56,18 @@ updates:
         patterns:
           - 'canvas-confetti'
           - 'react-canvas-confetti'
-          - 'axios'
           - 'zod'
           - 'serve'
           - '@vercel/*'
         dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
+      prod-misc:
+        applies-to: version-updates
+        dependency-type: 'production'
+        patterns:
+          - '*'
         update-types:
           - 'minor'
           - 'patch'

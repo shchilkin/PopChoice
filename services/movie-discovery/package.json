@@ -10,17 +10,16 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "node-cron": "^4.2.1",
-    "openai": "^6.34.0",
-    "pg": "^8.20.0"
+    "@pop-choice/shared": "*",
+    "node-cron": "^4.2.1"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.20.0",
     "tsx": "^4.19.4",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.4"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=24",

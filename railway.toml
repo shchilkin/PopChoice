@@ -1,14 +1,77 @@
-[[services]]
-name = "web"
+# railway.toml — Root Railway configuration for the PopChoice monorepo
+#
+# This file is the single source of truth for Railway deployment settings.
+# It defines shared build/deploy defaults and the environment variables
+# consumed across all services. Every service is built from its own Dockerfile;
+# set `dockerfilePath` per-service in the Railway dashboard because each
+# service in the monorepo has a different Dockerfile path.
+#
+# Services deployed on Railway and their Dockerfiles:
+#   • Web App           — apps/web/Dockerfile
+#   • Bull Dashboard    — apps/web/bull-board.Dockerfile
+#   • movie-seed worker — apps/web/workers.Dockerfile
+#   • Storybook         — apps/web/storybook.Dockerfile
+#   • movie-discovery   — services/movie-discovery/Dockerfile
+#   • movie-seed        — services/movie-seed/Dockerfile
+#   • movie-backfill    — no Dockerfile yet; set up build in the dashboard
 
-[services.build]
-buildCommand = "npm ci && npm run build"
+[build]
+# All services are built from their own Dockerfiles.
+# Set `dockerfilePath` for each service individually in the Railway dashboard
+# (Service Settings → Build → Dockerfile Path) since each service in this
+# monorepo has a different Dockerfile location.
+builder = "DOCKERFILE"
 
-[services.deploy]
-startCommand = "npm run start"
+[deploy]
+# Default health-check and restart policy applied to all long-running services.
+# One-shot services (movie-seed, movie-backfill) override restartPolicyType to
+# "never" in the Railway dashboard so they run once and stop.
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
 
-[[services]]
-name = "storybook"
+[variables]
+# ── Node runtime ──────────────────────────────────────────────────────────────
+NODE_ENV = "production"
+NODE_VERSION = "24"
 
-[services.build]
-dockerfilePath = "storybook.Dockerfile"
+# ── Logging ───────────────────────────────────────────────────────────────────
+# Accepted values: debug | info | warn | error
+LOG_LEVEL = "info"
+
+# ── Database (PostgreSQL + pgvector) ─────────────────────────────────────────
+# Injected automatically by the Railway PostgreSQL plugin.
+# Reference syntax links the variable to the plugin's output at deploy time.
+DATABASE_URL = "${{Postgres.DATABASE_URL}}"
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+# Injected automatically by the Railway Redis plugin.
+# Used by the web app (rate limiting), Bull Dashboard, and the workers service.
+REDIS_URL = "${{Redis.REDIS_URL}}"
+
+# ── OpenAI ────────────────────────────────────────────────────────────────────
+# Required by: web app, movie-discovery, movie-seed, movie-backfill.
+# Set the actual secret value in the Railway dashboard (Variables tab).
+OPENAI_API_KEY = "${{shared.OPENAI_API_KEY}}"
+
+# ── TMDB ──────────────────────────────────────────────────────────────────────
+# Required by: movie-discovery, movie-backfill.
+# Optional for the web app (enables live poster images when present).
+TMDB_API_KEY = "${{shared.TMDB_API_KEY}}"
+
+# Client-side TMDB key exposed to the browser via Next.js public env prefix.
+# Only consumed by the web app (apps/web).
+NEXT_PUBLIC_TMDB_API_KEY = "${{shared.TMDB_API_KEY}}"
+
+# ── Web app public URL ────────────────────────────────────────────────────────
+# Required for CSRF validation when the app runs behind a reverse proxy.
+# Set to the Railway-generated or custom domain for each environment.
+NEXT_PUBLIC_BASE_URL = "${{shared.NEXT_PUBLIC_BASE_URL}}"
+
+# ── API key authentication (production) ───────────────────────────────────────
+# HMAC secret used to derive and verify API keys.
+# Set the actual secret value in the Railway dashboard (Variables tab).
+API_KEY_HMAC_SECRET = "${{shared.API_KEY_HMAC_SECRET}}"
+
+# Comma-separated list of scrypt-hashed API key digests.
+# Set the actual value in the Railway dashboard (Variables tab).
+VALID_API_KEYS = "${{shared.VALID_API_KEYS}}"

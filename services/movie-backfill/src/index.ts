@@ -16,13 +16,14 @@
 
 import { loadConfig } from './config.js';
 import {
+  checkTableExists,
   closeDatabase,
   getIncompleteMovies,
   initDatabase,
   updateMovie,
   type IncompleteMovie,
 } from './database.js';
-import { createEmbeddings, createOpenAIClient } from './embeddings.js';
+import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
 import {
   extractUSCertification,
@@ -51,15 +52,18 @@ async function main(): Promise<void> {
 
   initDatabase(config.databaseUrl);
 
-  // Create a single OpenAI client to reuse across all embedding calls
-  const openaiClient = createOpenAIClient(config.openaiApiKey);
-
   let totalProcessed = 0;
   let totalUpdated = 0;
   let totalWouldUpdate = 0;
   let totalSkipped = 0;
 
   try {
+    const tableExists = await checkTableExists('movies');
+    if (!tableExists) {
+      logger.info("Table 'movies' does not exist — skipping backfill");
+      return;
+    }
+
     const movies = await getIncompleteMovies(config.maxMovies);
     logger.info('Fetched incomplete movies from database', { count: movies.length });
 
@@ -167,7 +171,7 @@ async function main(): Promise<void> {
       let embeddings: number[][];
       try {
         embeddings = await createEmbeddings(
-          openaiClient,
+          config.openaiApiKey,
           pendingUpdates.map((u) => u.embeddingText),
         );
       } catch (err) {

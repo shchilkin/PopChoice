@@ -1,0 +1,283 @@
+export const en = {
+  nav: {
+    howItWorks: 'How it works',
+    availableMovies: 'Movies',
+    findAMovie: 'Find a movie',
+    toggleTheme: 'Toggle theme',
+    switchLanguage: 'Switch language',
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    styleGuide: 'Style Guide',
+  },
+  footer: {
+    builtBy: 'Built by',
+    authorName: 'Aleksandr Shchilkin',
+    tagline: 'a course project that got out of hand',
+  },
+  tmdbAttribution: {
+    disclaimer: 'PopChoice uses the TMDB API but is not endorsed or certified by TMDB.',
+    visitLink: 'Visit The Movie Database',
+  },
+  hero: {
+    badge: 'AI-Powered Movie Finder',
+    descriptionPre: 'Stop endlessly scrolling. Answer 5 quick questions and let AI find the',
+    perfectMovie: 'perfect movie',
+    descriptionPost: 'for your mood, your night, your vibe.',
+    findMyMovie: 'Find My Movie',
+    howItWorks: 'How it works',
+    noSignup: '✨ No sign-up required · Takes ~60 seconds · Works on mobile',
+  },
+  features: {
+    headline: 'Movie night, sorted.',
+    subheadline: 'No endless scrolling, no guesswork — just picks that fit.',
+    aiPowered: {
+      title: 'AI-Powered',
+      desc: 'Finds films that truly match your vibe',
+    },
+    fiveQuestions: {
+      title: '5 Quick Questions',
+      desc: 'No endless forms — just a 60-second taste quiz',
+    },
+    groupMode: {
+      title: 'Group Mode',
+      desc: 'A pick everyone in the room will actually agree on. No arguing required.',
+    },
+    instantResults: {
+      title: 'Instant Results',
+      desc: 'Get 6 curated recommendations in seconds',
+    },
+  },
+  cta: {
+    headline: 'Your next favorite film is one quiz away',
+    description:
+      "Whether it's a solo night in or movie night with friends, PopChoice finds a film that fits the mood — every time.",
+    button: 'Start the Quiz',
+  },
+  quiz: {
+    intro: {
+      title: "Let's find your movie",
+      subtitle: 'Are you watching solo or with others?',
+      soloTitle: 'Just me',
+      soloDesc: 'Personalized picks — just for you',
+      groupTitle: 'Group mode 🎉',
+      groupDesc: 'Everyone answers on the same device — 2 to 6 people',
+      youLabel: 'You',
+    },
+    groupSetup: {
+      title: "Who's watching?",
+      subtitle: "Add everyone's name so we can personalize your results",
+      personPlaceholder: "Person {n}'s name",
+      addPerson: 'Add another person',
+      back: 'Back',
+      letsGo: "Let's go!",
+    },
+    between: {
+      turnDone: "{name}'s turn is done!",
+      nowIts: "Now it's {name}'s turn. Hand over the phone!",
+      ready: "I'm ready, {name}! →",
+    },
+    nav: {
+      back: 'Back',
+      continue: 'Continue',
+      nextPerson: 'Next Person',
+      findMyMovie: 'Find My Movie ✨',
+      submitting: 'Submitting…',
+      ofTotal: '{current} of {total}',
+      personTurn: "{name}'s turn",
+    },
+    labels: ['Favorite film', 'Old or new?', 'Your mood', 'Pick a tone', 'Favorite actor'],
+    favoriteMovie: {
+      title: "What's your favorite movie?",
+      hint: 'This helps us understand your taste. Any film that made an impression on you.',
+      placeholder: 'e.g. The Dark Knight, Parasite, Coco…',
+      popularPicks: 'POPULAR PICKS',
+      why: 'WHY?',
+      whyOptional: '(optional)',
+      whyPlaceholder: 'Share your thoughts — plot, characters, what made it special…',
+    },
+    era: {
+      title: 'New releases or timeless classics?',
+      new: { title: 'New Releases', desc: 'Recent films from the last 5 years' },
+      classic: { title: 'Timeless Classics', desc: 'Golden films that stood the test of time' },
+      both: {
+        title: "I'm open to both",
+        desc: "Surprise me — old or new, as long as it's great",
+      },
+    },
+    mood: {
+      title: "What's your mood tonight?",
+      pickOne: 'Pick one or more',
+      selectedSingular: '✓ {n} genre selected',
+      selectedPlural: '✓ {n} genres selected',
+    },
+    tone: {
+      title: 'What tone are you after?',
+    },
+    actor: {
+      title: "Who's your favorite actor?",
+      hint: 'Optional — adds another dimension to your taste profile.',
+
+      placeholder: 'e.g. Tom Hanks, Meryl Streep, Cillian Murphy…',
+      popularPicks: 'POPULAR PICKS',
+    },
+  },
+  genres: {
+    action: 'Action',
+    comedy: 'Comedy',
+    drama: 'Drama',
+    scifi: 'Sci-Fi',
+    thriller: 'Thriller',
+    romance: 'Romance',
+    horror: 'Horror',
+    adventure: 'Adventure',
+    animation: 'Animation',
+    documentary: 'Documentary',
+  },
+  tones: {
+    light: { label: 'Light & Fun', desc: 'Easy going, uplifting' },
+    balanced: { label: 'Balanced', desc: 'Mix of everything' },
+    serious: { label: 'Serious', desc: 'Thought-provoking' },
+    dark: { label: 'Dark & Intense', desc: 'Gripping, complex' },
+  },
+  loading: {
+    title: 'Finding your perfect pick',
+    errorTitle: 'Oops…',
+    tips: [
+      'Decoding your cinematic DNA… 🧠',
+      'Scanning 10,000+ films for the perfect match… 🎬',
+      'Matching vibes, not just genres… ✨',
+      'Filtering out movies your friends already spoiled… 🤫',
+      'Calculating the perfect runtime for your evening… ⏱️',
+      'Consulting the AI film sommelier… 🍷',
+      'Almost there — your perfect pick is loading… 🍿',
+    ],
+    retryableError: 'Something went wrong. Please try again.',
+    moderatedError:
+      'Your input was flagged for inappropriate content. Please revise your preferences and try again.',
+    fatalError: 'The service is not available right now. Please try again later.',
+    savedAnswers:
+      "Your answers are saved in your browser — come back and we'll pick up where you left off.",
+    tryAgain: 'Try again',
+    backToQuiz: 'Back to quiz',
+    goHome: 'Go to home',
+    funFact: '🍿 Did you know?',
+    funFactText:
+      'The average person spends {time} deciding what to watch — PopChoice does it in seconds.',
+    funFactTime: '18 minutes',
+  },
+  results: {
+    badge: 'Your personalized picks',
+    title: 'We found your perfect film',
+    subtitle: 'Matched from {count} films based on your vibe',
+    topPick: 'Top Pick',
+    moreSuggestions: 'More suggestions',
+    loading: 'Loading your picks…',
+    noResultsTitle: 'Nothing matched…',
+    noResultsHint: 'Try again with a different vibe.',
+    tryAgain: 'Try Again',
+    tryWithFriends: 'Try with friends',
+    disclaimer: 'AI-picked for you. Results may spark a movie marathon.',
+    scrollLeft: 'Scroll left',
+    scrollRight: 'Scroll right',
+    showDetails: 'Show details for {name}',
+    aiPick: 'AI Pick',
+    match: 'match',
+    minUnit: 'min',
+    whyThisFilm: 'Why this film',
+    whyThisFilmForYou: 'Why this film for you',
+    broaderSearch: 'Expanded search — including results from TMDB',
+    foundInDb: 'Found in our library',
+    foundOnTmdb: 'Found on TMDB',
+    morePicksButton: 'Get more picks from TMDB',
+    morePicksLoading: 'Fetching more picks…',
+    morePicksEmpty: 'No more picks available right now.',
+  },
+  about: {
+    badge: 'How PopChoice works',
+    title: 'AI that gets your taste',
+    descriptionPre: "PopChoice isn't just a genre filter. It reads what makes a film feel right to",
+    you: 'you',
+    descriptionPost: '— then finds movies that genuinely match that feeling.',
+    ctaTitle: "Ready to find tonight's film?",
+    ctaSubtitle: '60 seconds. 5 questions. The perfect movie.',
+    ctaButton: 'Start the Quiz',
+    howItWorks: {
+      title: 'The process',
+      steps: [
+        {
+          title: 'You answer 5 quick questions',
+          desc: "Tell us your favorite film (and optionally why you love it), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you're after, and your favorite actor. It takes about 60 seconds.",
+        },
+        {
+          title: 'We build your taste profile',
+          desc: 'Your answers are transformed into a rich taste profile that captures the nuances of your preferences — not just genres, but cinematographic style, narrative complexity, and emotional tone.',
+        },
+        {
+          title: 'AI searches our film database',
+          desc: 'Using AI, we find the films in our database closest to your taste profile. Every film has been pre-analyzed for tone, pacing, themes, and emotional resonance.',
+        },
+        {
+          title: 'You get curated results',
+          desc: 'We surface your top match plus 5 additional great options, each with a personalized AI-written explanation of why it fits your taste.',
+        },
+      ],
+    },
+    techStack: {
+      title: 'Under the hood',
+      items: [
+        { name: 'Vector Search', desc: 'Semantic similarity matching across 10k+ films' },
+        {
+          name: 'AI Language Model',
+          desc: 'Generates personalized recommendations for each user',
+        },
+        {
+          name: 'Film Database',
+          desc: 'Curated metadata including tone, themes & cinematography',
+        },
+        {
+          name: 'Real-time Processing',
+          desc: 'Fast results — from submission to recommendations in seconds',
+        },
+      ],
+    },
+    faq: {
+      title: 'FAQ',
+      items: [
+        {
+          q: 'Does PopChoice require an account?',
+          a: 'Nope! PopChoice is completely anonymous and requires no sign-up. Just answer the quiz and get your picks.',
+        },
+        {
+          q: 'How does group mode work?',
+          a: "Each person answers the 5 questions on the same device — just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
+        },
+        {
+          q: 'How accurate are the recommendations?',
+          a: "The AI analyzes multiple film attributes — not just genre — which leads to surprisingly accurate taste matching. Of course, movie taste is subjective — that's why we give you 6 options!",
+        },
+        {
+          q: 'Where does the film data come from?',
+          a: 'Our film database is curated from public film metadata, including ratings, runtime, director, genre tags, and thematic analysis performed by our AI pipeline.',
+        },
+      ],
+    },
+  },
+  moviesPage: {
+    title: 'Available Movies',
+    loading: 'Loading movies…',
+    tryAgain: 'Try Again',
+    showing: 'Showing {start}–{end} of {total} movies',
+    noMoviesFound: 'No movies found',
+    prev: 'Prev',
+    next: 'Next',
+    pageOf: 'Page {current} of {total}',
+    columns: {
+      name: 'Name',
+      ageRating: 'Age Rating',
+      duration: 'Duration',
+      score: 'Score',
+    },
+  },
+};
+
+export type Translations = typeof en;

@@ -9,15 +9,13 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "openai": "^6.33.0",
-    "pg": "^8.20.0",
-    "pino": "^10.3.1"
+    "@pop-choice/shared": "*"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
     "@types/pg": "^8.20.0",
     "tsx": "^4.19.4",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   },
   "engines": {
     "node": ">=24",

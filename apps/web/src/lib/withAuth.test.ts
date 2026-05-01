@@ -1,0 +1,156 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { hashApiKey } from '@/lib/apiAuth';
+import { withAuth } from '@/lib/withAuth';
+
+const ORIGINAL_ENV = { ...process.env };
+
+describe('withAuth', () => {
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.stubEnv('NODE_ENV', 'test');
+    process.env.API_KEY_HMAC_SECRET = 'test-secret';
+    process.env.VALID_API_KEYS = hashApiKey('valid-key');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    process.env = { ...ORIGINAL_ENV };
+  });
+
+  it('returns 401 when API key is missing', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(new NextRequest('http://localhost/api/movies'));
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('allows same-origin requests with matching CSRF header/cookie when API key is missing', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          Origin: 'http://localhost',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('rejects cross-origin CSRF fallback when API key is missing', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          Origin: 'http://example.com',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('allows CSRF fallback when Origin is absent but fetch headers indicate same-origin', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-Mode': 'cors',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('allows request when API key is valid', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: { 'X-API-Key': 'valid-key' },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('returns 401 when CSRF header/cookie pair is present but mismatched', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          'X-API-Key': 'valid-key',
+          'X-CSRF-Token': 'header-token',
+          Cookie: '__csrf=cookie-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(401);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('allows CSRF fallback when Origin is absent but Sec-Fetch-Site indicates same-origin', async () => {
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          'Sec-Fetch-Site': 'same-origin',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('allows CSRF fallback when Origin matches NEXT_PUBLIC_BASE_URL behind a reverse proxy', async () => {
+    vi.stubEnv('NEXT_PUBLIC_BASE_URL', 'https://my-app.up.railway.app');
+    const handler = vi.fn(async () => NextResponse.json({ ok: true }));
+    const wrapped = withAuth(handler);
+
+    // req.nextUrl.origin is the internal address; Origin header is the public URL
+    const response = await wrapped(
+      new NextRequest('http://0.0.0.0:3000/api/movies', {
+        headers: {
+          Origin: 'https://my-app.up.railway.app',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: '__csrf=csrf-token',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+  });
+});
