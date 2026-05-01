@@ -92,7 +92,7 @@ describe('GET /api/poster-proxy', () => {
     const res = await GET(req);
 
     expect(res.status).toBe(200);
-    const fetchedUrl = fetchSpy.mock.calls[0][0] as string;
+    const fetchedUrl = String(fetchSpy.mock.calls[0][0]);
     expect(fetchedUrl).not.toContain('user');
     expect(fetchedUrl).not.toContain('secret');
     expect(fetchedUrl).toBe('https://image.tmdb.org/t/p/w500/poster.jpg');
