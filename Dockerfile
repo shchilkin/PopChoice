@@ -28,14 +28,8 @@ COPY apps/web/next.config.ts ./apps/web/
 COPY apps/web/postcss.config.mjs ./apps/web/
 RUN npm run build-storybook --workspace=apps/web
 
-# Serve stage
-FROM node:24-slim
-
-RUN npm install -g http-server
-
-COPY --from=builder /app/apps/web/storybook-static /app/storybook-static
-
-WORKDIR /app
-
-EXPOSE 6006
-CMD ["http-server", "storybook-static", "-p", "6006"]
+# Serve stage — nginx uses ~5MB RAM vs ~150MB for Node
+FROM nginx:1.27-alpine
+COPY --from=builder /app/apps/web/storybook-static /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
