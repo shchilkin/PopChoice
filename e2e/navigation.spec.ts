@@ -144,7 +144,10 @@ test.describe('/available-movies page', () => {
         }),
       }),
     );
-    await Promise.all([page.waitForResponse(/\/api\/movies/), page.goto('/available-movies')]);
+    await page.goto('/available-movies');
+    // Both skeleton variants (loading state + useIsMobile null phase) have aria-hidden="true",
+    // so getByRole('table') only resolves once the real accessible table is in the DOM.
+    await expect(page.getByRole('table')).toBeVisible({ timeout: 10_000 });
     // t.moviesPage.columns — Name, Age Rating, Duration, Score
     await expect(page.getByRole('columnheader', { name: 'Name' })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Age Rating' })).toBeVisible();
