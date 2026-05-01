@@ -99,7 +99,8 @@ describe('POST /api/auth/register', () => {
   });
 
   it('returns 422 when email exceeds 254 characters', async () => {
-    const longEmail = `${'a'.repeat(250)}@b.com`;
+    // 249 'a' chars + '@b.com' = 255 chars total, which exceeds the 254-char max
+    const longEmail = `${'a'.repeat(249)}@b.com`;
     const res = await POST(makeRequest({ email: longEmail, password: 'password123' }));
     expect(res.status).toBe(422);
   });

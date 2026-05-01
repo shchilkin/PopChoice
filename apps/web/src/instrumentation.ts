@@ -20,7 +20,7 @@ export async function register() {
   try {
     // Dynamic import keeps pg out of the edge runtime bundle.
     const pg = await import('pg');
-    const pool = new pg.default.Pool({ connectionString, max: 1, allowExitOnIdle: true });
+    const pool = new pg.default.Pool({ connectionString, max: 1 });
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
