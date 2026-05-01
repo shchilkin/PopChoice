@@ -18,7 +18,7 @@ interface PosterBackgroundProps {
 /**
  * Full-viewport movie poster grid for the hero section background.
  *
- * Four absolutely-positioned layers:
+ * Three absolutely-positioned layers:
  *  1. Grid layer   — animated (y drift + cursor-driven 3D tilt), no CSS filter (Safari GPU fix).
  *  2. Blur layer   — static backdrop-filter sibling; blurs/dims the grid at
  *                    compositing time so Safari never re-rasterises per frame.

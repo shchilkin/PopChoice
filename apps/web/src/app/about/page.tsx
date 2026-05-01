@@ -26,7 +26,7 @@ export default function AboutPage() {
         transition={{ duration: 0.5 }}
         className="mb-16"
       >
-        <Breadcrumbs className="mb-3" items={[{ label: 'About' }]} />
+        <Breadcrumbs className="mb-3" items={[{ label: t.techStackPage.breadcrumbAbout }]} />
         <h1
           className="mb-5"
           style={{

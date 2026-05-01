@@ -20,14 +20,27 @@ export function useAmbientColor(posterURL: string | undefined): RGB | null {
       return;
     }
 
-    // Route TMDB images through a same-origin proxy so Canvas 2D can read pixels.
-    const proxyUrl = posterURL.includes('image.tmdb.org')
-      ? `/api/poster-proxy?url=${encodeURIComponent(posterURL)}`
-      : posterURL;
+    // Reset stale color when posterURL changes
+    startTransition(() => setColor(null));
 
+    // Route TMDB images through a same-origin proxy so Canvas 2D can read pixels.
+    // Parse the URL to check hostname exactly, avoiding substring-match bypasses.
+    let proxyUrl: string;
+    try {
+      const parsed = new URL(posterURL);
+      proxyUrl =
+        parsed.hostname === 'image.tmdb.org'
+          ? `/api/poster-proxy?url=${encodeURIComponent(posterURL)}`
+          : posterURL;
+    } catch {
+      return;
+    }
+
+    let cancelled = false;
     const img = new Image();
 
     img.onload = () => {
+      if (cancelled) return;
       try {
         const canvas = document.createElement('canvas');
         canvas.width = 24;
@@ -67,6 +80,7 @@ export function useAmbientColor(posterURL: string | undefined): RGB | null {
           }
         }
 
+        if (cancelled) return;
         if (colorCount > 0) {
           setColor({
             r: Math.round(rColor / colorCount),
@@ -85,7 +99,17 @@ export function useAmbientColor(posterURL: string | undefined): RGB | null {
       }
     };
 
+    img.onerror = () => {
+      if (!cancelled) startTransition(() => setColor(null));
+    };
+
     img.src = proxyUrl;
+
+    return () => {
+      cancelled = true;
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [posterURL]);
 
   return color;

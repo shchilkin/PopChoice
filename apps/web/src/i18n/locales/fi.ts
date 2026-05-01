@@ -45,6 +45,7 @@ export const fi: Translations = {
     groupMode: {
       title: 'Ryhmätila',
       desc: 'Valinta, josta kaikki tosiaan innostuvat. Ei väittelyä.',
+      worksFor: 'Sopii 2–6 henkilölle',
     },
     instantResults: {
       title: 'Välittömät tulokset',
@@ -241,40 +242,67 @@ export const fi: Translations = {
           label: 'Frontend',
           items: [
             {
+              name: 'Next.js 16',
               why: 'App Router ja palvelinkomponentit streaming-renderöintiä ja full-stack TypeScriptia varten',
             },
-            { why: 'Rinnakkainen renderöinti ja Actions responsiiviseen testikokemukseen' },
-            { why: 'Testilogiikka formaaliksi tilakoneeksi — ennustettava kulku, ei if-spagettia' },
-            { why: 'Utility-first-tyylittely CSS-muuttujien design-tokeneilla' },
+            {
+              name: 'React 19',
+              why: 'Rinnakkainen renderöinti ja Actions responsiiviseen testikokemukseen',
+            },
+            {
+              name: 'XState',
+              why: 'Testilogiikka formaaliksi tilakoneeksi — ennustettava kulku, ei if-spagettia',
+            },
+            {
+              name: 'Tailwind CSS 4',
+              why: 'Utility-first-tyylittely CSS-muuttujien design-tokeneilla',
+            },
           ],
         },
         {
           label: 'Tekoäly + Data',
           items: [
             {
+              name: 'OpenAI text-embedding-3-large',
               why: 'Makuprofiilin enkoodaus 3072-ulotteisiksi vektoreiksi semanttista hakua varten',
             },
-            { why: 'Nopea ja kustannustehokas personoitujen suositusselitysten generointi' },
             {
+              name: 'gpt-5.4-mini',
+              why: 'Nopea ja kustannustehokas personoitujen suositusselitysten generointi',
+            },
+            {
+              name: 'PostgreSQL',
               why: 'Ensisijainen tietokanta 400+ kuratoitua elokuvaa, metatietoa ja vektoreita varten',
             },
-            { why: 'Itse isännöity vektorihaku automaattisella varavalintatoiminnolla TMDb:hen' },
+            {
+              name: 'pgvector',
+              why: 'Itse isännöity vektorihaku automaattisella varavalintatoiminnolla TMDb:hen',
+            },
           ],
         },
         {
           label: 'Infrastruktuuri',
           items: [
             {
+              name: 'Redis',
               why: 'Korkean suorituskyvyn koordinaatiokerros työjonoille ja API-nopeusrajoitukselle',
             },
-            { why: 'Taustatyöprosessointi elokuvatietojen täydennys- ja löytämisputkea varten' },
             {
+              name: 'BullMQ',
+              why: 'Taustatyöprosessointi elokuvatietojen täydennys- ja löytämisputkea varten',
+            },
+            {
+              name: 'Railway',
               why: 'Pilvisovellusalusta kontitetulle web-sovellukselle, worker-palveluille ja tietokannoille',
             },
             {
+              name: 'Turborepo',
               why: 'Monorepositorio-rakennusjärjestelmä korkean suorituskyvyn välimuistilla ja tehtäväorkestroinnilla',
             },
-            { why: 'Kontitettu käyttöönotto yhtenäistä ympäristöä varten kaikissa palveluissa' },
+            {
+              name: 'Docker',
+              why: 'Kontitettu käyttöönotto yhtenäistä ympäristöä varten kaikissa palveluissa',
+            },
           ],
         },
       ],
@@ -314,6 +342,7 @@ export const fi: Translations = {
         label: 'Frontend',
         items: [
           {
+            name: 'Next.js 16',
             role: 'Full-stack-kehys',
             rationale:
               'Next.js 16 ja App Router tarjoavat sovelluksen rungon. Palvelinkomponentit mahdollistavat streaming-renderöinnin ja layout-tason datan haun, kun taas full-stack TypeScript eliminoi API-sopimusten epäyhtenäisyydet.',
@@ -321,12 +350,14 @@ export const fi: Translations = {
               'Tulokset-sivu käyttää palvelinkomponentteja elokuvatietojen hakemiseen ja suoratoistoon ilman asiakaspuolen ketjuja — käyttöliittymä renderöityy asteittain suositusten saapuessa.',
           },
           {
+            name: 'React 19',
             role: 'Käyttöliittymäkirjasto',
             rationale:
               'React 19:n rinnakkaiset ominaisuudet pitävät testin käyttöliittymän responsiivisena raskaiden asynkronisten operaatioiden aikana. Actionien käyttö yksinkertaistaa lomakkeiden käsittelyä ja tilasiirtymiä koko sovelluksessa.',
             detail: null,
           },
           {
+            name: 'XState',
             role: 'Tilanhallinta',
             rationale:
               '5 kysymyksen testi on mallinnettu formaaliksi tilakoneeksi. Tämä estää laittomia tilasiirtymiä ja tarjoaa selkeän, ennustettavan kulun monimutkaiselle haarautumislogiikalle.',
@@ -334,6 +365,7 @@ export const fi: Translations = {
               '@xstate/react:n käyttö mahdollistaa UI:n reagoinnin koneen tilamuutoksiin, käsitellen lataustilat ja siirtymät ilman yhtäkään "if (loading)" spagettikoodia.',
           },
           {
+            name: 'Tailwind CSS 4',
             role: 'Tyylikerros',
             rationale:
               'Utility-first-tyylittely CSS-muuttujien design-tokeneilla totuuden lähteenä. Tailwind 4 generoi luokat dynaamisesti, kun taas tokenit kantavat semanttisen merkityksen teemoille.',
@@ -341,12 +373,14 @@ export const fi: Translations = {
               'Kaikki teemaan mukautuvat värit (vaalea/tumma tila) elävät CSS-muuttujissa. Yksittäinen className voi reagoida teemaan ilman JavaScriptia.',
           },
           {
+            name: 'Motion',
             role: 'Animaatiot',
             rationale:
               'Entinen Framer Motion -kirjasto käsittelee kaikki jousipohjaiset siirtymät ja sisääntuloanimaatiot, varmistaen että käyttöliittymä tuntuu elävältä ja reagoivalta.',
             detail: null,
           },
           {
+            name: 'Lucide React',
             role: 'Ikonisarja',
             rationale:
               'Puhdas, yhtenäinen ikonkirjasto, joka on täysin tree-shakeable ja optimoitu moderneille React-ympäristöille.',
@@ -358,6 +392,7 @@ export const fi: Translations = {
         label: 'Tekoäly + Data',
         items: [
           {
+            name: 'OpenAI text-embedding-3-large',
             role: 'Makuprofiilin koodaus',
             rationale:
               'Testivastaukset kootaan rakenteellisiksi syötteiksi ja koodataan 3072-ulotteisiksi vektoreiksi. Tämä tallentaa syvän semanttisen merkityksen: "perheen dynamiikka" ja "moraalinen monimutkaisuus" sijoittuvat lähelle toisiaan vektoriavaruudessa.',
@@ -365,6 +400,7 @@ export const fi: Translations = {
               'Vektorointipyyntö on ainoa AI-kutsu, joka estää käyttäjää. Kaikki muu suoritetaan asynkronisesti taustatyöntekijöissä.',
           },
           {
+            name: 'gpt-5.4-mini',
             role: 'Selitysten generointi',
             rationale:
               'Generoi personoituja selityksiä jokaiselle suositukselle. gpt-5.4-mini tarjoaa poikkeuksellisen tasapainon nopeuden ja päättelylaadun välillä reaaliaikaisiin sovelluksiin.',
@@ -372,12 +408,14 @@ export const fi: Translations = {
               '6 selitystä per testilähety — koko gpt-5.4-mallin käyttö lisäisi latenssia. "Mini"-versio tarjoaa lähes välittömät tulokset.',
           },
           {
+            name: 'PostgreSQL',
             role: 'Elokuvatietokanta',
             rationale:
               'Toimii 400+ kuratoidun elokuvan, metatietojen ja vektorien keskusvarastona. Kaiken tallentaminen yhteen relaatiotietokantaan yksinkertaistaa tietojen eheyttä ja ristiviittauksia.',
             detail: null,
           },
           {
+            name: 'pgvector',
             role: 'Vektorihaku',
             rationale:
               'PostgreSQL-laajennus, joka mahdollistaa vektorisamankaltaisuushaun suoraan tietokannassamme. Tämä välttää erillisen vektoritietokannan hallinnan ylimääräiset kustannukset.',
@@ -390,6 +428,7 @@ export const fi: Translations = {
         label: 'Infrastruktuuri',
         items: [
           {
+            name: 'Redis',
             role: 'Tietovarasto',
             rationale:
               'Toimii taustatyötehtäviemme työvarastona ja globaalin nopeusrajoituksen koordinaatiokerroksena AI-putkilinjassamme.',
@@ -397,12 +436,14 @@ export const fi: Translations = {
               'Redis varmistaa, että jopa useilla worker-instansseilla emme koskaan ylitä OpenAI API:n token-per-minuutti- tai pyyntö-per-minuutti-kiintiöitä.',
           },
           {
+            name: 'BullMQ',
             role: 'Työjono',
             rationale:
               'Käsittelee taustatyön aikataulutuksen, uudelleenyritykset ja vikasietoisuuden elokuvatietojen täydennys- ja löytämisputkelle.',
             detail: null,
           },
           {
+            name: 'Railway',
             role: 'Käyttöönottofoorumi',
             rationale:
               'Tuotantoympäristö monisovellusarkkitehtuurillemme. Railway orkestroi Next.js-sovelluksen, worker-palvelut, PostgreSQL:n ja Redisin yhtenäisessä putkilinjassa.',
@@ -410,12 +451,14 @@ export const fi: Translations = {
               'Repositorio on yhdistetty Railwayn GitHub-integraation kautta, joka käyttää automaattisesti monorepon aina kun muutoksia työnnetään päähaaraan.',
           },
           {
+            name: 'Turborepo',
             role: 'Rakennusjärjestelmä',
             rationale:
               'Hallinnoi monorepon rakennuksia korkean suorituskyvyn välimuistilla. Varmistaa, että jaetut paketit rakennetaan oikein ennen niitä kuluttavia sovelluksia.',
             detail: null,
           },
           {
+            name: 'Docker',
             role: 'Kontitus',
             rationale:
               'Varmistaa yhtenäiset ympäristöt paikallisesta kehityksestä tuotantoon. Monivaiheiset Dockerfilet pitävät lopulliset tuotantokuvat kevyinä ja turvallisina.',
@@ -427,24 +470,28 @@ export const fi: Translations = {
         label: 'Laatu',
         items: [
           {
+            name: 'Vitest',
             role: 'Testikehys',
             rationale:
               'Vite-natiivi testikehys, joka tarjoaa lähes välittömän palautteen kehityksen aikana. Käsittelee yksikkö- ja integraatiotestit koko monorepon laajuudella.',
             detail: null,
           },
           {
+            name: 'Playwright',
             role: 'E2E-testaus',
             rationale:
               'Varmistaa, että kriittinen polku testilähtyksestä elokuvasuosituksiin toimii moitteettomasti kaikissa moderneissa selainmoottoreissa.',
             detail: null,
           },
           {
+            name: 'Storybook',
             role: 'Komponenttilaboratorio',
             rationale:
               'Mahdollistaa käyttöliittymäkomponenttien eristetyn kehityksen ja testauksen, varmistaen visuaalisen johdonmukaisuuden ja saavutettavuuden ennen integraatiota.',
             detail: null,
           },
           {
+            name: 'MSW',
             role: 'API-simulointi',
             rationale:
               'Mock Service Worker sieppaa verkkopyyntöjä selaintasolla, mahdollistaen käyttöliittymän kehittämisen realististen API-vastausten perusteella ilman live-backendiä.',

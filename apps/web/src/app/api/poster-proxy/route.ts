@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Invalid url', { status: 400 });
   }
 
-  if (parsed.hostname !== ALLOWED_HOST) {
+  if (parsed.hostname !== ALLOWED_HOST || parsed.protocol !== 'https:') {
     return new NextResponse('Forbidden', { status: 403 });
   }
 

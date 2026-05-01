@@ -21,23 +21,32 @@ const labelStyle = {
 
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   return (
-    <p className={className} style={labelStyle}>
-      {items.map((item, index) => (
-        <span key={index}>
-          {index > 0 && <span>{' / '}</span>}
-          {item.href ? (
-            <Link
-              href={item.href}
-              className="hover:opacity-70 transition-opacity duration-150"
-              style={{ color: 'inherit' }}
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <span>{item.label}</span>
-          )}
-        </span>
-      ))}
-    </p>
+    <nav aria-label="Breadcrumb" className={className}>
+      <ol className="flex flex-wrap items-center" style={labelStyle}>
+        {items.map((item, index) => {
+          const isCurrent = index === items.length - 1;
+          return (
+            <li key={index} className="flex items-center">
+              {index > 0 && (
+                <span aria-hidden="true" className="mx-1">
+                  {'/'}
+                </span>
+              )}
+              {item.href && !isCurrent ? (
+                <Link
+                  href={item.href}
+                  className="hover:opacity-70 transition-opacity duration-150"
+                  style={{ color: 'inherit' }}
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <span aria-current={isCurrent ? 'page' : undefined}>{item.label}</span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }

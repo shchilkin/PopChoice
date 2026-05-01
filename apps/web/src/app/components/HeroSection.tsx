@@ -134,9 +134,12 @@ export function HeroSection() {
           </button>
 
           <button
-            onClick={() =>
-              document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
-            }
+            onClick={() => {
+              const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+              document
+                .getElementById('how-it-works')
+                ?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+            }}
             className="px-6 py-4 rounded-2xl text-sm transition-all duration-200"
             style={{
               color: 'var(--pc-t2)',

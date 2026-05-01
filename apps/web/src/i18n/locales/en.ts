@@ -42,6 +42,7 @@ export const en = {
     groupMode: {
       title: 'Group Mode',
       desc: 'A pick everyone in the room will actually agree on. No arguing required.',
+      worksFor: 'Works for 2–6 people',
     },
     instantResults: {
       title: 'Instant Results',
@@ -236,24 +237,40 @@ export const en = {
           label: 'Frontend',
           items: [
             {
+              name: 'Next.js 16',
               why: 'App Router and server components for streaming renders and full-stack TypeScript',
             },
-            { why: 'Concurrent rendering and Actions for a highly responsive quiz experience' },
             {
+              name: 'React 19',
+              why: 'Concurrent rendering and Actions for a highly responsive quiz experience',
+            },
+            {
+              name: 'XState',
               why: 'Quiz logic modeled as a formal state machine — predictable flow, zero if-spaghetti',
             },
-            { why: 'Utility-first styling driven by CSS custom property design tokens' },
+            {
+              name: 'Tailwind CSS 4',
+              why: 'Utility-first styling driven by CSS custom property design tokens',
+            },
           ],
         },
         {
           label: 'AI + Data',
           items: [
             {
+              name: 'OpenAI text-embedding-3-large',
               why: 'Taste profile encoding into 3072-dimensional vectors for high-signal semantic search',
             },
-            { why: 'Fast, cost-effective generation of personalized recommendation explanations' },
-            { why: 'Primary database for 400+ curated films, metadata, and vectors' },
             {
+              name: 'gpt-5.4-mini',
+              why: 'Fast, cost-effective generation of personalized recommendation explanations',
+            },
+            {
+              name: 'PostgreSQL',
+              why: 'Primary database for 400+ curated films, metadata, and vectors',
+            },
+            {
+              name: 'pgvector',
               why: 'Self-hosted vector similarity search with automatic fallback to TMDb for broader discovery',
             },
           ],
@@ -261,11 +278,26 @@ export const en = {
         {
           label: 'Infrastructure',
           items: [
-            { why: 'High-performance coordination layer for job queues and API rate limiting' },
-            { why: 'Background job processing for the movie data backfill and discovery pipeline' },
-            { why: 'Cloud platform hosting containerized web app, worker services, and databases' },
-            { why: 'Monorepo build system with high-performance caching and task orchestration' },
-            { why: 'Containerized deployment for consistent environments across all services' },
+            {
+              name: 'Redis',
+              why: 'High-performance coordination layer for job queues and API rate limiting',
+            },
+            {
+              name: 'BullMQ',
+              why: 'Background job processing for the movie data backfill and discovery pipeline',
+            },
+            {
+              name: 'Railway',
+              why: 'Cloud platform hosting containerized web app, worker services, and databases',
+            },
+            {
+              name: 'Turborepo',
+              why: 'Monorepo build system with high-performance caching and task orchestration',
+            },
+            {
+              name: 'Docker',
+              why: 'Containerized deployment for consistent environments across all services',
+            },
           ],
         },
       ],
@@ -305,6 +337,7 @@ export const en = {
         label: 'Frontend',
         items: [
           {
+            name: 'Next.js 16',
             role: 'Full-stack framework',
             rationale:
               'Next.js 16 and the App Router provide the backbone of the application. Server components allow for streaming renders and layout-level data fetching, while full-stack TypeScript eliminates API contract drift.',
@@ -312,12 +345,14 @@ export const en = {
               'The results page uses server components to fetch and stream movie data without client-side waterfalls — the UI renders progressively as recommendations arrive.',
           },
           {
+            name: 'React 19',
             role: 'UI Library',
             rationale:
               'React 19 concurrent features keep the quiz UI responsive during heavy async operations. The use of Actions simplifies form handling and state transitions throughout the application.',
             detail: null,
           },
           {
+            name: 'XState',
             role: 'State Management',
             rationale:
               'The 5-question quiz is modeled as a formal state machine. This prevents illegal state transitions and provides a clear, predictable flow for the complex branching logic.',
@@ -325,6 +360,7 @@ export const en = {
               'Using @xstate/react allows the UI to react to machine state changes, handling loading states and transitions with zero "if (loading)" spaghetti code.',
           },
           {
+            name: 'Tailwind CSS 4',
             role: 'Styling layer',
             rationale:
               'Utility-first styling with CSS custom property design tokens as the source of truth. Tailwind 4 generates classes dynamically, while tokens carry the semantic meaning for themes.',
@@ -332,12 +368,14 @@ export const en = {
               'All theme-adaptive colors (light/dark mode) live in CSS custom properties. This means a single className can respond to the theme without JavaScript.',
           },
           {
+            name: 'Motion',
             role: 'Animations',
             rationale:
               'Formerly Framer Motion, this library handles all spring-based transitions and entrance animations, ensuring the UI feels "alive" and responsive to user input.',
             detail: null,
           },
           {
+            name: 'Lucide React',
             role: 'Icon Set',
             rationale:
               'A clean, consistent icon library that is fully tree-shakeable and optimized for modern React environments.',
@@ -349,6 +387,7 @@ export const en = {
         label: 'AI + Data',
         items: [
           {
+            name: 'OpenAI text-embedding-3-large',
             role: 'Taste encoding',
             rationale:
               'Quiz answers are assembled into structured prompts and encoded into 3072-dimension vectors. This captures deep semantic meaning: "family dynamics" and "moral complexity" land near each other in embedding space.',
@@ -356,6 +395,7 @@ export const en = {
               'The embedding request is the only AI call that blocks the user. Everything else runs asynchronously in background workers.',
           },
           {
+            name: 'gpt-5.4-mini',
             role: 'Explanation generation',
             rationale:
               'Generates personalized explanations for each recommendation. gpt-5.4-mini provides an exceptional balance of speed and reasoning quality for real-time applications.',
@@ -363,12 +403,14 @@ export const en = {
               'At 6 explanations per quiz submission, using the full gpt-5.4 model would increase latency. The "mini" variant provides near-instant results.',
           },
           {
+            name: 'PostgreSQL',
             role: 'Primary Movie Database',
             rationale:
               'Serves as the central repository for 400+ curated films, metadata, and vectors. Storing everything in a single relational database simplifies data integrity and cross-referencing.',
             detail: null,
           },
           {
+            name: 'pgvector',
             role: 'Vector Search',
             rationale:
               'A PostgreSQL extension that enables vector similarity search directly in our database. This avoids the overhead of managing a separate vector database like Pinecone or Weaviate.',
@@ -381,6 +423,7 @@ export const en = {
         label: 'Infrastructure',
         items: [
           {
+            name: 'Redis',
             role: 'Data Store',
             rationale:
               'Acts as the job store for our background tasks and the coordination layer for global rate limiting across our AI pipeline.',
@@ -388,12 +431,14 @@ export const en = {
               'Redis ensures that even with multiple worker instances, we never exceed our OpenAI API token-per-minute or request-per-minute quotas.',
           },
           {
+            name: 'BullMQ',
             role: 'Job Queue',
             rationale:
               'Handles the heavy lifting of background job scheduling, retries, and failure recovery for the movie data backfill and discovery pipeline.',
             detail: null,
           },
           {
+            name: 'Railway',
             role: 'Deployment Platform',
             rationale:
               'The production environment for our multi-service architecture. Railway orchestrates the Next.js app, worker services, PostgreSQL, and Redis in a unified pipeline.',
@@ -401,12 +446,14 @@ export const en = {
               "The repository is connected via Railway's GitHub integration, which automatically deploys the monorepo whenever changes are pushed to main.",
           },
           {
+            name: 'Turborepo',
             role: 'Build System',
             rationale:
               'Manages monorepo builds with high-performance caching. It ensures that shared packages are built correctly before the apps that consume them.',
             detail: null,
           },
           {
+            name: 'Docker',
             role: 'Containerization',
             rationale:
               'Ensures consistent environments from local development to production. Multi-stage Dockerfiles keep the final production images lean and secure.',
@@ -418,24 +465,28 @@ export const en = {
         label: 'Quality',
         items: [
           {
+            name: 'Vitest',
             role: 'Testing Framework',
             rationale:
               'A Vite-native testing framework that provides near-instant feedback during development. It handles unit and integration tests across the entire monorepo.',
             detail: null,
           },
           {
+            name: 'Playwright',
             role: 'E2E Testing',
             rationale:
               'Ensures the critical path from quiz submission to movie recommendations works flawlessly across all modern browser engines.',
             detail: null,
           },
           {
+            name: 'Storybook',
             role: 'Component Lab',
             rationale:
               'Allows for isolated development and testing of UI components, ensuring visual consistency and accessibility before they are integrated into the app.',
             detail: null,
           },
           {
+            name: 'MSW',
             role: 'API Mocking',
             rationale:
               'Mock Service Worker intercepts network requests at the browser level, allowing the UI to be developed against realistic API responses without a live backend.',

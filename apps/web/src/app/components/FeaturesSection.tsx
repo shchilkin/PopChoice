@@ -117,7 +117,7 @@ export function FeaturesSection() {
             </div>
             {f.featured && (
               <p className="mt-auto text-xs font-semibold" style={{ color: f.color }}>
-                Works for 2–6 people
+                {t.features.groupMode.worksFor}
               </p>
             )}
           </motion.div>

@@ -5,12 +5,6 @@ import Link from 'next/link';
 
 import { useLanguage } from '@/i18n';
 
-const TECH_ITEM_NAMES = [
-  ['Next.js 16', 'React 19', 'XState', 'Tailwind CSS 4'],
-  ['OpenAI text-embedding-3-large', 'gpt-5.4-mini', 'PostgreSQL', 'pgvector'],
-  ['Redis', 'BullMQ', 'Railway', 'Turborepo', 'Docker'],
-] as const;
-
 export function TechStackSection() {
   const { t } = useLanguage();
   const { title, linkText, groups } = t.about.techStack;
@@ -67,7 +61,7 @@ export function TechStackSection() {
                       minWidth: '14rem',
                     }}
                   >
-                    {TECH_ITEM_NAMES[gi]?.[ii]}
+                    {item.name}
                   </span>
                   <span style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', lineHeight: 1.6 }}>
                     {item.why}

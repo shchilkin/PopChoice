@@ -9,13 +9,6 @@ import { palette } from '@/styles/designTokens';
 
 const GROUP_COLORS = [palette.gold, palette.purple, palette.teal, palette.amber] as const;
 
-const ITEM_NAMES = [
-  ['Next.js 16', 'React 19', 'XState', 'Tailwind CSS 4', 'Motion', 'Lucide React'],
-  ['OpenAI text-embedding-3-large', 'gpt-5.4-mini', 'PostgreSQL', 'pgvector'],
-  ['Redis', 'BullMQ', 'Railway', 'Turborepo', 'Docker'],
-  ['Vitest', 'Playwright', 'Storybook', 'MSW'],
-] as const;
-
 export default function TechStackPage() {
   const { t } = useLanguage();
   const { breadcrumbAbout, breadcrumbStack, title, intro, backToAbout, tryQuiz, groups } =
@@ -92,7 +85,7 @@ export default function TechStackPage() {
                   >
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
                       <h2 style={{ color: 'var(--pc-t1)', fontWeight: 700, fontSize: '1rem' }}>
-                        {ITEM_NAMES[gi]?.[ii]}
+                        {item.name}
                       </h2>
                       <span
                         style={{
