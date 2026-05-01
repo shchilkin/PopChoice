@@ -94,21 +94,21 @@ describe('env validation — production (NODE_ENV=production)', () => {
   });
 
   it('throws when OPENAI_API_KEY is missing in production', async () => {
-    const { OPENAI_API_KEY: _removed, ...rest } = REQUIRED_PRODUCTION_VARS;
+    const { OPENAI_API_KEY: _removedOpenAI, ...rest } = REQUIRED_PRODUCTION_VARS;
     setEnv(rest);
 
     await expect(import('./env')).rejects.toThrow(/OPENAI_API_KEY/);
   });
 
   it('throws when API_KEY_HMAC_SECRET is missing in production', async () => {
-    const { API_KEY_HMAC_SECRET: _removed, ...rest } = REQUIRED_PRODUCTION_VARS;
+    const { API_KEY_HMAC_SECRET: _removedHmacSecret, ...rest } = REQUIRED_PRODUCTION_VARS;
     setEnv(rest);
 
     await expect(import('./env')).rejects.toThrow(/API_KEY_HMAC_SECRET/);
   });
 
   it('throws when VALID_API_KEYS is missing in production', async () => {
-    const { VALID_API_KEYS: _removed, ...rest } = REQUIRED_PRODUCTION_VARS;
+    const { VALID_API_KEYS: _removedApiKeys, ...rest } = REQUIRED_PRODUCTION_VARS;
     setEnv(rest);
 
     await expect(import('./env')).rejects.toThrow(/VALID_API_KEYS/);
