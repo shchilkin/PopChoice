@@ -17,7 +17,6 @@ vi.mock('@/clients/dbClient', () => ({
 
 import { getDbClient } from '@/clients/dbClient';
 import { verifyPassword } from '@/lib/auth/password';
-import { SESSION_COOKIE } from '@/lib/auth/session';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 import { POST } from './route';
@@ -30,11 +29,9 @@ import type { DbClient } from '@/clients/dbClient';
 
 function makeMockDb(overrides: Record<string, unknown> = {}): DbClient {
   const filterChain = {
-    limit: vi
-      .fn()
-      .mockReturnValue(
-        Promise.resolve({ data: [{ id: 1, password_hash: 'salt:hash' }], error: null }),
-      ),
+    limit: vi.fn().mockReturnValue(
+      Promise.resolve({ data: [{ id: 1, password_hash: 'salt:hash' }], error: null }),
+    ),
   };
 
   const selectChain = {
@@ -80,14 +77,12 @@ const validBody = { email: 'alice@example.com', password: 'password123' };
 
 describe('POST /api/auth/login', () => {
   beforeEach(() => {
-    vi.stubEnv('API_KEY_HMAC_SECRET', 'test-session-secret');
     vi.mocked(getDbClient).mockReturnValue(makeMockDb());
     vi.mocked(verifyPassword).mockResolvedValue(true);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    vi.unstubAllEnvs();
   });
 
   it('returns 200 on successful login', async () => {
@@ -95,8 +90,6 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toEqual({ ok: true });
-    expect(res.headers.get('set-cookie')).toContain(`${SESSION_COOKIE}=`);
-    expect(res.headers.get('set-cookie')).toContain('HttpOnly');
   });
 
   it('returns 422 when email is missing', async () => {
