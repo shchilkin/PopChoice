@@ -1,73 +1,28 @@
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
-
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
+import { hashPassword } from '@/lib/auth/password';
 import logger from '@/lib/logger';
+import { applyRateLimit } from '@/lib/rateLimit';
 
 // ---------------------------------------------------------------------------
 // Input schema
 // ---------------------------------------------------------------------------
 
 const registerSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
 });
-
-// ---------------------------------------------------------------------------
-// Password helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Hashes a plaintext password using scrypt with a random per-user salt.
- * Returns a `salt:hash` string safe to store in the database.
- */
-async function hashPassword(plaintext: string): Promise<string> {
-  const salt = randomBytes(16).toString('hex');
-  const hash = await new Promise<string>((resolve, reject) => {
-    scrypt(plaintext, salt, 32, { N: 32_768, r: 8, p: 1 }, (err, derivedKey) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(derivedKey.toString('hex'));
-    });
-  });
-  return `${salt}:${hash}`;
-}
-
-/**
- * Verifies a plaintext password against a stored `salt:hash` value.
- * Uses timingSafeEqual to prevent timing attacks.
- *
- * Exported for use by future login / session endpoints.
- */
-export async function verifyPassword(plaintext: string, stored: string): Promise<boolean> {
-  const separatorIndex = stored.indexOf(':');
-  if (separatorIndex === -1) return false;
-  const salt = stored.slice(0, separatorIndex);
-  const storedHash = stored.slice(separatorIndex + 1);
-  const candidateHash = await new Promise<string>((resolve, reject) => {
-    scrypt(plaintext, salt, 32, { N: 32_768, r: 8, p: 1 }, (err, derivedKey) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(derivedKey.toString('hex'));
-    });
-  });
-  const storedBuf = Buffer.from(storedHash, 'hex');
-  const candidateBuf = Buffer.from(candidateHash, 'hex');
-  if (storedBuf.length !== candidateBuf.length) return false;
-  return timingSafeEqual(storedBuf, candidateBuf);
-}
 
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest): Promise<Response> {
+  const rateLimitResponse = await applyRateLimit(req);
+  if (rateLimitResponse) return rateLimitResponse;
+
   let body: unknown;
   try {
     body = await req.json();
@@ -118,6 +73,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
   }
 
-  logger.info({ email: normalizedEmail }, 'New user registered');
+  const userId = (result.data?.[0] as { id?: unknown })?.id;
+  logger.info({ userId }, 'New user registered');
   return NextResponse.json({ ok: true }, { status: 201 });
 }

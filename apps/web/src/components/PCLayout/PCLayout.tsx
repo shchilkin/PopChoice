@@ -29,6 +29,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
     { href: '/about', label: t.nav.howItWorks },
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/style-guide', label: t.nav.styleGuide },
+    { href: '/register', label: t.nav.signUp },
   ];
 
   return (
@@ -89,19 +90,6 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               {link.label}
             </Link>
           ))}
-
-          <Link
-            href="/register"
-            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
-            style={{
-              color: pathname?.startsWith('/register') ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
-              background: pathname?.startsWith('/register')
-                ? 'var(--pc-gold-subtle)'
-                : 'transparent',
-            }}
-          >
-            {t.nav.signUp}
-          </Link>
 
           <LanguageSwitcher />
 
@@ -206,20 +194,6 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/register"
-            onClick={() => setMobileMenuOpen(false)}
-            className="px-3 py-2.5 rounded-xl text-sm transition-colors duration-200"
-            style={{
-              color: pathname?.startsWith('/register') ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-              background: pathname?.startsWith('/register')
-                ? 'var(--pc-gold-subtle)'
-                : 'transparent',
-              fontWeight: pathname?.startsWith('/register') ? 600 : 400,
-            }}
-          >
-            {t.nav.signUp}
-          </Link>
           <div className="flex items-center gap-2 pt-1">
             <LanguageSwitcher />
             {!isLanding && (
