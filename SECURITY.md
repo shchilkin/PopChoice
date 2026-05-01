@@ -8,10 +8,10 @@ This document outlines the security measures and vulnerability management for th
 
 ### 🚨 **Critical Security Issues**
 
-- [ ] **Input Validation & Sanitization**
-  - [ ] Add Zod validation schemas for all API endpoints
-  - [ ] Validate user input in `/api/movie-recommendation` route
-  - [ ] Sanitize form data before processing
+- [x] **Input Validation & Sanitization**
+  - [x] Add Zod validation schemas for all API endpoints (`requestBodySchema.parse(body)` in `/api/movie-recommendation` and `/api/more-tmdb-picks`)
+  - [x] Validate user input in `/api/movie-recommendation` route
+  - [x] Sanitize form data before processing (prompt injection detection via `checkForPromptInjection()` in `src/utils/ai/moderation.ts`; OpenAI Moderation API via `moderateInput()`; LLM-as-judge via `judgeForMoviePlatform()`)
   - [ ] Implement input length limits (favoriteMovie: 500 chars, preferences: 200 chars)
 
 - [x] **Rate Limiting**
@@ -28,13 +28,14 @@ This document outlines the security measures and vulnerability management for th
 
 - [ ] **Request Size & Timeout Management**
   - [ ] Set maximum request body size limits
-  - [ ] Configure API timeouts for external services (OpenAI, TMDB)
+  - [x] Configure API timeouts for TMDB (`AbortSignal.timeout()` with 504 response in `more-tmdb-picks/route.ts`)
+  - [ ] Configure API timeouts for OpenAI (no `AbortSignal` on `openai.chat.completions.create()` calls)
   - [ ] Implement retry logic with exponential backoff
 
 ### ⚠️ **Medium Priority Security Issues**
 
-- [ ] **Data Storage Security**
-  - [ ] Replace localStorage with secure alternatives
+- [x] **Data Storage Security**
+  - [x] Replace localStorage with secure alternatives (migrated to BullMQ + TanStack Query async flow in PR #367 — no more localStorage handoffs)
   - [ ] Implement httpOnly cookies for sensitive data
   - [ ] Add data encryption for stored recommendations
   - [ ] Implement secure session storage
@@ -42,15 +43,17 @@ This document outlines the security measures and vulnerability management for th
 - [ ] **Error Handling & Information Disclosure**
   - [ ] Remove sensitive information from error responses
   - [ ] Implement generic error messages for clients
-  - [ ] Remove console.log statements in production
+  - [x] Remove console.log statements in production (replaced with structured pino logger via `src/lib/logger.ts` throughout the codebase)
   - [ ] Add proper error logging without exposing internals
 
-- [ ] **HTTP Security Headers**
-  - [ ] Implement Content Security Policy (CSP)
-  - [ ] Add Strict-Transport-Security (HSTS) header
-  - [ ] Configure X-Frame-Options
-  - [ ] Set X-Content-Type-Options: nosniff
-  - [ ] Add Referrer-Policy header
+- [x] **HTTP Security Headers**
+  - [x] Implement Content Security Policy (CSP) — with `unsafe-inline` for Next.js hydration, `unsafe-eval` in dev only
+  - [x] Add Strict-Transport-Security (HSTS) header — `max-age=63072000; includeSubDomains; preload` (production only)
+  - [x] Configure X-Frame-Options — `DENY`
+  - [x] Set X-Content-Type-Options: nosniff
+  - [x] Add Referrer-Policy header — `strict-origin-when-cross-origin`
+  - [x] Add Permissions-Policy — camera, microphone, geolocation, payment, usb, interest-cohort all disabled
+  - All headers are applied via `securityHeaders` array in `apps/web/next.config.ts` to all routes
 
 - [ ] **API Security**
   - [ ] Validate environment variables on application startup
@@ -82,16 +85,17 @@ This document outlines the security measures and vulnerability management for th
 
 ### Phase 1 (Immediate - Critical Issues)
 
-1. Input validation on API routes
-2. Rate limiting implementation
-3. Remove sensitive console logs
-4. Add request timeouts
+1. ~~Input validation on API routes~~ ✅ Done (Zod schemas + AI moderation pipeline)
+2. ~~Rate limiting implementation~~ ✅ Done
+3. ~~Remove sensitive console logs~~ ✅ Done (pino logger)
+4. Add request timeouts for OpenAI API calls
+5. Add request body size limits
 
 ### Phase 2 (Short-term - Medium Issues)
 
-1. Implement security headers
-2. Replace localStorage with secure storage
-3. Add proper error handling
+1. ~~Implement security headers~~ ✅ Done
+2. ~~Replace localStorage with secure storage~~ ✅ Done (PR #367)
+3. Add proper error handling / generic error messages for clients
 4. ~~CSRF protection~~ ✅ Done
 
 ### Phase 3 (Long-term - Additional Measures)
@@ -105,11 +109,27 @@ This document outlines the security measures and vulnerability management for th
 
 ### `/api/movie-recommendation`
 
-- [ ] Input validation
+- [x] Input validation (Zod schema + prompt injection detection + OpenAI Moderation API + LLM content judge)
 - [x] Rate limiting (Redis-backed, 10 req/min per IP; requires `REDIS_URL`)
 - [ ] Error sanitization
 - [ ] Request size limits
-- [ ] Timeout configuration
+- [ ] Timeout configuration (OpenAI API calls have no `AbortSignal`)
+
+### `/api/more-tmdb-picks`
+
+- [x] Input validation (Zod schema)
+- [x] Rate limiting (Redis-backed, 10 req/min per IP)
+- [x] Timeout configuration (`AbortSignal.timeout()` with 504 response on TMDB fetch)
+- [ ] Error sanitization
+- [ ] Request size limits
+
+### AI Moderation Pipeline (implemented security layer)
+
+Both API endpoints pass user input through Zod validation. The `/api/movie-recommendation` endpoint additionally runs a multi-stage moderation pipeline before any LLM call:
+
+1. **Prompt injection detection** — regex-based structural check (`checkForPromptInjection()` in `src/utils/ai/moderation.ts`) on `favoriteMovie` and `favoriteMovieWhy` fields
+2. **OpenAI Moderation API** — `moderateInput()` flags harmful content categories (hate, self-harm, violence, etc.)
+3. **LLM-as-judge** — `judgeForMoviePlatform()` evaluates suitability for a movie recommendation platform
 
 ## Environment Variables
 
