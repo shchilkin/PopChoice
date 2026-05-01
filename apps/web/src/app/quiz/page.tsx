@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 
 import {
   BetweenPersons,
@@ -50,15 +51,41 @@ export default function QuizPage() {
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
     if (!isSubmitting) return;
-    const resolved =
-      mode === 'solo'
-        ? people.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p))
-        : people;
-    const apiData = resolved.map(toApiFormat);
-    const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
-    localStorage.setItem('popchoice_quiz_data', JSON.stringify(dataToSend));
-    router.push('/loading');
-  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router]);
+
+    async function submit() {
+      const resolved =
+        mode === 'solo'
+          ? people.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p))
+          : people;
+      const apiData = resolved.map(toApiFormat);
+      const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
+
+      try {
+        const res = await fetch('/api/recommendations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken(),
+          },
+          body: JSON.stringify(dataToSend),
+        });
+
+        if (!res.ok) {
+          // If the server can't process the quiz data, go back to quiz
+          send({ type: 'BACK' });
+          return;
+        }
+
+        const { id } = (await res.json()) as { id: string };
+        router.push(`/results/${id}`);
+      } catch {
+        // Network error — send the machine back so the user can retry
+        send({ type: 'BACK' });
+      }
+    }
+
+    void submit();
+  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router, send]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     send({ type: 'UPDATE_PERSON', updates });

@@ -28,6 +28,7 @@
     "@bull-board/api": "^7.0.0",
     "@bull-board/express": "^7.0.0",
     "@langchain/core": "^1.1.42",
+    "@tanstack/react-query": "^5.100.7",
     "@xstate/react": "^6.1.0",
     "bullmq": "^5.76.2",
     "canvas-confetti": "^1.9.4",

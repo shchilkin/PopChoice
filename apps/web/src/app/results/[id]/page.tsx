@@ -1,8 +1,9 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2, RotateCcw, Sparkles, Users } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
@@ -10,51 +11,124 @@ import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
 
-import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from './components';
+import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from '../components';
 
-interface ApiResponse {
-  title: string;
-  description: string;
-  posterURL?: string;
-  movieDetails?: {
-    year: number;
-    age_rating?: string;
-    duration?: number;
-    score_rating?: number;
-    similarity: number;
-  };
-  similarMovies?: {
-    id: number;
-    name: string;
-    year: number;
-    similarity: number;
-    age_rating?: string;
-    duration?: number;
-    score_rating?: number;
-    posterURL?: string;
-    aiDescription?: string;
-    localizedName?: string;
-    isMainRecommendation?: boolean;
-    fromTMDB?: boolean;
-  }[];
-  usedBroaderSearch?: boolean;
-  dbMovieCount?: number;
+import type { RecommendationWithMovies } from '@/lib/db/recommendations';
+
+// ---------------------------------------------------------------------------
+// Polling hook
+// ---------------------------------------------------------------------------
+
+function useRecommendation(id: string) {
+  return useQuery<RecommendationWithMovies>({
+    queryKey: ['recommendation', id],
+    queryFn: async () => {
+      const res = await fetch(`/api/recommendations/${id}`, {
+        headers: {
+          'X-CSRF-Token': getCsrfToken(),
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res.json() as Promise<RecommendationWithMovies>;
+    },
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      if (status === 'completed' || status === 'failed') return false;
+      return 2000;
+    },
+    staleTime: Infinity,
+    retry: 3,
+  });
 }
 
-export default function ResultsPage() {
+// ---------------------------------------------------------------------------
+// Loading state
+// ---------------------------------------------------------------------------
+
+function LoadingState() {
+  const { t } = useLanguage();
+  return (
+    <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+      <div className="text-center">
+        <div className="text-4xl mb-4">🎬</div>
+        <p style={{ color: 'var(--pc-t2)' }}>{t.results.loading}</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Error / failed state
+// ---------------------------------------------------------------------------
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  const { t } = useLanguage();
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] px-5">
+      <div className="text-4xl mb-4">😕</div>
+      <h2
+        className="mb-2"
+        style={{
+          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+          fontWeight: '600',
+          textTransform: 'uppercase',
+          fontSize: '1.8rem',
+          color: 'var(--pc-t1)',
+        }}
+      >
+        {t.results.noResultsTitle}
+      </h2>
+      <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
+        {t.results.noResultsHint}
+      </p>
+      <button
+        onClick={onRetry}
+        className="px-6 py-3 rounded-2xl"
+        style={{
+          background: 'var(--pc-cta)',
+          color: 'var(--pc-cta-text)',
+          fontWeight: 700,
+        }}
+      >
+        {t.results.tryAgain}
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Results view (shared with /results/page.tsx layout)
+// ---------------------------------------------------------------------------
+
+function ResultsView({
+  movies,
+  usedBroaderSearch,
+  dbMovieCount,
+  quizData,
+}: {
+  movies: MovieRecommendation[];
+  usedBroaderSearch: boolean;
+  dbMovieCount?: number;
+  quizData?: unknown;
+}) {
   const router = useRouter();
   const { t, locale } = useLanguage();
-  const [movies, setMovies] = useState<MovieRecommendation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [usedBroaderSearch, setUsedBroaderSearch] = useState(false);
-  const [dbMovieCount, setDbMovieCount] = useState<number | null>(null);
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [noMorePicks, setNoMorePicks] = useState(false);
+  const [extraMovies, setExtraMovies] = useState<MovieRecommendation[]>([]);
   const carouselRef = useRef<HTMLDivElement>(null);
   const tmdbCarouselRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const allMovies = [...movies, ...extraMovies];
+  const mainMovie = allMovies.find((m) => m.isMainRecommendation) || allMovies[0];
+  const otherMovies = allMovies.filter((m) => m !== mainMovie);
+  const localOtherMovies = otherMovies.filter((m) => !m.fromTMDB);
+  const tmdbOtherMovies = otherMovies.filter((m) => m.fromTMDB);
 
   const scrollCarousel = useCallback((dir: 'left' | 'right') => {
     if (!carouselRef.current) return;
@@ -71,7 +145,6 @@ export default function ResultsPage() {
     setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 8);
   }, []);
 
-  // Sync scroll state once movies are rendered and on window resize
   useEffect(() => {
     if (movies.length === 0) return;
     const raf = requestAnimationFrame(handleScroll);
@@ -82,17 +155,26 @@ export default function ResultsPage() {
     };
   }, [movies, handleScroll]);
 
+  useEffect(() => {
+    if (movies.length === 0) return;
+    const raf = requestAnimationFrame(handleScroll);
+    const onResize = () => handleScroll();
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [movies, handleScroll]);
+
   function toggleSuggestion(id: number) {
     setActiveSuggestion((prev) => (prev === id ? null : id));
   }
 
   const handleMorePicks = useCallback(async () => {
-    const quizDataStr = localStorage.getItem('popchoice_quiz_data');
-    if (!quizDataStr || isFetchingMore) return;
-
+    if (isFetchingMore || !quizData) return;
     setIsFetchingMore(true);
     try {
-      const currentTmdbIds = movies.filter((m) => m.fromTMDB).map((m) => m.id);
+      const currentTmdbIds = tmdbOtherMovies.map((m) => m.id);
       const res = await fetch('/api/more-tmdb-picks', {
         method: 'POST',
         headers: {
@@ -101,18 +183,14 @@ export default function ResultsPage() {
           'X-CSRF-Token': getCsrfToken(),
         },
         body: JSON.stringify({
-          quizData: JSON.parse(quizDataStr),
+          quizData,
           page: 2,
           excludeIds: currentTmdbIds,
         }),
       });
 
       if (!res.ok) {
-        // A 429 is a transient rate-limit — don't permanently hide the button.
-        // For any other error treat it as exhausted.
-        if (res.status !== 429) {
-          setNoMorePicks(true);
-        }
+        if (res.status !== 429) setNoMorePicks(true);
         return;
       }
 
@@ -149,9 +227,8 @@ export default function ResultsPage() {
         fromTMDB: true,
       }));
 
-      setMovies((prev) => [...prev, ...newMovies]);
-      setNoMorePicks(true); // One-time action — hide the button after fetching
-      // Scroll TMDB carousel to end so new cards are visible
+      setExtraMovies((prev) => [...prev, ...newMovies]);
+      setNoMorePicks(true);
       requestAnimationFrame(() => {
         if (tmdbCarouselRef.current) {
           tmdbCarouselRef.current.scrollTo({
@@ -165,129 +242,9 @@ export default function ResultsPage() {
     } finally {
       setIsFetchingMore(false);
     }
-  }, [isFetchingMore, locale, movies]);
+  }, [isFetchingMore, locale, quizData, tmdbOtherMovies]);
 
-  useEffect(() => {
-    async function init() {
-      const raw = localStorage.getItem('popchoice_recommendation');
-      if (!raw) {
-        router.replace('/quiz');
-        return;
-      }
-
-      try {
-        const parsed: ApiResponse = JSON.parse(raw);
-
-        if (parsed.usedBroaderSearch) {
-          setUsedBroaderSearch(true);
-        }
-
-        if (typeof parsed.dbMovieCount === 'number') {
-          setDbMovieCount(parsed.dbMovieCount);
-        }
-
-        if (parsed.similarMovies && parsed.similarMovies.length > 0) {
-          const mapped: MovieRecommendation[] = parsed.similarMovies.map((m) => ({
-            id: m.id,
-            name: m.name,
-            year: m.year,
-            similarity: m.similarity,
-            age_rating: m.age_rating,
-            duration: m.duration,
-            score_rating: m.score_rating,
-            posterURL: m.posterURL,
-            description: m.aiDescription,
-            localizedName: m.localizedName,
-            isMainRecommendation: m.isMainRecommendation,
-            fromTMDB: m.fromTMDB,
-          }));
-
-          const needPosters = mapped.filter((m) => !m.posterURL);
-          if (needPosters.length > 0) {
-            const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
-            try {
-              const enhanced = await enhanceMoviesWithPosters(needPosters, tmdbApiKey);
-              const final = mapped.map((m) => enhanced.find((em) => em.id === m.id) || m);
-              setMovies(final);
-            } catch {
-              setMovies(mapped);
-            }
-          } else {
-            setMovies(mapped);
-          }
-        }
-      } catch {
-        // JSON parse error — leave movies empty, isLoading will be cleared below
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    void init();
-  }, [router]);
-
-  useEffect(() => {
-    if (movies.length === 0 || isLoading) return;
-    // Recalculate after movies render
-    const raf = requestAnimationFrame(handleScroll);
-    const onResize = () => handleScroll();
-    window.addEventListener('resize', onResize);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [movies, isLoading, handleScroll]);
-
-  const mainMovie = movies.find((m) => m.isMainRecommendation) || movies[0];
-  const otherMovies = movies.filter((m) => m !== mainMovie);
-  // Split other movies by source for separate sections
-  const localOtherMovies = otherMovies.filter((m) => !m.fromTMDB);
-  const tmdbOtherMovies = otherMovies.filter((m) => m.fromTMDB);
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="text-4xl mb-4">🎬</div>
-          <p style={{ color: 'var(--pc-t2)' }}>{t.results.loading}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!mainMovie) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] px-5">
-        <div className="text-4xl mb-4">😕</div>
-        <h2
-          className="mb-2"
-          style={{
-            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            fontSize: '1.8rem',
-            color: 'var(--pc-t1)',
-          }}
-        >
-          {t.results.noResultsTitle}
-        </h2>
-        <p className="mb-6" style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>
-          {t.results.noResultsHint}
-        </p>
-        <button
-          onClick={() => router.push('/quiz')}
-          className="px-6 py-3 rounded-2xl"
-          style={{
-            background: 'var(--pc-cta)',
-            color: 'var(--pc-cta-text)',
-            fontWeight: 700,
-          }}
-        >
-          {t.results.tryAgain}
-        </button>
-      </div>
-    );
-  }
+  if (!mainMovie) return null;
 
   return (
     <div className="px-4 md:px-8 py-8 max-w-3xl mx-auto w-full">
@@ -325,7 +282,9 @@ export default function ResultsPage() {
         <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
           {t.results.subtitle.replace(
             '{count}',
-            dbMovieCount !== null ? new Intl.NumberFormat(locale).format(dbMovieCount) : '…',
+            dbMovieCount !== null && dbMovieCount !== undefined
+              ? new Intl.NumberFormat(locale).format(dbMovieCount)
+              : '…',
           )}
         </p>
       </motion.div>
@@ -488,7 +447,7 @@ export default function ResultsPage() {
         </motion.div>
       )}
 
-      {/* Additional suggestions — from TMDB (always rendered so button is always accessible) */}
+      {/* Additional suggestions — from TMDB */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -532,7 +491,7 @@ export default function ResultsPage() {
           </>
         )}
 
-        {/* More picks button — shown once, hidden after use or on error */}
+        {/* More picks button */}
         {!noMorePicks && (
           <div className="mt-5 flex justify-center">
             <button
@@ -573,9 +532,7 @@ export default function ResultsPage() {
         className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
       >
         <button
-          onClick={() => {
-            router.push('/quiz');
-          }}
+          onClick={() => router.push('/quiz')}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: 'var(--pc-ghost)',
@@ -596,9 +553,7 @@ export default function ResultsPage() {
         </button>
 
         <button
-          onClick={() => {
-            router.push('/quiz');
-          }}
+          onClick={() => router.push('/quiz')}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: `linear-gradient(135deg, ${palette.purple}, #6D28D9)`,
@@ -615,5 +570,84 @@ export default function ResultsPage() {
         {t.results.disclaimer}
       </p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page component
+// ---------------------------------------------------------------------------
+
+export default function ResultsIdPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = typeof params.id === 'string' ? params.id : '';
+
+  const { data, isError } = useRecommendation(id);
+
+  // Map DB movies to MovieRecommendation format + optionally enhance missing posters
+  const [movies, setMovies] = useState<MovieRecommendation[]>([]);
+  const [moviesReady, setMoviesReady] = useState(false);
+
+  useEffect(() => {
+    if (data?.status !== 'completed' || !data.movies) return;
+
+    async function prepareMovies() {
+      const mapped: MovieRecommendation[] = (data!.movies ?? []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        year: m.year,
+        similarity: m.similarity ?? 0,
+        age_rating: m.age_rating,
+        duration: m.duration,
+        score_rating: m.score_rating,
+        posterURL: m.posterURL,
+        description: m.aiDescription,
+        localizedName: m.localizedName,
+        isMainRecommendation: m.isMainRecommendation,
+        fromTMDB: m.fromTMDB,
+      }));
+
+      const needPosters = mapped.filter((m) => !m.posterURL);
+      if (needPosters.length > 0) {
+        const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
+        try {
+          const enhanced = await enhanceMoviesWithPosters(needPosters, tmdbApiKey);
+          const final = mapped.map((m) => enhanced.find((em) => em.id === m.id) || m);
+          setMovies(final);
+        } catch {
+          setMovies(mapped);
+        }
+      } else {
+        setMovies(mapped);
+      }
+      setMoviesReady(true);
+    }
+
+    void prepareMovies();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.status]);
+
+  if (!id) {
+    router.replace('/quiz');
+    return null;
+  }
+
+  const status = data?.status;
+
+  if (isError || status === 'failed') {
+    return <ErrorState onRetry={() => router.push('/quiz')} />;
+  }
+
+  if (!data || status === 'pending' || status === 'processing' || !moviesReady) {
+    return <LoadingState />;
+  }
+
+  return (
+    <ResultsView
+      movies={movies}
+      usedBroaderSearch={data.usedBroaderSearch ?? false}
+      dbMovieCount={data.dbMovieCount}
+      quizData={undefined}
+    />
   );
 }
