@@ -39,10 +39,20 @@ function getRedisClient(): Promise<RedisClient | null> {
   return initPromise;
 }
 
-const RATE_LIMIT = 10;
-const RATE_LIMIT_WINDOW_SECONDS = 60;
+const DEFAULT_RATE_LIMIT = 10;
+const DEFAULT_RATE_LIMIT_WINDOW_SECONDS = 60;
 
-export async function applyRateLimit(req: Request & { ip?: string }): Promise<Response | null> {
+export interface RateLimitOptions {
+  limit?: number;
+  windowSeconds?: number;
+}
+
+export async function applyRateLimit(
+  req: Request & { ip?: string },
+  options?: RateLimitOptions,
+): Promise<Response | null> {
+  const RATE_LIMIT = options?.limit ?? DEFAULT_RATE_LIMIT;
+  const RATE_LIMIT_WINDOW_SECONDS = options?.windowSeconds ?? DEFAULT_RATE_LIMIT_WINDOW_SECONDS;
   const ip = getClientIp(req);
 
   // Skip rate limiting when the client IP cannot be determined or is not a
