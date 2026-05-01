@@ -13,7 +13,11 @@
 
 import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 
-const SCRYPT_OPTIONS = { N: 32_768, r: 8, p: 1 } as const;
+// maxmem must be set explicitly: Node's default (32 MiB) is exactly equal to
+// 128 * N * r but OpenSSL's internal bookkeeping adds a small overhead, causing
+// ERR_CRYPTO_INVALID_SCRYPT_PARAMS when maxmem is not specified. 64 MiB gives
+// comfortable headroom while still following OWASP interactive-login guidance.
+const SCRYPT_OPTIONS = { N: 32_768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const;
 const KEY_LENGTH = 32;
 
 /**
