@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 const ALLOWED_HOST = 'image.tmdb.org';
+const ALLOWED_PATHNAME = /^\/(?:t\/p|original)\/[A-Za-z0-9/_\-.~%]+$/;
+const ALLOWED_QUERY_KEYS = new Set(['language']);
 const ALLOWED_CONTENT_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -29,9 +31,27 @@ export async function GET(req: NextRequest) {
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  // Reconstruct URL from validated parsed components so the fetch target is never
-  // derived from raw user input (addresses SSRF: any auth, port, or fragment is dropped).
-  const safeUrl = new URL(`https://${ALLOWED_HOST}${parsed.pathname}${parsed.search}`).toString();
+  const normalizedPathname = decodeURIComponent(parsed.pathname);
+  if (
+    !ALLOWED_PATHNAME.test(parsed.pathname) ||
+    normalizedPathname.includes('..') ||
+    normalizedPathname.includes('\\') ||
+    normalizedPathname.includes('//')
+  ) {
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+
+  const safeSearchParams = new URLSearchParams();
+  for (const [key, value] of parsed.searchParams.entries()) {
+    if (!ALLOWED_QUERY_KEYS.has(key)) continue;
+    if (key === 'language' && /^[a-z]{2}(?:-[A-Z]{2})?$/.test(value)) {
+      safeSearchParams.set(key, value);
+    }
+  }
+
+  // Reconstruct URL from fixed host + sanitized path/query only.
+  const safeUrl = new URL(`https://${ALLOWED_HOST}${parsed.pathname}`);
+  safeUrl.search = safeSearchParams.toString();
 
   const res = await fetch(safeUrl, {
     next: { revalidate: 86400 },
