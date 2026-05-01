@@ -1,12 +1,33 @@
 // Shared layout helpers for style-guide pages.
 // Keep these server-compatible (no client hooks).
 
-export function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export { ColorSwatch } from './ColorSwatch';
+export { MascotSection } from './MascotSection';
+export { TokenRow } from './TokenRow';
+
+export function Section({
+  title,
+  children,
+  id: explicitId,
+}: {
+  title: string;
+  children: React.ReactNode;
+  id?: string;
+}) {
+  const id =
+    explicitId ??
+    title
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
   return (
-    <section className="mb-16">
+    <section className="mb-16" id={id}>
       <h2
-        className="mb-6 text-xs font-bold uppercase tracking-[0.2em]"
-        style={{ color: 'var(--pc-gold)', fontFamily: "var(--font-oswald), 'Oswald', sans-serif" }}
+        className="mb-6 text-sm font-bold uppercase tracking-[0.2em]"
+        style={{
+          color: 'var(--pc-gold)',
+          fontFamily: "var(--font-manrope), 'Manrope', sans-serif",
+        }}
       >
         {title}
       </h2>

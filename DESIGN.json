@@ -1,0 +1,381 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-30T00:00:00Z",
+  "title": "Design System: PopChoice",
+  "extensions": {
+    "colorMeta": {
+      "gold": {
+        "role": "primary",
+        "displayName": "Projectionist's Gold",
+        "canonical": "oklch(62% 0.14 75)",
+        "note": "Light mode value. Dark mode uses gold-bright (#f5c518).",
+        "tonalRamp": [
+          "#2a1a00",
+          "#4a3000",
+          "#6b4700",
+          "#8c6300",
+          "#c4950a",
+          "#d4aa3d",
+          "#e3c878",
+          "#f5e8b8"
+        ]
+      },
+      "gold-bright": {
+        "role": "primary",
+        "displayName": "Gold Bright",
+        "canonical": "oklch(82% 0.18 84)",
+        "note": "Dark mode accent and CTA gradient start.",
+        "tonalRamp": [
+          "#3a2a00",
+          "#5c4400",
+          "#8c6a00",
+          "#b58900",
+          "#f5c518",
+          "#f9d45a",
+          "#fbe48e",
+          "#fdf3c5"
+        ]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Amber Reel",
+        "canonical": "oklch(57% 0.15 55)",
+        "note": "Light mode gradient partner to gold. Dark mode uses amber-bright.",
+        "tonalRamp": [
+          "#2a0f00",
+          "#4a2000",
+          "#6b3500",
+          "#9c5500",
+          "#d4760c",
+          "#e09a42",
+          "#ecbf7e",
+          "#f5e0c0"
+        ]
+      },
+      "amber-bright": {
+        "role": "secondary",
+        "displayName": "Amber Reel Bright",
+        "canonical": "oklch(74% 0.17 55)",
+        "note": "Dark mode gradient partner. CTA gradient end.",
+        "tonalRamp": [
+          "#2a1000",
+          "#4a2200",
+          "#7a4000",
+          "#b06000",
+          "#ff9f1c",
+          "#ffbe66",
+          "#ffd8a0",
+          "#ffeecc"
+        ]
+      },
+      "bg-light": {
+        "role": "neutral",
+        "displayName": "Warm Parchment",
+        "canonical": "oklch(97% 0.008 85)",
+        "note": "Light mode base background. Tinted cream — not white.",
+        "tonalRamp": [
+          "#3a3530",
+          "#625c52",
+          "#8a827a",
+          "#b0a89e",
+          "#d8d1c4",
+          "#e8e3d6",
+          "#f0ece2",
+          "#f7f5ee"
+        ]
+      },
+      "bg-dark": {
+        "role": "neutral",
+        "displayName": "Midnight Screen",
+        "canonical": "oklch(6% 0.01 270)",
+        "note": "Dark mode base background. Near-black with blue-violet undertone.",
+        "tonalRamp": [
+          "#09090f",
+          "#13131f",
+          "#1a1a2e",
+          "#252540",
+          "#333355",
+          "#4a4a70",
+          "#6a6a90",
+          "#9090b8"
+        ]
+      },
+      "surface-light": {
+        "role": "neutral",
+        "displayName": "Projection White",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": [
+          "#3a3535",
+          "#625c5c",
+          "#8a8080",
+          "#b0a8a8",
+          "#d8d2d2",
+          "#eae4e4",
+          "#f2eded",
+          "#ffffff"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Dark Stage",
+        "canonical": "oklch(10% 0.012 270)",
+        "tonalRamp": [
+          "#09090f",
+          "#13131f",
+          "#1c1c30",
+          "#252540",
+          "#303050",
+          "#404060",
+          "#606080",
+          "#8888aa"
+        ]
+      },
+      "text-primary-light": {
+        "role": "neutral",
+        "displayName": "Director's Ink",
+        "canonical": "oklch(10% 0.015 264)",
+        "note": "Near-black primary text, light mode.",
+        "tonalRamp": [
+          "#0d0d1a",
+          "#1a1a30",
+          "#2d2d48",
+          "#424260",
+          "#5a5a78",
+          "#7b7b9d",
+          "#9696b8",
+          "#c0c0d8"
+        ]
+      },
+      "text-primary-dark": {
+        "role": "neutral",
+        "displayName": "Ghost White",
+        "canonical": "oklch(99% 0.005 264)",
+        "note": "Near-white primary text, dark mode.",
+        "tonalRamp": [
+          "#1a1a2a",
+          "#2d2d45",
+          "#424260",
+          "#5a5a80",
+          "#7b7b9d",
+          "#9696b8",
+          "#c0c0d8",
+          "#f8f8ff"
+        ]
+      },
+      "text-secondary-light": {
+        "role": "neutral",
+        "displayName": "Cast Credits",
+        "canonical": "oklch(38% 0.04 264)",
+        "tonalRamp": [
+          "#0d0d1a",
+          "#1a1a30",
+          "#2d2d48",
+          "#424260",
+          "#5a5a78",
+          "#7b7b9d",
+          "#9696b8",
+          "#c0c0d8"
+        ]
+      },
+      "text-muted-light": {
+        "role": "neutral",
+        "displayName": "Supporting Role",
+        "canonical": "oklch(50% 0.04 264)",
+        "tonalRamp": [
+          "#1a1a2a",
+          "#2d2d45",
+          "#424260",
+          "#5a5a80",
+          "#6a6a88",
+          "#8888aa",
+          "#a0a0c0",
+          "#c8c8e0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headlines and marquee statements. One per page. Always Oswald, uppercase, letter-spaced."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headers, quiz step titles. Oswald uppercase."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, modal headers, emphasized UI labels. Manrope bold."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Paragraph text, descriptions, feature copy. Max 65-75ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chips, nav items, badges, table headers. Manrope semibold."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-ambient-light",
+        "value": "0 20px 50px rgba(0,0,0,0.1)",
+        "purpose": "Content card lift in light mode. Soft and diffuse."
+      },
+      {
+        "name": "card-ambient-dark",
+        "value": "0 40px 80px rgba(0,0,0,0.5)",
+        "purpose": "Content card lift in dark mode. Deeper and more atmospheric."
+      },
+      {
+        "name": "cta-glow-rest",
+        "value": "0 4px 20px rgba(196,149,10,0.3), 0 2px 8px rgba(196,149,10,0.15)",
+        "purpose": "Gold warmth under CTA button at rest. CTA variant only."
+      },
+      {
+        "name": "cta-glow-hover",
+        "value": "0 8px 30px rgba(196,149,10,0.4), 0 4px 16px rgba(196,149,10,0.2)",
+        "purpose": "CTA button hover. The button appears to levitate."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "200ms ease-out",
+        "purpose": "Default state transitions: buttons, borders, colors, nav links."
+      },
+      {
+        "name": "ease-deliberate",
+        "value": "300ms ease-out",
+        "purpose": "Progress dots and theme transitions. Slightly slower for weight."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "CTA Button",
+      "kind": "button",
+      "refersTo": "button-cta",
+      "description": "Primary action button. Gold-to-amber gradient. Used for quiz start, recommendations, key conversions.",
+      "html": "<button class=\"ds-btn-cta\">Find My Movie</button>",
+      "css": ".ds-btn-cta { background: linear-gradient(135deg, #f5c518, #ff9f1c); color: #09090f; padding: 16px; width: 100%; border: none; border-radius: 8px; font-family: 'Manrope', sans-serif; font-size: 1.25rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 20px rgba(196,149,10,0.3), 0 2px 8px rgba(196,149,10,0.15); transition: opacity 0.2s ease-out, box-shadow 0.2s ease-out, transform 0.2s ease-out; } .ds-btn-cta:hover { opacity: 0.9; box-shadow: 0 8px 30px rgba(196,149,10,0.4), 0 4px 16px rgba(196,149,10,0.2); } .ds-btn-cta:active { transform: scale(0.95); } .ds-btn-cta:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Default Button",
+      "kind": "button",
+      "refersTo": "button-default",
+      "description": "Secondary action. Solid gold background. Used for secondary confirmations.",
+      "html": "<button class=\"ds-btn-default\">Continue</button>",
+      "css": ".ds-btn-default { background: #c4950a; color: #0d0d1a; padding: 16px; width: 100%; border: none; border-radius: 8px; font-family: 'Manrope', sans-serif; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s ease-out; } .ds-btn-default:hover { opacity: 0.9; } .ds-btn-default:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Tertiary action. Transparent with subtle border. Used for dismissals, secondary options.",
+      "html": "<button class=\"ds-btn-ghost\">Skip</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #424260; padding: 16px; width: 100%; border: 1px solid rgba(0,0,0,0.09); border-radius: 8px; font-family: 'Manrope', sans-serif; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: color 0.2s ease-out, border-color 0.2s ease-out; } .ds-btn-ghost:hover { color: #0d0d1a; border-color: rgba(0,0,0,0.14); } .ds-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Content Card",
+      "kind": "card",
+      "description": "Standard content container. Movie results, feature items, information blocks.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-body\">Card content goes here.</p></div>",
+      "css": ".ds-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.09); border-radius: 12px; padding: 20px 20px 14px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); transition: box-shadow 0.2s ease-out; } .ds-card:hover { box-shadow: 0 24px 60px rgba(0,0,0,0.14); } .ds-card-body { font-family: 'Manrope', sans-serif; font-size: 1rem; line-height: 1.65; color: #0d0d1a; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "description": "Standard text field. Quiz answers, search, form inputs.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Type your answer...\">",
+      "css": ".ds-input { background: #ffffff; border: 1px solid rgba(0,0,0,0.09); border-radius: 12px; padding: 12px 16px; font-family: 'Manrope', sans-serif; font-size: 1rem; color: #0d0d1a; width: 100%; outline: none; transition: border-color 0.2s ease-out; } .ds-input::placeholder { color: #6a6a88; } .ds-input:focus { border-color: rgba(196,149,10,0.5); }"
+    },
+    {
+      "name": "Navigation Header",
+      "kind": "nav",
+      "description": "Sticky frosted-glass header with logo and nav links.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-logo\">PopChoice</span><nav class=\"ds-nav-links\"><a class=\"ds-nav-link ds-nav-link--active\" href=\"#\">Home</a><a class=\"ds-nav-link\" href=\"#\">Quiz</a></nav></header>",
+      "css": ".ds-nav { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: rgba(247,245,238,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0,0,0,0.06); } .ds-nav-logo { font-family: 'Oswald', sans-serif; font-size: 1.4rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; background: linear-gradient(90deg, #f5c518, #ff9f1c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; } .ds-nav-links { display: flex; gap: 4px; } .ds-nav-link { font-family: 'Manrope', sans-serif; font-size: 0.875rem; font-weight: 600; color: #6a6a88; padding: 8px 12px; border-radius: 12px; text-decoration: none; transition: color 0.2s ease-out, background 0.2s ease-out; } .ds-nav-link:hover { color: #0d0d1a; background: rgba(196,149,10,0.06); } .ds-nav-link--active { color: #8c6300; background: rgba(196,149,10,0.1); }"
+    },
+    {
+      "name": "Progress Dots",
+      "kind": "custom",
+      "description": "Quiz step indicator. Dots morph between states — shape change is the signal.",
+      "html": "<div class=\"ds-progress\"><div class=\"ds-dot ds-dot--complete\"></div><div class=\"ds-dot ds-dot--active\"></div><div class=\"ds-dot ds-dot--inactive\"></div><div class=\"ds-dot ds-dot--inactive\"></div></div>",
+      "css": ".ds-progress { display: flex; align-items: center; gap: 8px; } .ds-dot { height: 8px; border-radius: 9999px; transition: all 0.3s ease-out; } .ds-dot--complete { width: 24px; background: rgba(245,197,24,0.5); } .ds-dot--active { width: 24px; background: linear-gradient(90deg, #f5c518, #ff9f1c); } .ds-dot--inactive { width: 8px; background: rgba(0,0,0,0.09); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Repertory House",
+    "overview": "The neighborhood cinema where the staff loves movies as much as you do. Not a multiplex algorithm churning thumbnails, not a streaming service with 400+ options — a room with good chairs, warm light, and a poster on the wall that makes you feel something before the lights even go down. PopChoice occupies this space: confident, curated, quietly thrilled about film.\n\nThe system operates in two modes — warm parchment light and cool midnight dark — both theater-appropriate, both treated as equals. Neither is an afterthought. The interface uses Oswald's cinematic authority for headlines and Manrope's warm approachability for everything conversational. Gold appears where it counts: on what you should do next, on what's been chosen, on what matters. Everywhere else, it rests.\n\nPlayfulness is earned through texture and motion, not decoration. The animated mascot, the morphing progress dots, the gold glow on the CTA — these are moments, not a mood board. The product should feel fun and unusual enough to be memorable, and immediately legible from a glance.",
+    "keyCharacteristics": [
+      "Dual-theme: warm parchment light and cool midnight dark — both intentional, both equal",
+      "Gold as signal, never noise — the accent appears on exactly what matters",
+      "Oswald uppercase authority paired with Manrope warm approachability",
+      "Restrained surface depth: flat at rest, depth earned by state",
+      "Motion in service of feedback, not spectacle"
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Gold appears on ≤10% of any given screen in its full-value form. Its rarity is what makes it read as signal. Gold tints exist for hover backgrounds — those are not accent uses.",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Pure-Extremes Rule",
+        "body": "Never #000000 or #ffffff. Director's Ink (#0d0d1a) and Ghost White (#f8f8ff) are the terminals. Every neutral is tinted toward the brand hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Uppercase Authority Rule",
+        "body": "Oswald is always uppercase and letter-spaced (minimum 0.04em). Lowercase Oswald defeats its purpose entirely.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single Display Rule",
+        "body": "One Display-level element per page. Hierarchy collapses when everything shouts.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. The card shadow is a quiet hint, not a statement. Only the CTA carries an expressive shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Gold Glow Rule",
+        "body": "The gold-tinted shadow exists only on the CTA button. Do not apply --pc-cta-shadow to cards, chips, nav items, or decorative elements.",
+        "section": "elevation"
+      },
+      {
+        "name": "The No-Nested-Cards Rule",
+        "body": "Cards do not contain cards. Use tinted backgrounds or borders for inner containers, never a nested card.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do use gold on ≤10% of any given screen in its full-value form — CTAs, active states, progress indicators, the logo.",
+      "Do use Oswald uppercase with letter-spacing at minimum 0.04em on all display and headline text.",
+      "Do maintain warm parchment light mode and cool midnight dark mode with equal visual care.",
+      "Do apply the gold glow shadow exclusively to the CTA button variant.",
+      "Do animate state changes with 200ms ease-out. Progress dots use 300ms for deliberate weight.",
+      "Do cap body copy at 65–75ch line length.",
+      "Do treat solo and group mode entry points with equal visual weight on the landing page."
+    ],
+    "donts": [
+      "Don't copy streaming platform aesthetics: dark backgrounds with red or blue accents (Netflix, Disney, Max).",
+      "Don't use Amazon-style 'you might also like' card grids — transactional, invisible, soulless.",
+      "Don't over-design into heavy editorial film-festival territory — alienating, prioritizes aesthetic over instant comprehension.",
+      "Don't use gradient text (background-clip: text + gradient) on anything except the logo wordmark.",
+      "Don't use border-left or border-right greater than 1px as a colored accent stripe on cards, list items, or callouts.",
+      "Don't use Oswald in lowercase or without letter-spacing.",
+      "Don't layer gold on gold. One gold-role element per visual cluster.",
+      "Don't use #000000 or #ffffff — Director's Ink (#0d0d1a) and Ghost White (#f8f8ff) are the terminals.",
+      "Don't build identical-sized card grids with icon + heading + paragraph repeated in a uniform grid."
+    ]
+  }
+}

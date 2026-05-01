@@ -51,3 +51,6 @@ storybook-static
 # Turborepo
 .turbo
 **/.turbo
+
+# Playwright
+playwright-report

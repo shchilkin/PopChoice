@@ -31,8 +31,13 @@ export function HowItWorksSection() {
         <div
           className="absolute left-7 top-10 bottom-10 w-0.5 hidden sm:block"
           style={{
-            background:
-              'linear-gradient(180deg, rgba(245,197,24,0.3) 0%, rgba(255,159,28,0.1) 50%, transparent 100%)',
+            background: `linear-gradient(180deg,
+              ${palette.gold}80 0%,
+              ${palette.purple}80 33%,
+              ${palette.teal}80 66%,
+              ${palette.amber}80 85%,
+              transparent 100%
+            )`,
           }}
         />
         <div className="flex flex-col gap-6">
@@ -58,7 +63,7 @@ export function HowItWorksSection() {
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 relative z-10"
                   style={{
-                    background: `${color}18`,
+                    background: `color-mix(in srgb, ${color} 12%, var(--pc-bg))`,
                     border: `1px solid ${color}30`,
                     color,
                   }}
