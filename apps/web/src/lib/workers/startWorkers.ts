@@ -7,7 +7,9 @@ const movieSeedWorker = createMovieSeedWorker();
 const recommendationWorker = createRecommendationWorker();
 
 if (!movieSeedWorker && !recommendationWorker) {
-  logger.error('No workers started. Exiting because no workers could be created.');
+  // Both workers failed — REDIS_URL is likely unset or Redis is unreachable.
+  // Exiting is intentional: running with zero workers provides no value.
+  logger.error('No workers could be started (both movie-seed and recommendation). Exiting.');
   process.exit(1);
 }
 

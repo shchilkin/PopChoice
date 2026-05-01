@@ -589,10 +589,12 @@ export default function ResultsIdPage() {
   const [moviesReady, setMoviesReady] = useState(false);
 
   useEffect(() => {
-    if (data?.status !== 'completed' || !data.movies) return;
+    if (data?.status !== 'completed' || !data.movies || moviesReady) return;
+
+    const movies = data.movies;
 
     async function prepareMovies() {
-      const mapped: MovieRecommendation[] = (data!.movies ?? []).map((m) => ({
+      const mapped: MovieRecommendation[] = movies.map((m) => ({
         id: m.id,
         name: m.name,
         year: m.year,
@@ -624,8 +626,7 @@ export default function ResultsIdPage() {
     }
 
     void prepareMovies();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.status]);
+  }, [data, moviesReady]);
 
   if (!id) {
     router.replace('/quiz');

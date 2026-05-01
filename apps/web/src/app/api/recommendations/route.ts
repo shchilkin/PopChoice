@@ -147,7 +147,10 @@ async function postHandler(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Failed to create recommendation' }, { status: 500 });
   }
 
-  // Enqueue to BullMQ if available, otherwise fall back to inline processing
+  // Enqueue to BullMQ if available, otherwise fall back to inline processing.
+  // In both cases we return 201 immediately — the client polls /api/recommendations/:id
+  // for completion. processInline catches all errors and writes them to the DB row
+  // so the polling endpoint surfaces the 'failed' status to the user.
   if (recommendationQueue) {
     try {
       await recommendationQueue.add(
@@ -161,12 +164,10 @@ async function postHandler(req: NextRequest): Promise<Response> {
         { err, recommendationId },
         'Failed to enqueue recommendation job — falling back to inline processing',
       );
-      // Fallback: process inline
       void processInline(recommendationId, allPeopleData, locale);
     }
   } else {
     logger.warn('Recommendation queue unavailable (no Redis) — processing inline');
-    // Process inline but don't await — respond immediately and let it run in background
     void processInline(recommendationId, allPeopleData, locale);
   }
 
