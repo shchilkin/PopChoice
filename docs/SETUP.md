@@ -19,9 +19,21 @@ POSTGRES_DB=popchoice
 # TMDB API (for movie data)
 TMDB_API_KEY=your-tmdb-api-key
 
-# Redis (optional) – enables distributed rate limiting on /api/movie-recommendation
-# When unset, rate limiting is disabled and the API fails open
+# API key authentication secret (used to derive scrypt key digests)
+# Required when VALID_API_KEYS is set; must stay stable across restarts
+API_KEY_HMAC_SECRET=your-stable-hmac-secret
+
+# Redis (optional) – enables distributed rate limiting and BullMQ background workers
+# When unset, rate limiting is skipped and background seeding is disabled
 REDIS_URL=redis://user:password@host:6379
+
+# API key authentication – comma-separated scrypt digests of valid API keys
+# Required in production; when unset in development, auth is disabled with a warning
+VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
+
+# Public base URL of the app (required behind a reverse proxy such as Railway or Vercel)
+# Used for same-origin CSRF validation; without this, browser API calls will return 401
+NEXT_PUBLIC_BASE_URL=https://your-app.up.railway.app
 ```
 
 ## OpenAI Setup
@@ -80,11 +92,78 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 2. **Add to environment**
    - Add `TMDB_API_KEY=your-key` to your `.env` file
 
-## Redis Setup (Optional – Rate Limiting)
+## API Endpoint Protection
 
-The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10 requests per minute per IP). This requires a Redis instance and the `REDIS_URL` environment variable to be set. When `REDIS_URL` is absent the endpoint continues to work without rate limiting.
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by the `withAuth` wrapper and accept either:
+
+- API key authentication (`Authorization: Bearer <key>` or `X-API-Key`)
+- Same-origin browser requests with a valid CSRF cookie/header pair
+
+### 1. API key authentication (recommended for external/service callers)
+
+External callers (mobile apps, partner integrations) can authenticate via one of these headers:
+
+- `Authorization: Bearer <key>`
+- `X-API-Key: <key>`
+
+Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variable (comma-separated). The derivation uses a server-side secret from `API_KEY_HMAC_SECRET`. Never store plaintext keys.
+
+#### Generating and registering a key
+
+1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
+2. **Set `API_KEY_HMAC_SECRET`** in your environment (e.g. `openssl rand -hex 32`). This secret must stay the same across restarts.
+3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`:
+   ```ts
+   import { hashApiKey } from '@/lib/apiAuth';
+   console.log(hashApiKey('your-plaintext-key'));
+   ```
+4. **Add the hash** to your environment:
+   ```env
+   API_KEY_HMAC_SECRET=<your-derivation-secret>
+   VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
+   ```
+5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
+
+#### Development mode
+
+When `VALID_API_KEYS` is not set, API key authentication is **disabled in development** (`NODE_ENV !== 'production'`) and a warning is logged. In production, all API requests are rejected when the variable is absent.
+
+### 2. CSRF tokens (browser fallback path)
+
+Next.js middleware (`src/middleware.ts`) issues a random `__csrf` cookie on page loads. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls.
+
+The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. CSRF fallback is accepted only for same-origin browser requests and only when both cookie and header are present and identical.
+
+## Redis Setup (Optional – Rate Limiting & Background Workers)
+
+Redis is used for two features:
+
+- **Rate limiting** – `/api/movie-recommendation` is limited to 10 requests per minute per IP. When `REDIS_URL` is absent, rate limiting is skipped and the API fails open.
+- **BullMQ workers** – background TMDB seeding jobs are queued via BullMQ. When `REDIS_URL` is absent, background seeding is disabled.
 
 > **Security note:** `REDIS_URL` may contain credentials (e.g. `redis://user:password@host:6379`). Store it as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
+
+### Local Redis with Docker
+
+A `redis` service is included in `docker-compose.yml`. Start it with:
+
+```bash
+docker compose up redis -d
+```
+
+Then add to your `.env`:
+
+```env
+REDIS_URL=redis://localhost:6379
+```
+
+Run background workers in a separate terminal:
+
+```bash
+npm run start:workers
+```
+
+### Production Redis
 
 1. **Provision a Redis instance**
    - Use any Redis provider, e.g. [Redis Cloud](https://redis.io/cloud/), [Railway](https://railway.app), or a self-hosted instance
@@ -94,7 +173,8 @@ The `/api/movie-recommendation` endpoint supports Redis-backed rate limiting (10
 
 3. **Verify**
    - On the first request to `/api/movie-recommendation`, the app logs `Rate limiter initialized with Redis` when the connection succeeds
-   - On the first request to `/api/movie-recommendation`, when `REDIS_URL` is not set, it logs `REDIS_URL not set. Rate limiting disabled.`
+   - When `REDIS_URL` is not set, rate limiting logs `REDIS_URL not set. Rate limiting disabled.`
+   - When `REDIS_URL` is not set, the worker logs `REDIS_URL not set. Movie seeding worker is disabled.`
 
 ## Local Docker PostgreSQL Setup
 
@@ -122,7 +202,7 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    ```
 
 > **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
-> To reset the database from scratch, run `docker compose down -v` (removes the volume) then `npm run setup:local-db` again.
+> To reset the database from scratch, run `npm run cleanup:local-db` (stops containers and removes the volume) then `npm run setup:local-db` again.
 
 ## Railway PostgreSQL Setup
 
@@ -175,7 +255,7 @@ This project includes a development container configuration for consistent devel
 
 ### Features included:
 
-- Node.js 22 with npm
+- Node.js 24 with npm
 - Git and GitHub CLI pre-installed
 - All VS Code extensions pre-configured
 - Port forwarding for development servers (3000, 6006)

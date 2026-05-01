@@ -16,25 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: services/movie-discovery
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'npm'
-          cache-dependency-path: services/movie-discovery/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npm run build
-
-      - name: Run tests
-        run: npm test
+      - name: Build and test movie-discovery
+        run: npx turbo run build test --filter=./services/movie-discovery

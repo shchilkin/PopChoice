@@ -68,6 +68,7 @@ async function fetchFromSource(
         Authorization: `Bearer ${readAccessToken}`,
         Accept: 'application/json',
       },
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {
@@ -135,6 +136,7 @@ export async function fetchMovieDetails(
       Authorization: `Bearer ${readAccessToken}`,
       Accept: 'application/json',
     },
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {

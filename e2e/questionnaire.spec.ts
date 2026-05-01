@@ -8,21 +8,19 @@ test.describe('Quiz intro', () => {
     await page.goto('/quiz');
   });
 
-  test('shows solo and group mode options', async ({ page }) => {
+  test('shows solo mode option', async ({ page }) => {
     await expect(page.getByRole('button', { name: /Just me/i })).toBeVisible();
+  });
+
+  test('group mode button is visible but disabled (ships later)', async ({ page }) => {
     await expect(page.getByRole('button', { name: /Group mode/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Group mode/i })).toBeDisabled();
   });
 
   test('clicking "Just me" starts the quiz at step 1', async ({ page }) => {
     await page.getByRole('button', { name: /Just me/i }).click();
     // FavoriteMovieStep — t.quiz.favoriteMovie.title
     await expect(page.getByRole('heading', { name: "What's your favorite movie?" })).toBeVisible();
-  });
-
-  test('clicking "Group mode" shows group setup screen', async ({ page }) => {
-    await page.getByRole('button', { name: /Group mode/i }).click();
-    // GroupSetup — t.quiz.groupSetup.title
-    await expect(page.getByRole('heading', { name: "Who's watching?" })).toBeVisible();
   });
 });
 
@@ -149,28 +147,5 @@ test.describe('Quiz questions (solo flow)', () => {
   });
 });
 
-test.describe('Quiz group setup', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/quiz');
-    await page.getByRole('button', { name: /Group mode/i }).click();
-  });
-
-  test('group name inputs are shown', async ({ page }) => {
-    // Two placeholder inputs: "Person 1's name", "Person 2's name"
-    await expect(page.getByPlaceholder("Person 1's name")).toBeVisible();
-    await expect(page.getByPlaceholder("Person 2's name")).toBeVisible();
-  });
-
-  test('"Add another person" button is visible', async ({ page }) => {
-    await expect(page.getByRole('button', { name: 'Add another person' })).toBeVisible();
-  });
-
-  test('entering names and confirming starts the quiz for person 1', async ({ page }) => {
-    await page.getByPlaceholder("Person 1's name").fill('Alice');
-    await page.getByPlaceholder("Person 2's name").fill('Bob');
-    await page.getByRole('button', { name: "Let's go!" }).click();
-    // Should be on step 1 of quiz for Alice — person tab and heading are visible
-    await expect(page.getByText("Alice's turn")).toBeVisible();
-    await expect(page.getByRole('heading', { name: "What's your favorite movie?" })).toBeVisible();
-  });
-});
+// Group setup tests are skipped because group mode is currently disabled in QuizIntro.
+// Re-enable when the multi-person flow ships.

@@ -43,6 +43,7 @@ as $$
   from movies
   where movies.embedding is not null
     and 1 - (movies.embedding <=> query_embedding) > match_threshold
+    and 1 - (movies.embedding <=> query_embedding) <= 1.0
   order by similarity desc
   limit match_count;
 $$;

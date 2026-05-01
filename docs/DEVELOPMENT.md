@@ -1,8 +1,10 @@
 # Development Guide
 
+For ongoing code health reviews, use the **[Maintainability Checklist](./MAINTAINABILITY-CHECKLIST.md)**.
+
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 24+ and npm (match the version required by the `package.json` `engines` field)
 - Git
 - VS Code (recommended)
 
@@ -34,24 +36,20 @@
 
 ### Database & Data Management
 
-- `npm run populate-db` - Populate database with movie data from movies.txt file
+- `npm run setup:local-db` - Start local PostgreSQL + Redis via Docker and write credentials to `.env`
+- `npm run populate-db` - Seed the database with movie embeddings via the `movie-seed` service
+- `npm run cleanup:local-db` - Stop containers and remove the database volume (full reset)
 - `npm run analyze-movies` - Analyze movie data chunks for embedding optimization
 
 ## Database Setup Workflow
 
-The project includes scripts to help you set up and manage your movie recommendation database:
+The project includes scripts to help you set up and manage your movie recommendation database. All commands run from the **repo root**:
 
-1. **Analysis Phase** - Use `npm run analyze-movies` to understand your movie data structure
-2. **Population Phase** - Use `npm run populate-db` to import movies into your PostgreSQL database
+1. **Start the DB** - Run `npm run setup:local-db` to spin up PostgreSQL + Redis and initialize credentials
+2. **Seed the DB** - Run `npm run populate-db` to import movies (via `services/movie-seed`) into PostgreSQL
+3. **Reset** - Run `npm run cleanup:local-db` to wipe everything, then repeat from step 1
 
-The populate script reads `movies.txt` from the **project root**. The curated movie list lives at `services/movie-seed/movies.txt` — copy it to the project root before running:
-
-```bash
-cp services/movie-seed/movies.txt ./movies.txt
-npm run populate-db
-```
-
-The populate script automatically creates embeddings for new movies during the import process.
+The `movie-seed` service reads its movie list from `services/movie-seed/movies.txt`.
 
 ## Mock Data Fallback
 
