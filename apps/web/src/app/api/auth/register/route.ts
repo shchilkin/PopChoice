@@ -26,7 +26,7 @@ const registerSchema = z.object({
 async function hashPassword(plaintext: string): Promise<string> {
   const salt = randomBytes(16).toString('hex');
   const hash = await new Promise<string>((resolve, reject) => {
-    scrypt(plaintext, salt, 32, { N: 16_384, r: 8, p: 1 }, (err, derivedKey) => {
+    scrypt(plaintext, salt, 32, { N: 32_768, r: 8, p: 1 }, (err, derivedKey) => {
       if (err) {
         reject(err);
         return;
@@ -40,6 +40,8 @@ async function hashPassword(plaintext: string): Promise<string> {
 /**
  * Verifies a plaintext password against a stored `salt:hash` value.
  * Uses timingSafeEqual to prevent timing attacks.
+ *
+ * Exported for use by future login / session endpoints.
  */
 export async function verifyPassword(plaintext: string, stored: string): Promise<boolean> {
   const separatorIndex = stored.indexOf(':');
@@ -47,7 +49,7 @@ export async function verifyPassword(plaintext: string, stored: string): Promise
   const salt = stored.slice(0, separatorIndex);
   const storedHash = stored.slice(separatorIndex + 1);
   const candidateHash = await new Promise<string>((resolve, reject) => {
-    scrypt(plaintext, salt, 32, { N: 16_384, r: 8, p: 1 }, (err, derivedKey) => {
+    scrypt(plaintext, salt, 32, { N: 32_768, r: 8, p: 1 }, (err, derivedKey) => {
       if (err) {
         reject(err);
         return;
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   // Check for duplicate email
-  const existing = await db.from('users').select('id').eq('email', normalizedEmail);
+  const existing = await db.from('users').select('id').eq('email', normalizedEmail).limit(1);
   if (existing.error) {
     logger.error({ error: existing.error.message }, 'Failed to query users table');
     return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
