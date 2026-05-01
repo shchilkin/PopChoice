@@ -5,6 +5,7 @@ export const ru: Translations = {
     howItWorks: 'Как это работает',
     availableMovies: 'Фильмы',
     findAMovie: 'Найти фильм',
+    signUp: 'Регистрация',
     toggleTheme: 'Переключить тему',
     switchLanguage: 'Переключить язык',
     openMenu: 'Открыть меню',
@@ -313,7 +314,7 @@ export const ru: Translations = {
       items: [
         {
           q: 'Нужна ли учётная запись для PopChoice?',
-          a: 'Нет! PopChoice полностью анонимен, без регистрации. Просто пройдите тест и забирайте подборку.',
+          a: 'Для использования PopChoice регистрация не нужна — просто проходите тест и забирайте подборку. При желании можно создать бесплатный аккаунт, чтобы сохранять результаты.',
         },
         {
           q: 'Как работает групповой режим?',
@@ -722,6 +723,31 @@ export const ru: Translations = {
       breadcrumbStyleGuide: 'Дизайн-система',
       skeletonMoviesNote: 'MoviesTableSkeleton / MoviesTable',
       skeletonCardNote: 'SkeletonCard / SmallSuggestionCard',
+    },
+  },
+  register: {
+    title: 'Создать аккаунт',
+    subtitle: 'Сохраняйте подборки и открывайте больше',
+    emailLabel: 'Электронная почта',
+    emailPlaceholder: 'вы@example.com',
+    passwordLabel: 'Пароль',
+    passwordPlaceholder: 'Минимум 8 символов',
+    confirmPasswordLabel: 'Подтвердите пароль',
+    confirmPasswordPlaceholder: 'Повторите пароль',
+    submitButton: 'Создать аккаунт',
+    submitting: 'Создаём аккаунт…',
+    successTitle: 'Аккаунт создан!',
+    successMessage: 'Теперь вы можете войти в PopChoice.',
+    backToHome: 'На главную',
+    errors: {
+      emailRequired: 'Введите электронную почту.',
+      emailInvalid: 'Введите корректный адрес почты.',
+      passwordRequired: 'Введите пароль.',
+      passwordTooShort: 'Пароль должен содержать не менее 8 символов.',
+      confirmPasswordRequired: 'Подтвердите пароль.',
+      passwordMismatch: 'Пароли не совпадают.',
+      emailTaken: 'Этот адрес почты уже зарегистрирован.',
+      generic: 'Что-то пошло не так. Попробуйте снова.',
     },
   },
 };

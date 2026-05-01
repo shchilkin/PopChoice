@@ -9,3 +9,10 @@
   embedding vector(3072),
     UNIQUE(name, year)
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id bigserial PRIMARY KEY,
+  email text NOT NULL UNIQUE,
+  password_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);

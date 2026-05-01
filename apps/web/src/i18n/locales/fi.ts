@@ -5,6 +5,7 @@ export const fi: Translations = {
     howItWorks: 'Miten se toimii',
     availableMovies: 'Elokuvat',
     findAMovie: 'Etsi elokuva',
+    signUp: 'Rekisteröidy',
     toggleTheme: 'Vaihda teema',
     switchLanguage: 'Vaihda kieli',
     openMenu: 'Avaa valikko',
@@ -311,7 +312,7 @@ export const fi: Translations = {
       items: [
         {
           q: 'Tarvitaanko PopChoiceen tiliä?',
-          a: 'Ei! PopChoice on täysin anonyymi eikä vaadi rekisteröitymistä. Vastaa vain testiin ja saat suosituksesi.',
+          a: 'PopChoicea voi käyttää ilman rekisteröitymistä — vastaa vain testiin ja saat suosituksesi. Voit halutessasi luoda ilmaisen tilin tallentaaksesi tuloksesi.',
         },
         {
           q: 'Miten ryhmätila toimii?',
@@ -720,6 +721,31 @@ export const fi: Translations = {
       breadcrumbStyleGuide: 'Designjärjestelmä',
       skeletonMoviesNote: 'MoviesTableSkeleton / MoviesTable',
       skeletonCardNote: 'SkeletonCard / SmallSuggestionCard',
+    },
+  },
+  register: {
+    title: 'Luo tili',
+    subtitle: 'Tallenna suosikkisi ja löydä lisää',
+    emailLabel: 'Sähköpostiosoite',
+    emailPlaceholder: 'sinä@esimerkki.fi',
+    passwordLabel: 'Salasana',
+    passwordPlaceholder: 'Vähintään 8 merkkiä',
+    confirmPasswordLabel: 'Vahvista salasana',
+    confirmPasswordPlaceholder: 'Toista salasanasi',
+    submitButton: 'Luo tili',
+    submitting: 'Luodaan tiliä…',
+    successTitle: 'Tili luotu!',
+    successMessage: 'Voit nyt kirjautua PopChoiceen.',
+    backToHome: 'Etusivulle',
+    errors: {
+      emailRequired: 'Sähköpostiosoite vaaditaan.',
+      emailInvalid: 'Anna kelvollinen sähköpostiosoite.',
+      passwordRequired: 'Salasana vaaditaan.',
+      passwordTooShort: 'Salasanan on oltava vähintään 8 merkkiä.',
+      confirmPasswordRequired: 'Vahvista salasanasi.',
+      passwordMismatch: 'Salasanat eivät täsmää.',
+      emailTaken: 'Tämä sähköpostiosoite on jo rekisteröity.',
+      generic: 'Jokin meni pieleen. Yritä uudelleen.',
     },
   },
 };

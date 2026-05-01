@@ -3,6 +3,7 @@ export const en = {
     howItWorks: 'How it works',
     availableMovies: 'Movies',
     findAMovie: 'Find a movie',
+    signUp: 'Sign Up',
     toggleTheme: 'Toggle theme',
     switchLanguage: 'Switch language',
     openMenu: 'Open menu',
@@ -307,7 +308,7 @@ export const en = {
       items: [
         {
           q: 'Does PopChoice require an account?',
-          a: 'Nope! PopChoice is completely anonymous and requires no sign-up. Just answer the quiz and get your picks.',
+          a: 'No sign-up needed to use PopChoice — just answer the quiz and get your picks. You can optionally create a free account to save your results.',
         },
         {
           q: 'How does group mode work?',
@@ -711,6 +712,31 @@ export const en = {
       breadcrumbStyleGuide: 'Design System',
       skeletonMoviesNote: 'MoviesTableSkeleton / MoviesTable',
       skeletonCardNote: 'SkeletonCard / SmallSuggestionCard',
+    },
+  },
+  register: {
+    title: 'Create an account',
+    subtitle: 'Save your picks and discover more',
+    emailLabel: 'Email address',
+    emailPlaceholder: 'you@example.com',
+    passwordLabel: 'Password',
+    passwordPlaceholder: 'At least 8 characters',
+    confirmPasswordLabel: 'Confirm password',
+    confirmPasswordPlaceholder: 'Repeat your password',
+    submitButton: 'Create account',
+    submitting: 'Creating account…',
+    successTitle: 'Account created!',
+    successMessage: 'You can now sign in to PopChoice.',
+    backToHome: 'Back to home',
+    errors: {
+      emailRequired: 'Email is required.',
+      emailInvalid: 'Please enter a valid email address.',
+      passwordRequired: 'Password is required.',
+      passwordTooShort: 'Password must be at least 8 characters.',
+      confirmPasswordRequired: 'Please confirm your password.',
+      passwordMismatch: 'Passwords do not match.',
+      emailTaken: 'This email is already registered.',
+      generic: 'Something went wrong. Please try again.',
     },
   },
 };
