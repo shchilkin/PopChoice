@@ -16,7 +16,7 @@
     "lint:fix": "eslint . --fix",
     "start": "next start",
     "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
-    "start:workers": "tsx --env-file=.env src/lib/workers/startWorkers.ts",
+    "start:workers": "sh -c 'if [ -f .env ]; then exec tsx --env-file=.env src/lib/workers/startWorkers.ts; else exec tsx src/lib/workers/startWorkers.ts; fi'",
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
     "test:server": "vitest --project=server",
