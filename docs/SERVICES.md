@@ -6,11 +6,79 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service           | Type      | Trigger         | Source       |
-| ----------------- | --------- | --------------- | ------------ |
-| `movie-seed`      | One-shot  | Manual / CI     | `movies.txt` |
-| `movie-discovery` | Scheduled | Cron / One-shot | TMDB API     |
-| `movie-backfill`  | One-shot  | Manual          | TMDB API     |
+| Service                 | Type                  | Trigger                                           | Source        |
+| ----------------------- | --------------------- | ------------------------------------------------- | ------------- |
+| `movie-seed`            | One-shot              | Manual / CI                                       | `movies.txt`  |
+| `movie-discovery`       | Scheduled             | Cron / One-shot                                   | TMDB API      |
+| `movie-backfill`        | One-shot              | Manual                                            | TMDB API      |
+| BullMQ `recommendation` | Per-request           | HTTP POST to /api/recommendations                 | TMDB + OpenAI |
+| BullMQ `more-picks`     | On demand             | HTTP POST to /api/recommendations/[id]/more-picks | TMDB + OpenAI |
+| BullMQ `movie-seed`     | Triggered by pipeline | Internal (more-picks pipeline)                    | TMDB          |
+
+---
+
+## BullMQ Workers (`apps/web`)
+
+PopChoice uses [BullMQ](https://docs.bullmq.io/) backed by Redis for async job processing. Workers run in a separate Node.js process alongside the Next.js server.
+
+### Architecture
+
+```
+Browser → POST /api/recommendations/[id]/more-picks
+             ↓
+        claimMorePicksSlot(slug)   [atomic UPDATE in Postgres]
+             ↓ (slot claimed)
+        morePicksQueue.add(job)    [Redis / BullMQ]
+             ↓
+        morePicksWorker            [reads quiz_data from DB, runs pipeline]
+             ↓
+        runMorePicksPipeline()     [TMDB discover → embeddings → AI descriptions]
+             ↓
+        insertMorePicksMovies()    [writes to recommendation_movies, locked transaction]
+             ↓
+        updateMorePicksStatus('completed')
+             ↓
+        Browser poll detects completion (TanStack Query, 2s interval)
+```
+
+### Queue names
+
+| Queue            | Worker file                                        | Job data                                 |
+| ---------------- | -------------------------------------------------- | ---------------------------------------- |
+| `recommendation` | `apps/web/src/lib/workers/recommendationWorker.ts` | `recommendationId`, `quizData`, `locale` |
+| `more-picks`     | `apps/web/src/lib/workers/morePicksWorker.ts`      | `recommendationId`, `slug`, `locale`     |
+| `movie-seed`     | `apps/web/src/lib/workers/movieSeedWorker.ts`      | `tmdbMovies`, `localKeys`                |
+
+### Graceful degradation
+
+When `REDIS_URL` is not set (e.g., local dev without Redis), the `more-picks` route runs the pipeline **inline** (synchronous fallback) and returns a `202 Accepted` so the UI still polls correctly. The BullMQ queues are not created and workers are disabled.
+
+### Starting workers
+
+```bash
+# From apps/web
+npm run start:workers
+```
+
+Or via Docker Compose (workers.Dockerfile).
+
+### Environment variables
+
+| Variable         | Required       | Description                                             |
+| ---------------- | -------------- | ------------------------------------------------------- |
+| `REDIS_URL`      | ✅ (for async) | Redis connection string (e.g. `redis://localhost:6379`) |
+| `DATABASE_URL`   | ✅             | PostgreSQL connection string                            |
+| `TMDB_API_KEY`   | ✅             | TMDB v4 read access token                               |
+| `OPENAI_API_KEY` | ✅             | OpenAI API key (embeddings + chat)                      |
+
+### Bull Board (monitoring dashboard)
+
+A separate monitoring UI is available in `apps/bull-board/`. It provides a web interface to inspect queues, retry failed jobs, and view job history.
+
+```bash
+# From repo root
+npx --prefix apps/bull-board tsx --env-file=.env apps/bull-board/src/index.ts
+```
 
 ---
 

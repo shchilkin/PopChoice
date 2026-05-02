@@ -1,15 +1,17 @@
-import type { Translations } from './en';
+import { en, type Translations } from './en';
 
 export const fi: Translations = {
   nav: {
     howItWorks: 'Miten se toimii',
     availableMovies: 'Elokuvat',
     findAMovie: 'Etsi elokuva',
+    signUp: 'Rekisteröidy',
     toggleTheme: 'Vaihda teema',
     switchLanguage: 'Vaihda kieli',
     openMenu: 'Avaa valikko',
     closeMenu: 'Sulje valikko',
     styleGuide: 'Tyyliopas',
+    techStack: 'Pino',
   },
   footer: {
     builtBy: 'Rakentanut',
@@ -44,6 +46,7 @@ export const fi: Translations = {
     groupMode: {
       title: 'Ryhmätila',
       desc: 'Valinta, josta kaikki tosiaan innostuvat. Ei väittelyä.',
+      worksFor: 'Toimii 2–6 henkilölle',
     },
     instantResults: {
       title: 'Välittömät tulokset',
@@ -196,6 +199,7 @@ export const fi: Translations = {
     morePicksButton: 'Lisää valintoja TMDB:stä',
     morePicksLoading: 'Haetaan lisää…',
     morePicksEmpty: 'Ei enempää tuloksia juuri nyt.',
+    morePicksStalled: 'Kestää liian kauan — yritä myöhemmin uudelleen.',
   },
   about: {
     badge: 'Miten PopChoice toimii',
@@ -204,6 +208,15 @@ export const fi: Translations = {
       'PopChoice ei ole pelkkä genresuodatin. Se tunnistaa, mikä tekee elokuvasta oikean juuri',
     you: 'sinulle',
     descriptionPost: '— ja löytää elokuvia, jotka aidosti vastaavat tätä tunnetta.',
+    originDescription:
+      'PopChoice alkoi Scrimban AI engineering -kurssiprojektina. Kurssin jälkeen jatkoin sen rakentamista oikeaksi full-stack-järjestelmäksi oppiakseni asiat, jotka opetusmateriaalit usein ohittavat: vektoritietokannat, taustajonot, monoreporakenteet ja konttipohjaiset käyttöönotot. Elokuvasuositukset ovat oikeita.',
+    sourceCode: 'Projektin lähdekoodi on saatavilla',
+    sourceCodeLink: 'täällä',
+    whatItDoesLabel: 'Mitä se tekee',
+    whatItDoesDescription:
+      'PopChoice muuntaa 5 kysymyksen makutestin vastaukset vektoriesitykseksi OpenAI:n avulla ja vertaa sitä kuratoituun yli 400 elokuvan tietokantaan PostgreSQL:ssä ja pgvectorissa. Jos paikallinen kokoelma ei tuota riittävän hyvää osumaa, järjestelmä laajentaa haun TMDb:hen. Lopputuloksena saat suosituksia, joista jokaiselle luodaan tekoälyn kirjoittama selitys siitä, miksi se sopii juuri sinun makuusi.',
+    backgroundNote:
+      'Kaikki tämä tapahtuu taustalla. Sinulle näkyy vain 60 sekunnin testi ja katsomisen arvoinen elokuva.',
     ctaTitle: 'Valmis löytämään tämän illan elokuvan?',
     ctaSubtitle: '60 sekuntia. 5 kysymystä. Täydellinen elokuva.',
     ctaButton: 'Aloita testi',
@@ -230,6 +243,7 @@ export const fi: Translations = {
     },
     techStack: {
       title: 'Konepellin alla',
+      linkText: 'Koko tekninen pino →',
       items: [
         {
           name: 'Vektorihaku',
@@ -246,6 +260,29 @@ export const fi: Translations = {
         {
           name: 'Reaaliaikainen käsittely',
           desc: 'Nopeat tulokset — lähetyksestä suosituksiin sekunneissa',
+        },
+      ],
+      groups: [
+        {
+          label: 'Teknologia',
+          items: [
+            {
+              name: 'Vektorihaku',
+              why: 'Semanttinen samankaltaisuusvastaavuus yli 10 000 elokuvassa',
+            },
+            {
+              name: 'Tekoälyn kielimalli',
+              why: 'Luo personoituja suosituksia jokaiselle käyttäjälle',
+            },
+            {
+              name: 'Elokuvatietokanta',
+              why: 'Kuratoitua metatietoa, mukaan lukien sävy, teemat ja elokuvakerronnan tyyli',
+            },
+            {
+              name: 'Reaaliaikainen käsittely',
+              why: 'Nopeat tulokset — lähetyksestä suosituksiin sekunneissa',
+            },
+          ],
         },
       ],
     },
@@ -287,4 +324,7 @@ export const fi: Translations = {
       score: 'Pisteet',
     },
   },
+  techStackPage: en.techStackPage,
+  styleGuide: en.styleGuide,
+  register: en.register,
 };

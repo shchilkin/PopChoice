@@ -5,6 +5,7 @@
  * that go beyond the chainable query-builder abstraction in pgClient.ts.
  */
 
+import { nanoid } from 'nanoid';
 import pg from 'pg';
 
 import logger from '@/lib/logger';
@@ -53,6 +54,8 @@ export interface RecommendationWithMovies {
   movies: RecommendationMovie[];
   usedBroaderSearch?: boolean;
   dbMovieCount?: number;
+  quizData?: unknown;
+  morePicksStatus?: string | null;
 }
 
 export interface MovieRowToInsert {
@@ -76,15 +79,16 @@ export interface MovieRowToInsert {
 
 export async function createRecommendation(
   quizData: PersonFormData | PersonFormData[],
-): Promise<string> {
+): Promise<{ id: string; slug: string }> {
   const pool = getPool();
-  const result = await pool.query<{ id: string }>(
-    `INSERT INTO recommendations (status, quiz_data) VALUES ('pending', $1) RETURNING id`,
-    [JSON.stringify(quizData)],
+  const slug = nanoid(12);
+  const result = await pool.query<{ id: string; slug: string }>(
+    `INSERT INTO recommendations (status, quiz_data, slug) VALUES ('pending', $1, $2) RETURNING id, slug`,
+    [JSON.stringify(quizData), slug],
   );
-  const id = result.rows[0]?.id;
-  if (!id) throw new Error('Failed to create recommendation row');
-  return id;
+  const row = result.rows[0];
+  if (!row) throw new Error('Failed to create recommendation row');
+  return row;
 }
 
 // ---------------------------------------------------------------------------
@@ -138,8 +142,8 @@ export async function insertRecommendationMovies(
         `INSERT INTO recommendation_movies (
           recommendation_id, movie_id, position, is_main_recommendation,
           ai_description, poster_url, localized_name, similarity,
-          from_tmdb, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+          from_tmdb, tmdb_id, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           recommendationId,
           movieId,
@@ -150,6 +154,7 @@ export async function insertRecommendationMovies(
           m.localizedName ?? null,
           m.similarity ?? null,
           m.fromTMDB,
+          m.fromTMDB ? Math.abs(m.id) : null,
           m.fromTMDB ? m.name : null,
           m.fromTMDB ? m.year : null,
           m.fromTMDB ? (m.score_rating ?? null) : null,
@@ -173,19 +178,22 @@ export async function insertRecommendationMovies(
 // ---------------------------------------------------------------------------
 
 export async function getRecommendationWithMovies(
-  id: string,
+  slug: string,
 ): Promise<RecommendationWithMovies | null> {
   const pool = getPool();
 
-  // Fetch the recommendation row
+  // Fetch the recommendation row by slug (public identifier)
   const recResult = await pool.query<{
+    id: string;
     status: RecommendationStatus;
     error: string | null;
     used_broader_search: boolean | null;
     db_movie_count: number | null;
+    quiz_data: unknown;
+    more_picks_status: string | null;
   }>(
-    `SELECT status, error, used_broader_search, db_movie_count FROM recommendations WHERE id = $1`,
-    [id],
+    `SELECT id, status, error, used_broader_search, db_movie_count, quiz_data, more_picks_status FROM recommendations WHERE slug = $1`,
+    [slug],
   );
 
   const rec = recResult.rows[0];
@@ -198,10 +206,12 @@ export async function getRecommendationWithMovies(
       movies: [],
       usedBroaderSearch: rec.used_broader_search ?? false,
       dbMovieCount: rec.db_movie_count ?? undefined,
+      quizData: rec.quiz_data ?? undefined,
+      morePicksStatus: rec.more_picks_status ?? null,
     };
   }
 
-  // Fetch movies joined with local movies table (for non-TMDB movies)
+  // Fetch movies using the internal UUID
   const moviesResult = await pool.query<{
     rm_id: number;
     movie_id: number | null;
@@ -212,6 +222,7 @@ export async function getRecommendationWithMovies(
     localized_name: string | null;
     similarity: number | null;
     from_tmdb: boolean;
+    tmdb_id: number | null;
     tmdb_name: string | null;
     tmdb_year: number | null;
     tmdb_score_rating: number | null;
@@ -233,6 +244,7 @@ export async function getRecommendationWithMovies(
        rm.localized_name,
        rm.similarity,
        rm.from_tmdb,
+      rm.tmdb_id,
        rm.tmdb_name,
        rm.tmdb_year,
        rm.tmdb_score_rating,
@@ -247,13 +259,13 @@ export async function getRecommendationWithMovies(
      LEFT JOIN movies m ON m.id = rm.movie_id
      WHERE rm.recommendation_id = $1
      ORDER BY rm.position ASC`,
-    [id],
+    [rec.id],
   );
 
   const movies: RecommendationMovie[] = moviesResult.rows.map((row) => {
     if (row.from_tmdb) {
       return {
-        id: row.rm_id,
+        id: row.tmdb_id ? -row.tmdb_id : row.rm_id,
         name: row.tmdb_name ?? '',
         year: row.tmdb_year ?? 0,
         similarity: row.similarity ?? undefined,
@@ -289,6 +301,8 @@ export async function getRecommendationWithMovies(
     movies,
     usedBroaderSearch: rec.used_broader_search ?? false,
     dbMovieCount: rec.db_movie_count ?? undefined,
+    quizData: rec.quiz_data ?? undefined,
+    morePicksStatus: rec.more_picks_status ?? null,
   };
 }
 
@@ -298,4 +312,131 @@ export async function getRecommendationWithMovies(
 
 export function logDbError(context: string, err: unknown): void {
   logger.error({ err }, context);
+}
+
+// ---------------------------------------------------------------------------
+// More-picks helpers (async TMDB batch via worker)
+// ---------------------------------------------------------------------------
+
+/**
+ * Atomically claims the "more picks" slot for a recommendation identified by slug.
+ * Succeeds when:
+ *   - `more_picks_status IS NULL` (first request), OR
+ *   - `more_picks_status = 'failed'` (retry after a failed/timed-out job)
+ * and the main job is already `completed`.
+ *
+ * Returns `{ recommendationId, quizData }` on success, or `null` if already claimed.
+ */
+export async function claimMorePicksSlot(
+  slug: string,
+): Promise<{ recommendationId: string; quizData: unknown } | null> {
+  const pool = getPool();
+  const result = await pool.query<{ id: string; quiz_data: unknown }>(
+    `UPDATE recommendations
+        SET more_picks_status = 'pending'
+      WHERE slug = $1
+        AND status = 'completed'
+        AND (more_picks_status IS NULL OR more_picks_status = 'failed')
+      RETURNING id, quiz_data`,
+    [slug],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return { recommendationId: row.id, quizData: row.quiz_data };
+}
+
+/**
+ * Returns TMDB-backed movie IDs in the same negative-ID form used by the client
+ * and the more-picks pipeline's `excludeIds` contract.
+ */
+export async function getRecommendationTMDBExcludeIds(recommendationId: string): Promise<number[]> {
+  const pool = getPool();
+  const result = await pool.query<{ tmdb_id: number | null }>(
+    `SELECT tmdb_id
+       FROM recommendation_movies
+      WHERE recommendation_id = $1
+        AND from_tmdb = true
+        AND tmdb_id IS NOT NULL
+      ORDER BY position ASC`,
+    [recommendationId],
+  );
+
+  return result.rows.flatMap((row) => (row.tmdb_id ? [-row.tmdb_id] : []));
+}
+
+/** Updates the `more_picks_status` column on a recommendation (looked up by internal UUID). */
+export async function updateMorePicksStatus(
+  recommendationId: string,
+  status: 'pending' | 'processing' | 'completed' | 'failed',
+  error?: string,
+): Promise<void> {
+  const pool = getPool();
+  await pool.query(
+    `UPDATE recommendations SET more_picks_status = $1, error = COALESCE($2, error) WHERE id = $3`,
+    [status, error ?? null, recommendationId],
+  );
+}
+
+/**
+ * Inserts extra TMDB movies for a recommendation, appending after the existing positions.
+ * Does NOT touch `used_broader_search` or `db_movie_count` on the parent row.
+ */
+export async function insertMorePicksMovies(
+  recommendationId: string,
+  movies: MovieRowToInsert[],
+): Promise<void> {
+  if (movies.length === 0) return;
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Lock the recommendation row so concurrent more-picks jobs cannot race on
+    // MAX(position) — only one transaction can hold this lock at a time.
+    await client.query('SELECT id FROM recommendations WHERE id = $1 FOR UPDATE', [
+      recommendationId,
+    ]);
+
+    const posResult = await client.query<{ max_pos: number | null }>(
+      `SELECT MAX(position) AS max_pos FROM recommendation_movies WHERE recommendation_id = $1`,
+      [recommendationId],
+    );
+    const startPosition = (posResult.rows[0]?.max_pos ?? -1) + 1;
+
+    for (let i = 0; i < movies.length; i++) {
+      const m = movies[i];
+      await client.query(
+        `INSERT INTO recommendation_movies (
+            recommendation_id, movie_id, position, is_main_recommendation,
+            ai_description, poster_url, localized_name, similarity,
+            from_tmdb, tmdb_id, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [
+          recommendationId,
+          null, // all more-picks movies are TMDB-only; no local movie_id
+          startPosition + i,
+          false,
+          m.aiDescription ?? null,
+          m.posterURL ?? null,
+          m.localizedName ?? null,
+          m.similarity ?? null,
+          true,
+          Math.abs(m.id),
+          m.name,
+          m.year,
+          m.score_rating ?? null,
+          m.duration ?? null,
+          m.age_rating ?? null,
+        ],
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }

@@ -12,6 +12,7 @@ import type { Locale } from '@/lib/locale';
 
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 export const RECOMMENDATION_QUEUE_NAME = 'recommendation';
+export const MORE_PICKS_QUEUE_NAME = 'more-picks';
 
 export type MovieSeedJobData = {
   tmdbMovies: TMDBDiscoverMovie[];
@@ -22,6 +23,12 @@ export type MovieSeedJobData = {
 export type RecommendationJobData = {
   recommendationId: string;
   quizData: PersonFormData | PersonFormData[];
+  locale: Locale;
+};
+
+export type MorePicksJobData = {
+  recommendationId: string; // internal UUID
+  slug: string; // public slug (for logging)
   locale: Locale;
 };
 
@@ -72,4 +79,17 @@ export const seedQueue = queueConnection
 
 export const recommendationQueue = queueConnection
   ? new Queue<RecommendationJobData>(RECOMMENDATION_QUEUE_NAME, { connection: queueConnection })
+  : null;
+
+export const MORE_PICKS_JOB_OPTIONS = {
+  attempts: 2,
+  backoff: { type: 'exponential' as const, delay: 3000 },
+  removeOnComplete: 200,
+  removeOnFail: 100,
+  /** Kill the job if the worker takes longer than 90 s — ensures more_picks_status reaches 'failed' and the UI can recover. */
+  timeout: 90_000,
+};
+
+export const morePicksQueue = queueConnection
+  ? new Queue<MorePicksJobData>(MORE_PICKS_QUEUE_NAME, { connection: queueConnection })
   : null;

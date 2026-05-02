@@ -138,17 +138,20 @@ async function postHandler(req: NextRequest): Promise<Response> {
   }
 
   // Create the recommendation DB row (status = 'pending')
-  let recommendationId: string;
+  let recommendationId: string; // internal UUID used by workers and DB FK
+  let recommendationSlug: string; // short nanoid(12) used in public URLs
   try {
-    recommendationId = await createRecommendation(validatedBody);
-    logger.info({ recommendationId }, 'Recommendation row created');
+    const created = await createRecommendation(validatedBody);
+    recommendationId = created.id;
+    recommendationSlug = created.slug;
+    logger.info({ recommendationId, recommendationSlug }, 'Recommendation row created');
   } catch (err) {
     logger.error({ err }, 'Failed to create recommendation row');
     return NextResponse.json({ error: 'Failed to create recommendation' }, { status: 500 });
   }
 
   // Enqueue to BullMQ if available, otherwise fall back to inline processing.
-  // In both cases we return 201 immediately — the client polls /api/recommendations/:id
+  // In both cases we return 201 immediately — the client polls /api/recommendations/:slug
   // for completion. processInline catches all errors and writes them to the DB row
   // so the polling endpoint surfaces the 'failed' status to the user.
   if (recommendationQueue) {
@@ -171,7 +174,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
     void processInline(recommendationId, allPeopleData, locale);
   }
 
-  return NextResponse.json({ id: recommendationId }, { status: 201 });
+  return NextResponse.json({ id: recommendationSlug }, { status: 201 });
 }
 
 /**

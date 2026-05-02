@@ -3,7 +3,7 @@
 import { useMachine } from '@xstate/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -35,6 +35,8 @@ export default function QuizPage() {
 
   // groupNames is transient UI state only needed during GroupSetup
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
+  // Guard against React StrictMode double-invoking the submit effect
+  const submittingRef = useRef(false);
 
   const { people, currentPersonIdx, dir, mode } = state.context;
   const currentPerson = people[currentPersonIdx];
@@ -51,6 +53,9 @@ export default function QuizPage() {
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
     if (!isSubmitting) return;
+    // Prevent double-submission from React StrictMode or re-renders
+    if (submittingRef.current) return;
+    submittingRef.current = true;
 
     async function submit() {
       const resolved =
