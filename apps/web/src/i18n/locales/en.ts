@@ -197,11 +197,7 @@ export const en = {
     morePicksStalled: 'Taking too long — try again later.',
   },
   about: {
-    badge: 'How PopChoice works',
     title: 'AI that gets your taste',
-    descriptionPre: "PopChoice isn't just a genre filter. It reads what makes a film feel right to",
-    you: 'you',
-    descriptionPost: '— then finds movies that genuinely match that feeling.',
     originDescription:
       'Started as a Scrimba AI engineering course project. After finishing the course I kept building — turning it into a real full-stack system to learn the parts that tutorials skip: vector databases, background job pipelines, monorepo tooling, and containerized deployments. The movie recommendations are real.',
     sourceCode: "This project's source code is available",
@@ -237,24 +233,6 @@ export const en = {
     },
     techStack: {
       title: 'Under the hood',
-      items: [
-        {
-          name: 'Vector Search',
-          desc: 'Semantic similarity matching across 400+ curated films',
-        },
-        {
-          name: 'AI Language Model',
-          desc: 'Generates personalized recommendation explanations for each user',
-        },
-        {
-          name: 'Film Database',
-          desc: 'Curated metadata including tone, themes, pacing, and cinematographic style',
-        },
-        {
-          name: 'Real-time Processing',
-          desc: 'Fast results from quiz submission to recommendations in seconds',
-        },
-      ],
       linkText: 'Full stack breakdown →',
       groups: [
         {

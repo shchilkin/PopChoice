@@ -10,8 +10,8 @@ export const fi: Translations = {
     switchLanguage: 'Vaihda kieli',
     openMenu: 'Avaa valikko',
     closeMenu: 'Sulje valikko',
-    styleGuide: 'Tyyliopas',
-    techStack: 'Pino',
+    styleGuide: 'Designjärjestelmä',
+    techStack: 'Teknologia',
   },
   footer: {
     builtBy: 'Rakentanut',
@@ -23,41 +23,40 @@ export const fi: Translations = {
     visitLink: 'Vieraile The Movie Database -sivustolla',
   },
   hero: {
-    badge: 'Tekoälypohjainen elokuvahaku',
-    descriptionPre:
-      'Lopeta loputon selaaminen. Vastaa 5 nopeaan kysymykseen ja anna tekoälyn löytää',
-    perfectMovie: 'täydellinen elokuva',
-    descriptionPost: 'mielialaasi, iltaasi ja tunnelmaasi varten.',
+    badge: 'Tekoäly löytää sinulle sopivan elokuvan',
+    descriptionPre: 'Viisi kysymystä kertoo maustasi. Tekoäly löytää',
+    perfectMovie: 'täydellisen elokuvan',
+    descriptionPost: 'yli 400 analysoidun elokuvan joukosta. Yksin tai ryhmässä.',
     findMyMovie: 'Löydä elokuvani',
     howItWorks: 'Miten se toimii',
-    noSignup: '✨ Ei rekisteröitymistä · Kestää ~60 sekuntia · Toimii puhelimella',
+    noSignup: 'Ei rekisteröitymistä · ~60 sekuntia · Toimii puhelimella',
   },
   features: {
-    headline: 'Elokuvailta, hoidettu.',
-    subheadline: 'Ei loputonta selaamista, ei arvausta — vain sopivat elokuvat.',
+    headline: 'Ei suodatin. Täsmäys.',
+    subheadline: 'Tunnelma, rytmi, tyyli — koodattuna 5 kysymykseen, haettuna tekoälyllä.',
     aiPowered: {
-      title: 'Tekoälypohjainen',
-      desc: 'Löytää elokuvia, jotka todella sopivat tunnelmaasi',
+      title: 'Maku, ei tagit',
+      desc: 'Vastauksistasi muodostuu makuprofiili, jota verrataan ennalta analysoituihin elokuviin tunteen, rytmin ja tyylin perusteella — ei genrelaatikoihin.',
     },
     fiveQuestions: {
-      title: '5 nopeaa kysymystä',
-      desc: 'Ei pitkiä lomakkeita — vain 60 sekunnin makutesti',
+      title: 'Viisi kysymystä',
+      desc: 'Lempifilmi, aikakausi, mieliala, sävy, näyttelijä. Kuusikymmentä sekuntia rakentaa makuprofiilin, jolla hakeminen onnistuu.',
     },
     groupMode: {
       title: 'Ryhmätila',
-      desc: 'Valinta, josta kaikki tosiaan innostuvat. Ei väittelyä.',
-      worksFor: 'Toimii 2–6 henkilölle',
+      desc: 'Jokainen vastaa samalla laitteella. PopChoice löytää kohdan, jossa maut kohtaavat — ei väittelyä, ei arvontaa.',
+      worksFor: 'Sopii 2–6 henkilölle',
     },
     instantResults: {
-      title: 'Välittömät tulokset',
-      desc: 'Saat 6 harkittua suositusta sekunneissa',
+      title: 'Kuusi harkittua ehdotusta',
+      desc: 'Paras osuma ja viisi vaihtoehtoa — jokaiselle tekoälyn kirjoittama selitys, miksi juuri tämä elokuva sopii sinulle.',
     },
   },
   cta: {
-    headline: 'Seuraava lempifilmisi löytyy yhdellä testillä',
+    headline: 'Oikea elokuva löytyy sieltä. Anna tekoälyn etsiä se.',
     description:
-      'Olipa kyse rauhallisesta yksinäisestä illasta tai isomman kaveriporukan leffatuokiosta — PopChoice tunnistaa tilanteen ja löytää valinnan, josta kaikki pitävät.',
-    button: 'Aloita testi',
+      '60 sekuntia, 5 kysymystä. Toimii sekä yksin katsomiseen että ryhmän elokuvaväittelyn ratkaisemiseen.',
+    button: 'Löydä elokuvani',
   },
   quiz: {
     intro: {
@@ -202,21 +201,16 @@ export const fi: Translations = {
     morePicksStalled: 'Kestää liian kauan — yritä myöhemmin uudelleen.',
   },
   about: {
-    badge: 'Miten PopChoice toimii',
     title: 'Tekoäly, joka ymmärtää makuasi',
-    descriptionPre:
-      'PopChoice ei ole pelkkä genresuodatin. Se tunnistaa, mikä tekee elokuvasta oikean juuri',
-    you: 'sinulle',
-    descriptionPost: '— ja löytää elokuvia, jotka aidosti vastaavat tätä tunnetta.',
     originDescription:
-      'PopChoice alkoi Scrimban AI engineering -kurssiprojektina. Kurssin jälkeen jatkoin sen rakentamista oikeaksi full-stack-järjestelmäksi oppiakseni asiat, jotka opetusmateriaalit usein ohittavat: vektoritietokannat, taustajonot, monoreporakenteet ja konttipohjaiset käyttöönotot. Elokuvasuositukset ovat oikeita.',
-    sourceCode: 'Projektin lähdekoodi on saatavilla',
+      'Alkoi Scrimba AI -insinöörikurssin harjoitustyönä. Kurssin jälkeen jatkoin kehitystä — muutin sen oikeaksi full-stack-järjestelmäksi oppiakseni osat, joita tutoriaalit sivuuttavat: vektoritietokannat, taustatyöjonot, monorepositorio-työkalut ja kontitetut käyttöönotot. Elokuvasuositukset ovat aitoja.',
+    sourceCode: 'Tämän projektin lähdekoodi on saatavilla',
     sourceCodeLink: 'täällä',
     whatItDoesLabel: 'Mitä se tekee',
     whatItDoesDescription:
-      'PopChoice muuntaa 5 kysymyksen makutestin vastaukset vektoriesitykseksi OpenAI:n avulla ja vertaa sitä kuratoituun yli 400 elokuvan tietokantaan PostgreSQL:ssä ja pgvectorissa. Jos paikallinen kokoelma ei tuota riittävän hyvää osumaa, järjestelmä laajentaa haun TMDb:hen. Lopputuloksena saat suosituksia, joista jokaiselle luodaan tekoälyn kirjoittama selitys siitä, miksi se sopii juuri sinun makuusi.',
+      'PopChoice tarjoaa 5 kysymyksen makutestin — lempifilmi, suosittu aikakausi, nykyinen tunnelma, sävy ja lempinäyttelijä — ja muuntaa vastauksesi vektorirepresentaatioksi OpenAI-rajapinnan avulla. Tätä vertaillaan yli 400 ennalta analysoituun elokuvaan PostgreSQL:ssä pgvector-laajennuksella. Jos paikallisesta kokoelmasta ei löydy laadukasta vastaavuutta, järjestelmä laajentaa hakua automaattisesti TMDb-tietokantaan. Läheisimmät vastaavuudet esitetään suosituksina, joista jokaiselle on GPT:n luoma selitys siitä, miksi se sopii juuri sinulle. Genre on vain yksi ulottuvuus — järjestelmä tunnistaa myös elokuvallisen tyylin, kerronnallisen monimutkaisuuden ja tunnesävyn.',
     backgroundNote:
-      'Kaikki tämä tapahtuu taustalla. Sinulle näkyy vain 60 sekunnin testi ja katsomisen arvoinen elokuva.',
+      'Kaikki tämä tapahtuu taustalla. Sinulle näkyy: 60 sekunnin testi ja elokuva, jota kannattaa katsoa.',
     ctaTitle: 'Valmis löytämään tämän illan elokuvan?',
     ctaSubtitle: '60 sekuntia. 5 kysymystä. Täydellinen elokuva.',
     ctaButton: 'Aloita testi',
@@ -237,50 +231,78 @@ export const fi: Translations = {
         },
         {
           title: 'Saat harkitut tulokset',
-          desc: 'Näytämme parhaan vastauksesi sekä 5 muuta hienoa vaihtoehtoa, joista jokaisen kohdalla on personoitu tekoälyn kirjoittama selitys siitä, miksi se sopii makuusi tänä iltana.',
+          desc: 'Näytämme parhaan vastauksesi sekä 5 muuta hienoa vaihtoehtoa, joista jokaisen kohdalla on personoitu tekoälyn kirjoittama selitys siitä, miksi se sopii makuusi.',
         },
       ],
     },
     techStack: {
       title: 'Konepellin alla',
-      linkText: 'Koko tekninen pino →',
-      items: [
-        {
-          name: 'Vektorihaku',
-          desc: 'Semanttinen samankaltaisuusvastaavuus yli 10 000 elokuvassa',
-        },
-        {
-          name: 'Tekoälyn kielimalli',
-          desc: 'Luo personoituja suosituksia jokaiselle käyttäjälle',
-        },
-        {
-          name: 'Elokuvatietokanta',
-          desc: 'Kuratoitua metatietoa, mukaan lukien sävy, teemat ja elokuvakerronnan tyyli',
-        },
-        {
-          name: 'Reaaliaikainen käsittely',
-          desc: 'Nopeat tulokset — lähetyksestä suosituksiin sekunneissa',
-        },
-      ],
+      linkText: 'Täydellinen teknologiapurku →',
       groups: [
         {
-          label: 'Teknologia',
+          label: 'Frontend',
           items: [
             {
-              name: 'Vektorihaku',
-              why: 'Semanttinen samankaltaisuusvastaavuus yli 10 000 elokuvassa',
+              name: 'Next.js 16',
+              why: 'App Router ja palvelinkomponentit streaming-renderöintiä ja full-stack TypeScriptia varten',
             },
             {
-              name: 'Tekoälyn kielimalli',
-              why: 'Luo personoituja suosituksia jokaiselle käyttäjälle',
+              name: 'React 19',
+              why: 'Rinnakkainen renderöinti ja Actions responsiiviseen testikokemukseen',
             },
             {
-              name: 'Elokuvatietokanta',
-              why: 'Kuratoitua metatietoa, mukaan lukien sävy, teemat ja elokuvakerronnan tyyli',
+              name: 'XState',
+              why: 'Testilogiikka formaaliksi tilakoneeksi — ennustettava kulku, ei if-spagettia',
             },
             {
-              name: 'Reaaliaikainen käsittely',
-              why: 'Nopeat tulokset — lähetyksestä suosituksiin sekunneissa',
+              name: 'Tailwind CSS 4',
+              why: 'Utility-first-tyylittely CSS-muuttujien design-tokeneilla',
+            },
+          ],
+        },
+        {
+          label: 'Tekoäly + Data',
+          items: [
+            {
+              name: 'OpenAI text-embedding-3-large',
+              why: 'Makuprofiilin enkoodaus 3072-ulotteisiksi vektoreiksi semanttista hakua varten',
+            },
+            {
+              name: 'gpt-5.4-mini',
+              why: 'Nopea ja kustannustehokas personoitujen suositusselitysten generointi',
+            },
+            {
+              name: 'PostgreSQL',
+              why: 'Ensisijainen tietokanta 400+ kuratoitua elokuvaa, metatietoa ja vektoreita varten',
+            },
+            {
+              name: 'pgvector',
+              why: 'Itse isännöity vektorihaku automaattisella varavalintatoiminnolla TMDb:hen',
+            },
+          ],
+        },
+        {
+          label: 'Infrastruktuuri',
+          items: [
+            {
+              name: 'Redis',
+              why: 'Korkean suorituskyvyn koordinaatiokerros työjonoille ja API-nopeusrajoitukselle',
+            },
+            {
+              name: 'BullMQ',
+              why: 'Taustatyöprosessointi elokuvatietojen täydennys- ja löytämisputkea varten',
+            },
+            {
+              name: 'Railway',
+              why: 'Pilvisovellusalusta kontitetulle web-sovellukselle, worker-palveluille ja tietokannoille',
+            },
+            {
+              name: 'Turborepo',
+              why: 'Monorepositorio-rakennusjärjestelmä korkean suorituskyvyn välimuistilla ja tehtäväorkestroinnilla',
+            },
+            {
+              name: 'Docker',
+              why: 'Kontitettu käyttöönotto yhtenäistä ympäristöä varten kaikissa palveluissa',
             },
           ],
         },
@@ -291,7 +313,7 @@ export const fi: Translations = {
       items: [
         {
           q: 'Tarvitaanko PopChoiceen tiliä?',
-          a: 'Ei! PopChoice on täysin anonyymi eikä vaadi rekisteröitymistä. Vastaa vain testiin ja saat suosituksesi.',
+          a: 'PopChoicea voi käyttää ilman rekisteröitymistä — vastaa vain testiin ja saat suosituksesi. Voit halutessasi luoda ilmaisen tilin tallentaaksesi tuloksesi.',
         },
         {
           q: 'Miten ryhmätila toimii?',
@@ -299,7 +321,7 @@ export const fi: Translations = {
         },
         {
           q: 'Kuinka tarkkoja suositukset ovat?',
-          a: 'Tekoäly analysoi elokuvan useita ominaisuuksia — ei vain genreä — mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Tietenkin elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa!',
+          a: 'Tekoäly analysoi elokuvan useita ominaisuuksia — ei vain genreä — mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa.',
         },
         {
           q: 'Mistä elokuvatiedot tulevat?',
@@ -307,6 +329,178 @@ export const fi: Translations = {
         },
       ],
     },
+  },
+  techStackPage: {
+    breadcrumbAbout: 'Tietoja',
+    breadcrumbStack: 'Pino',
+    title: 'Konepellin alla',
+    intro:
+      'Jokainen valinta on tehty oppiakseni osat, joita kurssiprojektit sivuuttavat: itse isännöity vektorihaku, taustatyöjonot, monorepositorio-työkalut ja kontitetut monipalvelukäyttöönotot. Alla olevat päätökset selittävät perustelut, eivät vain lopputuloksen.',
+    backToAbout: '← Takaisin tietoihin',
+    tryQuiz: 'Kokeile testiä →',
+    groups: [
+      {
+        label: 'Frontend',
+        items: [
+          {
+            name: 'Next.js 16',
+            role: 'Full-stack-kehys',
+            rationale:
+              'Next.js 16 ja App Router tarjoavat sovelluksen rungon. Palvelinkomponentit mahdollistavat streaming-renderöinnin ja layout-tason datan haun, kun taas full-stack TypeScript eliminoi API-sopimusten epäyhtenäisyydet.',
+            detail:
+              'Tulokset-sivu käyttää palvelinkomponentteja elokuvatietojen hakemiseen ja suoratoistoon ilman asiakaspuolen ketjuja — käyttöliittymä renderöityy asteittain suositusten saapuessa.',
+          },
+          {
+            name: 'React 19',
+            role: 'Käyttöliittymäkirjasto',
+            rationale:
+              'React 19:n rinnakkaiset ominaisuudet pitävät testin käyttöliittymän responsiivisena raskaiden asynkronisten operaatioiden aikana. Actionien käyttö yksinkertaistaa lomakkeiden käsittelyä ja tilasiirtymiä koko sovelluksessa.',
+            detail: null,
+          },
+          {
+            name: 'XState',
+            role: 'Tilanhallinta',
+            rationale:
+              '5 kysymyksen testi on mallinnettu formaaliksi tilakoneeksi. Tämä estää laittomia tilasiirtymiä ja tarjoaa selkeän, ennustettavan kulun monimutkaiselle haarautumislogiikalle.',
+            detail:
+              '@xstate/react:n käyttö mahdollistaa UI:n reagoinnin koneen tilamuutoksiin, käsitellen lataustilat ja siirtymät ilman yhtäkään "if (loading)" spagettikoodia.',
+          },
+          {
+            name: 'Tailwind CSS 4',
+            role: 'Tyylikerros',
+            rationale:
+              'Utility-first-tyylittely CSS-muuttujien design-tokeneilla totuuden lähteenä. Tailwind 4 generoi luokat dynaamisesti, kun taas tokenit kantavat semanttisen merkityksen teemoille.',
+            detail:
+              'Kaikki teemaan mukautuvat värit (vaalea/tumma tila) elävät CSS-muuttujissa. Yksittäinen className voi reagoida teemaan ilman JavaScriptia.',
+          },
+          {
+            name: 'Motion',
+            role: 'Animaatiot',
+            rationale:
+              'Entinen Framer Motion -kirjasto käsittelee kaikki jousipohjaiset siirtymät ja sisääntuloanimaatiot, varmistaen että käyttöliittymä tuntuu elävältä ja reagoivalta.',
+            detail: null,
+          },
+          {
+            name: 'Lucide React',
+            role: 'Ikonisarja',
+            rationale:
+              'Puhdas, yhtenäinen ikonkirjasto, joka on täysin tree-shakeable ja optimoitu moderneille React-ympäristöille.',
+            detail: null,
+          },
+        ],
+      },
+      {
+        label: 'Tekoäly + Data',
+        items: [
+          {
+            name: 'OpenAI text-embedding-3-large',
+            role: 'Makuprofiilin koodaus',
+            rationale:
+              'Testivastaukset kootaan rakenteellisiksi syötteiksi ja koodataan 3072-ulotteisiksi vektoreiksi. Tämä tallentaa syvän semanttisen merkityksen: "perheen dynamiikka" ja "moraalinen monimutkaisuus" sijoittuvat lähelle toisiaan vektoriavaruudessa.',
+            detail:
+              'Vektorointipyyntö on ainoa AI-kutsu, joka estää käyttäjää. Kaikki muu suoritetaan asynkronisesti taustatyöntekijöissä.',
+          },
+          {
+            name: 'gpt-5.4-mini',
+            role: 'Selitysten generointi',
+            rationale:
+              'Generoi personoituja selityksiä jokaiselle suositukselle. gpt-5.4-mini tarjoaa poikkeuksellisen tasapainon nopeuden ja päättelylaadun välillä reaaliaikaisiin sovelluksiin.',
+            detail:
+              '6 selitystä per testilähety — koko gpt-5.4-mallin käyttö lisäisi latenssia. "Mini"-versio tarjoaa lähes välittömät tulokset.',
+          },
+          {
+            name: 'PostgreSQL',
+            role: 'Elokuvatietokanta',
+            rationale:
+              'Toimii 400+ kuratoidun elokuvan, metatietojen ja vektorien keskusvarastona. Kaiken tallentaminen yhteen relaatiotietokantaan yksinkertaistaa tietojen eheyttä ja ristiviittauksia.',
+            detail: null,
+          },
+          {
+            name: 'pgvector',
+            role: 'Vektorihaku',
+            rationale:
+              'PostgreSQL-laajennus, joka mahdollistaa vektorisamankaltaisuushaun suoraan tietokannassamme. Tämä välttää erillisen vektoritietokannan hallinnan ylimääräiset kustannukset.',
+            detail:
+              'Kosinisamankaltaisuushaku löytää lähimmät naapurit käyttäjän makuvektorille alle 100ms suorituskyvyllä skaalassa.',
+          },
+        ],
+      },
+      {
+        label: 'Infrastruktuuri',
+        items: [
+          {
+            name: 'Redis',
+            role: 'Tietovarasto',
+            rationale:
+              'Toimii taustatyötehtäviemme työvarastona ja globaalin nopeusrajoituksen koordinaatiokerroksena AI-putkilinjassamme.',
+            detail:
+              'Redis varmistaa, että jopa useilla worker-instansseilla emme koskaan ylitä OpenAI API:n token-per-minuutti- tai pyyntö-per-minuutti-kiintiöitä.',
+          },
+          {
+            name: 'BullMQ',
+            role: 'Työjono',
+            rationale:
+              'Käsittelee taustatyön aikataulutuksen, uudelleenyritykset ja vikasietoisuuden elokuvatietojen täydennys- ja löytämisputkelle.',
+            detail: null,
+          },
+          {
+            name: 'Railway',
+            role: 'Käyttöönottofoorumi',
+            rationale:
+              'Tuotantoympäristö monisovellusarkkitehtuurillemme. Railway orkestroi Next.js-sovelluksen, worker-palvelut, PostgreSQL:n ja Redisin yhtenäisessä putkilinjassa.',
+            detail:
+              'Repositorio on yhdistetty Railwayn GitHub-integraation kautta, joka käyttää automaattisesti monorepon aina kun muutoksia työnnetään päähaaraan.',
+          },
+          {
+            name: 'Turborepo',
+            role: 'Rakennusjärjestelmä',
+            rationale:
+              'Hallinnoi monorepon rakennuksia korkean suorituskyvyn välimuistilla. Varmistaa, että jaetut paketit rakennetaan oikein ennen niitä kuluttavia sovelluksia.',
+            detail: null,
+          },
+          {
+            name: 'Docker',
+            role: 'Kontitus',
+            rationale:
+              'Varmistaa yhtenäiset ympäristöt paikallisesta kehityksestä tuotantoon. Monivaiheiset Dockerfilet pitävät lopulliset tuotantokuvat kevyinä ja turvallisina.',
+            detail: null,
+          },
+        ],
+      },
+      {
+        label: 'Laatu',
+        items: [
+          {
+            name: 'Vitest',
+            role: 'Testikehys',
+            rationale:
+              'Vite-natiivi testikehys, joka tarjoaa lähes välittömän palautteen kehityksen aikana. Käsittelee yksikkö- ja integraatiotestit koko monorepon laajuudella.',
+            detail: null,
+          },
+          {
+            name: 'Playwright',
+            role: 'E2E-testaus',
+            rationale:
+              'Varmistaa, että kriittinen polku testilähtyksestä elokuvasuosituksiin toimii moitteettomasti kaikissa moderneissa selainmoottoreissa.',
+            detail: null,
+          },
+          {
+            name: 'Storybook',
+            role: 'Komponenttilaboratorio',
+            rationale:
+              'Mahdollistaa käyttöliittymäkomponenttien eristetyn kehityksen ja testauksen, varmistaen visuaalisen johdonmukaisuuden ja saavutettavuuden ennen integraatiota.',
+            detail: null,
+          },
+          {
+            name: 'MSW',
+            role: 'API-simulointi',
+            rationale:
+              'Mock Service Worker sieppaa verkkopyyntöjä selaintasolla, mahdollistaen käyttöliittymän kehittämisen realististen API-vastausten perusteella ilman live-backendiä.',
+            detail: null,
+          },
+        ],
+      },
+    ],
   },
   moviesPage: {
     title: 'Saatavilla olevat elokuvat',
@@ -324,7 +518,235 @@ export const fi: Translations = {
       score: 'Pisteet',
     },
   },
-  techStackPage: en.techStackPage,
-  styleGuide: en.styleGuide,
-  register: en.register,
+  styleGuide: {
+    title: 'Designjärjestelmä',
+    description:
+      'Elokuvatasoisen suosittelusovelluksen visuaalinen kieli. Kulta signaalina, Oswald auktoriteettina, Manrope lämpönä. Kaksi tasavertaista teemaa. Yksi sääntö: tasainen lepotilassa, syvyys tilassa.',
+    componentsTitle: 'Komponentit',
+    componentsDescription: 'Kaikki uudelleenkäytettävät UI-komponentit propseillaan ja tiloineen.',
+    footerTokens: 'PopChoice-designjärjestelmä: suunnittelutokenit ja komponentit',
+    footerComponents: 'PopChoice-designjärjestelmä: interaktiivinen komponenttikirjasto',
+    backLink: '← Designjärjestelmä',
+    forwardLink: 'Komponentit →',
+    nav: {
+      brandPalette: 'Väripaletti',
+      typography: 'Typografia',
+      buttons: 'Painikkeet',
+      progressDots: 'Edistymispisteet',
+      components: 'Komponentit',
+    },
+    sections: {
+      brandVoice: 'Brändin ääni',
+      mascot: 'Maskotti',
+      brandPalette: 'Brändipaletti',
+      backgrounds: 'Taustat',
+      textColors: 'Tekstivärit',
+      brandColors: 'Brändivärit',
+      gradients: 'Gradientit',
+      typography: 'Typografia',
+      buttons: 'Painikkeet',
+      ageRatingChips: 'Ikärajasirut',
+      progressDots: 'Edistymispisteet',
+      borders: 'Reunukset',
+      shadows: 'Varjot',
+      goldAccentStates: 'Kultatehosteet',
+      spacingScale: 'Välimatka-asteikko',
+      borderRadius: 'Reunojen pyöristys',
+      headerControls: 'Otsikkoelementit',
+      breadcrumbs: 'Polkuelementit',
+      tmdbAttribution: 'TMDB-attribuutio',
+      similarityBadge: 'Samankaltaisuusmerkki',
+      starRating: 'Tähtiarvio',
+      ageRatingPill: 'Ikärajapilli',
+      movieCards: 'Elokuvakortit',
+      skeletonLoading: 'Luuranko / lataaustilat',
+      aiContentBlock: 'Tekoälysisältölohko',
+      alertBanners: 'Ilmoitusbannereita',
+      featureCards: 'Ominaisuuskortit',
+      genreSelector: 'Genrevalitsin',
+      toneSelector: 'Sävyvalitsin',
+      eraSelector: 'Aikakausivalitsin',
+      textInputs: 'Tekstikentät',
+      numberBadge: 'Numeromerkki',
+      quizNavigation: 'Tietokilpailun navigointi',
+      stepHeaderPattern: 'Vaiheen otsikkorakenne',
+    },
+    voice: {
+      cinematic: {
+        word: 'Elokuvallinen',
+        desc: 'Herättää oikean elokuvateatterin tunteen kopioimatta sen estetiikkaa. Typografia on elokuvan nimi; paletti on mainoskyltti yöllä. Ei suoratoistopalvelun tummansininen. Ei elokuvafestivaalien teeskentely.',
+      },
+      confident: {
+        word: 'Vakuuttava',
+        desc: 'Tuotteella on mielipiteitä. Teksti sanoo "oikea elokuva on siellä" eikä "luulemme, että saatat pitää." Oswald julistaa eikä epäile. Yksi CTA, selvästi kultainen, pinnalla joka ei kilpaile.',
+      },
+      playful: {
+        word: 'Leikkisä',
+        desc: 'Ilo elää yksityiskohdissa: konfettiräjähdys, muuttuva edistymispiste, latausvinkit. Persoonallisuus ansaitaan tarkkuudella, ei kovaäänisellä koristeella tai emojilla laajassa mittakaavassa.',
+      },
+    },
+    principles: {
+      p01: {
+        title: 'Kulta signaalina',
+        body: 'Kultaa on enintään 10 % mistä tahansa näytöstä: CTA:t, aktiiviset tilat, logon sanamerkki. Sen harvinaisuus tekee siitä tarkoituksen signaalin. Kun kultaa ilmestyy, jokin on tärkeää.',
+      },
+      p02: {
+        title: 'Oswald julistaa, Manrope keskustelee',
+        body: 'Tiivistetty versaalijärjestys auktoriteetti otsikoille, lämmin humanistinen luettavuus kaikkeen keskustelevaan. Pari on Cinematic Concierge typografisessa muodossa: luottavainen otsikko, lämmin ääni.',
+      },
+      p03: {
+        title: 'Kaksi tasavertaista teemaa',
+        body: 'Lämmin pergamentti ja viileä keskiyö: molemmat tarkoituksellisia, molemmille annetaan yhtäläinen visuaalinen huomio. Kumpikaan ei ole tumman tilan kytkin jälkikäteen lisätty.',
+      },
+      p04: {
+        title: 'Tasainen levossa, syvyys tilassa',
+        body: 'Pinnat ovat tasaisia. Kortin varjo on hiljainen vihje. Ainoastaan CTA kantaa ilmeikästä kultahehkua. Ei koristeellista syvyyttä. Vain syvyyttä joka ansaitsee paikkansa.',
+      },
+    },
+    tokens: {
+      pageBackground: 'Sivun tausta',
+      cardSurface: 'Kortti / pinta',
+      hoveredSurface: 'Pinta hover-tilassa',
+      deepSurface: 'Syvä / sisäkkäinen pinta',
+      subtleInteractive: 'Hienovarainen interaktiivinen täyttö',
+      primaryText: 'Ensisijainen teksti',
+      secondaryText: 'Toissijainen teksti',
+      tertiaryText: 'Kolmansijainen teksti',
+      mutedText: 'Vaimea teksti',
+      goldText: 'Kultainen teksti (saavutettava)',
+      amberText: 'Meripihkainen teksti (saavutettava)',
+      ctaGradient: 'CTA',
+      ctaHorizontal: 'CTA vaakasuuntainen',
+      progressGradient: 'Edistyminen',
+      subtleBorder: 'bd1 — subtle',
+      defaultBorder: 'bd2 — default',
+      mediumBorder: 'bd3 — medium',
+      strongBorder: 'bd4 — strong',
+      cardShadow: 'Kortin varjo',
+      ctaShadow: 'CTA-varjo',
+      ctaShadowHover: 'CTA-varjo hover-tilassa',
+    },
+    typo: {
+      oswaldLabel: 'Oswald — Otsikot',
+      manropeLabel: 'Manrope — Teksti / UI',
+      sizes: 'Koot',
+      allRatings: 'Kaikki ikärajat',
+    },
+    btns: {
+      ctaButton: 'CTA-painike',
+      defaultButton: 'Oletusnäppäin',
+      ghostButton: 'Ghost-painike',
+      ctaDisabled: 'CTA poissa käytöstä',
+      defaultDisabled: 'Oletus poissa käytöstä',
+      ghostDisabled: 'Ghost poissa käytöstä',
+    },
+    ageChip: {
+      note: 'AgeRatingChip — semanttinen väri per ikärajataso (G=vihreä, PG=turkoosi, R=punainen jne.). Käytetään MoviesTable-komponentissa ja yksityiskohtanäkymissä, joissa ikäraja kantaa merkitystä. Neutraalille pillille käytä AgeRatingPillä (ks. Komponentit-sivu).',
+      sizes: 'Koot',
+      allRatings: 'Kaikki ikärajat',
+    },
+    progress: {
+      step1: 'Vaihe 1 / 5',
+      step3: 'Vaihe 3 / 5',
+      step5: 'Vaihe 5 / 5',
+    },
+    mascotSection: {
+      name: 'Popcorn',
+      desc: 'Raidoitettu elokuvateatteriämpäri, välittömästi tunnistettava ja aidosti innostunut. Ei logo. Hahmo. Cinematic Concierge fyysisenä hahmona: luottavainen muoto, lämpimät kultaiset jyvät, raitorakenne lainattu klassisesta elokuvateatteriämpäristä.',
+      clickIt: 'Klikkaa sitä.',
+      stripeColorsLabel: 'Raitojen värit',
+      stripeColorsValue:
+        'Punainen #f20000 ja valkoinen — klassinen elokuvateatteriämpäri, ilman epäilyksiä.',
+      kernelFillLabel: 'Ytimien täyttö',
+      kernelFillValue:
+        'Kultainen #F7B017 — suoraan kartoitettu brändin aksenttiväriin. Sama sävy, sama signaali.',
+      interactionLabel: 'Vuorovaikutus',
+      interactionValue:
+        'Klikkaus laukaisee kultaisen konfettiräjähdyksen. Ilo joka on ansaittu, ei koristeellinen — se laukeaa vain kun itse valitset sen.',
+      usageLabel: 'Käyttö',
+      usageValue: 'Hero, CTA-osio, lataus- ja tyhjät tilat. Aina levossa — kunnes kutsutaan.',
+    },
+    comp: {
+      mascotNote: 'Klikkaa maskottia käynnistääksesi konfetti. Hyväksyy width- ja height-propsit.',
+      breadcrumbsNote:
+        'Käyttää Oswald condensed uppercase text-xs / tracking-[0.12em] -arvoilla. Viimeinen elementti on aria-current="page", ilman linkkiä.',
+      ageRatingPillNote:
+        'AgeRatingPill — neutraali, ilman värisemantikkaa. Käytetään SmallSuggestionCard-komponentissa, jossa tila on rajallinen. AgeRatingChip — semanttinen väri per vyöhyke. Käytetään MoviesTable-komponentissa ja yksityiskohtanäkymissä, joissa ikäraja on ensisijainen datapiste (ks. Designjärjestelmä).',
+      movieCardsNote:
+        'Klikkaa vaihtaaksesi aktiivisen tilan. SmallSuggestionCard käytetään tulosten vieritysrivillä.',
+      movieCardsLabel: 'SmallSuggestionCard — aktiivinen / ei-aktiivinen tilat',
+      stateLabel: 'Tila:',
+      loading: 'Ladataan',
+      loaded: 'Ladattu',
+      aiBlockContent:
+        'Christopher Nolanin mieltä taivuttava trilleri seuraa taitavaa varasta, joka varastaa salaisuuksia unista. Täydellinen valinta älyllisen scifin ystäville, jotka arvostavat hengästyttäviä visuaaleja.',
+      aiBlockLabel:
+        'var(--pc-ai-bg) / var(--pc-ai-bd) — käytetään tekoälyn tuottamissa kuvauksissa',
+      aiPickLabel: 'Tekoälyn valinta',
+      alertInfo: 'Elokuvatietokanta latautuu — näytetään välimuistissa olevat tulokset.',
+      alertWarning: 'Joitakin elokuvapostereita ei voitu ladata TMDB:stä.',
+      alertError: 'Suosittelupalvelu ei ole käytettävissä. Yritä uudelleen.',
+      featureCardsNote:
+        'Käytetään FeaturesSection-komponentissa aloitussivulla. Propsit: icon: LucideIcon, title: string, desc: string, color: string (brändin hex palette-kokoelmasta). Ikonin sävy ja tausta johdetaan color-arvosta alpha-suffixilla.',
+      featureCardsLabel:
+        'FeatureCard — tasainen levossa, ikoni sävy color-arvolle, pinta var(--pc-surface)',
+      featureAiTitle: 'Tekoälypohjainen',
+      featureAiDesc: 'Käyttää OpenAI-vektoreita älykkäisiin suosituksiin',
+      featureQuestionsTitle: '5 kysymystä',
+      featureQuestionsDesc: 'Vastaa lyhyeen tietokilpailuun personoituja ehdotuksia varten',
+      featureGroupTitle: 'Ryhmätila',
+      featureGroupDesc: 'Löydä elokuva, josta kaikki ryhmässä pitävät',
+      featureInstantTitle: 'Välittömät tulokset',
+      featureInstantDesc: 'Saat suosituksia sekunneissa, ei minuuteissa',
+      genreSelectorNote: 'Monivalinta. Klikkaa vaihtaaksesi genre. Käytetään MoodStep-vaiheessa.',
+      toneSelectorNote: 'Yksivalinta. Klikkaa valitaksesi sävyn. Käytetään ToneStep-vaiheessa.',
+      eraSelectorNote:
+        'Yksivalinta. Klikkaa valitaksesi elokuvan aikakausi. Käytetään EraStep-vaiheessa.',
+      inputFavouriteMovie: 'Lempielokuva',
+      inputFavouriteActor: 'Lempinäyttelijä',
+      inputWithNumberBadge: 'Numeromerkillä',
+      inputsLabel: 'Oletus · fokus: kultainen reunus + rengas · käytetään tietokilpailun vaiheissa',
+      numberBadgeNote: 'Käytetään GroupSetup-vaiheessa osallistujien merkitsemiseen.',
+      quizNavCanProceed: 'Voidaan jatkaa · kesken tietokilpailu',
+      quizNavCannotProceed: 'Ei voida jatkaa',
+      quizNavLastStep: 'Viimeinen vaihe · lähetetään',
+      stepHeaderNote:
+        'Ikonimerkki + Oswald-otsikko käytetään kaikkien tietokilpailun vaiheotsikkojen kanssa.',
+      similarity95: '95%+ — Teal',
+      similarity90: '90–94% — Gold',
+      similarity85: '85–89% — Amber',
+      similarityLow: '< 85% — Purple',
+      breadcrumbHome: 'Etusivu',
+      breadcrumbQuiz: 'Tietokilpailu',
+      breadcrumbResults: 'Tulokset',
+      breadcrumbStyleGuide: 'Designjärjestelmä',
+      skeletonMoviesNote: 'MoviesTableSkeleton / MoviesTable',
+      skeletonCardNote: 'SkeletonCard / SmallSuggestionCard',
+    },
+  },
+  register: {
+    title: 'Luo tili',
+    subtitle: 'Tallenna suosikkisi ja löydä lisää',
+    emailLabel: 'Sähköpostiosoite',
+    emailPlaceholder: 'sinä@esimerkki.fi',
+    passwordLabel: 'Salasana',
+    passwordPlaceholder: 'Vähintään 8 merkkiä',
+    confirmPasswordLabel: 'Vahvista salasana',
+    confirmPasswordPlaceholder: 'Toista salasanasi',
+    submitButton: 'Luo tili',
+    submitting: 'Luodaan tiliä…',
+    successTitle: 'Tili luotu!',
+    successMessage: 'Voit nyt kirjautua PopChoiceen.',
+    backToHome: 'Etusivulle',
+    errors: {
+      emailRequired: 'Sähköpostiosoite vaaditaan.',
+      emailInvalid: 'Anna kelvollinen sähköpostiosoite.',
+      passwordRequired: 'Salasana vaaditaan.',
+      passwordTooShort: 'Salasanan on oltava vähintään 8 merkkiä.',
+      confirmPasswordRequired: 'Vahvista salasanasi.',
+      passwordMismatch: 'Salasanat eivät täsmää.',
+      emailTaken: 'Tämä sähköpostiosoite on jo rekisteröity.',
+      generic: 'Jokin meni pieleen. Yritä uudelleen.',
+    },
+  },
 };

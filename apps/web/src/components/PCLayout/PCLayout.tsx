@@ -271,6 +271,7 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
     { href: '/about', label: t.nav.howItWorks },
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/style-guide', label: t.nav.styleGuide },
+    { href: '/register', label: t.nav.signUp },
   ];
 
   return (

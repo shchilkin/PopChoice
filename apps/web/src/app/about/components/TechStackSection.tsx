@@ -1,21 +1,18 @@
 'use client';
 
-import { Brain, Database, Search, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
+import Link from 'next/link';
 
 import { useLanguage } from '@/i18n';
-import { palette } from '@/styles/designTokens';
-
-const TECH_ICONS = [Search, Brain, Database, Zap];
-const TECH_COLORS = [palette.teal, palette.purple, palette.gold, palette.amber];
 
 export function TechStackSection() {
   const { t } = useLanguage();
+  const { title, linkText, groups } = t.about.techStack;
 
   return (
     <section className="mb-16">
       <h2
-        className="mb-6"
+        className="mb-8"
         style={{
           fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
           fontWeight: '600',
@@ -25,45 +22,65 @@ export function TechStackSection() {
           color: 'var(--pc-t1)',
         }}
       >
-        {t.about.techStack.title}
+        {title}
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {t.about.techStack.items.map((tech, i) => {
-          const Icon = TECH_ICONS[i];
-          const color = TECH_COLORS[i];
-          if (!Icon || !color) {
-            if (process.env.NODE_ENV === 'development')
-              // eslint-disable-next-line no-console
-              console.warn('Missing icon or color for tech item:', tech.name);
-            return null;
-          }
-          return (
-            <motion.div
-              key={tech.name}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="flex items-start gap-4 p-4 rounded-2xl"
-              style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd1)' }}
+
+      <div className="flex flex-col gap-10">
+        {groups.map((group, gi) => (
+          <div key={gi}>
+            <p
+              className="mb-3"
+              style={{
+                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                fontSize: '0.75rem',
+                letterSpacing: '0.12em',
+                color: 'var(--pc-t3)',
+              }}
             >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `${color}18`, color }}
-              >
-                <Icon size={17} />
-              </div>
-              <div>
-                <div style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '0.88rem' }}>
-                  {tech.name}
-                </div>
-                <div style={{ color: 'var(--pc-t3)', fontSize: '0.78rem', lineHeight: 1.6 }}>
-                  {tech.desc}
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+              {group.label}
+            </p>
+            <div style={{ borderTop: '1px solid var(--pc-bd1)' }}>
+              {group.items.map((item, ii) => (
+                <motion.div
+                  key={ii}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.35, delay: gi * 0.05 + ii * 0.06 }}
+                  className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-6 py-3.5"
+                  style={{ borderBottom: '1px solid var(--pc-bd1)' }}
+                >
+                  <span
+                    className="shrink-0"
+                    style={{
+                      color: 'var(--pc-t1)',
+                      fontWeight: 600,
+                      fontSize: '0.9rem',
+                      minWidth: '14rem',
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                  <span style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                    {item.why}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <Link
+          href="/about/tech-stack"
+          className="inline-flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-70"
+          style={{ color: 'var(--pc-t3)', fontSize: '0.835rem' }}
+        >
+          {linkText}
+        </Link>
       </div>
     </section>
   );

@@ -83,7 +83,16 @@ export default function LoadingPage() {
         // Keep popchoice_quiz_data alive — the results page needs it for 'Get more picks from TMDB'.
         // It is cleaned up when the user clicks 'Try Again'.
         setProgress(100);
-        setTimeout(() => router.push('/results'), 400);
+        setTimeout(() => {
+          const navigate = () => router.push('/results');
+          if (typeof document !== 'undefined' && 'startViewTransition' in document) {
+            const vt = document.startViewTransition(navigate);
+            // Next.js async navigation can abort the transition — suppress the unhandled rejection
+            vt.finished.catch(() => {});
+          } else {
+            navigate();
+          }
+        }, 400);
       })
       .catch((err) => {
         if ((err as Error).name === 'AbortError') return;
@@ -108,7 +117,7 @@ export default function LoadingPage() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
+    <div className="page-main flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
       {/* Background glow */}
       <div
         className="fixed inset-0 pointer-events-none"

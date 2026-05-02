@@ -14,3 +14,13 @@ CREATE TABLE IF NOT EXISTS movies (
   embedding vector(3072),
   UNIQUE(name, year)
 );
+
+CREATE TABLE IF NOT EXISTS users (
+  id bigserial PRIMARY KEY,
+  email text NOT NULL,
+  password_hash text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique
+  ON users (lower(email));

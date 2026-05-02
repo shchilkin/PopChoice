@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
+import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 
@@ -40,11 +41,8 @@ export function CtaSection() {
         transition={{ duration: 0.7 }}
         className="relative z-10 text-center max-w-xl mx-auto"
       >
-        <div
-          className="text-5xl mb-6"
-          style={{ animation: 'mascot-bob 2.5s ease-in-out infinite' }}
-        >
-          🎬
+        <div className="mb-6 flex justify-center">
+          <Mascot width={80} height={80} />
         </div>
         <h2
           className="mb-4"
@@ -76,7 +74,6 @@ export function CtaSection() {
           {t.cta.button}
         </button>
       </motion.div>
-      <style>{`@keyframes mascot-bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }`}</style>
     </section>
   );
 }

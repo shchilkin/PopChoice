@@ -48,11 +48,10 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
             src={movie.posterURL}
             alt={movie.name}
             fill
+            priority
             sizes="(max-width: 768px) 100vw, 600px"
             className="object-cover transition-opacity duration-700"
             style={{ opacity: imgLoaded ? 1 : 0 }}
-            priority
-            loading="eager"
             onLoad={() => setImgLoaded(true)}
           />
           <div
