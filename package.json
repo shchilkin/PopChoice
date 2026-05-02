@@ -32,6 +32,11 @@
     "test:storybook": "npm run test:storybook --workspace=apps/web",
     "type-check": "npm run type-check --workspace=apps/web"
   },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": "eslint --max-warnings=0",
+    "*.{json,md,css,scss,html,yml,yaml}": "prettier --check",
+    "package.json": "sort-package-json --check"
+  },
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",

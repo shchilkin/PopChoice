@@ -1,4 +1,4 @@
-import { en, type Translations } from './en';
+import type { Translations } from './en';
 
 export const ru: Translations = {
   nav: {
