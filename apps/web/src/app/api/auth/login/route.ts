@@ -3,6 +3,7 @@ import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
 import { verifyPassword } from '@/lib/auth/password';
+import { createSessionToken, setSessionCookie } from '@/lib/auth/session';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 
@@ -69,6 +70,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
   }
 
+  const sessionToken = createSessionToken(String(user.id));
+  if (!sessionToken) {
+    logger.error({ userId: user.id }, 'Session secret is not configured — cannot log in user.');
+    return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
+  }
+
+  const response = NextResponse.json({ ok: true }, { status: 200 });
+  setSessionCookie(response, sessionToken);
+
   logger.info({ userId: user.id }, 'User logged in');
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return response;
 }

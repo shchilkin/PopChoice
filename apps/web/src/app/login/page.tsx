@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 
+import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
@@ -20,6 +21,7 @@ interface FieldErrors {
 }
 
 export default function LoginPage() {
+  const { isAuthenticated, refreshSession } = useAuth();
   const { t } = useLanguage();
   const l = t.login;
 
@@ -59,6 +61,7 @@ export default function LoginPage() {
       });
 
       if (res.status === 200) {
+        await refreshSession();
         setSuccess(true);
         return;
       }
@@ -78,7 +81,7 @@ export default function LoginPage() {
     }
   }
 
-  if (success) {
+  if (success || isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 px-5 py-16">
         <motion.div
