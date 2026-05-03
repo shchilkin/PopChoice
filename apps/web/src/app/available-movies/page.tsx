@@ -7,7 +7,7 @@ import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 
-import type { Movie, MoviesResponse } from '../api/movies/route';
+import type { Movie, MoviesResponse } from '@/features/movies/catalog';
 
 export default function AvailableMoviesPage() {
   const { t } = useLanguage();

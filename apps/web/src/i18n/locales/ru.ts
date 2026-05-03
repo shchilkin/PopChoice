@@ -201,6 +201,7 @@ export const ru: Translations = {
     morePicksButton: 'Ещё варианты из TMDB',
     morePicksLoading: 'Загружаем ещё…',
     morePicksEmpty: 'Больше вариантов пока нет.',
+    morePicksStalled: 'Слишком долго — попробуйте позже.',
   },
   about: {
     title: 'ИИ, который чувствует ваш вкус',

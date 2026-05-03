@@ -67,7 +67,7 @@ vi.mock('@/clients/dbClient', () => ({
 }));
 
 // Mock MovieService (TMDB poster lookups)
-vi.mock('@/services', () => ({
+vi.mock('@/integrations/tmdb', () => ({
   IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
   MovieService: vi.fn(function () {
     return {

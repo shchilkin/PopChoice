@@ -35,8 +35,8 @@ vi.mock('@/clients', () => ({
   },
 }));
 
-// Mock IMAGE_BASE_URL from services
-vi.mock('@/services', () => ({
+// Mock IMAGE_BASE_URL from the TMDB integration
+vi.mock('@/integrations/tmdb', () => ({
   IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
 }));
 

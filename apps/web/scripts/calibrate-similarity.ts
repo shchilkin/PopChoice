@@ -4,7 +4,7 @@
  *
  * Embeds a set of representative queries, runs them against the live database,
  * and prints ranked results with cosine similarity scores. Use the output to
- * decide whether SIMILARITY_THRESHOLD in route.ts needs adjustment.
+ * decide whether the recommendation config needs adjustment.
  *
  * Usage:
  *   npm run calibrate-similarity
@@ -16,6 +16,10 @@
 
 import { getOpenAIClient } from '../src/clients/openaiClient';
 import { createPgDbClient } from '../src/clients/pgClient';
+import {
+  LOCAL_VECTOR_MATCH_THRESHOLD,
+  SIMILARITY_THRESHOLD,
+} from '../src/features/recommendation/config';
 
 // ---------------------------------------------------------------------------
 // Built-in calibration queries — cover diverse genres and era preferences.
@@ -96,7 +100,7 @@ async function main() {
 
     const { data, error } = await db.rpc('match_movies', {
       query_embedding: embedding,
-      match_threshold: 0.1,
+      match_threshold: LOCAL_VECTOR_MATCH_THRESHOLD,
       match_count: MATCH_COUNT,
     });
 
@@ -106,7 +110,7 @@ async function main() {
     }
 
     if (data.length === 0) {
-      console.log('  (no results above match_threshold = 0.1)');
+      console.log(`  (no results above match_threshold = ${LOCAL_VECTOR_MATCH_THRESHOLD})`);
       continue;
     }
 
@@ -130,13 +134,13 @@ async function main() {
     console.log('\nSummary');
     console.log(`  Highest observed score : ${ceiling.toFixed(4)}`);
     console.log(`  Suggested threshold    : ~${suggested.toFixed(2)}  (≈ 2/3 of ceiling)`);
-    console.log(`  Current threshold      : 0.40  (SIMILARITY_THRESHOLD in route.ts)`);
+    console.log(
+      `  Current threshold      : ${SIMILARITY_THRESHOLD.toFixed(2)}  (SIMILARITY_THRESHOLD in src/features/recommendation/config.ts)`,
+    );
 
-    if (Math.abs(suggested - 0.4) >= 0.05) {
+    if (Math.abs(suggested - SIMILARITY_THRESHOLD) >= 0.05) {
       console.log(`\n⚠️  Suggested threshold differs from current by ≥ 0.05.`);
-      console.log(
-        `   Consider updating SIMILARITY_THRESHOLD in src/app/api/movie-recommendation/route.ts`,
-      );
+      console.log(`   Consider updating src/features/recommendation/config.ts`);
       console.log(`   and the calibration table in docs/SERVICES.md.`);
     } else {
       console.log(`\n✅ Current threshold looks appropriate.`);

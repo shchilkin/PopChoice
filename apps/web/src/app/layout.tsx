@@ -4,6 +4,8 @@ import { PCLayout } from '../components/PCLayout';
 import { ThemeProvider } from '../components/ThemeProvider';
 import { LanguageProvider } from '../i18n';
 
+import { Providers } from './providers';
+
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -94,7 +96,9 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <LanguageProvider>
-            <PCLayout>{children}</PCLayout>
+            <Providers>
+              <PCLayout>{children}</PCLayout>
+            </Providers>
           </LanguageProvider>
         </ThemeProvider>
       </body>

@@ -16,12 +16,18 @@ if (!REDIS_URL) {
 const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
 
 const seedQueue = new Queue('movie-seed', { connection });
+const recommendationQueue = new Queue('recommendation', { connection });
+const morePicksQueue = new Queue('more-picks', { connection });
 
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/');
 
 createBullBoard({
-  queues: [new BullMQAdapter(seedQueue)],
+  queues: [
+    new BullMQAdapter(seedQueue),
+    new BullMQAdapter(recommendationQueue),
+    new BullMQAdapter(morePicksQueue),
+  ],
   serverAdapter,
 });
 

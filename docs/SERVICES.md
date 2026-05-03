@@ -6,11 +6,81 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service           | Type      | Trigger         | Source       |
-| ----------------- | --------- | --------------- | ------------ |
-| `movie-seed`      | One-shot  | Manual / CI     | `movies.txt` |
-| `movie-discovery` | Scheduled | Cron / One-shot | TMDB API     |
-| `movie-backfill`  | One-shot  | Manual          | TMDB API     |
+| Service                 | Type                  | Trigger                                           | Source        |
+| ----------------------- | --------------------- | ------------------------------------------------- | ------------- |
+| `movie-seed`            | One-shot              | Manual / CI                                       | `movies.txt`  |
+| `movie-discovery`       | Scheduled             | Cron / One-shot                                   | TMDB API      |
+| `movie-backfill`        | One-shot              | Manual                                            | TMDB API      |
+| BullMQ `recommendation` | Per-request           | HTTP POST to /api/recommendations                 | TMDB + OpenAI |
+| BullMQ `more-picks`     | On demand             | HTTP POST to /api/recommendations/[id]/more-picks | TMDB + OpenAI |
+| BullMQ `movie-seed`     | Triggered by pipeline | Internal (more-picks pipeline)                    | TMDB          |
+
+---
+
+## BullMQ Workers (`apps/web`)
+
+PopChoice uses [BullMQ](https://docs.bullmq.io/) backed by Redis for async job processing. Workers run in a separate Node.js process alongside the Next.js server.
+
+### Architecture
+
+```
+Browser → POST /api/recommendations/[id]/more-picks
+             ↓
+        claimMorePicksRequest()    [features/recommendation/morePicksPersistence.ts]
+             ↓
+        startMorePicksRequest()    [features/recommendation/morePicksJobs.ts]
+             ↓
+        morePicksQueue.add(job) or inline fallback
+             ↓
+        morePicksWorker
+             ↓
+        processMorePicksRecommendation()
+             ↓
+        runMorePicksPipeline()     [TMDB discover → embeddings → AI descriptions]
+             ↓
+        storeMorePicks() / markMorePicksStatus()
+             ↓
+        Browser poll detects completion (TanStack Query, 2s interval)
+```
+
+### Queue names
+
+| Queue            | Worker file                                        | Job data                                 |
+| ---------------- | -------------------------------------------------- | ---------------------------------------- |
+| `recommendation` | `apps/web/src/lib/workers/recommendationWorker.ts` | `recommendationId`, `quizData`, `locale` |
+| `more-picks`     | `apps/web/src/lib/workers/morePicksWorker.ts`      | `recommendationId`, `slug`, `locale`     |
+| `movie-seed`     | `apps/web/src/lib/workers/movieSeedWorker.ts`      | `tmdbMovies`, `localKeys`                |
+
+### Graceful degradation
+
+When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. The BullMQ queues are not created and workers are disabled.
+
+### Starting workers
+
+```bash
+# From apps/web
+npm run start:workers
+```
+
+Or via Docker Compose (workers.Dockerfile).
+
+### Environment variables
+
+| Variable         | Required       | Description                                             |
+| ---------------- | -------------- | ------------------------------------------------------- |
+| `REDIS_URL`      | ✅ (for async) | Redis connection string (e.g. `redis://localhost:6379`) |
+| `DATABASE_URL`   | ✅             | PostgreSQL connection string                            |
+| `TMDB_API_KEY`   | ✅             | TMDB v4 read access token                               |
+| `OPENAI_API_KEY` | ✅             | OpenAI API key (embeddings + chat)                      |
+
+### Bull Board (monitoring dashboard)
+
+A separate monitoring UI is available in `apps/bull-board/`. It provides a web interface to inspect queues, retry failed jobs, and view job history.
+
+```bash
+# From repo root
+npx --prefix apps/bull-board tsx --env-file=.env apps/bull-board/src/index.ts
+```
 
 ---
 
@@ -156,9 +226,19 @@ DRY_RUN=true npx tsx src/index.ts # dry run
 
 ---
 
-## API Route: Hybrid Search (`/api/movie-recommendation`)
+## Recommendation Feature (`/api/movie-recommendation`, `/api/recommendations`)
 
-The recommendation route combines local vector search with a TMDB fallback.
+The recommendation feature combines local vector search with a TMDB fallback. The HTTP routes are now thin entrypoints over feature-owned modules in `apps/web/src/features/recommendation`.
+
+### Current ownership
+
+- `input.ts` owns shared normalization and moderation / prompt-injection screening.
+- `pipeline.ts` owns the synchronous recommendation flow used by `/api/movie-recommendation`.
+- `jobs.ts` owns async recommendation creation / queue startup for `/api/recommendations`.
+- `persistence.ts` owns recommendation reads, writes, and status transitions.
+- `morePicksPersistence.ts` owns more-picks claim, exclusion lookup, and result persistence.
+- `morePicksJobs.ts` owns shared more-picks enqueue / inline fallback / worker processing orchestration.
+- `morePicksPipeline.ts` owns TMDB discover, embeddings, ranking, and description generation for extra picks.
 
 ### How it works
 
@@ -233,16 +313,16 @@ If the DB grows substantially, a new embedding model is adopted, or scores shift
 
 2. Note the **ceiling** value (the highest score across all queries). Set `SIMILARITY_THRESHOLD` to roughly **two-thirds of that ceiling** (e.g. ceiling 0.60 → threshold 0.40).
 
-3. Update the constant in `src/app/api/movie-recommendation/route.ts` and the calibration tables above.
+3. Update the constants in `apps/web/src/features/recommendation/config.ts`, then update the calibration tables above.
 
-4. Run the unit tests — `shouldFallBackToTMDB` tests will catch threshold regressions:
+4. Run the unit tests — the recommendation route tests will catch threshold regressions:
    ```bash
    npx vitest --project=server run src/app/api/movie-recommendation/route.test.ts
    ```
 
 To add or edit calibration queries, modify the `QUERIES` array in `scripts/calibrate-similarity.ts`.
 
-### Constants (`src/app/api/movie-recommendation/route.ts`)
+### Constants (`apps/web/src/features/recommendation/config.ts`)
 
 | Constant                 | Value  | Purpose                                                               |
 | ------------------------ | ------ | --------------------------------------------------------------------- |

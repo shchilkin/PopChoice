@@ -8,7 +8,7 @@ import { ageRatings } from '@/utils/schemas/movieSchemas';
 
 import { AgeRatingChip } from '../AgeRatingChip';
 
-import type { Movie } from '@/app/api/movies/route';
+import type { Movie } from '@/features/movies/catalog';
 
 /**
  * Animated table skeleton shown while movie data is loading or while the

@@ -37,8 +37,11 @@ cd PopChoice
 npm install
 cp .env.example .env        # add OPENAI_API_KEY (and optionally TMDB_API_KEY)
 npm run setup:local-db      # spin up local PostgreSQL + Redis via Docker
+npm run copy:env            # copy root .env into apps/services workspaces
 npm run populate-db         # seed the database with movie embeddings
 npm run dev                 # start the dev server at http://localhost:3000
+# in a second terminal:
+cd apps/web && npm run start:workers
 ```
 
 For a step-by-step walkthrough, see **[💻 Local Development Setup](#-local-development-setup)** below.
@@ -75,6 +78,8 @@ TMDB_API_KEY=your-tmdb-api-key          # optional – enables live poster image
 ```
 
 > The database credentials (`DATABASE_URL`, `POSTGRES_*`) are generated automatically in the next step.
+>
+> The root `.env` is the source of truth. After changing it, run `npm run copy:env` so `apps/web/.env` and the service-level `.env` files stay in sync.
 
 ### Step 3 — Start local PostgreSQL and Redis
 
@@ -91,7 +96,20 @@ This script:
 
 On subsequent runs the script reuses the existing credentials and just ensures the containers are running.
 
-### Step 4 — Seed the database
+### Step 4 — Sync workspace `.env` files
+
+```bash
+npm run copy:env
+```
+
+This copies the root `.env` into the workspaces that run locally, including:
+
+- `apps/web/.env`
+- `services/movie-seed/.env`
+- `services/movie-discovery/.env`
+- `services/movie-backfill/.env`
+
+### Step 5 — Seed the database
 
 ```bash
 npm run populate-db
@@ -101,13 +119,31 @@ This reads the curated movie list, calls the OpenAI Embeddings API to generate v
 
 > **Note:** Each run deduplicates by title + year, so it is safe to re-run.
 
-### Step 5 — Start the development server
+### Step 6 — Start the local app
+
+Run the web app and the BullMQ workers in separate terminals:
 
 ```bash
+# terminal 1, repo root
 npm run dev
+
+# terminal 2, apps/web workspace
+cd apps/web
+npm run start:workers
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to use the app.
+
+The workers terminal is required for the async recommendation flow when Redis is enabled locally.
+
+### Optional — Bull Board queue dashboard
+
+```bash
+cd apps/web
+npm run bull-board
+```
+
+Open [http://localhost:3001](http://localhost:3001) to inspect BullMQ queues locally.
 
 ### Optional — Storybook component workshop
 
@@ -119,17 +155,20 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 
 ### Troubleshooting
 
-| Problem                       | Solution                                             |
-| ----------------------------- | ---------------------------------------------------- |
-| `DATABASE_URL is not set`     | Run `npm run setup:local-db` to generate credentials |
-| Docker container not starting | Ensure Docker Desktop is running                     |
-| OpenAI errors when seeding    | Verify `OPENAI_API_KEY` is correct in `.env`         |
-| Missing movie posters         | Add a valid `TMDB_API_KEY` to `.env`                 |
+| Problem                             | Solution                                                  |
+| ----------------------------------- | --------------------------------------------------------- |
+| `DATABASE_URL is not set`           | Run `npm run setup:local-db`, then `npm run copy:env`     |
+| Recommendations stay pending        | Start workers with `cd apps/web && npm run start:workers` |
+| App or workers use stale env values | Re-run `npm run copy:env` after editing the root `.env`   |
+| Docker container not starting       | Ensure Docker Desktop is running                          |
+| OpenAI errors when seeding          | Verify `OPENAI_API_KEY` is correct in `.env`              |
+| Missing movie posters               | Add a valid `TMDB_API_KEY` to `.env`                      |
 
 ## 📖 Documentation
 
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
 - **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
+- **[Architecture Boundaries](./docs/BOUNDARIES.md)** — Ownership rules for app, domain, infrastructure, and shared modules
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
@@ -139,23 +178,30 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 ## 🗂 Project Structure
 
 ```text
-src/
-├── app/                    # Next.js app directory (API routes, pages)
-├── clients/               # External API client wrappers
-├── components/            # Reusable React components
-├── hooks/                 # Custom React hooks
-├── i18n/                  # Internationalisation (i18n) support
-├── lib/                   # Shared library utilities
-├── mocks/                 # MSW mock handlers
-├── services/              # Business logic / service layer
-├── styles/                # Global styles
-└── utils/                 # Utility functions
+apps/
+├── web/
+│   └── src/
+│       ├── app/           # Next.js app routes, pages, and HTTP boundaries
+│       ├── clients/       # Infrastructure client wrappers (DB, OpenAI, pg)
+│       ├── components/    # Reusable React components
+│       ├── hooks/         # Custom React hooks
+│       ├── i18n/          # Internationalisation support
+│       ├── lib/           # Shared app-local infra helpers and adapters
+│       ├── mocks/         # MSW mock handlers
+│       ├── services/      # App-local service wrappers such as TMDB access
+│       ├── styles/        # Global styles
+│       └── utils/         # Reusable utilities and data helpers
+├── bull-board/            # Queue monitoring app
+packages/
+└── shared/                # Shared package reused by background services
 services/
 ├── movie-discovery/       # Continuous TMDB movie discovery service
 ├── movie-seed/            # One-shot database seeding service
 └── movie-backfill/        # One-shot service to backfill missing movie metadata
 db/                        # Database migrations / schema
 ```
+
+For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUNDARIES.md).
 
 ## 🗃 Background Services
 
@@ -167,11 +213,11 @@ db/                        # Database migrations / schema
 
 ```bash
 # Development
-npm run dev              # Start development server
-npm run build           # Build for production
-npm run start           # Start production server
-npm run start:workers   # Start BullMQ background workers (requires REDIS_URL)
-npm run bull-board      # Launch BullMQ monitoring dashboard (requires REDIS_URL)
+npm run dev                         # Start development server (repo root)
+npm run build                       # Build for production (repo root)
+npm run start                       # Start production server (apps/web)
+cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
+cd apps/web && npm run bull-board    # Launch BullMQ dashboard (apps/web)
 
 # Testing
 npm run test            # Run all tests
@@ -189,6 +235,7 @@ npm run fix             # Fix all issues automatically
 
 # Database & Data
 npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
+npm run copy:env             # Sync root .env into apps/services workspaces
 npm run populate-db          # Populate database with movie data
 npm run analyze-movies       # Analyze movie data for embeddings
 npm run calibrate-similarity # Calibrate vector similarity thresholds

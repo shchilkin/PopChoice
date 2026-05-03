@@ -3,12 +3,13 @@ import IORedis from 'ioredis';
 
 import logger from '@/lib/logger';
 
-import type {
-  SerializableTMDBEmbeddings,
-  TMDBDiscoverMovie,
-} from '@/app/api/movie-recommendation/tmdb';
+import type { SerializableTMDBEmbeddings, TMDBDiscoverMovie } from '@/features/recommendation/tmdb';
+import type { PersonFormData } from '@/features/recommendation/types';
+import type { Locale } from '@/lib/locale';
 
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
+export const RECOMMENDATION_QUEUE_NAME = 'recommendation';
+export const MORE_PICKS_QUEUE_NAME = 'more-picks';
 
 export type MovieSeedJobData = {
   tmdbMovies: TMDBDiscoverMovie[];
@@ -16,11 +17,30 @@ export type MovieSeedJobData = {
   tmdbEmbeddings?: SerializableTMDBEmbeddings;
 };
 
+export type RecommendationJobData = {
+  recommendationId: string;
+  quizData: PersonFormData | PersonFormData[];
+  locale: Locale;
+};
+
+export type MorePicksJobData = {
+  recommendationId: string; // internal UUID
+  slug: string; // public slug (for logging)
+  locale: Locale;
+};
+
 export const MOVIE_SEED_JOB_OPTIONS = {
   attempts: 3,
   backoff: { type: 'exponential' as const, delay: 2000 },
   removeOnComplete: 100,
   removeOnFail: 50,
+};
+
+export const RECOMMENDATION_JOB_OPTIONS = {
+  attempts: 2,
+  backoff: { type: 'exponential' as const, delay: 3000 },
+  removeOnComplete: 200,
+  removeOnFail: 100,
 };
 
 let bullMQConnection: IORedis | null = null;
@@ -52,4 +72,21 @@ const queueConnection = createBullMQConnection();
 
 export const seedQueue = queueConnection
   ? new Queue<MovieSeedJobData>(MOVIE_SEED_QUEUE_NAME, { connection: queueConnection })
+  : null;
+
+export const recommendationQueue = queueConnection
+  ? new Queue<RecommendationJobData>(RECOMMENDATION_QUEUE_NAME, { connection: queueConnection })
+  : null;
+
+export const MORE_PICKS_JOB_OPTIONS = {
+  attempts: 2,
+  backoff: { type: 'exponential' as const, delay: 3000 },
+  removeOnComplete: 200,
+  removeOnFail: 100,
+  /** Kill the job if the worker takes longer than 90 s — ensures more_picks_status reaches 'failed' and the UI can recover. */
+  timeout: 90_000,
+};
+
+export const morePicksQueue = queueConnection
+  ? new Queue<MorePicksJobData>(MORE_PICKS_QUEUE_NAME, { connection: queueConnection })
   : null;

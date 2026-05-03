@@ -30,10 +30,6 @@ describe('MovieService', () => {
     expect(movieService).toBeDefined();
   });
 
-  // -------------------------------------------------------------------------
-  // getMovieById
-  // -------------------------------------------------------------------------
-
   describe('getMovieById', () => {
     it('returns the movie when the TMDB ID exists', async () => {
       const result = await movieService.getMovieById(mockMovie.id);
@@ -47,10 +43,6 @@ describe('MovieService', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // getMovieByTitle — match quality cascade
-  // -------------------------------------------------------------------------
-
   describe('getMovieByTitle', () => {
     it('returns an exact title match', async () => {
       const result = await movieService.getMovieByTitle('Mock Movie');
@@ -59,7 +51,6 @@ describe('MovieService', () => {
     });
 
     it('strips a year suffix appended by OpenAI before searching', async () => {
-      // OpenAI sometimes returns "Brother (1997)" — the suffix must be stripped
       const result = await movieService.getMovieByTitle('Mock Movie (2025)');
       expect(result).toBeDefined();
       expect(result?.title).toBe('Mock Movie');
@@ -72,7 +63,6 @@ describe('MovieService', () => {
     });
 
     it('matches via prefix when full title includes a subtitle', async () => {
-      // "Mock Movie: The Return" should match a search for "Mock Movie: The Return"
       server.use(
         http.get(`${API_BASE_URL}/search/movie`, () =>
           HttpResponse.json({ results: [mockMovieWithSubtitle] }),
@@ -83,15 +73,13 @@ describe('MovieService', () => {
     });
 
     it('disambiguates by year when multiple films share the same title', async () => {
-      // mockMovie: 2025, mockMovieAlt: 2000 — asking for year 2000 must return the alt
       const result = await movieService.getMovieByTitle('Mock Movie', 2000);
       expect(result?.id).toBe(mockMovieAlt.id);
     });
 
     it('accepts a ±1 year tolerance for release-date shifts', async () => {
-      // Film released late in 2024 may be listed as 2025 in some regions
       const result = await movieService.getMovieByTitle('Mock Movie', 2024);
-      expect(result?.id).toBe(mockMovie.id); // 2025 is within ±1 of 2024
+      expect(result?.id).toBe(mockMovie.id);
     });
 
     it('falls back to a year-less search when the year-scoped search returns no results', async () => {
@@ -100,7 +88,6 @@ describe('MovieService', () => {
         http.get(`${API_BASE_URL}/search/movie`, ({ request }) => {
           const url = new URL(request.url);
           callCount++;
-          // First call (with year) returns empty; second call returns results
           if (url.searchParams.has('year')) {
             return HttpResponse.json({ results: [] });
           }
@@ -109,7 +96,7 @@ describe('MovieService', () => {
       );
       const result = await movieService.getMovieByTitle('Mock Movie', 2025);
       expect(result?.id).toBe(mockMovie.id);
-      expect(callCount).toBe(2); // both calls were made
+      expect(callCount).toBe(2);
     });
 
     it('returns undefined when no results are found at all', async () => {
@@ -127,10 +114,6 @@ describe('MovieService', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // getLocalizedMovieInfo
-  // -------------------------------------------------------------------------
-
   describe('getLocalizedMovieInfo', () => {
     it('returns localized title, poster_path, and overview', async () => {
       const result = await movieService.getLocalizedMovieInfo(mockMovie.id, 'ru-RU');
@@ -145,10 +128,6 @@ describe('MovieService', () => {
       expect(result).toBeUndefined();
     });
   });
-
-  // -------------------------------------------------------------------------
-  // getPosterURL
-  // -------------------------------------------------------------------------
 
   describe('getPosterURL', () => {
     it('builds a correct poster URL for a known size', () => {
