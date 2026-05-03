@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-import { API_BASE_URL, TMDB_MovieDetailsSchema } from '../services';
+import { API_BASE_URL, TMDB_MovieDetailsSchema } from '../integrations/tmdb';
 
 const makeMockMovie = (overrides: Partial<ReturnType<typeof TMDB_MovieDetailsSchema.parse>> = {}) =>
   TMDB_MovieDetailsSchema.parse({

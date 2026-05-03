@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { getMovieInfo } from '@/app/api/movie-recommendation/recommendation';
+import { getMovieInfo } from '@/features/recommendation/recommendation';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';

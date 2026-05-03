@@ -1,4 +1,4 @@
-import { MovieService } from '../../services';
+import { MovieService } from '../../integrations/tmdb';
 
 const movieService = new MovieService();
 

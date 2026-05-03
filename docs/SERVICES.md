@@ -26,17 +26,19 @@ PopChoice uses [BullMQ](https://docs.bullmq.io/) backed by Redis for async job p
 ```
 Browser → POST /api/recommendations/[id]/more-picks
              ↓
-        claimMorePicksSlot(slug)   [atomic UPDATE in Postgres]
-             ↓ (slot claimed)
-        morePicksQueue.add(job)    [Redis / BullMQ]
+        claimMorePicksRequest()    [features/recommendation/morePicksPersistence.ts]
              ↓
-        morePicksWorker            [reads quiz_data from DB, runs pipeline]
+        startMorePicksRequest()    [features/recommendation/morePicksJobs.ts]
+             ↓
+        morePicksQueue.add(job) or inline fallback
+             ↓
+        morePicksWorker
+             ↓
+        processMorePicksRecommendation()
              ↓
         runMorePicksPipeline()     [TMDB discover → embeddings → AI descriptions]
              ↓
-        insertMorePicksMovies()    [writes to recommendation_movies, locked transaction]
-             ↓
-        updateMorePicksStatus('completed')
+        storeMorePicks() / markMorePicksStatus()
              ↓
         Browser poll detects completion (TanStack Query, 2s interval)
 ```
@@ -51,7 +53,7 @@ Browser → POST /api/recommendations/[id]/more-picks
 
 ### Graceful degradation
 
-When `REDIS_URL` is not set (e.g., local dev without Redis), the `more-picks` route runs the pipeline **inline** (synchronous fallback) and returns a `202 Accepted` so the UI still polls correctly. The BullMQ queues are not created and workers are disabled.
+When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. The BullMQ queues are not created and workers are disabled.
 
 ### Starting workers
 
@@ -224,9 +226,19 @@ DRY_RUN=true npx tsx src/index.ts # dry run
 
 ---
 
-## API Route: Hybrid Search (`/api/movie-recommendation`)
+## Recommendation Feature (`/api/movie-recommendation`, `/api/recommendations`)
 
-The recommendation route combines local vector search with a TMDB fallback.
+The recommendation feature combines local vector search with a TMDB fallback. The HTTP routes are now thin entrypoints over feature-owned modules in `apps/web/src/features/recommendation`.
+
+### Current ownership
+
+- `input.ts` owns shared normalization and moderation / prompt-injection screening.
+- `pipeline.ts` owns the synchronous recommendation flow used by `/api/movie-recommendation`.
+- `jobs.ts` owns async recommendation creation / queue startup for `/api/recommendations`.
+- `persistence.ts` owns recommendation reads, writes, and status transitions.
+- `morePicksPersistence.ts` owns more-picks claim, exclusion lookup, and result persistence.
+- `morePicksJobs.ts` owns shared more-picks enqueue / inline fallback / worker processing orchestration.
+- `morePicksPipeline.ts` owns TMDB discover, embeddings, ranking, and description generation for extra picks.
 
 ### How it works
 
@@ -301,16 +313,16 @@ If the DB grows substantially, a new embedding model is adopted, or scores shift
 
 2. Note the **ceiling** value (the highest score across all queries). Set `SIMILARITY_THRESHOLD` to roughly **two-thirds of that ceiling** (e.g. ceiling 0.60 → threshold 0.40).
 
-3. Update the constant in `src/app/api/movie-recommendation/route.ts` and the calibration tables above.
+3. Update the constants in `apps/web/src/features/recommendation/config.ts`, then update the calibration tables above.
 
-4. Run the unit tests — `shouldFallBackToTMDB` tests will catch threshold regressions:
+4. Run the unit tests — the recommendation route tests will catch threshold regressions:
    ```bash
    npx vitest --project=server run src/app/api/movie-recommendation/route.test.ts
    ```
 
 To add or edit calibration queries, modify the `QUERIES` array in `scripts/calibrate-similarity.ts`.
 
-### Constants (`src/app/api/movie-recommendation/route.ts`)
+### Constants (`apps/web/src/features/recommendation/config.ts`)
 
 | Constant                 | Value  | Purpose                                                               |
 | ------------------------ | ------ | --------------------------------------------------------------------- |

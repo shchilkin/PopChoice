@@ -25,9 +25,9 @@ Owns route and page boundaries.
   - direct infrastructure workflows mixed with request handling
   - route-local modules that become the de facto home of domain logic
 
-### `src/services`
+### `src/integrations`
 
-Owns app-local service wrappers and external API access patterns used by the web app.
+Owns app-local third-party integrations and external API access patterns used by the web app.
 
 - Responsibilities:
   - wrap third-party APIs behind stable interfaces
@@ -81,7 +81,7 @@ Owns reusable pure or near-pure helpers.
 
 - Recommendation orchestration is reusable, but its current home under `src/app/api/...` still ties domain logic to route ownership.
 - Some API handlers still coordinate DB writes, queueing, and orchestration directly.
-- `src/services` and root `services/*` are easy to confuse because both use the word "services" for different levels of responsibility.
+- App-local external integrations and root `services/*` previously shared the same label, which made navigation and code review terminology ambiguous.
 - Documentation has historically described a flatter root-level `src/` structure than the actual workspace layout.
 
 ## Decision Rules
@@ -92,6 +92,6 @@ When adding new code, use these rules:
 2. If it configures an SDK or connection, it belongs in `src/clients`.
 3. If it wraps infra concerns used across the app runtime, it belongs in `src/lib`.
 4. If it is a narrow reusable helper with minimal side effects, it belongs in `src/utils`.
-5. If it wraps an external API for the web app, it belongs in `src/services`.
+5. If it wraps an external API for the web app, it belongs in `src/integrations`.
 6. If it is a background process that should run independently of the web app, it belongs in root `services/*`.
 7. If a flow starts spanning multiple routes or runtimes, prefer extracting it toward a clearer domain-oriented module boundary instead of leaving it under a route folder.

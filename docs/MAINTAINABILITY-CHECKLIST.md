@@ -12,9 +12,9 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 ### Architecture and boundaries
 
-- [ ] Module boundaries are clear across `src/app`, `src/services`, `src/clients`, `src/lib`, and `src/utils`.
+- [ ] Module boundaries are clear across `src/app`, `src/integrations`, `src/clients`, `src/lib`, and `src/utils`.
 - [ ] API routes stay thin (validate input, call service, map response).
-- [ ] Responsibilities between `src/services` and root `services/*` are documented and followed.
+- [ ] Responsibilities between `src/integrations` and root `services/*` are documented and followed.
 
 ### Code organization
 
@@ -78,7 +78,7 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 ## PopChoice priority next steps (highest impact)
 
-- [ ] Document and enforce boundaries for `src/app`, `src/services`, `src/lib`, and `src/utils`, and clarify how they relate to root-level `services/*`.
+- [ ] Document and enforce boundaries for `src/app`, `src/integrations`, `src/lib`, and `src/utils`, and clarify how they relate to root-level `services/*`.
 - [ ] Keep API route handlers thin and centralize recommendation orchestration.
 - [ ] Eliminate manual sync points for recommendation thresholds/config and docs.
 - [ ] Align docs with current structure (e.g. naming drift like `db` vs `database`).

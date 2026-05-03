@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { claimMorePicksSlot } from '@/lib/db/recommendations';
-import { MORE_PICKS_JOB_OPTIONS, morePicksQueue } from '@/lib/jobQueue';
+import { startMorePicksRequest } from '@/features/recommendation/morePicksJobs';
+import { claimMorePicksRequest } from '@/features/recommendation/morePicksPersistence';
 import { parseLocaleFromRequest } from '@/lib/locale';
-import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { withAuth } from '@/lib/withAuth';
-
-import type { Locale } from '@/lib/locale';
 
 // ---------------------------------------------------------------------------
 // POST /api/recommendations/[id]/more-picks
@@ -17,32 +14,6 @@ import type { Locale } from '@/lib/locale';
 // DB column `more_picks_status` is atomically set to 'pending' on first call
 // and subsequent calls return 409.
 // ---------------------------------------------------------------------------
-
-async function processInlineMorePicks(
-  recommendationId: string,
-  quizData: unknown,
-  locale: Locale,
-): Promise<void> {
-  const { runMorePicksPipeline } = await import('@/app/api/more-tmdb-picks/pipeline');
-  const { getRecommendationTMDBExcludeIds, insertMorePicksMovies, updateMorePicksStatus } =
-    await import('@/lib/db/recommendations');
-
-  try {
-    await updateMorePicksStatus(recommendationId, 'processing');
-    const excludeIds = await getRecommendationTMDBExcludeIds(recommendationId);
-    const movies = await runMorePicksPipeline(quizData, excludeIds, 2, locale);
-    await insertMorePicksMovies(recommendationId, movies);
-    await updateMorePicksStatus(recommendationId, 'completed');
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await updateMorePicksStatus(recommendationId, 'failed', message).catch((dbErr) => {
-      logger.error(
-        { err: dbErr, recommendationId },
-        'Failed to persist more-picks failure status during inline processing',
-      );
-    });
-  }
-}
 
 async function postHandler(
   req: NextRequest,
@@ -57,7 +28,7 @@ async function postHandler(
   }
 
   // Atomically claim the slot — fails gracefully if already claimed
-  const claimed = await claimMorePicksSlot(slug);
+  const claimed = await claimMorePicksRequest(slug);
   if (!claimed) {
     return NextResponse.json(
       { error: 'More picks already requested or recommendation not completed' },
@@ -65,29 +36,8 @@ async function postHandler(
     );
   }
 
-  const { recommendationId } = claimed;
   const locale = parseLocaleFromRequest(req);
-
-  if (morePicksQueue) {
-    try {
-      await morePicksQueue.add(
-        'more-picks',
-        { recommendationId, slug, locale },
-        MORE_PICKS_JOB_OPTIONS,
-      );
-      logger.info({ recommendationId, slug }, 'More-picks job enqueued');
-    } catch (err) {
-      logger.warn(
-        { err, recommendationId, slug },
-        'Failed to enqueue more-picks job — falling back to inline processing',
-      );
-      await processInlineMorePicks(recommendationId, claimed.quizData, locale);
-    }
-  } else {
-    // No Redis — run inline (blocks response but keeps the feature working in dev)
-    logger.warn({ slug }, 'More-picks queue unavailable — running inline');
-    await processInlineMorePicks(recommendationId, claimed.quizData, locale);
-  }
+  await startMorePicksRequest(claimed, slug, locale);
 
   return NextResponse.json({ status: 'pending' }, { status: 202 });
 }
