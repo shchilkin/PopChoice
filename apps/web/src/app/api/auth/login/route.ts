@@ -6,6 +6,7 @@ import { verifyPassword } from '@/lib/auth/password';
 import { createSessionToken, setSessionCookie } from '@/lib/auth/session';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { isSameOriginBrowserRequest } from '@/lib/withAuth';
 
 // ---------------------------------------------------------------------------
 // Input schema
@@ -22,10 +23,19 @@ const loginSchema = z.object({
 
 // Auth endpoints are expensive (scrypt) — use a tighter limit than the default.
 const AUTH_RATE_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
+const CSRF_COOKIE = '__csrf';
 
 export async function POST(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req, AUTH_RATE_LIMIT);
   if (rateLimitResponse) return rateLimitResponse;
+
+  // Require a valid same-origin CSRF pair to prevent login CSRF attacks.
+  const csrfHeader = req.headers.get('x-csrf-token');
+  const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
+  if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie || !isSameOriginBrowserRequest(req)) {
+    logger.warn('Login attempt rejected: CSRF check failed');
+    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+  }
 
   let body: unknown;
   try {

@@ -7,6 +7,7 @@ import { useState, type FormEvent } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 
 interface FormState {
@@ -56,7 +57,11 @@ export default function LoginPage() {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCsrfToken(),
+        },
         body: JSON.stringify({ email: form.email.trim(), password: form.password }),
       });
 
