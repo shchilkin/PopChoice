@@ -2,3 +2,4 @@
 set -e
 
 npm exec lint-staged
+npm run type-check

@@ -19,7 +19,7 @@
     "start:workers": "tsx src/lib/workers/startWorkers.ts",
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
-    "test:server": "vitest --project=server",
+    "test:server": "vitest run --project=server",
     "pretest:storybook": "npx playwright install && npx playwright install-deps",
     "test:storybook": "vitest --project=storybook run",
     "type-check": "tsc --noEmit"
