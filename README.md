@@ -168,6 +168,7 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
 - **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
+- **[Architecture Boundaries](./docs/BOUNDARIES.md)** — Ownership rules for app, domain, infrastructure, and shared modules
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
@@ -177,23 +178,30 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 ## 🗂 Project Structure
 
 ```text
-src/
-├── app/                    # Next.js app directory (API routes, pages)
-├── clients/               # External API client wrappers
-├── components/            # Reusable React components
-├── hooks/                 # Custom React hooks
-├── i18n/                  # Internationalisation (i18n) support
-├── lib/                   # Shared library utilities
-├── mocks/                 # MSW mock handlers
-├── services/              # Business logic / service layer
-├── styles/                # Global styles
-└── utils/                 # Utility functions
+apps/
+├── web/
+│   └── src/
+│       ├── app/           # Next.js app routes, pages, and HTTP boundaries
+│       ├── clients/       # Infrastructure client wrappers (DB, OpenAI, pg)
+│       ├── components/    # Reusable React components
+│       ├── hooks/         # Custom React hooks
+│       ├── i18n/          # Internationalisation support
+│       ├── lib/           # Shared app-local infra helpers and adapters
+│       ├── mocks/         # MSW mock handlers
+│       ├── services/      # App-local service wrappers such as TMDB access
+│       ├── styles/        # Global styles
+│       └── utils/         # Reusable utilities and data helpers
+├── bull-board/            # Queue monitoring app
+packages/
+└── shared/                # Shared package reused by background services
 services/
 ├── movie-discovery/       # Continuous TMDB movie discovery service
 ├── movie-seed/            # One-shot database seeding service
 └── movie-backfill/        # One-shot service to backfill missing movie metadata
 db/                        # Database migrations / schema
 ```
+
+For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUNDARIES.md).
 
 ## 🗃 Background Services
 
