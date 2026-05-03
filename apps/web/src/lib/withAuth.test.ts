@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { hashApiKey } from '@/lib/apiAuth';
+import { createSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
 import { withAuth } from '@/lib/withAuth';
 
 const ORIGINAL_ENV = { ...process.env };
@@ -45,6 +46,31 @@ describe('withAuth', () => {
 
     expect(response.status).toBe(200);
     expect(handler).toHaveBeenCalledOnce();
+  });
+
+  it('uses the logged-in session identity for same-origin browser requests', async () => {
+    const sessionToken = createSessionToken('42');
+    expect(sessionToken).toBeTruthy();
+
+    const handler = vi.fn(async (_req: NextRequest, clientId: string) =>
+      NextResponse.json({ clientId }),
+    );
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/movies', {
+        headers: {
+          Origin: 'http://localhost',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: `__csrf=csrf-token; ${SESSION_COOKIE}=${sessionToken}`,
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledOnce();
+    expect(handler).toHaveBeenCalledWith(expect.any(NextRequest), 'user:42');
+    await expect(response.json()).resolves.toEqual({ clientId: 'user:42' });
   });
 
   it('rejects cross-origin CSRF fallback when API key is missing', async () => {

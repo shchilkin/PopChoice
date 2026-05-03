@@ -24,7 +24,7 @@ This document outlines the security measures and vulnerability management for th
   - [x] Add CSRF protection for state-changing operations (`src/middleware.ts` issues `__csrf` cookie; `withAuth` validates matching header/cookie pair)
   - [x] Add API key authentication for external callers (scrypt-derived key digests via `VALID_API_KEYS`; `Authorization: Bearer` or `X-API-Key` headers)
   - [x] Add request origin validation (same-origin check in `withAuth` using `NEXT_PUBLIC_BASE_URL`)
-  - [ ] Implement session management
+  - [x] Implement session management (`pc_session` signed cookie, `/api/auth/session`, `/api/auth/logout`, and session-aware browser auth fallback)
 
 - [ ] **Request Size & Timeout Management**
   - [ ] Set maximum request body size limits

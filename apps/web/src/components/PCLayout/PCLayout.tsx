@@ -3,8 +3,17 @@
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Suspense, startTransition, useEffect, useState } from 'react';
+import {
+  Suspense,
+  startTransition,
+  useEffect,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react';
 
+import { useAuth } from '@/components/AuthProvider';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
@@ -18,12 +27,14 @@ type NavLink = {
 };
 
 type LayoutNavigationProps = {
+  isAuthenticated: boolean;
   isDark: boolean;
-  toggle: () => void;
+  logout: () => Promise<void>;
   mobileMenuOpen: boolean;
-  setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   navLinks: NavLink[];
+  setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
   t: Translations;
+  toggle: () => void;
 };
 
 function ThemeToggleButton({
@@ -57,12 +68,14 @@ function ThemeToggleButton({
 }
 
 function LayoutNavigationFallback({
+  isAuthenticated,
   isDark,
-  toggle,
+  logout,
   mobileMenuOpen,
-  setMobileMenuOpen,
   navLinks,
+  setMobileMenuOpen,
   t,
+  toggle,
 }: LayoutNavigationProps) {
   return (
     <>
@@ -80,6 +93,18 @@ function LayoutNavigationFallback({
             {link.label}
           </Link>
         ))}
+
+        {isAuthenticated && (
+          <button
+            onClick={() => {
+              void logout();
+            }}
+            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
+            style={{ color: 'var(--pc-t3)', background: 'transparent' }}
+          >
+            {t.nav.logOut}
+          </button>
+        )}
 
         <LanguageSwitcher />
 
@@ -122,12 +147,14 @@ function LayoutNavigationFallback({
 }
 
 function LayoutNavigation({
+  isAuthenticated,
   isDark,
-  toggle,
+  logout,
   mobileMenuOpen,
-  setMobileMenuOpen,
   navLinks,
+  setMobileMenuOpen,
   t,
+  toggle,
 }: LayoutNavigationProps) {
   const pathname = usePathname();
   const currentPath = pathname ?? '';
@@ -159,6 +186,18 @@ function LayoutNavigation({
             </Link>
           );
         })}
+
+        {isAuthenticated && (
+          <button
+            onClick={() => {
+              void logout();
+            }}
+            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
+            style={{ color: 'var(--pc-t3)', background: 'transparent' }}
+          >
+            {t.nav.logOut}
+          </button>
+        )}
 
         <LanguageSwitcher />
 
@@ -240,6 +279,20 @@ function LayoutNavigation({
               </Link>
             );
           })}
+
+          {isAuthenticated && (
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                void logout();
+              }}
+              className="px-3 py-2.5 rounded-xl text-sm text-left transition-colors duration-200"
+              style={{ color: 'var(--pc-t2)', background: 'transparent' }}
+            >
+              {t.nav.logOut}
+            </button>
+          )}
+
           <div className="flex items-center gap-2 pt-1">
             <LanguageSwitcher />
             {!isLanding && (
@@ -263,8 +316,9 @@ function LayoutNavigation({
   );
 }
 
-export function PCLayout({ children }: { children: React.ReactNode }) {
+export function PCLayout({ children }: { children: ReactNode }) {
   const { isDark, toggle } = usePCTheme();
+  const { isAuthenticated, logout } = useAuth();
   const { t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -272,7 +326,12 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
     { href: '/about', label: t.nav.howItWorks },
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/style-guide', label: t.nav.styleGuide },
-    { href: '/register', label: t.nav.signUp },
+    ...(isAuthenticated
+      ? []
+      : [
+          { href: '/login', label: t.nav.logIn },
+          { href: '/register', label: t.nav.signUp },
+        ]),
   ];
 
   return (
@@ -285,7 +344,6 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
         transition: 'background 0.3s, color 0.3s',
       }}
     >
-      {/* Sticky header */}
       <header
         className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-8 py-3"
         style={{
@@ -319,22 +377,26 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
         <Suspense
           fallback={
             <LayoutNavigationFallback
+              isAuthenticated={isAuthenticated}
               isDark={isDark}
-              toggle={toggle}
+              logout={logout}
               mobileMenuOpen={mobileMenuOpen}
-              setMobileMenuOpen={setMobileMenuOpen}
               navLinks={navLinks}
+              setMobileMenuOpen={setMobileMenuOpen}
               t={t}
+              toggle={toggle}
             />
           }
         >
           <LayoutNavigation
+            isAuthenticated={isAuthenticated}
             isDark={isDark}
-            toggle={toggle}
+            logout={logout}
             mobileMenuOpen={mobileMenuOpen}
-            setMobileMenuOpen={setMobileMenuOpen}
             navLinks={navLinks}
+            setMobileMenuOpen={setMobileMenuOpen}
             t={t}
+            toggle={toggle}
           />
         </Suspense>
       </header>
@@ -357,7 +419,8 @@ export function PCLayout({ children }: { children: React.ReactNode }) {
         >
           {t.footer.authorName}
         </a>{' '}
-        — {t.footer.tagline}
+        {' - '}
+        {t.footer.tagline}
       </footer>
     </div>
   );

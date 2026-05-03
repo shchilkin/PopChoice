@@ -1,31 +1,31 @@
 'use client';
 
-import { CheckCircle, UserPlus } from 'lucide-react';
+import { CheckCircle, LogIn } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 
+import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 interface FormState {
   email: string;
   password: string;
-  confirmPassword: string;
 }
 
 interface FieldErrors {
   email?: string;
   password?: string;
-  confirmPassword?: string;
   general?: string;
 }
 
-export default function RegisterPage() {
+export default function LoginPage() {
+  const { isAuthenticated, refreshSession } = useAuth();
   const { t } = useLanguage();
-  const r = t.register;
+  const l = t.login;
 
-  const [form, setForm] = useState<FormState>({ email: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState<FormState>({ email: '', password: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -33,19 +33,12 @@ export default function RegisterPage() {
   function validate(): FieldErrors {
     const errs: FieldErrors = {};
     if (!form.email.trim()) {
-      errs.email = r.errors.emailRequired;
+      errs.email = l.errors.emailRequired;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errs.email = r.errors.emailInvalid;
+      errs.email = l.errors.emailInvalid;
     }
     if (!form.password) {
-      errs.password = r.errors.passwordRequired;
-    } else if (form.password.length < 8) {
-      errs.password = r.errors.passwordTooShort;
-    }
-    if (!form.confirmPassword) {
-      errs.confirmPassword = r.errors.confirmPasswordRequired;
-    } else if (form.password !== form.confirmPassword) {
-      errs.confirmPassword = r.errors.passwordMismatch;
+      errs.password = l.errors.passwordRequired;
     }
     return errs;
   }
@@ -61,33 +54,34 @@ export default function RegisterPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email.trim(), password: form.password }),
       });
 
-      if (res.status === 201) {
+      if (res.status === 200) {
+        await refreshSession();
         setSuccess(true);
         return;
       }
 
       const data = (await res.json()) as { error?: string };
-      if (res.status === 409 || data.error === 'email_taken') {
-        setErrors({ email: r.errors.emailTaken });
+      if (res.status === 401 || data.error === 'invalid_credentials') {
+        setErrors({ general: l.errors.invalidCredentials });
       } else if (res.status === 422) {
-        setErrors({ general: r.errors.generic });
+        setErrors({ general: l.errors.generic });
       } else {
-        setErrors({ general: r.errors.generic });
+        setErrors({ general: l.errors.generic });
       }
     } catch {
-      setErrors({ general: r.errors.generic });
+      setErrors({ general: l.errors.generic });
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (success) {
+  if (success || isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 px-5 py-16">
         <motion.div
@@ -113,15 +107,15 @@ export default function RegisterPage() {
               color: 'var(--pc-t1)',
             }}
           >
-            {r.successTitle}
+            {l.successTitle}
           </h1>
-          <p style={{ color: 'var(--pc-t2)', marginBottom: '2rem' }}>{r.successMessage}</p>
+          <p style={{ color: 'var(--pc-t2)', marginBottom: '2rem' }}>{l.successMessage}</p>
           <Link
             href="/"
             className="inline-block px-6 py-3 rounded-xl text-sm font-semibold transition-colors duration-200"
             style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
           >
-            {r.backToHome}
+            {l.backToHome}
           </Link>
         </motion.div>
       </div>
@@ -142,7 +136,7 @@ export default function RegisterPage() {
             className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
             style={{ background: `${palette.gold}20`, color: 'var(--pc-gold-text)' }}
           >
-            <UserPlus size={22} />
+            <LogIn size={22} />
           </div>
           <h1
             className="mb-2"
@@ -155,9 +149,9 @@ export default function RegisterPage() {
               color: 'var(--pc-t1)',
             }}
           >
-            {r.title}
+            {l.title}
           </h1>
-          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>{r.subtitle}</p>
+          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>{l.subtitle}</p>
         </div>
 
         {/* Form */}
@@ -183,7 +177,7 @@ export default function RegisterPage() {
               className="text-sm font-medium"
               style={{ color: 'var(--pc-t2)' }}
             >
-              {r.emailLabel}
+              {l.emailLabel}
             </label>
             <input
               id="email"
@@ -191,7 +185,7 @@ export default function RegisterPage() {
               autoComplete="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              placeholder={r.emailPlaceholder}
+              placeholder={l.emailPlaceholder}
               className="w-full px-4 py-3 rounded-xl text-sm transition-colors duration-200 outline-none"
               style={{
                 background: 'var(--pc-input-bg, rgba(255,255,255,0.05))',
@@ -213,15 +207,15 @@ export default function RegisterPage() {
               className="text-sm font-medium"
               style={{ color: 'var(--pc-t2)' }}
             >
-              {r.passwordLabel}
+              {l.passwordLabel}
             </label>
             <input
               id="password"
               type="password"
-              autoComplete="new-password"
+              autoComplete="current-password"
               value={form.password}
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              placeholder={r.passwordPlaceholder}
+              placeholder={l.passwordPlaceholder}
               className="w-full px-4 py-3 rounded-xl text-sm transition-colors duration-200 outline-none"
               style={{
                 background: 'var(--pc-input-bg, rgba(255,255,255,0.05))',
@@ -232,36 +226,6 @@ export default function RegisterPage() {
             {errors.password && (
               <p className="text-xs" style={{ color: palette.red }}>
                 {errors.password}
-              </p>
-            )}
-          </div>
-
-          {/* Confirm password */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="confirmPassword"
-              className="text-sm font-medium"
-              style={{ color: 'var(--pc-t2)' }}
-            >
-              {r.confirmPasswordLabel}
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              value={form.confirmPassword}
-              onChange={(e) => setForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-              placeholder={r.confirmPasswordPlaceholder}
-              className="w-full px-4 py-3 rounded-xl text-sm transition-colors duration-200 outline-none"
-              style={{
-                background: 'var(--pc-input-bg, rgba(255,255,255,0.05))',
-                border: `1px solid ${errors.confirmPassword ? palette.red : 'var(--pc-bd2)'}`,
-                color: 'var(--pc-t1)',
-              }}
-            />
-            {errors.confirmPassword && (
-              <p className="text-xs" style={{ color: palette.red }}>
-                {errors.confirmPassword}
               </p>
             )}
           </div>
@@ -277,19 +241,19 @@ export default function RegisterPage() {
               cursor: submitting ? 'not-allowed' : 'pointer',
             }}
           >
-            {submitting ? r.submitting : r.submitButton}
+            {submitting ? l.submitting : l.submitButton}
           </button>
         </form>
 
-        {/* Link to login */}
+        {/* Link to register */}
         <p className="text-center text-sm mt-6" style={{ color: 'var(--pc-t3)' }}>
-          {r.alreadyHaveAccount}{' '}
+          {l.noAccount}{' '}
           <Link
-            href="/login"
+            href="/register"
             className="font-medium transition-colors duration-200"
             style={{ color: 'var(--pc-gold-text)' }}
           >
-            {r.logIn}
+            {l.signUp}
           </Link>
         </p>
       </motion.div>
