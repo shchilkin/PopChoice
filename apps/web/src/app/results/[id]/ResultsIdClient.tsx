@@ -1,0 +1,69 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { use, useEffect, useMemo } from 'react';
+
+import { useRecommendation } from '@/hooks/useRecommendation';
+import { type MovieRecommendation } from '@/utils/client';
+
+import { RecommendationResultsView } from './RecommendationResultsView';
+import { ResultsErrorState } from './ResultsErrorState';
+import { ResultsLoadingState } from './ResultsLoadingState';
+
+export function ResultsIdClient({ params }: { params: Promise<{ id: string }> }) {
+  const routeParams = use(params);
+  const router = useRouter();
+  const id = typeof routeParams.id === 'string' ? routeParams.id : '';
+
+  const { data, isError, refetch, morePicksTimedOut } = useRecommendation(id);
+
+  // Derive movies from the completed poll response — no secondary fetch needed because
+  // poster URLs are fetched during the BullMQ job and stored in recommendation_movies.
+  const movies = useMemo<MovieRecommendation[]>(() => {
+    if (data?.status !== 'completed' || !data.movies) return [];
+    return data.movies.map((m) => ({
+      id: m.id,
+      name: m.name,
+      year: m.year,
+      similarity: m.similarity ?? 0,
+      age_rating: m.age_rating,
+      duration: m.duration,
+      score_rating: m.score_rating,
+      posterURL: m.posterURL,
+      description: m.aiDescription,
+      localizedName: m.localizedName,
+      isMainRecommendation: m.isMainRecommendation,
+      fromTMDB: m.fromTMDB,
+    }));
+  }, [data]);
+
+  useEffect(() => {
+    if (!id) {
+      router.replace('/quiz');
+    }
+  }, [id, router]);
+
+  const status = data?.status;
+
+  if (!id) return null;
+
+  if (isError || status === 'failed') {
+    return <ResultsErrorState onRetry={() => router.push('/quiz')} />;
+  }
+
+  if (!data || status === 'pending' || status === 'processing' || movies.length === 0) {
+    return <ResultsLoadingState status={status} />;
+  }
+
+  return (
+    <RecommendationResultsView
+      movies={movies}
+      usedBroaderSearch={data.usedBroaderSearch ?? false}
+      dbMovieCount={data.dbMovieCount}
+      recommendationSlug={id}
+      morePicksStatus={data.morePicksStatus}
+      morePicksTimedOut={morePicksTimedOut}
+      onMorePicksRequested={refetch}
+    />
+  );
+}

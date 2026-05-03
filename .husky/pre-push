@@ -1,0 +1,4 @@
+#!/bin/sh
+set -e
+
+bash scripts/pre-push-checks.sh

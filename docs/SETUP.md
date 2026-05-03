@@ -36,11 +36,13 @@ VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
 NEXT_PUBLIC_BASE_URL=https://your-app.up.railway.app
 ```
 
+The root `.env` is the source of truth for local development. After you update it, run `npm run copy:env` from the repo root to sync the workspace-level `.env` files used by `apps/web` and the local services.
+
 ## OpenAI Setup
 
 This application uses the OpenAI API to generate embeddings and chat completions.
 
-### Steps:
+### OpenAI Setup Steps
 
 1. **Get your OpenAI API key**
    - Sign up or log in at [OpenAI Platform](https://platform.openai.com/docs/overview)
@@ -57,16 +59,17 @@ This application uses the OpenAI API to generate embeddings and chat completions
 
 This application uses a generic database client abstraction (`src/clients/dbClient.ts`) backed by PostgreSQL via `pgClient.ts` for storing movie embeddings.
 
-### Steps:
+### PostgreSQL Setup Steps
 
 1. **Provision a PostgreSQL database**
    - Use any PostgreSQL provider, e.g. [Railway](https://railway.app), [Neon](https://neon.tech), or a self-hosted instance
 
 2. **Enable the pgvector extension**
-   - Connect to your database and run:
-     ```sql
-     CREATE EXTENSION IF NOT EXISTS vector;
-     ```
+   Connect to your database and run:
+
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
 
 3. **Set up the database schema**
    - Run the SQL from [`db/createDB.sql`](../db/createDB.sql)
@@ -75,10 +78,11 @@ This application uses a generic database client abstraction (`src/clients/dbClie
    - Run the SQL from [`db/match_movies.sql`](../db/match_movies.sql)
 
 5. **Configure environment variables**
-   - Add `DATABASE_URL` to your `.env` file:
-     ```env
-     DATABASE_URL=postgresql://user:password@host:5432/dbname
-     ```
+   Add `DATABASE_URL` to your `.env` file:
+
+   ```env
+   DATABASE_URL=postgresql://user:password@host:5432/dbname
+   ```
 
 6. **Populate the database**
    - Run `npm run populate-db`
@@ -113,15 +117,19 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
 1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
 2. **Set `API_KEY_HMAC_SECRET`** in your environment (e.g. `openssl rand -hex 32`). This secret must stay the same across restarts.
 3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`:
+
    ```ts
    import { hashApiKey } from '@/lib/apiAuth';
    console.log(hashApiKey('your-plaintext-key'));
    ```
+
 4. **Add the hash** to your environment:
+
    ```env
    API_KEY_HMAC_SECRET=<your-derivation-secret>
    VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
    ```
+
 5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
 
 #### Development mode
@@ -157,10 +165,20 @@ Then add to your `.env`:
 REDIS_URL=redis://localhost:6379
 ```
 
+If you are using the repo's local setup flow, run `npm run copy:env` after changing the root `.env` so `apps/web/.env` picks up the same `REDIS_URL`.
+
 Run background workers in a separate terminal:
 
 ```bash
+cd apps/web
 npm run start:workers
+```
+
+Optional queue monitoring dashboard:
+
+```bash
+cd apps/web
+npm run bull-board
 ```
 
 ### Production Redis
@@ -184,7 +202,7 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop) installed and running
 
-### Steps:
+### Local Docker PostgreSQL Steps
 
 1. **Run the setup script**
 
@@ -196,10 +214,32 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 
    Docker automatically runs `db/init/01_schema.sql` and `db/init/02_match_movies.sql` on first start, enabling the `vector` extension, creating the `movies` table, and installing the `match_movies` function.
 
-2. **Populate the database**
+2. **Sync workspace `.env` files**
+
+   ```bash
+   npm run copy:env
+   ```
+
+   This copies the root `.env` into `apps/web/.env` and the local services so the web app, workers, and seed service all use the same credentials.
+
+3. **Populate the database**
+
    ```bash
    npm run populate-db
    ```
+
+4. **Run the app locally**
+
+   ```bash
+   # terminal 1, repo root
+   npm run dev
+
+   # terminal 2, apps/web
+   cd apps/web
+   npm run start:workers
+   ```
+
+   For the async recommendation flow, keep the workers running while you use the app.
 
 > **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
 > To reset the database from scratch, run `npm run cleanup:local-db` (stops containers and removes the volume) then `npm run setup:local-db` again.
@@ -208,17 +248,18 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 
 You can host your PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider).
 
-### Steps:
+### Railway Setup Steps
 
 1. **Create a Railway project**
    - Sign up at [Railway](https://railway.app)
    - Create a new project and add a **PostgreSQL** service
 
 2. **Enable the pgvector extension**
-   - Connect to your database (e.g. via `psql` or the Railway SQL editor) and run:
-     ```sql
-     CREATE EXTENSION IF NOT EXISTS vector;
-     ```
+   Connect to your database (e.g. via `psql` or the Railway SQL editor) and run:
+
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
 
 3. **Set up the database schema**
    - Run the SQL from [`db/createDB.sql`](../db/createDB.sql)
@@ -227,6 +268,7 @@ You can host your PostgreSQL database on [Railway](https://railway.app) (or any 
 4. **Configure environment variables**
    - Copy the `DATABASE_URL` from your Railway dashboard
    - Add it to your `.env` file:
+
      ```env
      DATABASE_URL=postgresql://user:password@host:5432/railway
      ```
@@ -238,7 +280,7 @@ You can host your PostgreSQL database on [Railway](https://railway.app) (or any 
 
 This project includes a development container configuration for consistent development environments.
 
-### Using with VS Code:
+### Using with VS Code
 
 1. **Install prerequisites**
    - Install [Docker](https://www.docker.com/products/docker-desktop)
@@ -253,7 +295,7 @@ This project includes a development container configuration for consistent devel
    - Click "Reopen in Container" when prompted
    - Wait for the container to build and dependencies to install
 
-### Features included:
+### Features Included
 
 - Node.js 24 with npm
 - Git and GitHub CLI pre-installed

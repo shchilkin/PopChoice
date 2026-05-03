@@ -10,7 +10,7 @@ import { useAmbientColor } from '@/hooks/useAmbientColor';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
-import { enhanceMoviesWithPosters, type MovieRecommendation } from '@/utils/client';
+import { type MovieRecommendation } from '@/utils/client';
 
 import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from './components';
 
@@ -206,11 +206,36 @@ export default function ResultsPage() {
 
           const needPosters = mapped.filter((m) => !m.posterURL);
           if (needPosters.length > 0) {
-            const tmdbApiKey = process.env.NEXT_PUBLIC_TMDB_API_KEY;
             try {
-              const enhanced = await enhanceMoviesWithPosters(needPosters, tmdbApiKey);
-              const final = mapped.map((m) => enhanced.find((em) => em.id === m.id) || m);
-              setMovies(final);
+              const res = await fetch('/api/movie-posters', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRF-Token': getCsrfToken(),
+                },
+                body: JSON.stringify({
+                  movies: needPosters.map((m) => ({
+                    id: m.id,
+                    name: m.name,
+                    year: m.year,
+                    tmdbId: m.id < 0 ? -m.id : undefined,
+                  })),
+                }),
+              });
+              if (res.ok) {
+                const { results } = (await res.json()) as {
+                  results: { id: number; posterURL: string | null }[];
+                };
+                const posterMap = new Map(results.map((r) => [r.id, r.posterURL]));
+                const final = mapped.map((m) =>
+                  posterMap.has(m.id) && posterMap.get(m.id)
+                    ? { ...m, posterURL: posterMap.get(m.id)! }
+                    : m,
+                );
+                setMovies(final);
+              } else {
+                setMovies(mapped);
+              }
             } catch {
               setMovies(mapped);
             }

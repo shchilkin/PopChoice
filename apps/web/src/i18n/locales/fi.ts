@@ -198,6 +198,7 @@ export const fi: Translations = {
     morePicksButton: 'Lisää valintoja TMDB:stä',
     morePicksLoading: 'Haetaan lisää…',
     morePicksEmpty: 'Ei enempää tuloksia juuri nyt.',
+    morePicksStalled: 'Kestää liian kauan — yritä myöhemmin uudelleen.',
   },
   about: {
     title: 'Tekoäly, joka ymmärtää makuasi',

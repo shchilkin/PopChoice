@@ -194,6 +194,7 @@ export const en = {
     morePicksButton: 'Get more picks from TMDB',
     morePicksLoading: 'Fetching more picks…',
     morePicksEmpty: 'No more picks available right now.',
+    morePicksStalled: 'Taking too long — try again later.',
   },
   about: {
     title: 'AI that gets your taste',
