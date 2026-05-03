@@ -7,6 +7,7 @@ export const fi: Translations = {
     findAMovie: 'Etsi elokuva',
     signUp: 'Rekisteröidy',
     logIn: 'Kirjaudu sisään',
+    logOut: 'Kirjaudu ulos',
     toggleTheme: 'Vaihda teema',
     switchLanguage: 'Vaihda kieli',
     openMenu: 'Avaa valikko',

@@ -23,6 +23,11 @@ TMDB_API_KEY=your-tmdb-api-key
 # Required when VALID_API_KEYS is set; must stay stable across restarts
 API_KEY_HMAC_SECRET=your-stable-hmac-secret
 
+# Session signing secret for login/logout cookies
+# Optional in development (falls back to API_KEY_HMAC_SECRET, then an ephemeral dev secret)
+# Required in production if users can log in; must stay stable across restarts
+AUTH_SESSION_SECRET=your-stable-session-secret
+
 # Redis (optional) – enables distributed rate limiting and BullMQ background workers
 # When unset, rate limiting is skipped and background seeding is disabled
 REDIS_URL=redis://user:password@host:6379
@@ -275,6 +280,16 @@ You can host your PostgreSQL database on [Railway](https://railway.app) (or any 
 
 5. **Populate the database**
    - Run `npm run populate-db`
+
+### Railway schema note
+
+Railway does not run the local Docker `db/init/*.sql` hooks automatically. The production web container now applies `db/init/*.sql` on startup before `next start`, so the `movies` and `users` tables and the `match_movies` function are created automatically as long as the service has a valid `DATABASE_URL`.
+
+If you need to backfill an existing Railway database manually, run:
+
+```bash
+DATABASE_URL=<your-railway-postgres-url> npm run migrate:db --workspace=apps/web
+```
 
 ## Development Container Setup
 

@@ -7,6 +7,7 @@ export const ru: Translations = {
     findAMovie: 'Найти фильм',
     signUp: 'Регистрация',
     logIn: 'Войти',
+    logOut: 'Выйти',
     toggleTheme: 'Переключить тему',
     switchLanguage: 'Переключить язык',
     openMenu: 'Открыть меню',

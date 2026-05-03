@@ -40,6 +40,8 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/web/.next ./apps/web/.next
 COPY apps/web/public ./apps/web/public
 COPY apps/web/next.config.ts ./apps/web/
+COPY apps/web/scripts ./apps/web/scripts
+COPY db/init ./db/init
 
 EXPOSE 3000
-CMD ["npm", "run", "start", "--workspace=apps/web"]
+CMD ["npm", "run", "start:with-migrations", "--workspace=apps/web"]

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { validateApiKey } from '@/lib/apiAuth';
+import { getSessionFromRequest } from '@/lib/auth/session';
 import logger from '@/lib/logger';
 
 type RouteHandler = (req: NextRequest, clientId: string) => Promise<Response> | Response;
@@ -14,8 +15,9 @@ const CSRF_COOKIE = '__csrf';
  * - **API key** — sent via `Authorization: Bearer <key>` or `X-API-Key: <key>`
  *   and validated against scrypt-derived digests in the `VALID_API_KEYS`
  *   environment variable.
- * - **Browser CSRF path** — when no API key is provided, same-origin browser
- *   requests may authenticate with a matching CSRF cookie/header pair.
+ * - **Browser session path** — when no API key is provided, same-origin browser
+ *   requests may authenticate with a matching CSRF cookie/header pair and an
+ *   optional signed session cookie.
  *
  * The wrapped handler receives a `clientId` string identifying the caller.
  *
@@ -52,6 +54,12 @@ export function withAuth(handler: RouteHandler) {
 
     // 3. Same-origin browser fallback with a valid CSRF pair.
     if (csrfHeader && csrfCookie && isSameOriginBrowserRequest(req)) {
+      const session = getSessionFromRequest(req);
+      if (session) {
+        logger.debug({ userId: session.sub }, 'Auth succeeded via browser session');
+        return handler(req, `user:${session.sub}`);
+      }
+
       logger.debug('Auth succeeded via same-origin CSRF browser fallback');
       return handler(req, 'browser-csrf');
     }

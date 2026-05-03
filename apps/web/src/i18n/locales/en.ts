@@ -5,6 +5,7 @@ export const en = {
     findAMovie: 'Find a movie',
     signUp: 'Sign Up',
     logIn: 'Log In',
+    logOut: 'Log Out',
     toggleTheme: 'Toggle theme',
     switchLanguage: 'Switch language',
     openMenu: 'Open menu',

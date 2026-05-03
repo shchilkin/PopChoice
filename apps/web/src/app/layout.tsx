@@ -1,5 +1,6 @@
 import { Manrope, Oswald } from 'next/font/google';
 
+import { AuthProvider } from '../components/AuthProvider';
 import { PCLayout } from '../components/PCLayout';
 import { ThemeProvider } from '../components/ThemeProvider';
 import { LanguageProvider } from '../i18n';
@@ -97,7 +98,9 @@ export default function RootLayout({
         >
           <LanguageProvider>
             <Providers>
-              <PCLayout>{children}</PCLayout>
+              <AuthProvider>
+                <PCLayout>{children}</PCLayout>
+              </AuthProvider>
             </Providers>
           </LanguageProvider>
         </ThemeProvider>
