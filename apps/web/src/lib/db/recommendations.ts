@@ -10,7 +10,7 @@ import pg from 'pg';
 
 import logger from '@/lib/logger';
 
-import type { PersonFormData } from '@/app/api/movie-recommendation/types';
+import type { PersonFormData } from '@/features/recommendation/types';
 
 const { Pool } = pg;
 
@@ -362,6 +362,18 @@ export async function getRecommendationTMDBExcludeIds(recommendationId: string):
   );
 
   return result.rows.flatMap((row) => (row.tmdb_id ? [-row.tmdb_id] : []));
+}
+
+export async function getRecommendationQuizData(recommendationId: string): Promise<unknown> {
+  const pool = getPool();
+  const result = await pool.query<{ quiz_data: unknown }>(
+    `SELECT quiz_data
+       FROM recommendations
+      WHERE id = $1`,
+    [recommendationId],
+  );
+
+  return result.rows[0]?.quiz_data;
 }
 
 /** Updates the `more_picks_status` column on a recommendation (looked up by internal UUID). */

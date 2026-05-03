@@ -6,7 +6,7 @@ vi.mock('@/clients/dbClient', () => ({
   })),
 }));
 
-vi.mock('@/services', () => ({
+vi.mock('@/integrations/tmdb', () => ({
   IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
 }));
 

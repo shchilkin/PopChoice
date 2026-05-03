@@ -8,12 +8,11 @@ const {
   mockWorkerOn,
   capturedProcessor,
   MockWorker,
-  mockPgQuery,
-  MockPool,
   mockRunMorePicksPipeline,
-  mockInsertMorePicksMovies,
-  mockGetRecommendationTMDBExcludeIds,
-  mockUpdateMorePicksStatus,
+  mockStoreMorePicks,
+  mockGetMorePicksExcludeIds,
+  mockLoadRecommendationQuizData,
+  mockMarkMorePicksStatus,
   mockCreateBullMQConnection,
 } = vi.hoisted(() => {
   const mockWorkerOn = vi.fn();
@@ -32,16 +31,11 @@ const {
     this.on = mockWorkerOn;
   }
 
-  const mockPgQuery = vi.fn();
-  function MockPool(this: { query: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }) {
-    this.query = mockPgQuery;
-    this.end = vi.fn().mockResolvedValue(undefined);
-  }
-
   const mockRunMorePicksPipeline = vi.fn();
-  const mockInsertMorePicksMovies = vi.fn();
-  const mockGetRecommendationTMDBExcludeIds = vi.fn();
-  const mockUpdateMorePicksStatus = vi.fn();
+  const mockStoreMorePicks = vi.fn();
+  const mockGetMorePicksExcludeIds = vi.fn();
+  const mockLoadRecommendationQuizData = vi.fn();
+  const mockMarkMorePicksStatus = vi.fn();
   // Controls whether createBullMQConnection returns a connection or null
   const mockCreateBullMQConnection = vi.fn();
 
@@ -49,12 +43,11 @@ const {
     mockWorkerOn,
     capturedProcessor,
     MockWorker,
-    mockPgQuery,
-    MockPool,
     mockRunMorePicksPipeline,
-    mockInsertMorePicksMovies,
-    mockGetRecommendationTMDBExcludeIds,
-    mockUpdateMorePicksStatus,
+    mockStoreMorePicks,
+    mockGetMorePicksExcludeIds,
+    mockLoadRecommendationQuizData,
+    mockMarkMorePicksStatus,
     mockCreateBullMQConnection,
   };
 });
@@ -66,14 +59,17 @@ vi.mock('bullmq', () => {
   }
   return { Worker: MockWorker, Queue: MockQueue };
 });
-vi.mock('pg', () => ({ default: { Pool: MockPool } }));
 vi.mock('@/app/api/more-tmdb-picks/pipeline', () => ({
   runMorePicksPipeline: mockRunMorePicksPipeline,
 }));
-vi.mock('@/lib/db/recommendations', () => ({
-  getRecommendationTMDBExcludeIds: mockGetRecommendationTMDBExcludeIds,
-  insertMorePicksMovies: mockInsertMorePicksMovies,
-  updateMorePicksStatus: mockUpdateMorePicksStatus,
+vi.mock('@/features/recommendation/morePicksPipeline', () => ({
+  runMorePicksPipeline: mockRunMorePicksPipeline,
+}));
+vi.mock('@/features/recommendation/morePicksPersistence', () => ({
+  getMorePicksExcludeIds: mockGetMorePicksExcludeIds,
+  loadRecommendationQuizData: mockLoadRecommendationQuizData,
+  markMorePicksStatus: mockMarkMorePicksStatus,
+  storeMorePicks: mockStoreMorePicks,
 }));
 vi.mock('@/lib/jobQueue', () => ({
   MORE_PICKS_QUEUE_NAME: 'more-picks',
@@ -114,11 +110,11 @@ describe('createMorePicksWorker', () => {
     vi.stubEnv('REDIS_URL', 'redis://localhost:6379');
     // By default simulate a live connection
     mockCreateBullMQConnection.mockReturnValue({ host: 'localhost' });
-    mockPgQuery.mockReset();
     mockRunMorePicksPipeline.mockReset();
-    mockInsertMorePicksMovies.mockReset();
-    mockGetRecommendationTMDBExcludeIds.mockReset();
-    mockUpdateMorePicksStatus.mockReset();
+    mockStoreMorePicks.mockReset();
+    mockGetMorePicksExcludeIds.mockReset();
+    mockLoadRecommendationQuizData.mockReset();
+    mockMarkMorePicksStatus.mockReset();
     mockWorkerOn.mockReset();
     capturedProcessor.current = null;
   });
@@ -146,47 +142,43 @@ describe('createMorePicksWorker', () => {
     const quizData = { favoriteMovie: 'Inception', newVsClassic: 'new' };
     const movies = [{ id: -1, name: 'Movie A', year: 2020 }];
 
-    mockPgQuery.mockResolvedValueOnce({ rows: [{ quiz_data: quizData }] });
-    mockGetRecommendationTMDBExcludeIds.mockResolvedValueOnce([-321]);
+    mockLoadRecommendationQuizData.mockResolvedValueOnce(quizData);
+    mockGetMorePicksExcludeIds.mockResolvedValueOnce([-321]);
     mockRunMorePicksPipeline.mockResolvedValueOnce(movies);
-    mockInsertMorePicksMovies.mockResolvedValueOnce(undefined);
-    mockUpdateMorePicksStatus.mockResolvedValue(undefined);
+    mockStoreMorePicks.mockResolvedValueOnce(undefined);
+    mockMarkMorePicksStatus.mockResolvedValue(undefined);
 
     createMorePicksWorker();
 
     expect(capturedProcessor.current).not.toBeNull();
     await capturedProcessor.current!(makeJob());
 
-    expect(mockUpdateMorePicksStatus).toHaveBeenCalledWith('rec-uuid', 'processing');
-    expect(mockGetRecommendationTMDBExcludeIds).toHaveBeenCalledWith('rec-uuid');
+    expect(mockMarkMorePicksStatus).toHaveBeenCalledWith('rec-uuid', 'processing');
+    expect(mockGetMorePicksExcludeIds).toHaveBeenCalledWith('rec-uuid');
     expect(mockRunMorePicksPipeline).toHaveBeenCalledWith(quizData, [-321], 2, 'en');
-    expect(mockInsertMorePicksMovies).toHaveBeenCalledWith('rec-uuid', movies);
-    expect(mockUpdateMorePicksStatus).toHaveBeenCalledWith('rec-uuid', 'completed');
+    expect(mockStoreMorePicks).toHaveBeenCalledWith('rec-uuid', movies);
+    expect(mockMarkMorePicksStatus).toHaveBeenCalledWith('rec-uuid', 'completed');
   });
 
   it('marks the job failed and rethrows when pipeline throws', async () => {
     const pipelineError = new Error('TMDB unreachable');
 
-    mockPgQuery.mockResolvedValueOnce({ rows: [{ quiz_data: {} }] });
-    mockGetRecommendationTMDBExcludeIds.mockResolvedValueOnce([]);
+    mockLoadRecommendationQuizData.mockResolvedValueOnce({});
+    mockGetMorePicksExcludeIds.mockResolvedValueOnce([]);
     mockRunMorePicksPipeline.mockRejectedValueOnce(pipelineError);
-    mockUpdateMorePicksStatus.mockResolvedValue(undefined);
+    mockMarkMorePicksStatus.mockResolvedValue(undefined);
 
     createMorePicksWorker();
 
     expect(capturedProcessor.current).not.toBeNull();
     await expect(capturedProcessor.current!(makeJob())).rejects.toThrow('TMDB unreachable');
 
-    expect(mockUpdateMorePicksStatus).toHaveBeenCalledWith(
-      'rec-uuid',
-      'failed',
-      'TMDB unreachable',
-    );
+    expect(mockMarkMorePicksStatus).toHaveBeenCalledWith('rec-uuid', 'failed', 'TMDB unreachable');
   });
 
   it('marks the job failed when quiz_data is not found in DB', async () => {
-    mockPgQuery.mockResolvedValueOnce({ rows: [] }); // no quiz_data row
-    mockUpdateMorePicksStatus.mockResolvedValue(undefined);
+    mockLoadRecommendationQuizData.mockResolvedValueOnce(undefined);
+    mockMarkMorePicksStatus.mockResolvedValue(undefined);
 
     createMorePicksWorker();
 
@@ -195,7 +187,7 @@ describe('createMorePicksWorker', () => {
       'Quiz data not found for recommendation',
     );
 
-    expect(mockUpdateMorePicksStatus).toHaveBeenCalledWith(
+    expect(mockMarkMorePicksStatus).toHaveBeenCalledWith(
       'rec-uuid',
       'failed',
       'Quiz data not found for recommendation',

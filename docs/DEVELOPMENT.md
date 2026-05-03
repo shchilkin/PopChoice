@@ -140,7 +140,7 @@ db/                        # SQL scripts and DB initialization assets
 - `apps/web/src/clients` should own low-level client setup.
 - `apps/web/src/lib` should hold app-local infrastructure helpers, not become a catch-all business layer.
 - `apps/web/src/utils` should stay narrow and reusable, not absorb end-to-end orchestration.
-- `apps/web/src/services` are app-local wrappers around external services.
+- `apps/web/src/integrations` are app-local wrappers around external services.
 - Root `services/*` are standalone background or offline runtimes.
 
 See [BOUNDARIES.md](./BOUNDARIES.md) for the full ownership definitions.

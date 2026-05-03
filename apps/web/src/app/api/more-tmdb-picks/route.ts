@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
+import { runMorePicksPipeline } from '@/features/recommendation/morePicksPipeline';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { withAuth } from '@/lib/withAuth';
-
-import { runMorePicksPipeline } from './pipeline';
 
 const personFormDataSchema = z.object({
   favoriteMovie: z.string().min(1),

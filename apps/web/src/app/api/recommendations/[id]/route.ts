@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getRecommendationWithMovies } from '@/lib/db/recommendations';
+import { getRecommendationRecord } from '@/features/recommendation/persistence';
 import logger from '@/lib/logger';
 import { withAuth } from '@/lib/withAuth';
 
@@ -17,7 +17,7 @@ async function getHandler(
   }
 
   try {
-    const result = await getRecommendationWithMovies(id);
+    const result = await getRecommendationRecord(id);
 
     if (!result) {
       return NextResponse.json({ error: 'Recommendation not found' }, { status: 404 });

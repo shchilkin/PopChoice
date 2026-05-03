@@ -2,7 +2,7 @@ import { Clapperboard, Play, Smile, Sparkles, Zap } from 'lucide-react';
 
 import { palette } from '@/styles/designTokens';
 
-import type { Movie } from '@/app/api/movies/route';
+import type { Movie } from '@/features/movies/catalog';
 import type { MovieRecommendation } from '@/utils/client';
 
 export const MOCK_TABLE_MOVIES: Movie[] = [

@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
+import { getRecommendationInputBlock, normalizePeopleData } from '@/features/recommendation/input';
+import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
+import { apiResponseSchema, requestBodySchema } from '@/features/recommendation/types';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { withAuth } from '@/lib/withAuth';
-import {
-  ALWAYS_BLOCK_CATEGORIES,
-  checkForPromptInjection,
-  judgeForMoviePlatform,
-  moderateInput,
-} from '@/utils/ai/moderation';
-
-import { runRecommendationPipeline } from './pipeline';
-import { apiResponseSchema, requestBodySchema } from './types';
-
-import type { PersonFormData } from './types';
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -36,95 +28,13 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const locale = parseLocaleFromRequest(req);
 
     // Normalize to array format for consistent processing
-    const allPeopleData: PersonFormData[] = Array.isArray(validatedBody)
-      ? validatedBody
-      : [validatedBody];
+    const allPeopleData = normalizePeopleData(validatedBody);
 
     logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
 
-    // Step 0: Protect against prompt injection, then moderate + judge all user inputs.
-    //
-    // Phase A — structural injection check on favoriteMovie and favoriteMovieWhy
-    // (fast regex, no API call). This must run before any LLM sees the text.
-    const injectionDetected = allPeopleData.some(
-      (p) =>
-        checkForPromptInjection(p.favoriteMovie) ||
-        checkForPromptInjection(p.favoriteMovieWhy ?? ''),
-    );
-    if (injectionDetected) {
-      logger.warn('Prompt injection attempt detected in user input');
-      return NextResponse.json(
-        {
-          error:
-            'Your input contains content that cannot be processed. Please revise your preferences and try again.',
-        },
-        { status: 422 },
-      );
-    }
-
-    // Phase B — Moderation API on all fields including the movie title.
-    const textsToModerate = allPeopleData.flatMap((p) =>
-      [
-        p.favoriteMovie,
-        p.newVsClassic,
-        p.tonePreference,
-        p.favoriteMovieWhy,
-        ...p.moodPreference,
-      ].filter((text): text is string => typeof text === 'string' && text.length > 0),
-    );
-    const moderationResult = await moderateInput(textsToModerate);
-
-    if (moderationResult.flagged) {
-      // Phase C — Always-block categories bypass the judge (no movie context justifies these).
-      const hasAlwaysBlockCategory = moderationResult.categories.some((c) =>
-        ALWAYS_BLOCK_CATEGORIES.has(c),
-      );
-      if (hasAlwaysBlockCategory) {
-        logger.warn(
-          { categories: moderationResult.categories },
-          'User input blocked by always-block moderation category',
-        );
-        return NextResponse.json(
-          {
-            error:
-              'Your input contains content that cannot be processed. Please revise your preferences and try again.',
-            flaggedCategories: moderationResult.categories,
-          },
-          { status: 422 },
-        );
-      }
-
-      // Phase D — Judge pattern: a cheap LLM decides if the flagged content is legitimate
-      // movie-platform input. "Kill Bill" flagged for violence is a real film title; the
-      // judge recognises this and returns suitable: true.
-      const labeledInputs = allPeopleData.flatMap((p) => [
-        { field: 'favoriteMovie', value: p.favoriteMovie },
-        { field: 'newVsClassic', value: p.newVsClassic },
-        { field: 'tonePreference', value: p.tonePreference },
-        ...p.moodPreference.map((m) => ({ field: 'moodPreference', value: m })),
-        ...(p.favoriteMovieWhy ? [{ field: 'favoriteMovieWhy', value: p.favoriteMovieWhy }] : []),
-      ]);
-      const judgeResult = await judgeForMoviePlatform(labeledInputs, moderationResult.categories);
-
-      if (!judgeResult.suitable) {
-        logger.warn(
-          { categories: moderationResult.categories },
-          'User input blocked by judge after moderation flag',
-        );
-        return NextResponse.json(
-          {
-            error:
-              'Your input contains content that cannot be processed. Please revise your preferences and try again.',
-            flaggedCategories: moderationResult.categories,
-          },
-          { status: 422 },
-        );
-      }
-
-      logger.info(
-        { categories: moderationResult.categories },
-        'Judge approved content flagged by moderation — proceeding',
-      );
+    const inputBlock = await getRecommendationInputBlock(allPeopleData);
+    if (inputBlock) {
+      return NextResponse.json(inputBlock, { status: 422 });
     }
 
     // Run the full AI pipeline (Steps 0.5–7)

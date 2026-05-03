@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import z from 'zod';
 
-import { getDbClient } from '@/clients/dbClient';
-import { hashPassword } from '@/lib/auth/password';
-import logger from '@/lib/logger';
+import { RegisterUserError, registerSchema, registerUser } from '@/features/auth/register';
 import { applyRateLimit } from '@/lib/rateLimit';
-
-// ---------------------------------------------------------------------------
-// Input schema
-// ---------------------------------------------------------------------------
-
-const registerSchema = z.object({
-  email: z.string().email().max(254),
-  password: z.string().min(8).max(128),
-});
 
 // ---------------------------------------------------------------------------
 // POST handler
@@ -41,33 +29,13 @@ export async function POST(req: NextRequest): Promise<Response> {
     );
   }
 
-  const { email, password } = parsed.data;
-  const normalizedEmail = email.toLowerCase().trim();
-
-  const db = getDbClient();
-  if (!db.isConfigured()) {
-    logger.error('Database not configured — cannot register user.');
-    return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
-  }
-
-  const passwordHash = await hashPassword(password);
-
-  // Let the DB unique index be the authoritative guard — no pre-check SELECT needed.
-  const result = await db
-    .from('users')
-    .insert({ email: normalizedEmail, password_hash: passwordHash })
-    .select('id');
-
-  if (result.error) {
-    // Catch unique-constraint violation race condition
-    if (result.error.message.includes('unique') || result.error.message.includes('duplicate')) {
-      return NextResponse.json({ error: 'email_taken' }, { status: 409 });
+  try {
+    await registerUser(parsed.data);
+    return NextResponse.json({ ok: true }, { status: 201 });
+  } catch (error) {
+    if (error instanceof RegisterUserError) {
+      return NextResponse.json(error.payload, { status: error.status });
     }
-    logger.error({ error: result.error.message }, 'Failed to insert user');
-    return NextResponse.json({ error: 'Service unavailable.' }, { status: 503 });
+    throw error;
   }
-
-  const userId = (result.data?.[0] as { id?: unknown })?.id;
-  logger.info({ userId }, 'New user registered');
-  return NextResponse.json({ ok: true }, { status: 201 });
 }

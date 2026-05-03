@@ -1,6 +1,6 @@
 import { MoviesTable } from './MoviesTable';
 
-import type { Movie } from '@/app/api/movies/route';
+import type { Movie } from '@/features/movies/catalog';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof MoviesTable> = {

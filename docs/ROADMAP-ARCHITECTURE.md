@@ -14,13 +14,13 @@ What is already true:
 - the web app and supporting apps already live under `apps/`
 - background jobs and sync processes already live under root `services/*`
 - a shared package already exists in `packages/shared`
-- some recommendation orchestration has already been extracted into reusable pipeline modules
+- recommendation orchestration now lives in reusable feature-owned modules outside route ownership
 
 The main remaining risks are:
 
 - boundary clarity across app/domain/infrastructure concerns
 - extractability of logic into independently owned modules over time
-- documentation drift between the current workspace layout and older single-app descriptions
+- some API boundaries still retain more orchestration awareness than the target boundary model
 
 ## Status Snapshot
 
@@ -29,17 +29,25 @@ The main remaining risks are:
 - [x] Workspace layout exists: `apps/`, `packages/`, and `services/` are already in place.
 - [x] Shared package extraction has started with `packages/shared` reused by root services.
 - [x] Background service responsibilities are partially separated into `services/movie-discovery`, `services/movie-seed`, and `services/movie-backfill`.
-- [x] Recommendation orchestration is partially extracted via reusable pipeline modules instead of living only inside a single route handler.
+- [x] Recommendation orchestration is extracted into reusable feature-owned modules instead of living only inside route handlers.
 - [x] Some recommendation thresholds/constants are separated into dedicated helper modules instead of being embedded directly in route handlers.
+- [x] Ownership boundaries for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients` are documented in `BOUNDARIES.md`.
+- [x] README and development docs reflect the current workspace layout.
+- [x] App-local external API wrappers now live under `src/integrations`, distinct from root `services/*` runtimes.
+- [x] Shared recommendation input screening and async job orchestration are extracted behind the feature layer.
+- [x] Recommendation thresholds and limits are centralized in a single feature config module.
+- [x] Recommendation persistence and DB row mapping are extracted behind a feature-owned adapter.
+- [x] More-picks persistence and quiz-data loading are extracted behind a feature-owned adapter.
+- [x] The reusable more-picks pipeline is extracted into the recommendation feature layer.
+- [x] The more-picks route and worker now share feature-owned orchestration instead of duplicating queue fallback and processing logic.
+- [x] Movies catalog data access and response types are extracted behind a feature module instead of living in the route file.
+- [x] The register route now delegates user-creation workflow to a feature module instead of owning DB writes directly.
+- [x] Poster utility routes now delegate TMDB fetch and proxy logic through the integration layer instead of owning raw fetch behavior.
+- [x] Recommendation feature modules now import concrete clients directly instead of relying on the broad `@/clients` barrel.
 
 ### Issues Still Present
 
-- [ ] Ownership boundaries for `src/app`, `src/services`, `src/lib`, `src/utils`, and `src/clients` are not documented clearly enough.
-- [ ] Recommendation domain logic still lives under `src/app/api/...` rather than behind a clearer domain-oriented module boundary.
-- [ ] API routes still import infrastructure and orchestration details directly, so several handlers are thicker than they should be.
-- [ ] `src/services` versus root-level `services/*` responsibilities are still ambiguous in docs and naming.
-- [ ] Recommendation-related constants and calibration guidance are not yet fully centralized into one documented source of truth.
-- [ ] Some docs still describe an older root-level `src/` structure, which hides the fact that the repo is already workspace-based.
+- No high-priority boundary issues remain in the current cleanup slice.
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
 
@@ -99,34 +107,34 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ## Priority Items for the Next 30 Days
 
-1. [ ] Write a short boundary definition for `src/app`, `src/services`, `src/lib`, `src/utils`, and `src/clients`.
-2. [ ] Identify and remove the highest-risk cross-layer imports in the recommendation flows.
-3. [ ] Move one end-to-end recommendation flow behind a clearer domain-oriented module boundary outside `src/app/api`.
-4. [ ] Centralize recommendation-related constants and calibration guidance to a single source of truth.
-5. [ ] Document `src/services` vs root-level `services/*` responsibilities clearly.
-6. [ ] Update README and development docs so the documented structure matches the current workspace layout.
+1. [x] Write a short boundary definition for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients`.
+2. [x] Identify and remove the highest-risk cross-layer imports in the recommendation flows.
+3. [x] Move one end-to-end recommendation flow behind a clearer domain-oriented module boundary outside `src/app/api`.
+4. [x] Centralize recommendation-related constants and calibration guidance to a single source of truth.
+5. [x] Separate app-local integrations from root-level `services/*` with explicit naming and documentation.
+6. [x] Update README and development docs so the documented structure matches the current workspace layout.
 
 ## Working Checklist
 
 ### Boundary Cleanup
 
-- [ ] Route handlers validate input, call orchestration, and map responses without owning business logic.
-- [ ] Domain orchestration does not depend on route-local module placement.
-- [ ] Infrastructure concerns stay behind clients, repositories, or queue adapters.
-- [ ] Shared exports remain intentional and do not hide ownership.
+- [x] Route handlers validate input, call orchestration, and map responses without owning business logic in the current API surface.
+- [x] Domain orchestration does not depend on route-local module placement.
+- [x] Infrastructure concerns stay behind clients, repositories, or queue adapters.
+- [x] Shared exports remain intentional and do not hide ownership in cross-boundary code paths.
 
 ### Recommendation Flow
 
 - [x] A reusable recommendation pipeline exists.
-- [ ] Recommendation pipeline ownership is no longer tied to `src/app/api/movie-recommendation`.
-- [ ] Queueing, DB writes, and response mapping are separated cleanly from recommendation decision logic.
-- [ ] Similarity thresholds and related calibration docs point to the same source of truth.
+- [x] Recommendation pipeline ownership is no longer tied to `src/app/api/movie-recommendation`.
+- [x] Queueing, DB writes, and response mapping are separated cleanly from recommendation decision logic.
+- [x] Similarity thresholds and related calibration docs point to the same source of truth.
 
 ### Documentation Alignment
 
-- [ ] README reflects the current `apps/web/src` structure.
-- [ ] Development docs reflect the current `apps/`, `packages/`, and `services/` layout.
-- [ ] Service docs and architecture docs use the same terminology for boundaries and ownership.
+- [x] README reflects the current `apps/web/src` structure.
+- [x] Development docs reflect the current `apps/`, `packages/`, and `services/` layout.
+- [x] Service docs and architecture docs use the same terminology for boundaries and ownership.
 
 ## Non-Goals (For Now)
 

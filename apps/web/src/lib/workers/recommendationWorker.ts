@@ -1,7 +1,11 @@
 import { Worker } from 'bullmq';
 
-import { runRecommendationPipeline } from '@/app/api/movie-recommendation/pipeline';
-import { insertRecommendationMovies, updateRecommendationStatus } from '@/lib/db/recommendations';
+import {
+  completeRecommendationRecord,
+  failRecommendationRecord,
+  markRecommendationProcessing,
+} from '@/features/recommendation/persistence';
+import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
 import {
   RECOMMENDATION_JOB_OPTIONS,
   RECOMMENDATION_QUEUE_NAME,
@@ -28,7 +32,7 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
       logger.info({ recommendationId, jobId: job.id }, 'Recommendation job started');
 
       // Mark as processing
-      await updateRecommendationStatus(recommendationId, 'processing');
+      await markRecommendationProcessing(recommendationId);
 
       try {
         const allPeopleData = Array.isArray(quizData) ? quizData : [quizData];
@@ -36,34 +40,10 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
         // Run the full AI pipeline
         const result = await runRecommendationPipeline(allPeopleData, locale);
 
-        // Persist movies
-        const moviesToInsert = (result.similarMovies ?? []).map((m) => ({
-          id: m.id,
-          name: m.name,
-          year: m.year,
-          similarity: m.similarity,
-          age_rating: m.age_rating,
-          duration: m.duration,
-          score_rating: m.score_rating,
-          posterURL: m.posterURL,
-          aiDescription: m.aiDescription,
-          localizedName: m.localizedName,
-          isMainRecommendation: m.isMainRecommendation ?? false,
-          fromTMDB: m.fromTMDB ?? false,
-        }));
-
-        await insertRecommendationMovies(
-          recommendationId,
-          moviesToInsert,
-          result.usedBroaderSearch ?? false,
-          result.dbMovieCount,
-        );
-
-        // Mark as completed
-        await updateRecommendationStatus(recommendationId, 'completed');
+        const movieCount = await completeRecommendationRecord(recommendationId, result);
 
         logger.info(
-          { recommendationId, jobId: job.id, movieCount: moviesToInsert.length },
+          { recommendationId, jobId: job.id, movieCount },
           'Recommendation job completed',
         );
       } catch (err) {
@@ -71,7 +51,7 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
         logger.error({ err, recommendationId, jobId: job.id }, 'Recommendation job failed');
 
         // Mark as failed — will be overwritten on retry, becomes permanent on last attempt
-        await updateRecommendationStatus(recommendationId, 'failed', message).catch((dbErr) => {
+        await failRecommendationRecord(recommendationId, message).catch((dbErr) => {
           logger.error({ err: dbErr, recommendationId }, 'Failed to update recommendation status');
         });
 
