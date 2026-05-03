@@ -97,7 +97,7 @@ function getExpectedOrigin(req: NextRequest): string {
   return req.nextUrl.origin;
 }
 
-function isSameOriginBrowserRequest(req: NextRequest): boolean {
+export function isSameOriginBrowserRequest(req: NextRequest): boolean {
   const secFetchSite = req.headers.get('sec-fetch-site');
   const secFetchMode = req.headers.get('sec-fetch-mode');
   const originHeader = req.headers.get('origin');

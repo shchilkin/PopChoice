@@ -67,7 +67,12 @@ function makeMockDb(overrides: Record<string, unknown> = {}): DbClient {
 function makeRequest(body: unknown) {
   return new NextRequest('http://localhost/api/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: 'http://localhost',
+      'X-CSRF-Token': 'csrf-token',
+      Cookie: '__csrf=csrf-token',
+    },
     body: JSON.stringify(body),
   });
 }
@@ -88,6 +93,31 @@ describe('POST /api/auth/login', () => {
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+  });
+
+  it('returns 403 when CSRF header is missing', async () => {
+    const req = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://localhost' },
+      body: JSON.stringify(validBody),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 403 when CSRF header does not match cookie', async () => {
+    const req = new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://localhost',
+        'X-CSRF-Token': 'wrong-token',
+        Cookie: '__csrf=csrf-token',
+      },
+      body: JSON.stringify(validBody),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(403);
   });
 
   it('returns 200 on successful login', async () => {
@@ -117,7 +147,12 @@ describe('POST /api/auth/login', () => {
   it('returns 400 when request body is not valid JSON', async () => {
     const req = new NextRequest('http://localhost/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://localhost',
+        'X-CSRF-Token': 'csrf-token',
+        Cookie: '__csrf=csrf-token',
+      },
       body: 'not json',
     });
     const res = await POST(req);

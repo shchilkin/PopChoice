@@ -27,11 +27,18 @@ async function main() {
       .filter((name) => name.endsWith('.sql'))
       .sort((left, right) => left.localeCompare(right));
 
-    for (const fileName of files) {
-      const filePath = path.join(migrationsDir, fileName);
-      const sql = await readFile(filePath, 'utf8');
-      console.log(`[db:migrate] Applying ${fileName}`);
-      await client.query(sql);
+    await client.query('BEGIN');
+    try {
+      for (const fileName of files) {
+        const filePath = path.join(migrationsDir, fileName);
+        const sql = await readFile(filePath, 'utf8');
+        console.log(`[db:migrate] Applying ${fileName}`);
+        await client.query(sql);
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
     }
 
     console.log('[db:migrate] Migrations complete.');

@@ -325,7 +325,7 @@ export function PCLayout({ children }: { children: ReactNode }) {
   const navLinks = [
     { href: '/about', label: t.nav.howItWorks },
     { href: '/available-movies', label: t.nav.availableMovies },
-    { href: '/style-guide', label: t.nav.styleGuide },
+    { href: '/design-system', label: t.nav.styleGuide },
     ...(isAuthenticated
       ? []
       : [
