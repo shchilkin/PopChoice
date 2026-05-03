@@ -1,6 +1,7 @@
 # Development Guide
 
 For ongoing code health reviews, use the **[Maintainability Checklist](./MAINTAINABILITY-CHECKLIST.md)**.
+For ownership rules across the current workspace layout, use **[Architecture Boundaries](./BOUNDARIES.md)**.
 
 ## Prerequisites
 
@@ -110,13 +111,36 @@ To switch to real data, add `DATABASE_URL` to your `.env` file and seed the data
 ## Project Structure
 
 ```text
-src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   └── pages/             # App pages
-├── components/            # Reusable React components
-├── services/              # External API integrations
-└── utils/                 # Utility functions and helpers
-    ├── db/               # Database scripts
-    └── movies/           # Movie data processing
+apps/
+├── web/
+│   └── src/
+│       ├── app/           # Next.js route and page boundaries
+│       ├── clients/       # Low-level infrastructure clients
+│       ├── components/    # Reusable React components
+│       ├── hooks/         # React hooks
+│       ├── i18n/          # Locale support
+│       ├── lib/           # App-local infra helpers and adapters
+│       ├── mocks/         # Mock handlers and test support
+│       ├── services/      # App-local service wrappers
+│       ├── styles/        # Styling and theme assets
+│       └── utils/         # Reusable utility helpers
+├── bull-board/            # Queue monitoring app
+packages/
+└── shared/                # Shared helpers reused by root services
+services/
+├── movie-discovery/       # Scheduled or one-shot TMDB discovery process
+├── movie-seed/            # Database seeding process
+└── movie-backfill/        # Metadata backfill process
+db/                        # SQL scripts and DB initialization assets
 ```
+
+## Boundary Notes
+
+- `apps/web/src/app` should stay focused on route/page boundaries.
+- `apps/web/src/clients` should own low-level client setup.
+- `apps/web/src/lib` should hold app-local infrastructure helpers, not become a catch-all business layer.
+- `apps/web/src/utils` should stay narrow and reusable, not absorb end-to-end orchestration.
+- `apps/web/src/services` are app-local wrappers around external services.
+- Root `services/*` are standalone background or offline runtimes.
+
+See [BOUNDARIES.md](./BOUNDARIES.md) for the full ownership definitions.
