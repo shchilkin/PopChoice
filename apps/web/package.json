@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
-    "migrate:db": "node scripts/migrate-db.mjs",
+    "migrate:db": "node scripts/migrate-db.js",
     "start": "next start",
     "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
     "start:with-migrations": "npm run migrate:db && next start",
