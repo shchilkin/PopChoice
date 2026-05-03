@@ -130,7 +130,8 @@ function LayoutNavigation({
   t,
 }: LayoutNavigationProps) {
   const pathname = usePathname();
-  const isLanding = pathname === '/';
+  const currentPath = pathname ?? '';
+  const isLanding = currentPath === '/';
 
   useEffect(() => {
     startTransition(() => {
@@ -142,7 +143,7 @@ function LayoutNavigation({
     <>
       <nav className="hidden md:flex items-center gap-1">
         {navLinks.map((link) => {
-          const isActive = pathname.startsWith(link.href);
+          const isActive = currentPath.startsWith(link.href);
 
           return (
             <Link
@@ -221,7 +222,7 @@ function LayoutNavigation({
           }}
         >
           {navLinks.map((link) => {
-            const isActive = pathname.startsWith(link.href);
+            const isActive = currentPath.startsWith(link.href);
 
             return (
               <Link
