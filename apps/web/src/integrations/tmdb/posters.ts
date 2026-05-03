@@ -64,7 +64,13 @@ export async function proxyPosterImage(url: string | null): Promise<PosterProxyR
     return { ok: false, status: 403, message: 'Forbidden' };
   }
 
-  const normalizedPathname = decodeURIComponent(parsed.pathname);
+  let normalizedPathname: string;
+  try {
+    normalizedPathname = decodeURIComponent(parsed.pathname);
+  } catch {
+    return { ok: false, status: 400, message: 'Invalid url' };
+  }
+
   if (
     !ALLOWED_PATHNAME.test(parsed.pathname) ||
     normalizedPathname.includes('..') ||

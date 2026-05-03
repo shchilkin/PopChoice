@@ -44,6 +44,14 @@ describe('GET /api/poster-proxy', () => {
     expect(res.status).toBe(403);
   });
 
+  it('returns 400 when the pathname contains invalid percent-encoding', async () => {
+    const url = encodeURIComponent('https://image.tmdb.org/t/p/w500/%ZZposter.jpg');
+    const req = new NextRequest(`http://localhost/api/poster-proxy?url=${url}`);
+    const res = await GET(req);
+
+    expect(res.status).toBe(400);
+  });
+
   it('proxies a valid TMDB image and returns image content', async () => {
     const fakeBuffer = new Uint8Array([1, 2, 3]).buffer;
     global.fetch = vi.fn().mockResolvedValueOnce({

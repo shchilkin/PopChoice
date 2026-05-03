@@ -14,7 +14,9 @@ export async function claimMorePicksRequest(
   return claimMorePicksSlot(slug);
 }
 
-export async function loadRecommendationQuizData(recommendationId: string): Promise<unknown> {
+export async function loadRecommendationQuizData(
+  recommendationId: string,
+): Promise<unknown | undefined> {
   return getRecommendationQuizData(recommendationId);
 }
 

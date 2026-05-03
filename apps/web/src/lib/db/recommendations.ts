@@ -364,7 +364,9 @@ export async function getRecommendationTMDBExcludeIds(recommendationId: string):
   return result.rows.flatMap((row) => (row.tmdb_id ? [-row.tmdb_id] : []));
 }
 
-export async function getRecommendationQuizData(recommendationId: string): Promise<unknown> {
+export async function getRecommendationQuizData(
+  recommendationId: string,
+): Promise<unknown | undefined> {
   const pool = getPool();
   const result = await pool.query<{ quiz_data: unknown }>(
     `SELECT quiz_data
