@@ -57,6 +57,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('[db:migrate] Migration failed:', error.message);
+  console.error('[db:migrate] Migration failed:', error);
   process.exit(1);
 });
