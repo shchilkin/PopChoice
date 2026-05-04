@@ -44,4 +44,4 @@ COPY apps/web/scripts ./apps/web/scripts
 COPY db/init ./db/init
 
 EXPOSE 3000
-CMD ["npm", "run", "start:with-migrations", "--workspace=apps/web"]
+CMD ["npm", "run", "start", "--workspace=apps/web"]

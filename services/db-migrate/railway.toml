@@ -1,0 +1,13 @@
+# railway.toml — db-migrate one-shot service
+#
+# Build context: repo root
+# In the Railway dashboard set:
+#   Service Settings → Build → Dockerfile Path: services/db-migrate/Dockerfile
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "services/db-migrate/Dockerfile"
+
+[deploy]
+# NEVER: runs once on each deploy and exits — does not restart.
+restartPolicyType = "NEVER"
