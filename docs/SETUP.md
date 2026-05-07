@@ -36,10 +36,12 @@ REDIS_URL=redis://user:password@host:6379
 # Required in production; when unset in development, auth is disabled with a warning
 VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
 
-# Public base URL of the app (required behind a reverse proxy such as Railway or Vercel)
+# Public base URL of the app (required behind a reverse proxy such as Coolify, Railway, or Vercel)
 # Used for same-origin CSRF validation; without this, browser API calls will return 401
-NEXT_PUBLIC_BASE_URL=https://your-app.up.railway.app
+NEXT_PUBLIC_BASE_URL=https://popchoice.example.com
 ```
+
+For production migration and self-managed VPS deployment details, see [`docs/DEPLOYMENT-COOLIFY-VPS.md`](./DEPLOYMENT-COOLIFY-VPS.md).
 
 The root `.env` is the source of truth for local development. After you update it, run `npm run copy:env` from the repo root to sync the workspace-level `.env` files used by `apps/web` and the local services.
 
@@ -249,7 +251,7 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 > **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
 > To reset the database from scratch, run `npm run cleanup:local-db` (stops containers and removes the volume) then `npm run setup:local-db` again.
 
-## Railway PostgreSQL Setup
+## Railway PostgreSQL Setup (legacy / optional)
 
 You can host your PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider).
 

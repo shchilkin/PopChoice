@@ -170,6 +170,7 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 - **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
 - **[Architecture Boundaries](./docs/BOUNDARIES.md)** — Ownership rules for app, domain, infrastructure, and shared modules
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
+- **[Coolify VPS Deployment](./docs/DEPLOYMENT-COOLIFY-VPS.md)** — Railway → self-managed VPS migration guide, production checklist, and service/env mapping
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
 - **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** — Practical phased direction for cleaner boundaries and future monorepo evolution
@@ -251,9 +252,17 @@ For detailed development workflows and project structure, see the **[Development
 - [TMDB API Documentation](https://developer.themoviedb.org/docs/getting-started) - The Movie Database API integration
 - [The AI Engineer Path](https://scrimba.com/the-ai-engineer-path-c02v) - Complete AI engineering course
 
-## 🚀 Deploy on Railway
+## 🚀 Deploy on Coolify (Self-Managed VPS)
 
-All production services (web app, Storybook, background workers) are deployed on [Railway](https://railway.app). See [`railway.toml`](./railway.toml) for the service configuration.
+Use **[docs/DEPLOYMENT-COOLIFY-VPS.md](./docs/DEPLOYMENT-COOLIFY-VPS.md)** for the production deployment path:
+
+- Railway → Coolify migration steps
+- Self-hosted PostgreSQL + pgvector + Redis setup
+- Long-running vs one-shot/admin service model
+- Production-readiness checklist, backups, TLS, firewall, and rollback guidance
+- Production compose file: [`docker-compose.coolify.yml`](./docker-compose.coolify.yml)
+
+`railway.toml` is kept as legacy Railway reference during migration.
 
 ---
 

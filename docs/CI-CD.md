@@ -1,5 +1,7 @@
 # CI/CD Documentation
 
+> Deployment target is now documented in [`docs/DEPLOYMENT-COOLIFY-VPS.md`](./DEPLOYMENT-COOLIFY-VPS.md). This document focuses on CI workflows and PR validation.
+
 ## GitHub Actions Workflow
 
 This project uses two GitHub Actions workflow files for pull request validation:
@@ -21,7 +23,7 @@ Both workflows run automatically on pull requests targeting the `development` br
 | `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload |
 | `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests           |
 | `pr.yml`                 | `build`              | Next.js production build verification                            |
-| `pr.yml`                 | `movie-seed-ci`      | TypeScript compilation for `services/movie-seed`                 |
+| `pr.yml`                 | `services-ci`        | Service-level CI (`turbo run test --filter=./services/*`)        |
 | `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                   |
 | `pr.yml`                 | `pr-validation`      | Stable required check that always runs on every PR               |
 | `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`  |
@@ -191,3 +193,9 @@ cd services/movie-discovery && npm run build && npm test
    - Run `cd services/movie-seed && npm run build` locally to reproduce and fix TypeScript errors.
 
 The workflow helps maintain code quality and functionality across all pull requests.
+
+## Deployment notes
+
+- CI runs on pull requests to `development` and validates code quality and buildability.
+- Production deployment is handled separately via Coolify/VPS operations (not via GitHub Actions deploy jobs in this repository).
+- Keep Railway configuration files (`railway.toml`) only as migration reference while moving services to Coolify.

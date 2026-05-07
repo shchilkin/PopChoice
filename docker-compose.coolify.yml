@@ -1,0 +1,165 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: ${WEB_PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      TMDB_API_KEY: ${TMDB_API_KEY:-}
+      NEXT_PUBLIC_TMDB_API_KEY: ${NEXT_PUBLIC_TMDB_API_KEY:-}
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?NEXT_PUBLIC_BASE_URL is required}
+      API_KEY_HMAC_SECRET: ${API_KEY_HMAC_SECRET:?API_KEY_HMAC_SECRET is required}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
+      VALID_API_KEYS: ${VALID_API_KEYS:?VALID_API_KEYS is required}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    expose:
+      - '${WEB_PORT:-3000}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://localhost:${WEB_PORT:-3000}/\",(res)=>process.exit(res.statusCode<500?0:1)).on(\"error\",()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  workers:
+    build:
+      context: .
+      dockerfile: apps/web/workers.Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      TMDB_API_KEY: ${TMDB_API_KEY:?TMDB_API_KEY is required}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  bull-board:
+    build:
+      context: .
+      dockerfile: apps/web/bull-board.Dockerfile
+    restart: unless-stopped
+    profiles: ['admin']
+    environment:
+      NODE_ENV: production
+      PORT: ${BULL_BOARD_PORT:-3001}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+    expose:
+      - '${BULL_BOARD_PORT:-3001}'
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "require(\"http\").get(\"http://localhost:${BULL_BOARD_PORT:-3001}/\",(res)=>process.exit(res.statusCode<500?0:1)).on(\"error\",()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  movie-discovery:
+    build:
+      context: .
+      dockerfile: services/movie-discovery/Dockerfile
+    restart: unless-stopped
+    profiles: ['optional']
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      TMDB_API_KEY: ${TMDB_API_KEY:?TMDB_API_KEY is required}
+      SYNC_SCHEDULE: ${SYNC_SCHEDULE:-0 0 * * 0}
+      TMDB_SOURCES: ${TMDB_SOURCES:-}
+      MAX_PAGES_PER_SOURCE: ${MAX_PAGES_PER_SOURCE:-3}
+      MIN_VOTE_COUNT: ${MIN_VOTE_COUNT:-500}
+      MIN_VOTE_AVERAGE: ${MIN_VOTE_AVERAGE:-6.5}
+      MAX_MOVIES_PER_RUN: ${MAX_MOVIES_PER_RUN:-50}
+      TMDB_LANGUAGE: ${TMDB_LANGUAGE:-en-US}
+      DRY_RUN: ${DISCOVERY_DRY_RUN:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-migrate:
+    build:
+      context: .
+      dockerfile: services/db-migrate/Dockerfile
+    profiles: ['admin-jobs']
+    restart: 'no'
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  movie-seed:
+    build:
+      context: .
+      dockerfile: services/movie-seed/Dockerfile
+    profiles: ['admin-jobs']
+    restart: 'no'
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      MOVIES_FILE_PATH: ${MOVIES_FILE_PATH:-}
+      DRY_RUN: ${MOVIE_SEED_DRY_RUN:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    expose:
+      - '5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--save', '60', '1000']
+    volumes:
+      - redis_data:/data
+    expose:
+      - '6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:
