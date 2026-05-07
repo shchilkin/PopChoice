@@ -134,8 +134,8 @@ Optional:
    - Ensure `NEXT_PUBLIC_BASE_URL` matches the final HTTPS URL exactly.
 
 7. **Run one-shot jobs manually**
-   - Commands below use Docker Compose V2 (`docker compose`).
-   - If your host only has legacy V1, replace each `docker compose` command with `docker-compose`.
+   - Commands below use Docker Compose V2 (`docker compose`) and V2 is the recommended setup.
+   - Legacy V1 (`docker-compose`) is end-of-life; upgrade when possible (fallback syntax is still shown for older hosts).
    - `docker compose -f docker-compose.coolify.yml --profile admin-jobs run --rm db-migrate`
    - `docker compose -f docker-compose.coolify.yml --profile admin-jobs run --rm movie-seed`
    - Run `movie-backfill` as a manual Coolify job when needed (not continuously).
