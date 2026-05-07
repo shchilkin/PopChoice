@@ -122,7 +122,7 @@ Optional:
 
 4. **Create PostgreSQL + pgvector**
    - Start `postgres` from `docker-compose.coolify.yml`.
-   - Ensure `CREATE EXTENSION IF NOT EXISTS vector;` succeeds (covered by `db/init/01_schema.sql`).
+   - Ensure `CREATE EXTENSION IF NOT EXISTS vector;` succeeds (currently defined in `db/init/01_schema.sql`).
 
 5. **Create Redis**
    - Start `redis` from `docker-compose.coolify.yml`.
@@ -134,6 +134,7 @@ Optional:
    - Ensure `NEXT_PUBLIC_BASE_URL` matches the final HTTPS URL exactly.
 
 7. **Run one-shot jobs manually**
+   - Commands below use Docker Compose V2 (`docker compose`). If your host only has legacy V1, replace with `docker-compose`.
    - `docker compose -f docker-compose.coolify.yml --profile admin-jobs run --rm db-migrate`
    - `docker compose -f docker-compose.coolify.yml --profile admin-jobs run --rm movie-seed`
    - Run `movie-backfill` as a manual Coolify job when needed (not continuously).
