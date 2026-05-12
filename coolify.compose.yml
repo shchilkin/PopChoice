@@ -59,7 +59,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'node -e "fetch(''http://127.0.0.1:3000'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+          'node -e "fetch(''http://127.0.0.1:3000/api/health'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
         ]
       interval: 30s
       timeout: 10s
@@ -78,6 +78,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "const pg=require(''pg''); const Redis=require(''ioredis''); const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:2000,max:1}); const redis=new Redis(process.env.REDIS_URL,{maxRetriesPerRequest:null,connectTimeout:2000,lazyConnect:true}); Promise.all([pool.query(''SELECT 1''),redis.connect().then(()=>redis.ping())]).then(()=>process.exit(0)).catch(()=>process.exit(1)).finally(()=>Promise.allSettled([pool.end(),redis.quit()]))"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   bull-board:
     build:
