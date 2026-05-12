@@ -121,7 +121,13 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
 
 1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
 2. **Set `API_KEY_HMAC_SECRET`** in your environment (e.g. `openssl rand -hex 32`). This secret must stay the same across restarts.
-3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`:
+3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`, or generate both values with this command:
+
+   ```bash
+   API_KEY_HMAC_SECRET="$(openssl rand -hex 32)" node -e "const {randomBytes,scryptSync}=require('crypto'); const secret=process.env.API_KEY_HMAC_SECRET; const key=randomBytes(32).toString('hex'); const hash=scryptSync(key, secret, 32, {N:16384,r:8,p:1}).toString('hex'); console.log('API_KEY_HMAC_SECRET='+secret); console.log('PLAINTEXT_API_KEY='+key); console.log('VALID_API_KEYS='+hash)"
+   ```
+
+   Or from application code:
 
    ```ts
    import { hashApiKey } from '@/lib/apiAuth';
@@ -135,7 +141,7 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
    VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
    ```
 
-5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
+5. **Distribute the plaintext key** to your API consumers — they send it in the header; store the digest in the server environment.
 
 #### Development mode
 
