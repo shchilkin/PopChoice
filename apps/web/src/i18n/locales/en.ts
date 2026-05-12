@@ -291,8 +291,8 @@ export const en = {
               why: 'Background job processing for the movie data backfill and discovery pipeline',
             },
             {
-              name: 'Railway',
-              why: 'Cloud platform hosting containerized web app, worker services, and databases',
+              name: 'Coolify',
+              why: 'Self-hosted deployment platform for the containerized web app, worker services, and databases',
             },
             {
               name: 'Turborepo',
@@ -442,12 +442,12 @@ export const en = {
             detail: null,
           },
           {
-            name: 'Railway',
+            name: 'Coolify',
             role: 'Deployment Platform',
             rationale:
-              'The production environment for our multi-service architecture. Railway orchestrates the Next.js app, worker services, PostgreSQL, and Redis in a unified pipeline.',
+              'Runs the production environment for our multi-service architecture on a VPS, orchestrating the Next.js app, worker services, PostgreSQL, and Redis through Docker Compose.',
             detail:
-              "The repository is connected via Railway's GitHub integration, which automatically deploys the monorepo whenever changes are pushed to main.",
+              'The repository is connected through Coolify, which deploys the monorepo to the VPS whenever production changes are shipped.',
           },
           {
             name: 'Turborepo',

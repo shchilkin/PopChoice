@@ -251,9 +251,9 @@ For detailed development workflows and project structure, see the **[Development
 - [TMDB API Documentation](https://developer.themoviedb.org/docs/getting-started) - The Movie Database API integration
 - [The AI Engineer Path](https://scrimba.com/the-ai-engineer-path-c02v) - Complete AI engineering course
 
-## 🚀 Deploy on Railway
+## 🚀 Deploy on Coolify
 
-All production services (web app, Storybook, background workers) are deployed on [Railway](https://railway.app). See [`railway.toml`](./railway.toml) for the service configuration.
+Production is designed to run on a VPS with [Coolify](https://coolify.io) using [`coolify.compose.yml`](./coolify.compose.yml). See the [Coolify deployment guide](./docs/COOLIFY.md) for the stack layout, required secrets, and first-deploy checklist.
 
 ---
 

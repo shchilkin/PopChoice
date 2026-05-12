@@ -1,10 +1,8 @@
 # Build context: repo root
 # docker build -f services/db-migrate/Dockerfile .
 #
-# One-shot Railway job: applies all db/init/*.sql migrations and exits.
-# Configure in Railway dashboard:
-#   • Dockerfile Path: services/db-migrate/Dockerfile
-#   • Restart Policy: never  (Job runs once per deploy)
+# One-shot deployment job: applies all db/init/*.sql migrations and exits.
+# In Coolify this is wired by coolify.compose.yml with restart: "no".
 
 FROM node:24-slim
 
