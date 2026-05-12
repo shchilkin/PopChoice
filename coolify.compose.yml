@@ -1,0 +1,142 @@
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER:-popchoice}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-popchoice}
+  REDIS_URL: redis://redis:6379
+  OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in Coolify}
+  TMDB_API_KEY: ${TMDB_API_KEY:-}
+  NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?Set NEXT_PUBLIC_BASE_URL to the public app URL in Coolify}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  API_KEY_HMAC_SECRET: ${API_KEY_HMAC_SECRET:-}
+  AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:?Set AUTH_SESSION_SECRET in Coolify}
+  VALID_API_KEYS: ${VALID_API_KEYS:-}
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-popchoice}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-popchoice}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    command: ['redis-server', '--appendonly', 'yes']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    command: ['npm', 'run', 'start:with-migrations', '--workspace=apps/web']
+    environment:
+      <<: *app-env
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - '3000'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:3000'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  workers:
+    build:
+      context: .
+      dockerfile: apps/web/workers.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  bull-board:
+    build:
+      context: .
+      dockerfile: apps/web/bull-board.Dockerfile
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - '3000'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:3000/admin/queues'').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  movie-seed:
+    profiles: ['tools']
+    build:
+      context: .
+      dockerfile: services/movie-seed/Dockerfile
+    restart: 'no'
+    environment:
+      <<: *app-env
+      DRY_RUN: ${DRY_RUN:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  movie-discovery:
+    profiles: ['discovery']
+    build:
+      context: .
+      dockerfile: services/movie-discovery/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      SYNC_SCHEDULE: ${SYNC_SCHEDULE:-0 0 * * 0}
+      TMDB_SOURCES: ${TMDB_SOURCES:-}
+      MAX_PAGES_PER_SOURCE: ${MAX_PAGES_PER_SOURCE:-3}
+      MIN_VOTE_COUNT: ${MIN_VOTE_COUNT:-500}
+      MIN_VOTE_AVERAGE: ${MIN_VOTE_AVERAGE:-6.5}
+      MAX_MOVIES_PER_RUN: ${MAX_MOVIES_PER_RUN:-50}
+      TMDB_LANGUAGE: ${TMDB_LANGUAGE:-en-US}
+      DRY_RUN: ${DRY_RUN:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:

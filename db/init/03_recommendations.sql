@@ -30,6 +30,9 @@ UPDATE recommendations
 -- Enforce NOT NULL now that every row has a value
 ALTER TABLE recommendations ALTER COLUMN slug SET NOT NULL;
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_recommendations_slug
+  ON recommendations (slug);
+
 -- Individual movies linked to a recommendation
 CREATE TABLE IF NOT EXISTS recommendation_movies (
   id                      bigserial  PRIMARY KEY,
@@ -49,6 +52,27 @@ CREATE TABLE IF NOT EXISTS recommendation_movies (
   tmdb_duration           integer,
   tmdb_age_rating         text
 );
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS from_tmdb boolean NOT NULL DEFAULT false;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_id bigint;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_name text;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_year integer;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_score_rating float;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_duration integer;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_age_rating text;
 
 CREATE INDEX IF NOT EXISTS idx_recommendation_movies_rec_id
   ON recommendation_movies (recommendation_id);
