@@ -110,8 +110,8 @@ available.
 
 Run this checklist after production deploys and after any infrastructure change:
 
-- `https://pop-choice.shchilkin.dev` loads with a trusted certificate.
-- `https://pop-choice.shchilkin.dev/api/health` returns `200`.
+- `https://your-domain.example` loads with a trusted certificate.
+- `https://your-domain.example/api/health` returns `200`.
 - A quiz submission creates and completes a recommendation.
 - Worker logs show Redis readiness and recommendation job completion.
 - The latest PostgreSQL backup exists in the configured backup destination.
@@ -124,7 +124,7 @@ created from pull requests and reported back to GitHub.
 1. Add a wildcard DNS record pointing at the VPS:
 
    ```txt
-   *.preview.pop-choice.shchilkin.dev A 178.105.60.238
+   *.preview.your-domain.example A <VPS_PUBLIC_IP>
    ```
 
 2. Enable preview deployments for repository members, collaborators, and
@@ -132,7 +132,7 @@ created from pull requests and reported back to GitHub.
 3. Use this preview URL template:
 
    ```txt
-   https://{{pr_id}}.preview.pop-choice.shchilkin.dev:3000
+   https://{{pr_id}}.preview.your-domain.example:3000
    ```
 
 4. Keep previews as full isolated stacks. Each PR should get its own `web`,
