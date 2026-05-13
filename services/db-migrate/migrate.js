@@ -1,6 +1,6 @@
 // Applies all SQL files from db/init/ against the database at DATABASE_URL.
 // Runs all migrations in a single transaction — rolls back everything on failure.
-// Designed to run as a one-shot Railway job before the web app starts.
+// Designed to run as a one-shot deployment job before the web app starts.
 
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';

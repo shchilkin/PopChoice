@@ -36,9 +36,9 @@ REDIS_URL=redis://user:password@host:6379
 # Required in production; when unset in development, auth is disabled with a warning
 VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
 
-# Public base URL of the app (required behind a reverse proxy such as Railway or Vercel)
+# Public base URL of the app (required behind a reverse proxy such as Coolify)
 # Used for same-origin CSRF validation; without this, browser API calls will return 401
-NEXT_PUBLIC_BASE_URL=https://your-app.up.railway.app
+NEXT_PUBLIC_BASE_URL=https://your-domain.example
 ```
 
 The root `.env` is the source of truth for local development. After you update it, run `npm run copy:env` from the repo root to sync the workspace-level `.env` files used by `apps/web` and the local services.
@@ -121,7 +121,13 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
 
 1. **Generate a random key** (e.g. using `openssl rand -hex 32`)
 2. **Set `API_KEY_HMAC_SECRET`** in your environment (e.g. `openssl rand -hex 32`). This secret must stay the same across restarts.
-3. **Hash the key** using the utility exported from `src/lib/apiAuth.ts`:
+3. **Hash the key** using the utility exported from `apps/web/src/lib/apiAuth.ts`, or generate both values with this command:
+
+   ```bash
+   API_KEY_HMAC_SECRET="$(openssl rand -hex 32)" node -e "const {randomBytes,scryptSync}=require('crypto'); const secret=process.env.API_KEY_HMAC_SECRET; const key=randomBytes(32).toString('hex'); const hash=scryptSync(key, secret, 32, {N:16384,r:8,p:1}).toString('hex'); console.log('API_KEY_HMAC_SECRET='+secret); console.log('PLAINTEXT_API_KEY='+key); console.log('VALID_API_KEYS='+hash)"
+   ```
+
+   Or from application code:
 
    ```ts
    import { hashApiKey } from '@/lib/apiAuth';
@@ -135,7 +141,7 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
    VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
    ```
 
-5. **Distribute the plaintext key** to your API consumers — they send it in the header; the server only ever sees the hash.
+5. **Distribute the plaintext key** to your API consumers — they send it in the header; store the digest in the server environment.
 
 #### Development mode
 
@@ -249,46 +255,18 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 > **Note:** The `pgdata` named volume persists data across container restarts. Init scripts only run once on first start.
 > To reset the database from scratch, run `npm run cleanup:local-db` (stops containers and removes the volume) then `npm run setup:local-db` again.
 
-## Railway PostgreSQL Setup
+## Coolify Production Setup
 
-You can host your PostgreSQL database on [Railway](https://railway.app) (or any other PostgreSQL provider).
+For VPS production deployments, use [`coolify.compose.yml`](../coolify.compose.yml).
+It runs PostgreSQL with pgvector, Redis, the web app, workers, Bull Board, and a
+web-start migration step.
 
-### Railway Setup Steps
+See [Deploying PopChoice with Coolify](./COOLIFY.md) for the full setup flow.
 
-1. **Create a Railway project**
-   - Sign up at [Railway](https://railway.app)
-   - Create a new project and add a **PostgreSQL** service
-
-2. **Enable the pgvector extension**
-   Connect to your database (e.g. via `psql` or the Railway SQL editor) and run:
-
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   ```
-
-3. **Set up the database schema**
-   - Run the SQL from [`db/createDB.sql`](../db/createDB.sql)
-   - Run the SQL from [`db/match_movies.sql`](../db/match_movies.sql)
-
-4. **Configure environment variables**
-   - Copy the `DATABASE_URL` from your Railway dashboard
-   - Add it to your `.env` file:
-
-     ```env
-     DATABASE_URL=postgresql://user:password@host:5432/railway
-     ```
-
-5. **Populate the database**
-   - Run `npm run populate-db`
-
-### Railway schema note
-
-Railway does not run the local Docker `db/init/*.sql` hooks automatically. The production web container now applies `db/init/*.sql` on startup before `next start`, so the `movies` and `users` tables and the `match_movies` function are created automatically as long as the service has a valid `DATABASE_URL`.
-
-If you need to backfill an existing Railway database manually, run:
+If you need to migrate an existing production database manually, run:
 
 ```bash
-DATABASE_URL=<your-railway-postgres-url> npm run migrate:db --workspace=apps/web
+DATABASE_URL=<your-production-postgres-url> npm run migrate:db --workspace=apps/web
 ```
 
 ## Development Container Setup

@@ -56,5 +56,23 @@ CREATE TABLE IF NOT EXISTS recommendation_movies (
 ALTER TABLE recommendation_movies
   ADD COLUMN IF NOT EXISTS tmdb_id bigint;
 
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS from_tmdb boolean NOT NULL DEFAULT false;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_name text;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_year integer;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_score_rating float;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_duration integer;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS tmdb_age_rating text;
+
 CREATE INDEX IF NOT EXISTS idx_recommendation_movies_rec_id
   ON recommendation_movies (recommendation_id);

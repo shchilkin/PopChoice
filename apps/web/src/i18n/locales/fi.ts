@@ -295,8 +295,8 @@ export const fi: Translations = {
               why: 'Taustatyöprosessointi elokuvatietojen täydennys- ja löytämisputkea varten',
             },
             {
-              name: 'Railway',
-              why: 'Pilvisovellusalusta kontitetulle web-sovellukselle, worker-palveluille ja tietokannoille',
+              name: 'Coolify',
+              why: 'Itse ylläpidetty julkaisualusta kontitetulle web-sovellukselle, worker-palveluille ja tietokannoille',
             },
             {
               name: 'Turborepo',
@@ -446,12 +446,12 @@ export const fi: Translations = {
             detail: null,
           },
           {
-            name: 'Railway',
+            name: 'Coolify',
             role: 'Käyttöönottofoorumi',
             rationale:
-              'Tuotantoympäristö monisovellusarkkitehtuurillemme. Railway orkestroi Next.js-sovelluksen, worker-palvelut, PostgreSQL:n ja Redisin yhtenäisessä putkilinjassa.',
+              'Ajaa monipalveluarkkitehtuurin tuotantoympäristöä VPS-palvelimella ja orkestroi Next.js-sovelluksen, worker-palvelut, PostgreSQL:n ja Redisin Docker Composen avulla.',
             detail:
-              'Repositorio on yhdistetty Railwayn GitHub-integraation kautta, joka käyttää automaattisesti monorepon aina kun muutoksia työnnetään päähaaraan.',
+              'Repositorio on yhdistetty Coolifyn kautta, joka julkaisee monorepon VPS-palvelimelle aina kun tuotantomuutokset toimitetaan.',
           },
           {
             name: 'Turborepo',
