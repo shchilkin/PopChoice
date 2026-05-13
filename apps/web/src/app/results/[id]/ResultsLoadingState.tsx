@@ -7,10 +7,35 @@ import { FilmReel } from '@/app/loading/components/FilmReel';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
-export function ResultsLoadingState({ status }: { status?: string }) {
+import type { RecommendationStage } from '@/lib/db/recommendations';
+
+const STAGE_ORDER: RecommendationStage[] = [
+  'queued',
+  'preparing',
+  'embedding',
+  'local-search',
+  'tmdb-search',
+  'ai-ranking',
+  'posters',
+  'descriptions',
+  'complete',
+];
+
+function getStageProgress(stage: RecommendationStage): number {
+  const index = STAGE_ORDER.indexOf(stage);
+  if (index < 0) return 10;
+  return Math.round(((index + 1) / STAGE_ORDER.length) * 100);
+}
+
+export function ResultsLoadingState({
+  status,
+  stage = 'queued',
+}: {
+  status?: string;
+  stage?: RecommendationStage;
+}) {
   const { t } = useLanguage();
   const [tipIndex, setTipIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -19,13 +44,8 @@ export function ResultsLoadingState({ status }: { status?: string }) {
     return () => clearInterval(interval);
   }, [t.loading.tips.length]);
 
-  useEffect(() => {
-    const target = status === 'processing' ? 85 : 20;
-    const interval = setInterval(() => {
-      setProgress((value) => (value >= target ? target : value + 1));
-    }, 80);
-    return () => clearInterval(interval);
-  }, [status]);
+  const progress = getStageProgress(stage);
+  const stageLabel = t.loading.stages[stage] ?? t.loading.stages.queued;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
@@ -52,6 +72,10 @@ export function ResultsLoadingState({ status }: { status?: string }) {
         >
           {t.loading.title}
         </h2>
+
+        <p className="mb-4" style={{ color: 'var(--pc-gold-text)', fontSize: '0.88rem' }}>
+          {stageLabel}
+        </p>
 
         <div className="h-12 mb-8 flex items-center justify-center">
           <AnimatePresence mode="wait">
@@ -83,7 +107,7 @@ export function ResultsLoadingState({ status }: { status?: string }) {
             />
           </div>
           <p className="mt-2 text-right" style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>
-            {status === 'processing' ? t.loading.title : ''}
+            {status === 'processing' ? t.loading.realProgressLabel : t.loading.queuedLabel}
           </p>
         </div>
       </motion.div>

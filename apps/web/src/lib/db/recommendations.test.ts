@@ -42,6 +42,7 @@ import {
   insertMorePicksMovies,
   insertRecommendationMovies,
   updateMorePicksStatus,
+  updateRecommendationStage,
 } from './recommendations';
 
 import type { MovieRowToInsert } from './recommendations';
@@ -180,6 +181,31 @@ describe('updateMorePicksStatus', () => {
 
     const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(params).toContain(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateRecommendationStage
+// ---------------------------------------------------------------------------
+
+describe('updateRecommendationStage', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({ rows: [] });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('updates the recommendation stage without changing status', async () => {
+    await updateRecommendationStage('rec-id', 'embedding');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('UPDATE recommendations SET stage = $1');
+    expect(params).toEqual(['embedding', 'rec-id']);
   });
 });
 
@@ -340,6 +366,7 @@ describe('getRecommendationWithMovies', () => {
           {
             id: 'rec-id',
             status: 'completed',
+            stage: 'complete',
             error: null,
             used_broader_search: false,
             db_movie_count: 12,
@@ -378,5 +405,6 @@ describe('getRecommendationWithMovies', () => {
     const result = await getRecommendationWithMovies('slug-123');
 
     expect(result?.movies[0]?.id).toBe(-321);
+    expect(result?.stage).toBe('complete');
   });
 });

@@ -33,6 +33,18 @@ function getPool(): InstanceType<typeof Pool> {
 
 export type RecommendationStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
+export type RecommendationStage =
+  | 'queued'
+  | 'preparing'
+  | 'embedding'
+  | 'local-search'
+  | 'tmdb-search'
+  | 'ai-ranking'
+  | 'posters'
+  | 'descriptions'
+  | 'complete'
+  | 'failed';
+
 export interface RecommendationMovie {
   id: number;
   name: string;
@@ -50,6 +62,7 @@ export interface RecommendationMovie {
 
 export interface RecommendationWithMovies {
   status: RecommendationStatus;
+  stage: RecommendationStage;
   error: string | null;
   movies: RecommendationMovie[];
   usedBroaderSearch?: boolean;
@@ -83,7 +96,7 @@ export async function createRecommendation(
   const pool = getPool();
   const slug = nanoid(12);
   const result = await pool.query<{ id: string; slug: string }>(
-    `INSERT INTO recommendations (status, quiz_data, slug) VALUES ('pending', $1, $2) RETURNING id, slug`,
+    `INSERT INTO recommendations (status, stage, quiz_data, slug) VALUES ('pending', 'queued', $1, $2) RETURNING id, slug`,
     [JSON.stringify(quizData), slug],
   );
   const row = result.rows[0];
@@ -102,10 +115,25 @@ export async function updateRecommendationStatus(
 ): Promise<void> {
   const pool = getPool();
   const completedAt = status === 'completed' ? new Date() : null;
+  const stage: RecommendationStage | null =
+    status === 'completed' ? 'complete' : status === 'failed' ? 'failed' : null;
   await pool.query(
-    `UPDATE recommendations SET status = $1, error = $2, completed_at = $3 WHERE id = $4`,
-    [status, error ?? null, completedAt, id],
+    `UPDATE recommendations
+        SET status = $1,
+            error = $2,
+            completed_at = $3,
+            stage = COALESCE($4, stage)
+      WHERE id = $5`,
+    [status, error ?? null, completedAt, stage, id],
   );
+}
+
+export async function updateRecommendationStage(
+  id: string,
+  stage: RecommendationStage,
+): Promise<void> {
+  const pool = getPool();
+  await pool.query(`UPDATE recommendations SET stage = $1 WHERE id = $2`, [stage, id]);
 }
 
 // ---------------------------------------------------------------------------
@@ -187,12 +215,16 @@ export async function getRecommendationWithMovies(
     id: string;
     status: RecommendationStatus;
     error: string | null;
+    stage: RecommendationStage | null;
     used_broader_search: boolean | null;
     db_movie_count: number | null;
     quiz_data: unknown;
     more_picks_status: string | null;
   }>(
-    `SELECT id, status, error, used_broader_search, db_movie_count, quiz_data, more_picks_status FROM recommendations WHERE slug = $1`,
+    `SELECT
+       id, status, error, stage, used_broader_search, db_movie_count, quiz_data, more_picks_status
+       FROM recommendations
+      WHERE slug = $1`,
     [slug],
   );
 
@@ -202,6 +234,7 @@ export async function getRecommendationWithMovies(
   if (rec.status !== 'completed') {
     return {
       status: rec.status,
+      stage: rec.stage ?? 'queued',
       error: rec.error,
       movies: [],
       usedBroaderSearch: rec.used_broader_search ?? false,
@@ -297,6 +330,7 @@ export async function getRecommendationWithMovies(
 
   return {
     status: rec.status,
+    stage: rec.stage ?? 'complete',
     error: rec.error,
     movies,
     usedBroaderSearch: rec.used_broader_search ?? false,

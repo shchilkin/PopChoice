@@ -28,6 +28,7 @@ import {
 } from './tmdb';
 
 import type { ApiResponse, PersonFormData } from './types';
+import type { RecommendationStage } from '@/lib/db/recommendations';
 import type { Locale } from '@/lib/locale';
 
 const MOVIE_SEED_ENQUEUE_TIMEOUT_MS = 1500;
@@ -84,9 +85,19 @@ async function withTimeout<T>(
 export async function runRecommendationPipeline(
   allPeopleData: PersonFormData[],
   locale: Locale,
+  options: { onStageChange?: (stage: RecommendationStage) => Promise<void> | void } = {},
 ): Promise<ApiResponse> {
+  async function emitStage(stage: RecommendationStage): Promise<void> {
+    try {
+      await options.onStageChange?.(stage);
+    } catch (err) {
+      logger.warn({ err, stage }, 'Failed to update recommendation stage');
+    }
+  }
+
   // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM,
   // while the DB movie count is fetched in parallel (both are independent of each other).
+  await emitStage('preparing');
   const [refinedQueryTags, dbMovieCountResult] = await Promise.all([
     refineQueryWithLLM(allPeopleData),
     (async () => {
@@ -102,10 +113,12 @@ export async function runRecommendationPipeline(
   ]);
 
   // Step 1: Create embedding
+  await emitStage('embedding');
   const embedding = await createEmbedding(allPeopleData, refinedQueryTags ?? undefined);
   logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
 
   // Step 2: Find similar movies (local vector search)
+  await emitStage('local-search');
   let similarMovies = await getSimilarMovies(embedding);
 
   // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
@@ -114,6 +127,7 @@ export async function runRecommendationPipeline(
   const needsTMDBFallback = shouldFallBackToTMDB(similarMovies);
 
   if (needsTMDBFallback) {
+    await emitStage('tmdb-search');
     logger.info(
       { highQualityLocal: highQualityLocal.length, threshold: SIMILARITY_THRESHOLD },
       'Local results below quality threshold — trying TMDB fallback',
@@ -205,10 +219,12 @@ export async function runRecommendationPipeline(
   }
 
   // Step 4: Get recommendation from OpenAI
+  await emitStage('ai-ranking');
   const responseMessage = await getRecommendation(similarMovies, locale);
   logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
 
   // Step 5: Get localized poster + name for main recommendation
+  await emitStage('posters');
   const { posterURL } = await getMovieInfo(responseMessage.title, locale);
 
   // Step 6: Enhance similar movies with poster URLs and localized names (in batches)
@@ -216,6 +232,7 @@ export async function runRecommendationPipeline(
   const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies, locale);
 
   // Step 7: Generate AI descriptions for each movie
+  await emitStage('descriptions');
   logger.info('Generating personalized AI descriptions for each movie');
   const moviesWithDescriptions = await generateMovieDescriptions(
     enhancedSimilarMovies,

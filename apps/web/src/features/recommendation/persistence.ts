@@ -2,11 +2,16 @@ import {
   createRecommendation,
   getRecommendationWithMovies,
   insertRecommendationMovies,
+  updateRecommendationStage,
   updateRecommendationStatus,
 } from '@/lib/db/recommendations';
 
 import type { ApiResponse, RecommendationRequestBody } from './types';
-import type { MovieRowToInsert, RecommendationWithMovies } from '@/lib/db/recommendations';
+import type {
+  MovieRowToInsert,
+  RecommendationStage,
+  RecommendationWithMovies,
+} from '@/lib/db/recommendations';
 
 export async function createRecommendationRecord(
   quizData: RecommendationRequestBody,
@@ -22,6 +27,13 @@ export async function getRecommendationRecord(
 
 export async function markRecommendationProcessing(recommendationId: string): Promise<void> {
   await updateRecommendationStatus(recommendationId, 'processing');
+}
+
+export async function markRecommendationStage(
+  recommendationId: string,
+  stage: RecommendationStage,
+): Promise<void> {
+  await updateRecommendationStage(recommendationId, stage);
 }
 
 export async function completeRecommendationRecord(

@@ -3,6 +3,7 @@ import { Worker } from 'bullmq';
 import {
   completeRecommendationRecord,
   failRecommendationRecord,
+  markRecommendationStage,
   markRecommendationProcessing,
 } from '@/features/recommendation/persistence';
 import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
@@ -38,7 +39,9 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
         const allPeopleData = Array.isArray(quizData) ? quizData : [quizData];
 
         // Run the full AI pipeline
-        const result = await runRecommendationPipeline(allPeopleData, locale);
+        const result = await runRecommendationPipeline(allPeopleData, locale, {
+          onStageChange: (stage) => markRecommendationStage(recommendationId, stage),
+        });
 
         const movieCount = await completeRecommendationRecord(recommendationId, result);
 

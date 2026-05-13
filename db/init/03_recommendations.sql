@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   slug                text        UNIQUE NOT NULL,
   status              text        NOT NULL DEFAULT 'pending',
+  stage               text        NOT NULL DEFAULT 'queued',
   quiz_data           jsonb       NOT NULL,
   error               text,
   created_at          timestamptz NOT NULL DEFAULT now(),
@@ -21,6 +22,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
 -- Idempotent column additions for databases created before slug / more_picks_status were added
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS slug             text;
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS more_picks_status text;
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS stage             text NOT NULL DEFAULT 'queued';
 
 -- Back-fill slug for any legacy rows that pre-date the column
 UPDATE recommendations

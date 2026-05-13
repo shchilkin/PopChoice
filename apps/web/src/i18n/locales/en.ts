@@ -147,6 +147,24 @@ export const en = {
   loading: {
     title: 'Finding your perfect pick',
     errorTitle: 'Oops…',
+    submitBridgeEyebrow: 'Quiz complete',
+    submitBridgeTitle: 'Starting your search',
+    submitBridgeBody:
+      'We are creating your recommendation now. The next screen will track the real job as it runs.',
+    queuedLabel: 'Waiting for the recommendation worker',
+    realProgressLabel: 'Live recommendation progress',
+    stages: {
+      queued: 'Queued for processing',
+      preparing: 'Reading your taste profile',
+      embedding: 'Creating your taste embedding',
+      'local-search': 'Searching the curated movie library',
+      'tmdb-search': 'Expanding the search with TMDB',
+      'ai-ranking': 'Choosing the strongest matches',
+      posters: 'Fetching poster and title details',
+      descriptions: 'Writing personalized explanations',
+      complete: 'Finalizing your picks',
+      failed: 'Recommendation failed',
+    },
     tips: [
       'Decoding your cinematic DNA… 🧠',
       'Scanning 400+ curated films for the perfect match… 🎬',

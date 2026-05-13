@@ -18,6 +18,7 @@ import {
   MoodStep,
   QuizIntro,
   QuizNavigation,
+  QuizSubmittingState,
   ToneStep,
 } from './components';
 import { slideVariants, toApiFormat } from './constants';
@@ -77,6 +78,7 @@ export default function QuizPage() {
 
         if (!res.ok) {
           // If the server can't process the quiz data, go back to quiz
+          submittingRef.current = false;
           send({ type: 'BACK' });
           return;
         }
@@ -85,6 +87,7 @@ export default function QuizPage() {
         router.push(`/results/${id}`);
       } catch {
         // Network error — send the machine back so the user can retry
+        submittingRef.current = false;
         send({ type: 'BACK' });
       }
     }
@@ -136,8 +139,8 @@ export default function QuizPage() {
     );
   }
 
-  // ── SUBMITTING ── redirect is in flight via useEffect above
-  if (state.matches('submitting')) return null;
+  // ── SUBMITTING ── recommendation creation is in flight via useEffect above
+  if (state.matches('submitting')) return <QuizSubmittingState />;
 
   // ── BETWEEN PERSONS ──
   if (state.matches('betweenPersons')) {
