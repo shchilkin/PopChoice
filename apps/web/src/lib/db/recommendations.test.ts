@@ -42,6 +42,7 @@ import {
   insertMorePicksMovies,
   insertRecommendationMovies,
   updateMorePicksStatus,
+  updateRecommendationStatus,
   updateRecommendationStage,
 } from './recommendations';
 
@@ -181,6 +182,52 @@ describe('updateMorePicksStatus', () => {
 
     const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(params).toContain(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateRecommendationStatus
+// ---------------------------------------------------------------------------
+
+describe('updateRecommendationStatus', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({ rows: [] });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('sets stage to complete when recommendation completes', async () => {
+    await updateRecommendationStatus('rec-id', 'completed');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('stage = COALESCE($4, stage)');
+    expect(params[0]).toBe('completed');
+    expect(params[3]).toBe('complete');
+    expect(params[4]).toBe('rec-id');
+  });
+
+  it('sets stage to failed when recommendation fails', async () => {
+    await updateRecommendationStatus('rec-id', 'failed', 'pipeline failed');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[0]).toBe('failed');
+    expect(params[1]).toBe('pipeline failed');
+    expect(params[3]).toBe('failed');
+  });
+
+  it('preserves the current stage for non-terminal statuses', async () => {
+    await updateRecommendationStatus('rec-id', 'processing');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[0]).toBe('processing');
+    expect(params[3]).toBeNull();
   });
 });
 
