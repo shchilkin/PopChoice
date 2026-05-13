@@ -33,6 +33,7 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY apps/web/tsconfig.json ./apps/web/
+COPY apps/web/scripts/coolify-runtime-env.cjs ./apps/web/scripts/
 COPY apps/web/src/ ./apps/web/src/
 
 EXPOSE 3000

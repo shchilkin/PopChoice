@@ -54,6 +54,7 @@ services:
       ]
     environment:
       <<: *app-env
+      NODE_OPTIONS: --require /app/apps/web/scripts/coolify-runtime-env.cjs
       PORT: 3000
       HOSTNAME: 0.0.0.0
     depends_on:
@@ -87,6 +88,7 @@ services:
       ]
     environment:
       <<: *app-env
+      NODE_OPTIONS: --require /app/apps/web/scripts/coolify-runtime-env.cjs
     depends_on:
       db:
         condition: service_healthy

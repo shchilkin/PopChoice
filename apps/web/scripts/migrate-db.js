@@ -23,7 +23,7 @@ const transientConnectionCodes = new Set([
 ]);
 
 async function main() {
-  const databaseUrl = (await resolveDatabaseUrl()) ?? process.env.DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL ?? (await resolveDatabaseUrl());
   if (!databaseUrl) {
     console.warn('[db:migrate] DATABASE_URL is not set, skipping migrations.');
     return;
