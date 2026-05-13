@@ -124,6 +124,11 @@ The endpoint returns `200` only when the Next.js app can reach both PostgreSQL
 and Redis. It returns a sanitized `503` response when either dependency is not
 available.
 
+The Compose file uses Coolify's `SERVICE_NAME_DB` and `SERVICE_NAME_REDIS`
+variables with local fallbacks to build internal connection URLs. This matters
+for preview deployments because Coolify can vary service names per preview
+stack; plain Docker Compose still falls back to `db` and `redis`.
+
 ## Post-deploy smoke checklist
 
 Run this checklist after production deploys and after any infrastructure change:
@@ -186,6 +191,12 @@ then `POSTGRES_PASSWORD` did not reach the preview stack. Check the Compose
 resource's environment variables, not only shared variables, and delete the
 failed preview stack before redeploying so PostgreSQL initializes from a clean
 volume with the password present.
+
+If `web` repeatedly logs `getaddrinfo EAI_AGAIN db` while the preview
+PostgreSQL container is healthy, the app is trying to resolve the plain Compose
+service name instead of Coolify's preview-specific service name. Verify the
+preview has picked up the latest compose file and that `DATABASE_URL` resolves
+through `SERVICE_NAME_DB`.
 
 ## Seeding movie data
 
