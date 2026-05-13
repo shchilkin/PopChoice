@@ -3,6 +3,8 @@ x-app-env: &app-env
   POSTGRES_USER: ${POSTGRES_USER:-popchoice}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?missing}
   POSTGRES_DB: ${POSTGRES_DB:-popchoice}
+  SERVICE_NAME_DB: ${SERVICE_NAME_DB:-db}
+  SERVICE_NAME_REDIS: ${SERVICE_NAME_REDIS:-redis}
   DATABASE_URL: postgresql://${POSTGRES_USER:-popchoice}:${POSTGRES_PASSWORD:?missing}@${SERVICE_NAME_DB:-db}:5432/${POSTGRES_DB:-popchoice}
   REDIS_URL: redis://${SERVICE_NAME_REDIS:-redis}:6379
   OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in Coolify}
@@ -125,6 +127,7 @@ services:
         'export REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec node_modules/.bin/tsx apps/web/scripts/bull-board.ts',
       ]
     environment:
+      SERVICE_NAME_REDIS: ${SERVICE_NAME_REDIS:-redis}
       REDIS_URL: redis://${SERVICE_NAME_REDIS:-redis}:6379
       PORT: 3000
       LOG_LEVEL: ${LOG_LEVEL:-info}
