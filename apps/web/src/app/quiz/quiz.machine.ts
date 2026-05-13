@@ -18,7 +18,8 @@ type QuizEvent =
   | { type: 'NEXT' }
   | { type: 'BACK' }
   | { type: 'UPDATE_PERSON'; updates: Partial<PersonAnswers> }
-  | { type: 'CONTINUE' };
+  | { type: 'CONTINUE' }
+  | { type: 'RESET' };
 
 export const quizMachine = setup({
   types: {
@@ -69,6 +70,12 @@ export const quizMachine = setup({
           i === context.currentPersonIdx ? { ...p, ...event.updates } : p,
         );
       },
+    }),
+    resetQuiz: assign({
+      mode: 'solo' as const,
+      people: [],
+      currentPersonIdx: 0,
+      dir: 1 as const,
     }),
   },
 }).createMachine({
@@ -157,7 +164,9 @@ export const quizMachine = setup({
       },
     },
     submitting: {
-      type: 'final',
+      on: {
+        RESET: { target: 'intro', actions: 'resetQuiz' },
+      },
     },
   },
 });

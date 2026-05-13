@@ -151,16 +151,16 @@ export const fi: Translations = {
   loading: {
     title: 'Etsitään täydellistä valintaasi',
     errorTitle: 'Oho…',
-    submitBridgeEyebrow: 'Testi valmis',
-    submitBridgeTitle: 'Aloitetaan haku',
+    submitBridgeEyebrow: 'Vastaukset tallessa',
+    submitBridgeTitle: 'Etsimme elokuvaa',
     submitBridgeBody:
-      'Luomme suositustasi nyt. Seuraava näkymä seuraa oikeaa taustatyötä sen edetessä.',
-    queuedLabel: 'Odotetaan suositustyöntekijää',
-    realProgressLabel: 'Suosituksen reaaliaikainen eteneminen',
+      'Sovitamme tunnelmasi kokoelmaan ja kokoamme listan, josta ilta on helppo aloittaa.',
+    queuedLabel: 'Lämmitetään projektoria',
+    realProgressLabel: 'Kootaan suosikkilistaasi',
     stages: {
       queued: 'Jonossa käsittelyyn',
       preparing: 'Luetaan makuprofiiliasi',
-      embedding: 'Luodaan makuasi kuvaava embedding',
+      embedding: 'Kartoitetaan elokuvamakuasi',
       'local-search': 'Haetaan kuratoidusta elokuvakirjastosta',
       'tmdb-search': 'Laajennetaan hakua TMDB:llä',
       'ai-ranking': 'Valitaan vahvimmat osumat',

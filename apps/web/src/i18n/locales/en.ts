@@ -147,16 +147,16 @@ export const en = {
   loading: {
     title: 'Finding your perfect pick',
     errorTitle: 'Oops…',
-    submitBridgeEyebrow: 'Quiz complete',
-    submitBridgeTitle: 'Starting your search',
+    submitBridgeEyebrow: 'Answers locked',
+    submitBridgeTitle: 'Finding your film',
     submitBridgeBody:
-      'We are creating your recommendation now. The next screen will track the real job as it runs.',
-    queuedLabel: 'Waiting for the recommendation worker',
-    realProgressLabel: 'Live recommendation progress',
+      'We are matching your vibe against the collection and shaping a shortlist worth the wait.',
+    queuedLabel: 'Warming up the projector',
+    realProgressLabel: 'Building your shortlist',
     stages: {
       queued: 'Queued for processing',
       preparing: 'Reading your taste profile',
-      embedding: 'Creating your taste embedding',
+      embedding: 'Mapping your movie taste',
       'local-search': 'Searching the curated movie library',
       'tmdb-search': 'Expanding the search with TMDB',
       'ai-ranking': 'Choosing the strongest matches',

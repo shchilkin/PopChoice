@@ -154,16 +154,16 @@ export const ru: Translations = {
   loading: {
     title: 'Ищем ваш идеальный фильм',
     errorTitle: 'Ой…',
-    submitBridgeEyebrow: 'Тест завершён',
-    submitBridgeTitle: 'Начинаем поиск',
+    submitBridgeEyebrow: 'Ответы приняты',
+    submitBridgeTitle: 'Подбираем фильм',
     submitBridgeBody:
-      'Мы создаём вашу рекомендацию. На следующем экране будет показан реальный ход фоновой задачи.',
-    queuedLabel: 'Ждём обработчик рекомендаций',
-    realProgressLabel: 'Реальный прогресс рекомендации',
+      'Сверяем ваш вкус с коллекцией и собираем подборку, с которой приятно начать вечер.',
+    queuedLabel: 'Готовим проектор',
+    realProgressLabel: 'Собираем вашу подборку',
     stages: {
       queued: 'В очереди на обработку',
       preparing: 'Читаем ваш вкусовой профиль',
-      embedding: 'Создаём embedding вашего вкуса',
+      embedding: 'Собираем карту вашего вкуса',
       'local-search': 'Ищем в кураторской базе фильмов',
       'tmdb-search': 'Расширяем поиск через TMDB',
       'ai-ranking': 'Выбираем самые сильные совпадения',

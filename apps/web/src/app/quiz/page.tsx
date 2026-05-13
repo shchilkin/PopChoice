@@ -85,6 +85,7 @@ export default function QuizPage() {
 
         const { id } = (await res.json()) as { id: string };
         router.push(`/results/${id}`);
+        send({ type: 'RESET' });
       } catch {
         // Network error — send the machine back so the user can retry
         submittingRef.current = false;
