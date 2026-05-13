@@ -1,5 +1,8 @@
 x-app-env: &app-env
   NODE_ENV: production
+  POSTGRES_USER: ${POSTGRES_USER:-popchoice}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?missing}
+  POSTGRES_DB: ${POSTGRES_DB:-popchoice}
   DATABASE_URL: postgresql://${POSTGRES_USER:-popchoice}:${POSTGRES_PASSWORD:?missing}@${SERVICE_NAME_DB:-db}:5432/${POSTGRES_DB:-popchoice}
   REDIS_URL: redis://${SERVICE_NAME_REDIS:-redis}:6379
   OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in Coolify}
@@ -43,7 +46,12 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
     restart: unless-stopped
-    command: ['npm', 'run', 'start:with-migrations', '--workspace=apps/web']
+    command:
+      [
+        'sh',
+        '-lc',
+        'export DATABASE_URL="postgresql://$${POSTGRES_USER:-popchoice}:$${POSTGRES_PASSWORD:?missing}@$${SERVICE_NAME_DB:-db}:5432/$${POSTGRES_DB:-popchoice}" REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec npm run start:with-migrations --workspace=apps/web',
+      ]
     environment:
       <<: *app-env
       PORT: 3000
@@ -71,6 +79,12 @@ services:
       context: .
       dockerfile: apps/web/workers.Dockerfile
     restart: unless-stopped
+    command:
+      [
+        'sh',
+        '-lc',
+        'export DATABASE_URL="postgresql://$${POSTGRES_USER:-popchoice}:$${POSTGRES_PASSWORD:?missing}@$${SERVICE_NAME_DB:-db}:5432/$${POSTGRES_DB:-popchoice}" REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec npm run start:workers --workspace=apps/web',
+      ]
     environment:
       <<: *app-env
     depends_on:
@@ -82,7 +96,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'node -e "const pg=require(''pg''); const Redis=require(''ioredis''); const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:2000,max:1}); const redis=new Redis(process.env.REDIS_URL,{maxRetriesPerRequest:null,connectTimeout:2000,lazyConnect:true}); Promise.all([pool.query(''SELECT 1''),redis.connect().then(()=>redis.ping())]).then(()=>process.exit(0)).catch(()=>process.exit(1)).finally(()=>Promise.allSettled([pool.end(),redis.quit()]))"',
+          'node -e "const pg=require(''pg''); const Redis=require(''ioredis''); const dbUrl=''postgresql://''+(process.env.POSTGRES_USER||''popchoice'')+'':''+process.env.POSTGRES_PASSWORD+''@''+(process.env.SERVICE_NAME_DB||''db'')+'':5432/''+(process.env.POSTGRES_DB||''popchoice''); const redisUrl=''redis://''+(process.env.SERVICE_NAME_REDIS||''redis'')+'':6379''; const pool=new pg.Pool({connectionString:dbUrl,connectionTimeoutMillis:2000,max:1}); const redis=new Redis(redisUrl,{maxRetriesPerRequest:null,connectTimeout:2000,lazyConnect:true}); Promise.all([pool.query(''SELECT 1''),redis.connect().then(()=>redis.ping())]).then(()=>process.exit(0)).catch(()=>process.exit(1)).finally(()=>Promise.allSettled([pool.end(),redis.quit()]))"',
         ]
       interval: 30s
       timeout: 10s
@@ -94,6 +108,12 @@ services:
       context: .
       dockerfile: apps/web/bull-board.Dockerfile
     restart: unless-stopped
+    command:
+      [
+        'sh',
+        '-lc',
+        'export REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec node_modules/.bin/tsx apps/web/scripts/bull-board.ts',
+      ]
     environment:
       REDIS_URL: redis://${SERVICE_NAME_REDIS:-redis}:6379
       PORT: 3000
@@ -120,6 +140,12 @@ services:
       context: .
       dockerfile: services/movie-seed/Dockerfile
     restart: 'no'
+    command:
+      [
+        'sh',
+        '-lc',
+        'export DATABASE_URL="postgresql://$${POSTGRES_USER:-popchoice}:$${POSTGRES_PASSWORD:?missing}@$${SERVICE_NAME_DB:-db}:5432/$${POSTGRES_DB:-popchoice}" REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec node dist/index.js',
+      ]
     environment:
       <<: *app-env
       DRY_RUN: ${DRY_RUN:-false}
@@ -133,6 +159,12 @@ services:
       context: .
       dockerfile: services/movie-discovery/Dockerfile
     restart: unless-stopped
+    command:
+      [
+        'sh',
+        '-lc',
+        'export DATABASE_URL="postgresql://$${POSTGRES_USER:-popchoice}:$${POSTGRES_PASSWORD:?missing}@$${SERVICE_NAME_DB:-db}:5432/$${POSTGRES_DB:-popchoice}" REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec node dist/index.js',
+      ]
     environment:
       <<: *app-env
       SYNC_SCHEDULE: ${SYNC_SCHEDULE:-0 0 * * 0}
