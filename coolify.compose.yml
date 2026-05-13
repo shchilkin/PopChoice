@@ -23,6 +23,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-popchoice}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      default:
+        aliases:
+          - db
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
@@ -35,6 +39,10 @@ services:
     volumes:
       - redisdata:/data
     command: ['redis-server', '--appendonly', 'yes']
+    networks:
+      default:
+        aliases:
+          - redis
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
