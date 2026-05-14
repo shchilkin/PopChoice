@@ -106,6 +106,7 @@ export function toApiFormat(person: PersonAnswers) {
     dark: 'Dark and intense',
   };
   return {
+    ...(person.name.trim() && { name: person.name.trim() }),
     favoriteMovie: person.favoriteMovie,
     ...(person.favoriteMovieWhy.trim() && { favoriteMovieWhy: person.favoriteMovieWhy.trim() }),
     newVsClassic: eraMap[person.era] || person.era,

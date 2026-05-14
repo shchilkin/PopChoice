@@ -16,6 +16,7 @@ export function RecommendationResultsView({
   movies,
   usedBroaderSearch,
   dbMovieCount,
+  peopleCount = 1,
   recommendationSlug,
   morePicksStatus,
   morePicksTimedOut,
@@ -24,6 +25,7 @@ export function RecommendationResultsView({
   movies: MovieRecommendation[];
   usedBroaderSearch: boolean;
   dbMovieCount?: number;
+  peopleCount?: number;
   recommendationSlug?: string;
   morePicksStatus?: string | null;
   morePicksTimedOut?: boolean;
@@ -40,6 +42,7 @@ export function RecommendationResultsView({
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const mainMovie = movies.find((movie) => movie.isMainRecommendation) || movies[0];
+  const isGroupResult = peopleCount > 1;
   const otherMovies = movies.filter((movie) => movie !== mainMovie);
   const localOtherMovies = otherMovies.filter((movie) => !movie.fromTMDB);
   const tmdbOtherMovies = otherMovies.filter((movie) => movie.fromTMDB);
@@ -114,7 +117,8 @@ export function RecommendationResultsView({
             color: 'var(--pc-gold-text)',
           }}
         >
-          <Sparkles size={11} /> {t.results.badge}
+          {isGroupResult ? <Users size={11} /> : <Sparkles size={11} />}
+          {isGroupResult ? t.results.groupBadge : t.results.badge}
         </div>
         <h1
           style={{
@@ -127,15 +131,17 @@ export function RecommendationResultsView({
             lineHeight: 1.1,
           }}
         >
-          {t.results.title}
+          {isGroupResult ? t.results.groupTitle : t.results.title}
         </h1>
         <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
-          {t.results.subtitle.replace(
-            '{count}',
-            dbMovieCount !== null && dbMovieCount !== undefined
-              ? new Intl.NumberFormat(locale).format(dbMovieCount)
-              : '…',
-          )}
+          {(isGroupResult ? t.results.groupSubtitle : t.results.subtitle)
+            .replace('{people}', new Intl.NumberFormat(locale).format(peopleCount))
+            .replace(
+              '{count}',
+              dbMovieCount !== null && dbMovieCount !== undefined
+                ? new Intl.NumberFormat(locale).format(dbMovieCount)
+                : '…',
+            )}
         </p>
       </motion.div>
 
@@ -169,7 +175,7 @@ export function RecommendationResultsView({
             {t.results.topPick}
           </span>
         </div>
-        <MainMovieCard movie={mainMovie} />
+        <MainMovieCard movie={mainMovie} isGroup={isGroupResult} />
       </div>
 
       {localOtherMovies.length > 0 && (
@@ -284,6 +290,7 @@ export function RecommendationResultsView({
                 <ExpandedSuggestion
                   key={activeSuggestion}
                   movie={localOtherMovies.find((movie) => movie.id === activeSuggestion)!}
+                  isGroup={isGroupResult}
                 />
               )}
           </AnimatePresence>
@@ -325,6 +332,7 @@ export function RecommendationResultsView({
                   <ExpandedSuggestion
                     key={activeSuggestion}
                     movie={tmdbOtherMovies.find((movie) => movie.id === activeSuggestion)!}
+                    isGroup={isGroupResult}
                   />
                 )}
             </AnimatePresence>

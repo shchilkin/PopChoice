@@ -16,7 +16,13 @@ import { StarRating } from './StarRating';
 
 import type { MovieRecommendation } from '@/utils/client';
 
-export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
+export function MainMovieCard({
+  movie,
+  isGroup = false,
+}: {
+  movie: MovieRecommendation;
+  isGroup?: boolean;
+}) {
   const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);
   const score = movie.score_rating ?? 0;
@@ -213,7 +219,7 @@ export function MainMovieCard({ movie }: { movie: MovieRecommendation }) {
                 className="uppercase tracking-widest"
                 style={{ color: 'var(--pc-gold-text)', fontSize: '0.65rem' }}
               >
-                {t.results.whyThisFilmForYou}
+                {isGroup ? t.results.whyThisFilmForGroup : t.results.whyThisFilmForYou}
               </span>
             </div>
             <p

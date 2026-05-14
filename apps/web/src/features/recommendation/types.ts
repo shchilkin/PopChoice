@@ -5,6 +5,10 @@ import z from 'zod';
 // ---------------------------------------------------------------------------
 
 export const personFormDataSchema = z.object({
+  name: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().trim().max(80, 'Name must be 80 characters or fewer').optional(),
+  ),
   favoriteMovie: z
     .string()
     .trim()

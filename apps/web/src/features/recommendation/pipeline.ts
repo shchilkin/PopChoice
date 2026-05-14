@@ -220,7 +220,7 @@ export async function runRecommendationPipeline(
 
   // Step 4: Get recommendation from OpenAI
   await emitStage('ai-ranking');
-  const responseMessage = await getRecommendation(similarMovies, locale);
+  const responseMessage = await getRecommendation(similarMovies, allPeopleData, locale);
   logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
 
   // Step 5: Get localized poster + name for main recommendation

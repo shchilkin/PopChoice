@@ -485,6 +485,30 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       );
     });
 
+    it('passes group viewer preferences into the final recommendation call', async () => {
+      const req = makeRequest([
+        { ...validPerson, name: 'Alex', favoriteMovie: 'Arrival' },
+        { ...validPerson, name: 'Sam', favoriteMovie: 'Paddington 2', tonePreference: 'light' },
+      ]);
+
+      const res = await POST(req);
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const recommendationCall = calls.find((callArgs) => callArgs[0].response_format);
+      expect(recommendationCall).toBeDefined();
+
+      const userMessage = recommendationCall?.[0].messages.find(
+        (message) => message.role === 'user',
+      );
+      expect(userMessage?.content).toContain('Available movie context');
+      expect(userMessage?.content).toContain('Viewer preferences');
+      expect(userMessage?.content).toContain('Group of 2 people preferences');
+      expect(userMessage?.content).toContain('Alex');
+      expect(userMessage?.content).toContain('Sam');
+      expect(userMessage?.content).toContain('Paddington 2');
+    });
+
     it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {
       // First call = enrichment, then recommendation + description calls
       mockChatCompletionsCreate

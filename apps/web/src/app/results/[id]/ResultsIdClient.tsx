@@ -10,6 +10,10 @@ import { RecommendationResultsView } from './RecommendationResultsView';
 import { ResultsErrorState } from './ResultsErrorState';
 import { ResultsLoadingState } from './ResultsLoadingState';
 
+function getQuizPeopleCount(quizData: unknown): number {
+  return Array.isArray(quizData) ? Math.max(quizData.length, 1) : 1;
+}
+
 export function ResultsIdClient({ params }: { params: Promise<{ id: string }> }) {
   const routeParams = use(params);
   const router = useRouter();
@@ -36,6 +40,8 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       fromTMDB: m.fromTMDB,
     }));
   }, [data]);
+
+  const peopleCount = useMemo(() => getQuizPeopleCount(data?.quizData), [data?.quizData]);
 
   useEffect(() => {
     if (!id) {
@@ -65,6 +71,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       movies={movies}
       usedBroaderSearch={data.usedBroaderSearch ?? false}
       dbMovieCount={data.dbMovieCount}
+      peopleCount={peopleCount}
       recommendationSlug={id}
       morePicksStatus={data.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}

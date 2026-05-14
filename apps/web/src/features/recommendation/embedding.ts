@@ -32,7 +32,8 @@ export const combineAllPeopleDataToString = (
   let combinedString = `Group of ${allPeopleData.length} people preferences:\n\n`;
 
   allPeopleData.forEach((personData, index) => {
-    combinedString += `Person ${index + 1}:\n`;
+    const participantLabel = personData.name?.trim() || `Person ${index + 1}`;
+    combinedString += `${participantLabel}:\n`;
     combinedString += Object.entries(personData)
       .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
