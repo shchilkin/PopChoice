@@ -24,7 +24,17 @@ ALTER TABLE recommendations
   ADD COLUMN IF NOT EXISTS more_picks_status text;
 
 ALTER TABLE recommendations
-  ADD COLUMN IF NOT EXISTS stage text NOT NULL DEFAULT 'queued';
+  ADD COLUMN IF NOT EXISTS stage text;
+
+UPDATE recommendations
+   SET stage = 'queued'
+ WHERE stage IS NULL;
+
+ALTER TABLE recommendations
+  ALTER COLUMN stage SET DEFAULT 'queued';
+
+ALTER TABLE recommendations
+  ALTER COLUMN stage SET NOT NULL;
 
 UPDATE recommendations
    SET slug = REPLACE(id::text, '-', '')

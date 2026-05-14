@@ -10,7 +10,10 @@ import pg from 'pg';
 
 import logger from '@/lib/logger';
 
+import type { RecommendationStage } from '@/features/recommendation/stages';
 import type { PersonFormData } from '@/features/recommendation/types';
+
+export type { RecommendationStage };
 
 const { Pool } = pg;
 
@@ -32,18 +35,6 @@ function getPool(): InstanceType<typeof Pool> {
 // ---------------------------------------------------------------------------
 
 export type RecommendationStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-export type RecommendationStage =
-  | 'queued'
-  | 'preparing'
-  | 'embedding'
-  | 'local-search'
-  | 'tmdb-search'
-  | 'ai-ranking'
-  | 'posters'
-  | 'descriptions'
-  | 'complete'
-  | 'failed';
 
 export interface RecommendationMovie {
   id: number;

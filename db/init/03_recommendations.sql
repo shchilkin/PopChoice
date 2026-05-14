@@ -22,15 +22,21 @@ CREATE TABLE IF NOT EXISTS recommendations (
 -- Idempotent column additions for databases created before slug / more_picks_status were added
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS slug             text;
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS more_picks_status text;
-ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS stage             text NOT NULL DEFAULT 'queued';
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS stage             text;
 
 -- Back-fill slug for any legacy rows that pre-date the column
 UPDATE recommendations
    SET slug = REPLACE(id::text, '-', '')
  WHERE slug IS NULL;
 
+UPDATE recommendations
+   SET stage = 'queued'
+ WHERE stage IS NULL;
+
 -- Enforce NOT NULL now that every row has a value
 ALTER TABLE recommendations ALTER COLUMN slug SET NOT NULL;
+ALTER TABLE recommendations ALTER COLUMN stage SET DEFAULT 'queued';
+ALTER TABLE recommendations ALTER COLUMN stage SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recommendations_slug
   ON recommendations (slug);

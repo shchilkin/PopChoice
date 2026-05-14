@@ -4,28 +4,12 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 
 import { FilmReel } from '@/app/loading/components/FilmReel';
+import {
+  getRecommendationStageProgress,
+  type RecommendationStage,
+} from '@/features/recommendation/stages';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
-
-import type { RecommendationStage } from '@/lib/db/recommendations';
-
-const STAGE_ORDER: RecommendationStage[] = [
-  'queued',
-  'preparing',
-  'embedding',
-  'local-search',
-  'tmdb-search',
-  'ai-ranking',
-  'posters',
-  'descriptions',
-  'complete',
-];
-
-function getStageProgress(stage: RecommendationStage): number {
-  const index = STAGE_ORDER.indexOf(stage);
-  if (index < 0) return 10;
-  return Math.round(((index + 1) / STAGE_ORDER.length) * 100);
-}
 
 export function ResultsLoadingState({
   status,
@@ -44,7 +28,7 @@ export function ResultsLoadingState({
     return () => clearInterval(interval);
   }, [t.loading.tips.length]);
 
-  const progress = getStageProgress(stage);
+  const progress = getRecommendationStageProgress(stage);
   const stageLabel = t.loading.stages[stage] ?? t.loading.stages.queued;
 
   return (

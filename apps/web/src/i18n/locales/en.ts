@@ -1,3 +1,5 @@
+import type { RecommendationStage } from '@/features/recommendation/stages';
+
 export const en = {
   nav: {
     howItWorks: 'How it works',
@@ -164,7 +166,7 @@ export const en = {
       descriptions: 'Writing personalized explanations',
       complete: 'Finalizing your picks',
       failed: 'Recommendation failed',
-    },
+    } satisfies Record<RecommendationStage, string>,
     tips: [
       'Decoding your cinematic DNA… 🧠',
       'Scanning 400+ curated films for the perfect match… 🎬',
