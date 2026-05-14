@@ -216,8 +216,16 @@ export const ru: Translations = {
     loading: 'Загружаем ваши рекомендации…',
     noResultsTitle: 'Ничего не нашлось…',
     noResultsHint: 'Попробуйте с другим настроением.',
+    sharedResultBadge: 'Общий результат',
+    missingResultTitle: 'Этот выбор уже ушёл из зала',
+    missingResultHint:
+      'Эта ссылка на результат больше недоступна. Начните новый тест, и PopChoice подберёт фильм на сегодня.',
+    failedResultTitle: 'Проектор застрял',
+    failedResultHint:
+      'Эта рекомендация не завершилась корректно. Начните заново, и мы соберём новый выбор.',
     tryAgain: 'Попробовать снова',
     tryWithFriends: 'Попробовать с друзьями',
+    startFresh: 'Начать новый тест',
     disclaimer: 'Подобрано ИИ специально для вас. Осторожно — может затянуть на марафон.',
     scrollLeft: 'Прокрутить влево',
     scrollRight: 'Прокрутить вправо',

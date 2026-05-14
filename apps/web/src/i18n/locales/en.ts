@@ -212,8 +212,16 @@ export const en = {
     loading: 'Loading your picks…',
     noResultsTitle: 'Nothing matched…',
     noResultsHint: 'Try again with a different vibe.',
+    sharedResultBadge: 'Shared result',
+    missingResultTitle: 'This pick left the theater',
+    missingResultHint:
+      'That shared result is no longer available. Start a fresh quiz and PopChoice will find a new film for tonight.',
+    failedResultTitle: 'The projector jammed',
+    failedResultHint:
+      'This recommendation did not finish cleanly. Start again and we will build a fresh pick.',
     tryAgain: 'Try Again',
     tryWithFriends: 'Try with friends',
+    startFresh: 'Start a fresh quiz',
     disclaimer: 'AI-picked for you. Results may spark a movie marathon.',
     scrollLeft: 'Scroll left',
     scrollRight: 'Scroll right',

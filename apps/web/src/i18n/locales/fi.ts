@@ -214,8 +214,16 @@ export const fi: Translations = {
     loading: 'Ladataan suosituksiasi…',
     noResultsTitle: 'Ei osumia…',
     noResultsHint: 'Kokeile eri tunnelmalla.',
+    sharedResultBadge: 'Jaettu tulos',
+    missingResultTitle: 'Tämä valinta poistui salista',
+    missingResultHint:
+      'Jaettu tulos ei ole enää saatavilla. Aloita uusi testi, niin PopChoice löytää uuden elokuvan täksi illaksi.',
+    failedResultTitle: 'Projektori jumittui',
+    failedResultHint:
+      'Tämä suositus ei valmistunut kunnolla. Aloita uudelleen, niin rakennamme tuoreen valinnan.',
     tryAgain: 'Yritä uudelleen',
     tryWithFriends: 'Kokeile kavereiden kanssa',
+    startFresh: 'Aloita uusi testi',
     disclaimer: 'Tekoälyn valitsemat juuri sinulle. Varoitus: saattaa aiheuttaa leffamaratonin.',
     scrollLeft: 'Vieritä vasemmalle',
     scrollRight: 'Vieritä oikealle',
