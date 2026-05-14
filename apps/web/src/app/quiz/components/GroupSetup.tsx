@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { PARTICIPANT_NAME_MAX_LENGTH } from '@/features/recommendation/limits';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
@@ -60,6 +61,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               </div>
               <input
                 value={name}
+                maxLength={PARTICIPANT_NAME_MAX_LENGTH}
                 onChange={(e) =>
                   onGroupNamesChange(groupNames.map((n, j) => (j === i ? e.target.value : n)))
                 }

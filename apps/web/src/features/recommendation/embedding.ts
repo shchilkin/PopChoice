@@ -18,12 +18,16 @@ export const combineAllPeopleDataToString = (
   options: { excludeKeys?: (keyof PersonFormData)[] } = {},
 ): string => {
   const { excludeKeys = [] } = options;
+  const effectiveExcludeKeys = allPeopleData.length > 1 ? [...excludeKeys, 'name'] : excludeKeys;
 
   if (allPeopleData.length === 1) {
     // Single person - same as before
     const data = allPeopleData[0];
     return Object.entries(data)
-      .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
+      .filter(
+        ([key, value]) =>
+          !effectiveExcludeKeys.includes(key as keyof PersonFormData) && value != null,
+      )
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
   }
@@ -35,7 +39,10 @@ export const combineAllPeopleDataToString = (
     const participantLabel = personData.name?.trim() || `Person ${index + 1}`;
     combinedString += `${participantLabel}:\n`;
     combinedString += Object.entries(personData)
-      .filter(([key, value]) => !excludeKeys.includes(key as keyof PersonFormData) && value != null)
+      .filter(
+        ([key, value]) =>
+          !effectiveExcludeKeys.includes(key as keyof PersonFormData) && value != null,
+      )
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
     combinedString += '\n\n';

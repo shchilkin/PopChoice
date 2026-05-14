@@ -6,15 +6,9 @@ import { use, useEffect, useMemo } from 'react';
 import { useRecommendation } from '@/hooks/useRecommendation';
 import { type MovieRecommendation } from '@/utils/client';
 
-import { buildGroupResultInsights } from '../lib/groupResultInsights';
-
 import { RecommendationResultsView } from './RecommendationResultsView';
 import { ResultsErrorState } from './ResultsErrorState';
 import { ResultsLoadingState } from './ResultsLoadingState';
-
-function getQuizPeopleCount(quizData: unknown): number {
-  return Array.isArray(quizData) ? Math.max(quizData.length, 1) : 1;
-}
 
 export function ResultsIdClient({ params }: { params: Promise<{ id: string }> }) {
   const routeParams = use(params);
@@ -43,8 +37,8 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
     }));
   }, [data]);
 
-  const peopleCount = useMemo(() => getQuizPeopleCount(data?.quizData), [data?.quizData]);
-  const groupInsights = useMemo(() => buildGroupResultInsights(data?.quizData), [data?.quizData]);
+  const peopleCount = data?.peopleCount ?? 1;
+  const groupInsights = data?.groupInsights ?? null;
 
   useEffect(() => {
     if (!id) {

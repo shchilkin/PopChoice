@@ -454,4 +454,52 @@ describe('getRecommendationWithMovies', () => {
     expect(result?.movies[0]?.id).toBe(-321);
     expect(result?.stage).toBe('complete');
   });
+
+  it('returns redacted group metadata instead of raw quiz data', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'rec-id',
+            status: 'completed',
+            stage: 'complete',
+            error: null,
+            used_broader_search: false,
+            db_movie_count: 12,
+            quiz_data: [
+              {
+                name: 'Alex',
+                favoriteMovie: 'Arrival',
+                newVsClassic: 'New',
+                moodPreference: ['Drama', 'Sci-Fi'],
+                tonePreference: 'Balanced',
+                favoriteActor: 'Amy Adams',
+              },
+              {
+                name: 'Sam',
+                favoriteMovie: 'Paddington 2',
+                newVsClassic: 'Both new and classic',
+                moodPreference: ['Comedy', 'Drama'],
+                tonePreference: 'Light and fun',
+                favoriteActor: 'Amy Adams',
+              },
+            ],
+            more_picks_status: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await getRecommendationWithMovies('slug-123');
+
+    expect(result?.peopleCount).toBe(2);
+    expect(result?.groupInsights).toEqual(
+      expect.objectContaining({
+        participantNames: ['Alex', 'Sam'],
+        sharedMoods: ['Drama'],
+        favoriteActors: ['Amy Adams'],
+      }),
+    );
+    expect(result).not.toHaveProperty('quizData');
+  });
 });

@@ -17,7 +17,7 @@ import {
   SmallSuggestionCard,
 } from '../components';
 
-import type { GroupResultInsights } from '../lib/groupResultInsights';
+import type { GroupResultInsights } from '@/features/recommendation/groupResultInsights';
 
 export function RecommendationResultsView({
   movies,

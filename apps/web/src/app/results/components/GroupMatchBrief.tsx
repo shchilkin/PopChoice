@@ -6,7 +6,7 @@ import { motion } from 'motion/react';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
-import type { GroupResultInsights } from '../lib/groupResultInsights';
+import type { GroupResultInsights } from '@/features/recommendation/groupResultInsights';
 import type { ReactNode } from 'react';
 
 function joinList(values: string[], locale: string): string {

@@ -14,6 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { PARTICIPANT_NAME_MAX_LENGTH } from '@/features/recommendation/limits';
 import { palette } from '@/styles/designTokens';
 
 import type { PersonAnswers, Tone } from './types';
@@ -105,8 +106,9 @@ export function toApiFormat(person: PersonAnswers) {
     serious: 'Serious and thought-provoking',
     dark: 'Dark and intense',
   };
+  const trimmedName = person.name.trim().slice(0, PARTICIPANT_NAME_MAX_LENGTH);
   return {
-    ...(person.name.trim() && { name: person.name.trim() }),
+    ...(trimmedName && { name: trimmedName }),
     favoriteMovie: person.favoriteMovie,
     ...(person.favoriteMovieWhy.trim() && { favoriteMovieWhy: person.favoriteMovieWhy.trim() }),
     newVsClassic: eraMap[person.era] || person.era,

@@ -8,6 +8,10 @@ export interface GroupResultInsights {
   favoriteActors: string[];
 }
 
+export function getQuizPeopleCount(quizData: unknown): number {
+  return Array.isArray(quizData) ? Math.max(quizData.length, 1) : 1;
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
