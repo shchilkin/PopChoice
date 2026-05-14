@@ -291,7 +291,7 @@ export function GroupMatchBrief({ insights }: { insights: GroupResultInsights })
           <ul>
             {insights.participantProfiles.map((profile, index) => (
               <ParticipantSignal
-                key={`${profile.name}-${profile.favoriteMovie ?? profile.tonePreference ?? ''}`}
+                key={`${profile.name}-${profile.favoriteMovie ?? profile.tonePreference ?? ''}-${index}`}
                 profile={profile}
                 t={t}
                 locale={locale}
