@@ -16,6 +16,8 @@ const meta: Meta<typeof BetweenPersons> = {
     },
   },
   args: {
+    completedCount: 1,
+    totalPeople: 3,
     onNext: () => {},
   },
 };

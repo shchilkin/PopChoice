@@ -143,7 +143,9 @@ export default function QuizPage() {
   }
 
   // ── SUBMITTING ── recommendation creation is in flight via useEffect above
-  if (state.matches('submitting')) return <QuizSubmittingState />;
+  if (state.matches('submitting')) {
+    return <QuizSubmittingState mode={mode} peopleCount={people.length} />;
+  }
 
   // ── BETWEEN PERSONS ──
   if (state.matches('betweenPersons')) {
@@ -153,6 +155,8 @@ export default function QuizPage() {
       <BetweenPersons
         currentPersonName={donePersonName}
         nextPersonName={nextPersonName}
+        completedCount={currentPersonIdx + 1}
+        totalPeople={people.length}
         onNext={() => send({ type: 'CONTINUE' })}
       />
     );
@@ -268,6 +272,7 @@ export default function QuizPage() {
         isSubmitting={isSubmitting}
         isLastStep={isLastStep}
         isLastPerson={isLastPerson}
+        nextPersonName={people[currentPersonIdx + 1]?.name}
       />
     </div>
   );

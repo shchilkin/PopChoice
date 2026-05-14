@@ -11,6 +11,7 @@ interface QuizNavigationProps {
   isSubmitting: boolean;
   isLastStep: boolean;
   isLastPerson: boolean;
+  nextPersonName?: string;
 }
 
 export function QuizNavigation({
@@ -20,8 +21,12 @@ export function QuizNavigation({
   isSubmitting,
   isLastStep,
   isLastPerson,
+  nextPersonName,
 }: QuizNavigationProps) {
   const { t } = useLanguage();
+  const nextPersonLabel = nextPersonName
+    ? t.quiz.nav.handTo.replace('{name}', nextPersonName)
+    : t.quiz.nav.nextPerson;
 
   return (
     <div className="px-5 py-6 max-w-xl mx-auto w-full flex gap-3">
@@ -54,7 +59,7 @@ export function QuizNavigation({
           <>{t.quiz.nav.findMyMovie}</>
         ) : isLastStep ? (
           <>
-            {t.quiz.nav.nextPerson} <ChevronRight size={16} />
+            {nextPersonLabel} <ChevronRight size={16} />
           </>
         ) : (
           <>
