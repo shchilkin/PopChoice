@@ -248,6 +248,8 @@ export const ru: Translations = {
     expandedDecisionNote:
       'PopChoice расширил поиск через TMDB, чтобы сохранить сильное совпадение.',
     groupBriefTitle: 'Как мы сбалансировали компанию',
+    groupBriefTakeaway:
+      'Сначала направление задают общие настроения. Тон, эпоха и актёрские подсказки помогают развязать ничьи, чтобы никто не превратился в простой средний вкус.',
     groupBriefPeople: 'Состав просмотра',
     groupBriefPeopleValue: '{count} участников: {names}',
     groupBriefSharedMood: 'Общее настроение',
@@ -257,6 +259,12 @@ export const ru: Translations = {
     groupBriefEra: 'Комфортная эпоха',
     groupBriefActors: 'Актёрский сигнал: {actors}',
     groupBriefMixedSignals: 'Смешанные сигналы, учтены как компромисс.',
+    groupBriefParticipantSignals: 'Что внёс каждый участник',
+    groupBriefFavorite: 'Любимый фильм:',
+    groupBriefMoodSignal: 'Настроение:',
+    groupBriefToneSignal: 'Тон:',
+    groupBriefEraSignal: 'Эпоха:',
+    groupBriefMissingSignal: 'Не указано',
     broaderSearch: 'Расширенный поиск — включает результаты из TMDB',
     foundInDb: 'Найдено в нашей базе',
     foundOnTmdb: 'Найдено на TMDB',

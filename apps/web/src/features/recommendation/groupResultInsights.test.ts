@@ -17,6 +17,7 @@ describe('buildGroupResultInsights', () => {
     const result = buildGroupResultInsights([
       {
         name: 'Alex',
+        favoriteMovie: 'Arrival',
         moodPreference: ['Comedy', 'Adventure'],
         tonePreference: 'Light and fun',
         newVsClassic: 'New',
@@ -24,6 +25,7 @@ describe('buildGroupResultInsights', () => {
       },
       {
         name: 'Sam',
+        favoriteMovie: 'Paddington 2',
         moodPreference: ['Comedy', 'Thriller'],
         tonePreference: 'Balanced',
         newVsClassic: 'Both new and classic',
@@ -33,6 +35,22 @@ describe('buildGroupResultInsights', () => {
 
     expect(result).toEqual({
       participantNames: ['Alex', 'Sam'],
+      participantProfiles: [
+        {
+          name: 'Alex',
+          favoriteMovie: 'Arrival',
+          moodPreferences: ['Comedy', 'Adventure'],
+          tonePreference: 'Light and fun',
+          eraPreference: 'New',
+        },
+        {
+          name: 'Sam',
+          favoriteMovie: 'Paddington 2',
+          moodPreferences: ['Comedy', 'Thriller'],
+          tonePreference: 'Balanced',
+          eraPreference: 'Both new and classic',
+        },
+      ],
       sharedMoods: ['Comedy'],
       tonePreferences: ['Light and fun', 'Balanced'],
       eraPreferences: ['New', 'Both new and classic'],
@@ -49,6 +67,11 @@ describe('buildGroupResultInsights', () => {
 
     expect(result).toMatchObject({
       participantNames: ['Person 1', 'Person 2', 'Mia'],
+      participantProfiles: [
+        expect.objectContaining({ name: 'Person 1', favoriteMovie: null }),
+        expect.objectContaining({ name: 'Person 2', favoriteMovie: null }),
+        expect.objectContaining({ name: 'Mia', favoriteMovie: null }),
+      ],
       sharedMoods: ['Drama'],
       tonePreferences: ['Serious', 'Balanced'],
     });

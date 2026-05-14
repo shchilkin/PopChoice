@@ -48,6 +48,9 @@ storybook-static
 # Aider
 .aider*
 
+# Claude
+.claude/
+
 # Turborepo
 .turbo
 **/.turbo
