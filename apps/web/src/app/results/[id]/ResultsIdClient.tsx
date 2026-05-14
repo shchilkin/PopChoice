@@ -44,6 +44,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   }, [id, router]);
 
   const status = data?.status;
+  const stage = data?.stage;
 
   if (!id) return null;
 
@@ -51,8 +52,12 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
     return <ResultsErrorState onRetry={() => router.push('/quiz')} />;
   }
 
-  if (!data || status === 'pending' || status === 'processing' || movies.length === 0) {
-    return <ResultsLoadingState status={status} />;
+  if (!data || status === 'pending' || status === 'processing') {
+    return <ResultsLoadingState status={status} stage={stage} />;
+  }
+
+  if (movies.length === 0) {
+    return <ResultsErrorState onRetry={() => router.push('/quiz')} />;
   }
 
   return (

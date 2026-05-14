@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS recommendations (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   slug                text        UNIQUE NOT NULL,              -- short nanoid(12) used in public URLs
   status              text        NOT NULL DEFAULT 'pending',   -- pending | processing | completed | failed
+  stage               text        NOT NULL DEFAULT 'queued',    -- queued | preparing | embedding | local-search | tmdb-search | ai-ranking | posters | descriptions | complete | failed
   quiz_data           jsonb       NOT NULL,
   error               text,                                      -- populated on failure
   created_at          timestamptz NOT NULL DEFAULT now(),
@@ -21,6 +22,19 @@ ALTER TABLE recommendations
 
 ALTER TABLE recommendations
   ADD COLUMN IF NOT EXISTS more_picks_status text;
+
+ALTER TABLE recommendations
+  ADD COLUMN IF NOT EXISTS stage text;
+
+UPDATE recommendations
+   SET stage = 'queued'
+ WHERE stage IS NULL;
+
+ALTER TABLE recommendations
+  ALTER COLUMN stage SET DEFAULT 'queued';
+
+ALTER TABLE recommendations
+  ALTER COLUMN stage SET NOT NULL;
 
 UPDATE recommendations
    SET slug = REPLACE(id::text, '-', '')

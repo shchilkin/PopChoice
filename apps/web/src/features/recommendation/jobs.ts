@@ -5,6 +5,7 @@ import {
   completeRecommendationRecord,
   createRecommendationRecord,
   failRecommendationRecord,
+  markRecommendationStage,
   markRecommendationProcessing,
 } from './persistence';
 import { runRecommendationPipeline } from './pipeline';
@@ -53,7 +54,9 @@ async function processInlineRecommendation(
 ): Promise<void> {
   try {
     await markRecommendationProcessing(recommendationId);
-    const result = await runRecommendationPipeline(allPeopleData, locale);
+    const result = await runRecommendationPipeline(allPeopleData, locale, {
+      onStageChange: (stage) => markRecommendationStage(recommendationId, stage),
+    });
 
     await completeRecommendationRecord(recommendationId, result);
     logger.info({ recommendationId }, 'Inline recommendation processing completed');

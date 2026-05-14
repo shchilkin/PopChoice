@@ -151,6 +151,24 @@ export const fi: Translations = {
   loading: {
     title: 'Etsitään täydellistä valintaasi',
     errorTitle: 'Oho…',
+    submitBridgeEyebrow: 'Vastaukset tallessa',
+    submitBridgeTitle: 'Etsimme elokuvaa',
+    submitBridgeBody:
+      'Sovitamme tunnelmasi kokoelmaan ja kokoamme listan, josta ilta on helppo aloittaa.',
+    queuedLabel: 'Lämmitetään projektoria',
+    realProgressLabel: 'Kootaan suosikkilistaasi',
+    stages: {
+      queued: 'Jonossa käsittelyyn',
+      preparing: 'Luetaan makuprofiiliasi',
+      embedding: 'Kartoitetaan elokuvamakuasi',
+      'local-search': 'Haetaan kuratoidusta elokuvakirjastosta',
+      'tmdb-search': 'Laajennetaan hakua TMDB:llä',
+      'ai-ranking': 'Valitaan vahvimmat osumat',
+      posters: 'Haetaan juliste- ja nimitietoja',
+      descriptions: 'Kirjoitetaan henkilökohtaisia perusteluja',
+      complete: 'Viimeistellään valintasi',
+      failed: 'Suositus epäonnistui',
+    },
     tips: [
       'Puretaan elokuvallinen DNA:si… 🧠',
       'Käydään läpi 10 000+ elokuvaa täydellisen osuman löytämiseksi… 🎬',

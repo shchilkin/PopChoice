@@ -18,7 +18,8 @@ RUN npm ci --omit=dev
 COPY packages/shared/src/ ./packages/shared/src/
 COPY packages/shared/tsconfig.json ./packages/shared/
 COPY apps/web/scripts/bull-board.ts ./apps/web/scripts/
+COPY apps/web/scripts/coolify-runtime-env.cjs ./apps/web/scripts/
 COPY apps/web/tsconfig.json ./apps/web/
 
 EXPOSE 3000
-CMD ["node_modules/.bin/tsx", "apps/web/scripts/bull-board.ts"]
+CMD ["npm", "run", "bull-board", "--workspace=apps/web"]

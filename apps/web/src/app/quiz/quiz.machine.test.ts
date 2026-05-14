@@ -170,4 +170,19 @@ describe('quiz machine – BACK navigation', () => {
     expect(snapshot.context.currentPersonIdx).toBe(0);
     expect(snapshot.context.dir).toBe(-1);
   });
+
+  it('RESET from submitting returns to a fresh intro state', () => {
+    const actor = makeActor();
+    actor.send({ type: 'START_SOLO', youLabel: 'You' });
+
+    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    expect(actor.getSnapshot().value).toBe('submitting');
+
+    actor.send({ type: 'RESET' });
+
+    const snapshot = actor.getSnapshot();
+    expect(snapshot.value).toBe('intro');
+    expect(snapshot.context.people).toEqual([]);
+    expect(snapshot.context.currentPersonIdx).toBe(0);
+  });
 });

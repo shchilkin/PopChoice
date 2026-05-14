@@ -1,3 +1,5 @@
+import type { RecommendationStage } from '@/features/recommendation/stages';
+
 export const en = {
   nav: {
     howItWorks: 'How it works',
@@ -147,6 +149,24 @@ export const en = {
   loading: {
     title: 'Finding your perfect pick',
     errorTitle: 'Oops…',
+    submitBridgeEyebrow: 'Answers locked',
+    submitBridgeTitle: 'Finding your film',
+    submitBridgeBody:
+      'We are matching your vibe against the collection and shaping a shortlist worth the wait.',
+    queuedLabel: 'Warming up the projector',
+    realProgressLabel: 'Building your shortlist',
+    stages: {
+      queued: 'Queued for processing',
+      preparing: 'Reading your taste profile',
+      embedding: 'Mapping your movie taste',
+      'local-search': 'Searching the curated movie library',
+      'tmdb-search': 'Expanding the search with TMDB',
+      'ai-ranking': 'Choosing the strongest matches',
+      posters: 'Fetching poster and title details',
+      descriptions: 'Writing personalized explanations',
+      complete: 'Finalizing your picks',
+      failed: 'Recommendation failed',
+    } satisfies Record<RecommendationStage, string>,
     tips: [
       'Decoding your cinematic DNA… 🧠',
       'Scanning 400+ curated films for the perfect match… 🎬',
