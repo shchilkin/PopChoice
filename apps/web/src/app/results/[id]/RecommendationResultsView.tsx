@@ -119,10 +119,15 @@ export function RecommendationResultsView({
 
   if (!mainMovie) return null;
 
+  const mainMovieName = mainMovie.localizedName ?? mainMovie.name;
+  const decisionNote = (isGroupResult ? t.results.groupDecisionNote : t.results.soloDecisionNote)
+    .replace('{name}', mainMovieName)
+    .replace('{people}', new Intl.NumberFormat(locale).format(peopleCount));
+
   const handleShare = async () => {
     const url = window.location.href;
-    const title = t.results.shareTitle.replace('{name}', mainMovie.localizedName ?? mainMovie.name);
-    const text = t.results.shareText.replace('{name}', mainMovie.localizedName ?? mainMovie.name);
+    const title = t.results.shareTitle.replace('{name}', mainMovieName);
+    const text = t.results.shareText.replace('{name}', mainMovieName);
 
     try {
       if (navigator.share) {
@@ -200,6 +205,50 @@ export function RecommendationResultsView({
             {shareState === 'copied' ? t.results.shareCopied : t.results.shareResult}
           </button>
         </div>
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.12 }}
+          className="mx-auto mt-5 max-w-xl rounded-2xl px-4 py-3 text-left"
+          style={{
+            background: 'var(--pc-ghost)',
+            border: '1px solid var(--pc-bd2)',
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: 'var(--pc-gold-subtle)',
+                color: 'var(--pc-gold-text)',
+              }}
+            >
+              {isGroupResult ? <Users size={14} /> : <Sparkles size={14} />}
+            </div>
+            <div>
+              <div
+                className="uppercase tracking-widest"
+                style={{ color: 'var(--pc-gold-text)', fontSize: '0.62rem' }}
+              >
+                {t.results.decisionNoteLabel}
+              </div>
+              <p
+                className="mt-1"
+                style={{ color: 'var(--pc-t2)', fontSize: '0.86rem', lineHeight: 1.6 }}
+              >
+                {decisionNote}
+              </p>
+              {usedBroaderSearch && (
+                <p
+                  className="mt-2"
+                  style={{ color: 'var(--pc-t4)', fontSize: '0.76rem', lineHeight: 1.55 }}
+                >
+                  {t.results.expandedDecisionNote}
+                </p>
+              )}
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
 
       {usedBroaderSearch && (

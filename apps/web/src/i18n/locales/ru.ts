@@ -232,6 +232,13 @@ export const ru: Translations = {
     shareCopied: 'Ссылка скопирована',
     shareTitle: 'PopChoice выбрал: {name}',
     shareText: 'PopChoice нашёл фильм для вечера: {name}.',
+    decisionNoteLabel: 'Почему этот выбор',
+    soloDecisionNote:
+      '{name} оказался первым, потому что совпал с вашим настроением, тоном, эпохой и подсказкой по любимому актёру, а не только с одним жанром.',
+    groupDecisionNote:
+      '{name} стал самым удобным пересечением для {people} участников: общий настрой, тон и эпоха сбалансированы вместе.',
+    expandedDecisionNote:
+      'PopChoice расширил поиск через TMDB, чтобы сохранить сильное совпадение.',
     groupBriefTitle: 'Как мы сбалансировали компанию',
     groupBriefPeople: 'Состав просмотра',
     groupBriefPeopleValue: '{count} участников: {names}',

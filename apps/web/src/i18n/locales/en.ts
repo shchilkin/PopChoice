@@ -228,6 +228,12 @@ export const en = {
     shareCopied: 'Link copied',
     shareTitle: 'PopChoice picked {name}',
     shareText: 'PopChoice found {name} for movie night.',
+    decisionNoteLabel: 'Why this pick',
+    soloDecisionNote:
+      '{name} won because it lines up with your mood, tone, era, and favorite actor cue, not just one genre.',
+    groupDecisionNote:
+      '{name} won as the most watchable overlap for {people} people, balancing shared mood with tone and era.',
+    expandedDecisionNote: 'PopChoice widened the search through TMDB to keep the match strong.',
     groupBriefTitle: 'How we balanced the room',
     groupBriefPeople: 'Watching crew',
     groupBriefPeopleValue: '{count} people: {names}',

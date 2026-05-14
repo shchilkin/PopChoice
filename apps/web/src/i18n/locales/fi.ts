@@ -230,6 +230,12 @@ export const fi: Translations = {
     shareCopied: 'Linkki kopioitu',
     shareTitle: 'PopChoice valitsi: {name}',
     shareText: 'PopChoice löysi elokuvailtaan: {name}.',
+    decisionNoteLabel: 'Miksi tämä valinta',
+    soloDecisionNote:
+      '{name} nousi kärkeen, koska se osuu tunnelmaasi, sävyysi, aikakauteen ja lempinäyttelijän vihjeeseen, ei vain yhteen genreen.',
+    groupDecisionNote:
+      '{name} nousi katsottavimmaksi yhteiseksi valinnaksi {people} henkilölle, tasapainottaen yhteisen tunnelman, sävyn ja aikakauden.',
+    expandedDecisionNote: 'PopChoice laajensi hakua TMDB:n kautta, jotta osuma pysyy vahvana.',
     groupBriefTitle: 'Näin tasapainotimme ryhmän',
     groupBriefPeople: 'Katseluporukka',
     groupBriefPeopleValue: '{count} henkilöä: {names}',
