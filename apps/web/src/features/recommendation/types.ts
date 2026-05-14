@@ -1,10 +1,20 @@
 import z from 'zod';
 
+import { PARTICIPANT_NAME_MAX_LENGTH } from './limits';
+
 // ---------------------------------------------------------------------------
 // Request validation schemas
 // ---------------------------------------------------------------------------
 
 export const personFormDataSchema = z.object({
+  name: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z
+      .string()
+      .trim()
+      .max(PARTICIPANT_NAME_MAX_LENGTH, 'Name must be 80 characters or fewer')
+      .optional(),
+  ),
   favoriteMovie: z
     .string()
     .trim()

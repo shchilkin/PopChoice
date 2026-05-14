@@ -13,7 +13,13 @@ import { StarRating } from './StarRating';
 
 import type { MovieRecommendation } from '@/utils/client';
 
-export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
+export function ExpandedSuggestion({
+  movie,
+  isGroup = false,
+}: {
+  movie: MovieRecommendation;
+  isGroup?: boolean;
+}) {
   const { t } = useLanguage();
   const score = movie.score_rating ?? 0;
   const hasRating = !!movie.age_rating && movie.age_rating !== 'NR';
@@ -113,7 +119,7 @@ export function ExpandedSuggestion({ movie }: { movie: MovieRecommendation }) {
                 className="uppercase tracking-widest"
                 style={{ color: 'var(--pc-gold-text)', fontSize: '0.62rem' }}
               >
-                {t.results.whyThisFilm}
+                {isGroup ? t.results.whyThisFilmForGroup : t.results.whyThisFilm}
               </span>
             </div>
             <p

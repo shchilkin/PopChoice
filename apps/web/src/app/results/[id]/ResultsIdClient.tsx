@@ -37,6 +37,9 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
     }));
   }, [data]);
 
+  const peopleCount = data?.peopleCount ?? 1;
+  const groupInsights = data?.groupInsights ?? null;
+
   useEffect(() => {
     if (!id) {
       router.replace('/quiz');
@@ -65,6 +68,8 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       movies={movies}
       usedBroaderSearch={data.usedBroaderSearch ?? false}
       dbMovieCount={data.dbMovieCount}
+      peopleCount={peopleCount}
+      groupInsights={groupInsights}
       recommendationSlug={id}
       morePicksStatus={data.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}

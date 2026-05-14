@@ -8,6 +8,10 @@
 import { nanoid } from 'nanoid';
 import pg from 'pg';
 
+import {
+  buildGroupResultInsights,
+  getQuizPeopleCount,
+} from '@/features/recommendation/groupResultInsights';
 import logger from '@/lib/logger';
 
 import type { RecommendationStage } from '@/features/recommendation/stages';
@@ -58,7 +62,8 @@ export interface RecommendationWithMovies {
   movies: RecommendationMovie[];
   usedBroaderSearch?: boolean;
   dbMovieCount?: number;
-  quizData?: unknown;
+  peopleCount?: number;
+  groupInsights?: ReturnType<typeof buildGroupResultInsights>;
   morePicksStatus?: string | null;
 }
 
@@ -221,6 +226,8 @@ export async function getRecommendationWithMovies(
 
   const rec = recResult.rows[0];
   if (!rec) return null;
+  const peopleCount = getQuizPeopleCount(rec.quiz_data);
+  const groupInsights = buildGroupResultInsights(rec.quiz_data);
 
   if (rec.status !== 'completed') {
     return {
@@ -230,7 +237,8 @@ export async function getRecommendationWithMovies(
       movies: [],
       usedBroaderSearch: rec.used_broader_search ?? false,
       dbMovieCount: rec.db_movie_count ?? undefined,
-      quizData: rec.quiz_data ?? undefined,
+      peopleCount,
+      groupInsights,
       morePicksStatus: rec.more_picks_status ?? null,
     };
   }
@@ -326,7 +334,8 @@ export async function getRecommendationWithMovies(
     movies,
     usedBroaderSearch: rec.used_broader_search ?? false,
     dbMovieCount: rec.db_movie_count ?? undefined,
-    quizData: rec.quiz_data ?? undefined,
+    peopleCount,
+    groupInsights,
     morePicksStatus: rec.more_picks_status ?? null,
   };
 }

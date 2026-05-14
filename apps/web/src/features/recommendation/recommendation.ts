@@ -40,8 +40,9 @@ For single person:
 For multiple people:
 - Start with a fun comment about finding a movie for the group.
 - Analyze the common themes and preferences across all group members.
-- Recommend a movie that best satisfies the group's combined preferences.
-- Mention how it appeals to different members' tastes.
+- Recommend a movie that best satisfies the group's combined preferences, not just the strongest single person's taste.
+- If participant names are provided, mention at least two people by name and explain the compromise.
+- If tastes conflict, name the bridge: tone, genre, era, actor, pacing, or mood.
 
 - Mention a couple of relevant details about the movie (genre, mood, why it's a good fit).
 - Do not suggest alternatives. Only provide one best match.
@@ -98,16 +99,24 @@ export async function getSimilarMovies(embedding: number[]): Promise<EnhancedMov
 // ---------------------------------------------------------------------------
 
 /** Ask OpenAI to pick the single best movie from the candidates. */
-export async function getRecommendation(similarMovies: EnhancedMovieMatch[], locale: Locale) {
+export async function getRecommendation(
+  similarMovies: EnhancedMovieMatch[],
+  userPreferences: PersonFormData[],
+  locale: Locale,
+) {
   try {
     // Convert enhanced movie data to formatted string for AI consumption
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
+    const userPreferencesContext = combineAllPeopleDataToString(userPreferences);
 
     const recommendation = await getOpenAIClient().chat.completions.create({
       model: MODELS.RECOMMENDATION,
       messages: [
         { role: 'system', content: buildPrompt(locale) },
-        { role: 'user', content: moviesContext },
+        {
+          role: 'user',
+          content: `Available movie context:\n${moviesContext}\n\nViewer preferences:\n${userPreferencesContext}`,
+        },
       ],
       response_format: recommendationResponseFormat,
     });
