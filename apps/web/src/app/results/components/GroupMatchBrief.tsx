@@ -13,6 +13,66 @@ function joinList(values: string[], locale: string): string {
   return new Intl.ListFormat(locale, { style: 'short', type: 'conjunction' }).format(values);
 }
 
+type TranslationCopy = ReturnType<typeof useLanguage>['t'];
+
+function normalizeChoice(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function translateMood(value: string, t: TranslationCopy): string {
+  const moodKey = normalizeChoice(value).replace(/\s+/g, '');
+  const aliases: Record<string, keyof typeof t.genres> = {
+    action: 'action',
+    adventure: 'adventure',
+    animation: 'animation',
+    comedy: 'comedy',
+    documentary: 'documentary',
+    drama: 'drama',
+    horror: 'horror',
+    romance: 'romance',
+    scifi: 'scifi',
+    sciencefiction: 'scifi',
+    thriller: 'thriller',
+  };
+  const key = aliases[moodKey];
+  return key ? t.genres[key] : value;
+}
+
+function translateTone(value: string, t: TranslationCopy): string {
+  const normalized = normalizeChoice(value);
+  const aliases: Record<string, keyof typeof t.tones> = {
+    balanced: 'balanced',
+    dark: 'dark',
+    'dark and intense': 'dark',
+    light: 'light',
+    'light and fun': 'light',
+    serious: 'serious',
+    'serious and thought provoking': 'serious',
+  };
+  const key = aliases[normalized];
+  return key ? t.tones[key].label : value;
+}
+
+function translateEra(value: string, t: TranslationCopy): string {
+  const normalized = normalizeChoice(value);
+  const aliases: Record<string, keyof Omit<typeof t.quiz.era, 'title'>> = {
+    both: 'both',
+    'both new and classic': 'both',
+    classic: 'classic',
+    'timeless classics': 'classic',
+    new: 'new',
+    'new releases': 'new',
+  };
+  const key = aliases[normalized];
+  return key ? t.quiz.era[key].title : value;
+}
+
 function BriefRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start gap-3">
@@ -43,15 +103,24 @@ export function GroupMatchBrief({ insights }: { insights: GroupResultInsights })
   const names = joinList(insights.participantNames, locale);
   const sharedMoods =
     insights.sharedMoods.length > 0
-      ? joinList(insights.sharedMoods, locale)
+      ? joinList(
+          insights.sharedMoods.map((mood) => translateMood(mood, t)),
+          locale,
+        )
       : t.results.groupBriefNoSharedMoods;
   const tones =
     insights.tonePreferences.length > 0
-      ? joinList(insights.tonePreferences, locale)
+      ? joinList(
+          insights.tonePreferences.map((tone) => translateTone(tone, t)),
+          locale,
+        )
       : t.results.groupBriefMixedSignals;
   const eras =
     insights.eraPreferences.length > 0
-      ? joinList(insights.eraPreferences, locale)
+      ? joinList(
+          insights.eraPreferences.map((era) => translateEra(era, t)),
+          locale,
+        )
       : t.results.groupBriefMixedSignals;
   const actors =
     insights.favoriteActors.length > 0 ? joinList(insights.favoriteActors, locale) : null;
