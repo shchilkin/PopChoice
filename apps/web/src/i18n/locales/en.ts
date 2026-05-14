@@ -76,10 +76,14 @@ export const en = {
       personPlaceholder: "Person {n}'s name",
       addPerson: 'Add another person',
       twoNamesHint: 'Add at least two names to start group mode.',
+      countLabel: '{count}/6 seats filled',
+      orderTitle: 'Turn order',
+      orderHint: 'Pass the device this way',
       back: 'Back',
       letsGo: "Let's go!",
     },
     between: {
+      progress: '{current} of {total} complete',
       turnDone: "{name}'s turn is done!",
       nowIts: "Now it's {name}'s turn. Hand over the phone!",
       ready: "I'm ready, {name}! →",
@@ -88,6 +92,7 @@ export const en = {
       back: 'Back',
       continue: 'Continue',
       nextPerson: 'Next Person',
+      handTo: 'Hand to {name}',
       findMyMovie: 'Find My Movie ✨',
       submitting: 'Submitting…',
       ofTotal: '{current} of {total}',
@@ -154,6 +159,10 @@ export const en = {
     submitBridgeTitle: 'Finding your film',
     submitBridgeBody:
       'We are matching your vibe against the collection and shaping a shortlist worth the wait.',
+    groupSubmitBridgeEyebrow: '{count} taste profiles locked',
+    groupSubmitBridgeTitle: 'Finding the overlap',
+    groupSubmitBridgeBody:
+      'We are weighing shared moods, favorite films, and compromise picks for a movie the room can agree on.',
     queuedLabel: 'Warming up the projector',
     realProgressLabel: 'Building your shortlist',
     stages: {

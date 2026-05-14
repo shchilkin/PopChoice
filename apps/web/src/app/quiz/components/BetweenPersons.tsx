@@ -7,10 +7,18 @@ import { useLanguage } from '@/i18n';
 interface BetweenPersonsProps {
   currentPersonName: string;
   nextPersonName: string;
+  completedCount: number;
+  totalPeople: number;
   onNext: () => void;
 }
 
-export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: BetweenPersonsProps) {
+export function BetweenPersons({
+  currentPersonName,
+  nextPersonName,
+  completedCount,
+  totalPeople,
+  onNext,
+}: BetweenPersonsProps) {
   const { t } = useLanguage();
 
   return (
@@ -22,6 +30,19 @@ export function BetweenPersons({ currentPersonName, nextPersonName, onNext }: Be
         className="text-center max-w-sm"
       >
         <div className="text-5xl mb-5">🎬</div>
+        <p
+          className="mb-3"
+          style={{
+            color: 'var(--pc-gold-text)',
+            fontSize: '0.72rem',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {t.quiz.between.progress
+            .replace('{current}', String(completedCount))
+            .replace('{total}', String(totalPeople))}
+        </p>
         <h2
           className="mb-2"
           style={{

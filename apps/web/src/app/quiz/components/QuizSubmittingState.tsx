@@ -5,8 +5,25 @@ import { motion } from 'motion/react';
 import { FilmReel } from '@/app/loading/components/FilmReel';
 import { useLanguage } from '@/i18n';
 
-export function QuizSubmittingState() {
+interface QuizSubmittingStateProps {
+  mode?: 'solo' | 'group';
+  peopleCount?: number;
+}
+
+export function QuizSubmittingState({ mode = 'solo', peopleCount = 1 }: QuizSubmittingStateProps) {
   const { t } = useLanguage();
+  const isGroup = mode === 'group' && peopleCount > 1;
+  const copy = isGroup
+    ? {
+        eyebrow: t.loading.groupSubmitBridgeEyebrow.replace('{count}', String(peopleCount)),
+        title: t.loading.groupSubmitBridgeTitle,
+        body: t.loading.groupSubmitBridgeBody,
+      }
+    : {
+        eyebrow: t.loading.submitBridgeEyebrow,
+        title: t.loading.submitBridgeTitle,
+        body: t.loading.submitBridgeBody,
+      };
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
@@ -29,7 +46,7 @@ export function QuizSubmittingState() {
             textTransform: 'uppercase',
           }}
         >
-          {t.loading.submitBridgeEyebrow}
+          {copy.eyebrow}
         </p>
 
         <h2
@@ -43,12 +60,10 @@ export function QuizSubmittingState() {
             color: 'var(--pc-t1)',
           }}
         >
-          {t.loading.submitBridgeTitle}
+          {copy.title}
         </h2>
 
-        <p style={{ color: 'var(--pc-t2)', fontSize: '0.92rem', lineHeight: 1.6 }}>
-          {t.loading.submitBridgeBody}
-        </p>
+        <p style={{ color: 'var(--pc-t2)', fontSize: '0.92rem', lineHeight: 1.6 }}>{copy.body}</p>
       </motion.div>
     </div>
   );

@@ -76,10 +76,14 @@ export const fi: Translations = {
       personPlaceholder: 'Henkilön {n} nimi',
       addPerson: 'Lisää henkilö',
       twoNamesHint: 'Lisää vähintään kaksi nimeä aloittaaksesi ryhmätilan.',
+      countLabel: '{count}/6 paikkaa täytetty',
+      orderTitle: 'Vuorojärjestys',
+      orderHint: 'Anna laite tässä järjestyksessä',
       back: 'Takaisin',
       letsGo: 'Mennään!',
     },
     between: {
+      progress: '{current}/{total} valmiina',
       turnDone: '{name}n vuoro on ohi!',
       nowIts: 'Nyt on {name}n vuoro. Anna puhelin eteenpäin!',
       ready: 'Olen valmis, {name}! →',
@@ -88,6 +92,7 @@ export const fi: Translations = {
       back: 'Takaisin',
       continue: 'Jatka',
       nextPerson: 'Seuraava henkilö',
+      handTo: 'Anna laite: {name}',
       findMyMovie: 'Löydä elokuvani ✨',
       submitting: 'Lähetetään…',
       ofTotal: '{current} / {total}',
@@ -156,6 +161,10 @@ export const fi: Translations = {
     submitBridgeTitle: 'Etsimme elokuvaa',
     submitBridgeBody:
       'Sovitamme tunnelmasi kokoelmaan ja kokoamme listan, josta ilta on helppo aloittaa.',
+    groupSubmitBridgeEyebrow: '{count} makuprofiilia valmiina',
+    groupSubmitBridgeTitle: 'Etsimme yhteistä osumaa',
+    groupSubmitBridgeBody:
+      'Punnitsemme yhteisiä tunnelmia, lempielokuvia ja kompromisseja, jotta koko porukka saa hyvän valinnan.',
     queuedLabel: 'Lämmitetään projektoria',
     realProgressLabel: 'Kootaan suosikkilistaasi',
     stages: {

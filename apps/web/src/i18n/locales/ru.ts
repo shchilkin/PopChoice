@@ -76,10 +76,14 @@ export const ru: Translations = {
       personPlaceholder: 'Имя участника {n}',
       addPerson: 'Добавить участника',
       twoNamesHint: 'Добавьте минимум два имени, чтобы начать групповой режим.',
+      countLabel: '{count}/6 мест заполнено',
+      orderTitle: 'Порядок ответов',
+      orderHint: 'Передавайте телефон по списку',
       back: 'Назад',
       letsGo: 'Поехали!',
     },
     between: {
+      progress: '{current} из {total} готовы',
       turnDone: '{name} ответил на все вопросы!',
       nowIts: 'Теперь черёд {name}. Передайте телефон!',
       ready: 'Вперёд, {name}! →',
@@ -88,6 +92,7 @@ export const ru: Translations = {
       back: 'Назад',
       continue: 'Продолжить',
       nextPerson: 'Следующий',
+      handTo: 'Передать: {name}',
       findMyMovie: 'Найти фильм ✨',
       submitting: 'Отправляем…',
       ofTotal: '{current} из {total}',
@@ -159,6 +164,10 @@ export const ru: Translations = {
     submitBridgeTitle: 'Подбираем фильм',
     submitBridgeBody:
       'Сверяем ваш вкус с коллекцией и собираем подборку, с которой приятно начать вечер.',
+    groupSubmitBridgeEyebrow: '{count} вкусовых профиля готовы',
+    groupSubmitBridgeTitle: 'Ищем общее совпадение',
+    groupSubmitBridgeBody:
+      'Сравниваем общие настроения, любимые фильмы и компромиссные варианты, чтобы выбрать фильм для всей компании.',
     queuedLabel: 'Готовим проектор',
     realProgressLabel: 'Собираем вашу подборку',
     stages: {
