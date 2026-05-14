@@ -216,8 +216,16 @@ export const ru: Translations = {
     loading: 'Загружаем ваши рекомендации…',
     noResultsTitle: 'Ничего не нашлось…',
     noResultsHint: 'Попробуйте с другим настроением.',
+    sharedResultBadge: 'Общий результат',
+    missingResultTitle: 'Этот выбор уже ушёл из зала',
+    missingResultHint:
+      'Эта ссылка на результат больше недоступна. Начните новый тест, и PopChoice подберёт фильм на сегодня.',
+    failedResultTitle: 'Проектор застрял',
+    failedResultHint:
+      'Эта рекомендация не завершилась корректно. Начните заново, и мы соберём новый выбор.',
     tryAgain: 'Попробовать снова',
     tryWithFriends: 'Попробовать с друзьями',
+    startFresh: 'Начать новый тест',
     disclaimer: 'Подобрано ИИ специально для вас. Осторожно — может затянуть на марафон.',
     scrollLeft: 'Прокрутить влево',
     scrollRight: 'Прокрутить вправо',
@@ -228,6 +236,17 @@ export const ru: Translations = {
     whyThisFilm: 'Почему этот фильм',
     whyThisFilmForYou: 'Почему этот фильм вам',
     whyThisFilmForGroup: 'Почему этот фильм вашей компании',
+    shareResult: 'Поделиться результатом',
+    shareCopied: 'Ссылка скопирована',
+    shareTitle: 'PopChoice выбрал: {name}',
+    shareText: 'PopChoice нашёл фильм для вечера: {name}.',
+    decisionNoteLabel: 'Почему этот выбор',
+    soloDecisionNote:
+      '{name} оказался первым, потому что совпал с вашим настроением, тоном, эпохой и подсказкой по любимому актёру, а не только с одним жанром.',
+    groupDecisionNote:
+      '{name} стал самым удобным пересечением для {people} участников: общий настрой, тон и эпоха сбалансированы вместе.',
+    expandedDecisionNote:
+      'PopChoice расширил поиск через TMDB, чтобы сохранить сильное совпадение.',
     groupBriefTitle: 'Как мы сбалансировали компанию',
     groupBriefPeople: 'Состав просмотра',
     groupBriefPeopleValue: '{count} участников: {names}',

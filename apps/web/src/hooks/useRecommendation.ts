@@ -10,6 +10,16 @@ import type { RecommendationWithMovies } from '@/lib/db/recommendations';
 /** Stop polling for more-picks after 2 minutes — prevents an infinite spinner when workers are down. */
 export const MORE_PICKS_POLL_TIMEOUT_MS = 2 * 60 * 1000;
 
+export class RecommendationFetchError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = 'RecommendationFetchError';
+  }
+}
+
 export function useRecommendation(id: string) {
   const morePicksPendingSince = useRef<number | null>(null);
   const [morePicksTimedOut, setMorePicksTimedOut] = useState(false);
@@ -23,7 +33,7 @@ export function useRecommendation(id: string) {
         },
       });
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        throw new RecommendationFetchError(`HTTP ${res.status}`, res.status);
       }
       return res.json() as Promise<RecommendationWithMovies>;
     },

@@ -214,8 +214,16 @@ export const fi: Translations = {
     loading: 'Ladataan suosituksiasi…',
     noResultsTitle: 'Ei osumia…',
     noResultsHint: 'Kokeile eri tunnelmalla.',
+    sharedResultBadge: 'Jaettu tulos',
+    missingResultTitle: 'Tämä valinta poistui salista',
+    missingResultHint:
+      'Jaettu tulos ei ole enää saatavilla. Aloita uusi testi, niin PopChoice löytää uuden elokuvan täksi illaksi.',
+    failedResultTitle: 'Projektori jumittui',
+    failedResultHint:
+      'Tämä suositus ei valmistunut kunnolla. Aloita uudelleen, niin rakennamme tuoreen valinnan.',
     tryAgain: 'Yritä uudelleen',
     tryWithFriends: 'Kokeile kavereiden kanssa',
+    startFresh: 'Aloita uusi testi',
     disclaimer: 'Tekoälyn valitsemat juuri sinulle. Varoitus: saattaa aiheuttaa leffamaratonin.',
     scrollLeft: 'Vieritä vasemmalle',
     scrollRight: 'Vieritä oikealle',
@@ -226,6 +234,16 @@ export const fi: Translations = {
     whyThisFilm: 'Miksi tämä elokuva',
     whyThisFilmForYou: 'Miksi tämä elokuva sinulle',
     whyThisFilmForGroup: 'Miksi tämä elokuva ryhmällenne',
+    shareResult: 'Jaa tulos',
+    shareCopied: 'Linkki kopioitu',
+    shareTitle: 'PopChoice valitsi: {name}',
+    shareText: 'PopChoice löysi elokuvailtaan: {name}.',
+    decisionNoteLabel: 'Miksi tämä valinta',
+    soloDecisionNote:
+      '{name} nousi kärkeen, koska se osuu tunnelmaasi, sävyysi, aikakauteen ja lempinäyttelijän vihjeeseen, ei vain yhteen genreen.',
+    groupDecisionNote:
+      '{name} nousi katsottavimmaksi yhteiseksi valinnaksi {people} henkilölle, tasapainottaen yhteisen tunnelman, sävyn ja aikakauden.',
+    expandedDecisionNote: 'PopChoice laajensi hakua TMDB:n kautta, jotta osuma pysyy vahvana.',
     groupBriefTitle: 'Näin tasapainotimme ryhmän',
     groupBriefPeople: 'Katseluporukka',
     groupBriefPeopleValue: '{count} henkilöä: {names}',

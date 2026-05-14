@@ -212,8 +212,16 @@ export const en = {
     loading: 'Loading your picks…',
     noResultsTitle: 'Nothing matched…',
     noResultsHint: 'Try again with a different vibe.',
+    sharedResultBadge: 'Shared result',
+    missingResultTitle: 'This pick left the theater',
+    missingResultHint:
+      'That shared result is no longer available. Start a fresh quiz and PopChoice will find a new film for tonight.',
+    failedResultTitle: 'The projector jammed',
+    failedResultHint:
+      'This recommendation did not finish cleanly. Start again and we will build a fresh pick.',
     tryAgain: 'Try Again',
     tryWithFriends: 'Try with friends',
+    startFresh: 'Start a fresh quiz',
     disclaimer: 'AI-picked for you. Results may spark a movie marathon.',
     scrollLeft: 'Scroll left',
     scrollRight: 'Scroll right',
@@ -224,6 +232,16 @@ export const en = {
     whyThisFilm: 'Why this film',
     whyThisFilmForYou: 'Why this film for you',
     whyThisFilmForGroup: 'Why this film for your group',
+    shareResult: 'Share result',
+    shareCopied: 'Link copied',
+    shareTitle: 'PopChoice picked {name}',
+    shareText: 'PopChoice found {name} for movie night.',
+    decisionNoteLabel: 'Why this pick',
+    soloDecisionNote:
+      '{name} won because it lines up with your mood, tone, era, and favorite actor cue, not just one genre.',
+    groupDecisionNote:
+      '{name} won as the most watchable overlap for {people} people, balancing shared mood with tone and era.',
+    expandedDecisionNote: 'PopChoice widened the search through TMDB to keep the match strong.',
     groupBriefTitle: 'How we balanced the room',
     groupBriefPeople: 'Watching crew',
     groupBriefPeopleValue: '{count} people: {names}',
