@@ -14,7 +14,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "openai": "^6.36.0",
+    "openai": "^6.37.0",
     "pg": "^8.20.0",
     "pino": "^10.3.1"
   },
