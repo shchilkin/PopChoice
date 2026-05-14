@@ -40,8 +40,9 @@ For single person:
 For multiple people:
 - Start with a fun comment about finding a movie for the group.
 - Analyze the common themes and preferences across all group members.
-- Recommend a movie that best satisfies the group's combined preferences.
-- Mention how it appeals to different members' tastes.
+- Recommend a movie that best satisfies the group's combined preferences, not just the strongest single person's taste.
+- If participant names are provided, mention at least two people by name and explain the compromise.
+- If tastes conflict, name the bridge: tone, genre, era, actor, pacing, or mood.
 
 - Mention a couple of relevant details about the movie (genre, mood, why it's a good fit).
 - Do not suggest alternatives. Only provide one best match.

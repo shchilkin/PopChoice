@@ -15,6 +15,8 @@ interface GroupSetupProps {
 
 export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: GroupSetupProps) {
   const { t } = useLanguage();
+  const namedPeopleCount = groupNames.filter((name) => name.trim().length > 0).length;
+  const canStart = namedPeopleCount >= 2;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
@@ -118,6 +120,12 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           </button>
         )}
 
+        {!canStart && (
+          <p className="mb-4 text-center text-xs" style={{ color: 'var(--pc-t4)' }}>
+            {t.quiz.groupSetup.twoNamesHint}
+          </p>
+        )}
+
         <div className="flex gap-3">
           <button
             onClick={onBack}
@@ -132,11 +140,14 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           </button>
           <button
             onClick={onStart}
+            disabled={!canStart}
             className="flex-1 py-3 rounded-xl text-sm transition-all duration-200"
             style={{
               background: 'var(--pc-cta)',
               color: 'var(--pc-cta-text)',
               fontWeight: 700,
+              opacity: canStart ? 1 : 0.5,
+              cursor: canStart ? 'pointer' : 'not-allowed',
             }}
           >
             {t.quiz.groupSetup.letsGo}

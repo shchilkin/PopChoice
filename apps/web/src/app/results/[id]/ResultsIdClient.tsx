@@ -6,6 +6,8 @@ import { use, useEffect, useMemo } from 'react';
 import { useRecommendation } from '@/hooks/useRecommendation';
 import { type MovieRecommendation } from '@/utils/client';
 
+import { buildGroupResultInsights } from '../lib/groupResultInsights';
+
 import { RecommendationResultsView } from './RecommendationResultsView';
 import { ResultsErrorState } from './ResultsErrorState';
 import { ResultsLoadingState } from './ResultsLoadingState';
@@ -42,6 +44,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   }, [data]);
 
   const peopleCount = useMemo(() => getQuizPeopleCount(data?.quizData), [data?.quizData]);
+  const groupInsights = useMemo(() => buildGroupResultInsights(data?.quizData), [data?.quizData]);
 
   useEffect(() => {
     if (!id) {
@@ -72,6 +75,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       usedBroaderSearch={data.usedBroaderSearch ?? false}
       dbMovieCount={data.dbMovieCount}
       peopleCount={peopleCount}
+      groupInsights={groupInsights}
       recommendationSlug={id}
       morePicksStatus={data.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}

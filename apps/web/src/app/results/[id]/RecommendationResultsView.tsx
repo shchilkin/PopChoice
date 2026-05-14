@@ -10,13 +10,21 @@ import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 import { type MovieRecommendation } from '@/utils/client';
 
-import { ExpandedSuggestion, MainMovieCard, SmallSuggestionCard } from '../components';
+import {
+  ExpandedSuggestion,
+  GroupMatchBrief,
+  MainMovieCard,
+  SmallSuggestionCard,
+} from '../components';
+
+import type { GroupResultInsights } from '../lib/groupResultInsights';
 
 export function RecommendationResultsView({
   movies,
   usedBroaderSearch,
   dbMovieCount,
   peopleCount = 1,
+  groupInsights,
   recommendationSlug,
   morePicksStatus,
   morePicksTimedOut,
@@ -26,6 +34,7 @@ export function RecommendationResultsView({
   usedBroaderSearch: boolean;
   dbMovieCount?: number;
   peopleCount?: number;
+  groupInsights?: GroupResultInsights | null;
   recommendationSlug?: string;
   morePicksStatus?: string | null;
   morePicksTimedOut?: boolean;
@@ -161,6 +170,8 @@ export function RecommendationResultsView({
           {t.results.broaderSearch}
         </motion.div>
       )}
+
+      {isGroupResult && groupInsights && <GroupMatchBrief insights={groupInsights} />}
 
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-4">

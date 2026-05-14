@@ -135,7 +135,9 @@ export default function QuizPage() {
         groupNames={groupNames}
         onGroupNamesChange={setGroupNames}
         onBack={() => send({ type: 'BACK' })}
-        onStart={() => send({ type: 'START_GROUP_QUESTIONS', names: groupNames })}
+        onStart={() =>
+          send({ type: 'START_GROUP_QUESTIONS', names: groupNames.map((name) => name.trim()) })
+        }
       />
     );
   }
