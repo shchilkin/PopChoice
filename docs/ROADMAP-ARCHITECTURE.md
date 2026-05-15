@@ -47,7 +47,7 @@ The main remaining risks are:
 
 ### Issues Still Present
 
-- No high-priority boundary issues remain in the current cleanup slice.
+- The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
 
@@ -92,6 +92,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Isolate external integrations behind stable client/service interfaces.
 - Centralize configuration and constants to reduce manual synchronization.
 - Prefer extracting recommendation flows out of `src/app/api` into clearer domain-owned modules.
+- Refactor the quiz submission lifecycle so recommendation creation is modeled explicitly instead of coordinated through route-local `useEffect`, refs, and navigation timing.
 
 ### Phase 3: Extract intentional packages from the existing layout
 

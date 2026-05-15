@@ -526,6 +526,71 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
       expect(userMessage?.content).not.toContain('name: Sam');
     });
 
+    it('uses favorite movies as taste signals but excludes them from recommendation candidates', async () => {
+      const { getDbClient } = vi.mocked(await import('@/clients/dbClient'));
+      (getDbClient as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce({
+          isConfigured: vi.fn().mockReturnValue(true),
+          from: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue({ count: 2, error: null }),
+          }),
+        })
+        .mockReturnValueOnce({
+          rpc: vi.fn().mockResolvedValue({
+            data: [
+              {
+                id: 1,
+                name: 'The Dark Knight',
+                age_rating: 'PG-13',
+                description: 'A masked hero faces chaos.',
+                duration: 152,
+                score_rating: 9,
+                year: 2008,
+                similarity: 0.98,
+                content: 'The Dark Knight (2008) — A masked hero faces chaos.',
+              },
+              {
+                id: 2,
+                name: 'Heat',
+                age_rating: 'R',
+                description: 'A tense crime drama about cops and robbers.',
+                duration: 170,
+                score_rating: 8.3,
+                year: 1995,
+                similarity: 0.9,
+                content: 'Heat (1995) — A tense crime drama about cops and robbers.',
+              },
+            ],
+            error: null,
+          }),
+        });
+      mockChatCompletionsCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ title: 'Heat', description: 'A strong fit.' }),
+            },
+          },
+        ],
+      });
+
+      const res = await POST(makeRequest(validBody));
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const recommendationCall = calls.find((callArgs) => callArgs[0].response_format);
+      const userMessage = recommendationCall?.[0].messages.find(
+        (message) => message.role === 'user',
+      );
+      const [candidateContext, viewerPreferences] = String(userMessage?.content ?? '').split(
+        'Viewer preferences:',
+      );
+
+      expect(candidateContext).toContain('Heat');
+      expect(candidateContext).not.toContain('The Dark Knight');
+      expect(viewerPreferences).toContain('The Dark Knight');
+    });
+
     it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {
       // First call = enrichment, then recommendation + description calls
       mockChatCompletionsCreate
