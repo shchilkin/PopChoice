@@ -37,6 +37,13 @@ describe('candidateFilters', () => {
     expect(isMentionedMovieTitle('THE DARK-KNIGHT', mentioned)).toBe(true);
   });
 
+  it('matches mentioned movie titles written in non-Latin scripts', () => {
+    const mentioned = getMentionedMovieTitleKeys([person('Сталкер'), person('千と千尋の神隠し')]);
+
+    expect(isMentionedMovieTitle('сталкер', mentioned)).toBe(true);
+    expect(isMentionedMovieTitle('千と千尋の神隠し', mentioned)).toBe(true);
+  });
+
   it('does not treat related titles as the same movie', () => {
     const mentioned = getMentionedMovieTitleKeys([person('Alien')]);
 

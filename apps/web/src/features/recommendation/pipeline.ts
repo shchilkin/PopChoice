@@ -126,10 +126,8 @@ export async function runRecommendationPipeline(
 
   // Step 2: Find similar movies (local vector search)
   await emitStage('local-search');
-  let similarMovies = excludeMentionedLocalMovies(
-    await getSimilarMovies(embedding),
-    mentionedTitleKeys,
-  );
+  const localSimilarMovies = await getSimilarMovies(embedding);
+  let similarMovies = excludeMentionedLocalMovies(localSimilarMovies, mentionedTitleKeys);
 
   // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
   let usedBroaderSearch = false;
@@ -228,7 +226,19 @@ export async function runRecommendationPipeline(
   }
 
   if (similarMovies.length === 0) {
-    throw new Error('No similar movies found.');
+    const fallbackMovies = localSimilarMovies.slice(0, MAX_TOTAL_MOVIES);
+    if (fallbackMovies.length === 0) {
+      throw new Error('No similar movies found.');
+    }
+
+    logger.warn(
+      {
+        mentionedTitleCount: mentionedTitleKeys.size,
+        fallbackCount: fallbackMovies.length,
+      },
+      'Mentioned-title filtering removed every candidate and TMDB fallback did not refill results; relaxing filter as last resort',
+    );
+    similarMovies = fallbackMovies;
   }
 
   // Step 4: Get recommendation from OpenAI

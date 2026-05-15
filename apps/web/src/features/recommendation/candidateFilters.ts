@@ -3,11 +3,11 @@ import type { EnhancedMovieMatch, PersonFormData } from './types';
 
 function normalizeMovieTitle(title: string): string {
   return title
-    .toLowerCase()
+    .toLocaleLowerCase()
     .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\p{M}+/gu, '')
     .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
     .replace(/^(the|a|an)\s+/, '')
     .replace(/\s+/g, ' ');
