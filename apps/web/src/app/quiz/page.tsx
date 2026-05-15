@@ -29,6 +29,59 @@ import type { PersonAnswers } from './types';
 
 const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
+type ResultNavigation = {
+  mode: 'solo' | 'group';
+  peopleCount: number;
+};
+
+const QUIZ_HANDOFF_STORAGE_KEY = 'pop-choice:quiz-handoff';
+const QUIZ_HANDOFF_TTL_MS = 30_000;
+
+function readStoredQuizHandoff(): ResultNavigation | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(QUIZ_HANDOFF_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as ResultNavigation & { expiresAt?: number };
+    if (
+      (parsed.mode !== 'solo' && parsed.mode !== 'group') ||
+      typeof parsed.peopleCount !== 'number' ||
+      typeof parsed.expiresAt !== 'number' ||
+      parsed.expiresAt < Date.now()
+    ) {
+      window.sessionStorage.removeItem(QUIZ_HANDOFF_STORAGE_KEY);
+      return null;
+    }
+
+    return {
+      mode: parsed.mode,
+      peopleCount: parsed.peopleCount,
+    };
+  } catch {
+    window.sessionStorage.removeItem(QUIZ_HANDOFF_STORAGE_KEY);
+    return null;
+  }
+}
+
+function storeQuizHandoff(handoff: ResultNavigation) {
+  if (typeof window === 'undefined') return;
+
+  window.sessionStorage.setItem(
+    QUIZ_HANDOFF_STORAGE_KEY,
+    JSON.stringify({
+      ...handoff,
+      expiresAt: Date.now() + QUIZ_HANDOFF_TTL_MS,
+    }),
+  );
+}
+
+function clearQuizHandoff() {
+  if (typeof window === 'undefined') return;
+
+  window.sessionStorage.removeItem(QUIZ_HANDOFF_STORAGE_KEY);
+}
 
 export default function QuizPage() {
   const [state, send] = useMachine(quizMachine);
@@ -37,10 +90,9 @@ export default function QuizPage() {
 
   // groupNames is transient UI state only needed during GroupSetup
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
-  const [resultNavigation, setResultNavigation] = useState<{
-    mode: 'solo' | 'group';
-    peopleCount: number;
-  } | null>(null);
+  const [resultNavigation, setResultNavigation] = useState<ResultNavigation | null>(
+    readStoredQuizHandoff,
+  );
   // Guard against React StrictMode double-invoking the submit effect
   const submittingRef = useRef(false);
 
@@ -62,6 +114,8 @@ export default function QuizPage() {
     // Prevent double-submission from React StrictMode or re-renders
     if (submittingRef.current) return;
     submittingRef.current = true;
+    const handoff = { mode, peopleCount: people.length };
+    storeQuizHandoff(handoff);
 
     async function submit() {
       const resolved =
@@ -83,6 +137,7 @@ export default function QuizPage() {
 
         if (!res.ok) {
           // If the server can't process the quiz data, go back to quiz
+          clearQuizHandoff();
           setResultNavigation(null);
           submittingRef.current = false;
           send({ type: 'BACK' });
@@ -93,13 +148,14 @@ export default function QuizPage() {
         // Commit the handoff screen before resetting the machine. Otherwise the
         // intro state can briefly render while Next is navigating to results.
         flushSync(() => {
-          setResultNavigation({ mode, peopleCount: people.length });
+          setResultNavigation(handoff);
         });
         submittingRef.current = false;
         send({ type: 'RESET' });
         router.push(`/results/${id}`);
       } catch {
         // Network error — send the machine back so the user can retry
+        clearQuizHandoff();
         setResultNavigation(null);
         submittingRef.current = false;
         send({ type: 'BACK' });
