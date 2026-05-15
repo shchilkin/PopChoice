@@ -4,6 +4,7 @@ import { useMachine } from '@xstate/react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -89,7 +90,11 @@ export default function QuizPage() {
         }
 
         const { id } = (await res.json()) as { id: string };
-        setResultNavigation({ mode, peopleCount: people.length });
+        // Commit the handoff screen before resetting the machine. Otherwise the
+        // intro state can briefly render while Next is navigating to results.
+        flushSync(() => {
+          setResultNavigation({ mode, peopleCount: people.length });
+        });
         submittingRef.current = false;
         send({ type: 'RESET' });
         router.push(`/results/${id}`);
