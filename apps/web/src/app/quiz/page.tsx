@@ -84,8 +84,11 @@ export default function QuizPage() {
         }
 
         const { id } = (await res.json()) as { id: string };
-        router.push(`/results/${id}`);
+        // Leave the cached quiz route in a clean state. Next can preserve client route state
+        // between navigations, so the submission guard must be reset before we move away.
+        submittingRef.current = false;
         send({ type: 'RESET' });
+        router.push(`/results/${id}`);
       } catch {
         // Network error — send the machine back so the user can retry
         submittingRef.current = false;
