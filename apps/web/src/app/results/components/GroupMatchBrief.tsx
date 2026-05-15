@@ -1,12 +1,15 @@
 'use client';
 
-import { Film, Smile, Sparkles, Users } from 'lucide-react';
+import { Film, Smile, Sparkles, Ticket, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
-import type { GroupResultInsights } from '@/features/recommendation/groupResultInsights';
+import type {
+  GroupParticipantProfile,
+  GroupResultInsights,
+} from '@/features/recommendation/groupResultInsights';
 import type { ReactNode } from 'react';
 
 function joinList(values: string[], locale: string): string {
@@ -98,6 +101,88 @@ function BriefRow({ icon, label, value }: { icon: ReactNode; label: string; valu
   );
 }
 
+function ParticipantSignal({
+  profile,
+  t,
+  locale,
+  hasDivider,
+}: {
+  profile: GroupParticipantProfile;
+  t: TranslationCopy;
+  locale: string;
+  hasDivider: boolean;
+}) {
+  const moodValue =
+    profile.moodPreferences.length > 0
+      ? joinList(
+          profile.moodPreferences.map((mood) => translateMood(mood, t)),
+          locale,
+        )
+      : t.results.groupBriefMissingSignal;
+  const toneValue = profile.tonePreference
+    ? translateTone(profile.tonePreference, t)
+    : t.results.groupBriefMissingSignal;
+  const eraValue = profile.eraPreference
+    ? translateEra(profile.eraPreference, t)
+    : t.results.groupBriefMissingSignal;
+
+  return (
+    <li
+      className="grid gap-2 py-3 sm:grid-cols-[minmax(6rem,0.8fr)_1fr] sm:gap-4"
+      style={{
+        borderTop: hasDivider ? '1px solid var(--pc-bd1)' : '0',
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <div
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+          style={{
+            background: 'var(--pc-gold-subtle)',
+            color: 'var(--pc-gold-text)',
+          }}
+        >
+          <Ticket size={13} />
+        </div>
+        <span style={{ color: 'var(--pc-t1)', fontSize: '0.9rem', fontWeight: 700 }}>
+          {profile.name}
+        </span>
+      </div>
+
+      <div
+        className="flex flex-wrap gap-x-3 gap-y-1.5"
+        style={{ color: 'var(--pc-t3)', fontSize: '0.78rem', lineHeight: 1.5 }}
+      >
+        {profile.favoriteMovie && (
+          <span>
+            <strong style={{ color: 'var(--pc-t2)', fontWeight: 700 }}>
+              {t.results.groupBriefFavorite}
+            </strong>{' '}
+            {profile.favoriteMovie}
+          </span>
+        )}
+        <span>
+          <strong style={{ color: 'var(--pc-t2)', fontWeight: 700 }}>
+            {t.results.groupBriefMoodSignal}
+          </strong>{' '}
+          {moodValue}
+        </span>
+        <span>
+          <strong style={{ color: 'var(--pc-t2)', fontWeight: 700 }}>
+            {t.results.groupBriefToneSignal}
+          </strong>{' '}
+          {toneValue}
+        </span>
+        <span>
+          <strong style={{ color: 'var(--pc-t2)', fontWeight: 700 }}>
+            {t.results.groupBriefEraSignal}
+          </strong>{' '}
+          {eraValue}
+        </span>
+      </div>
+    </li>
+  );
+}
+
 export function GroupMatchBrief({ insights }: { insights: GroupResultInsights }) {
   const { t, locale } = useLanguage();
   const names = joinList(insights.participantNames, locale);
@@ -147,6 +232,13 @@ export function GroupMatchBrief({ insights }: { insights: GroupResultInsights })
         </h2>
       </div>
 
+      <p
+        className="mb-5 max-w-2xl"
+        style={{ color: 'var(--pc-t3)', fontSize: '0.86rem', lineHeight: 1.6 }}
+      >
+        {t.results.groupBriefTakeaway}
+      </p>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <BriefRow
           icon={<Users size={14} />}
@@ -179,6 +271,34 @@ export function GroupMatchBrief({ insights }: { insights: GroupResultInsights })
           }}
         >
           {t.results.groupBriefActors.replace('{actors}', actors)}
+        </div>
+      )}
+
+      {insights.participantProfiles.length > 0 && (
+        <div
+          className="mt-5 rounded-xl px-4 py-3"
+          style={{
+            background: 'var(--pc-surface-hover)',
+            border: '1px solid var(--pc-bd1)',
+          }}
+        >
+          <div
+            className="mb-1 uppercase tracking-widest"
+            style={{ color: 'var(--pc-t4)', fontSize: '0.62rem' }}
+          >
+            {t.results.groupBriefParticipantSignals}
+          </div>
+          <ul>
+            {insights.participantProfiles.map((profile, index) => (
+              <ParticipantSignal
+                key={`${profile.name}-${profile.favoriteMovie ?? profile.tonePreference ?? ''}-${index}`}
+                profile={profile}
+                t={t}
+                locale={locale}
+                hasDivider={index > 0}
+              />
+            ))}
+          </ul>
         </div>
       )}
     </motion.section>

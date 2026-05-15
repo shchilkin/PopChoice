@@ -34,3 +34,9 @@ Cinematic, Confident, Playful. The "Cinematic Concierge" — culturally aware, o
 ## Accessibility & Inclusion
 
 WCAG AA compliance. Standard good practices: sufficient color contrast, keyboard navigation, reduced-motion support via `prefers-reduced-motion`. No specialized accommodations required beyond baseline.
+
+## Product Roadmap Notes
+
+- Avoid recommending a film the user explicitly mentioned as a favorite or reference title. That signal should shape taste, not become the answer; in most cases the user has already seen it.
+- Improve the results share card so a user can create and copy a stable share link. Social sharing can follow later, but the core need is "send this recommendation to someone" without friction.
+- Loading states must be truthful and terminal. If recommendation polling hits authorization, missing-result, worker, or network failures, the UI should show an actionable error instead of returning to an earlier loading state or spinning indefinitely.

@@ -2,10 +2,19 @@ type UnknownRecord = Record<string, unknown>;
 
 export interface GroupResultInsights {
   participantNames: string[];
+  participantProfiles: GroupParticipantProfile[];
   sharedMoods: string[];
   tonePreferences: string[];
   eraPreferences: string[];
   favoriteActors: string[];
+}
+
+export interface GroupParticipantProfile {
+  name: string;
+  favoriteMovie: string | null;
+  moodPreferences: string[];
+  tonePreference: string | null;
+  eraPreference: string | null;
 }
 
 export function getQuizPeopleCount(quizData: unknown): number {
@@ -67,6 +76,13 @@ export function buildGroupResultInsights(quizData: unknown): GroupResultInsights
     participantNames: people.map(
       (person, index) => cleanString(person.name) ?? `Person ${index + 1}`,
     ),
+    participantProfiles: people.map((person, index) => ({
+      name: cleanString(person.name) ?? `Person ${index + 1}`,
+      favoriteMovie: cleanString(person.favoriteMovie),
+      moodPreferences: cleanStringArray(person.moodPreference),
+      tonePreference: cleanString(person.tonePreference),
+      eraPreference: cleanString(person.newVsClassic),
+    })),
     sharedMoods: uniqueStrings(intersectMoodPreferences(people)),
     tonePreferences: uniqueStrings(
       cleanStringValues(people.map((person) => person.tonePreference)),

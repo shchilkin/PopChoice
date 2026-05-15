@@ -20,6 +20,17 @@ export class RecommendationFetchError extends Error {
   }
 }
 
+export function shouldRetryRecommendationFetch(failureCount: number, error: Error): boolean {
+  if (
+    error instanceof RecommendationFetchError &&
+    (error.status === 401 || error.status === 403 || error.status === 404)
+  ) {
+    return false;
+  }
+
+  return failureCount < 3;
+}
+
 export function useRecommendation(id: string) {
   const morePicksPendingSince = useRef<number | null>(null);
   const [morePicksTimedOut, setMorePicksTimedOut] = useState(false);
@@ -38,6 +49,8 @@ export function useRecommendation(id: string) {
       return res.json() as Promise<RecommendationWithMovies>;
     },
     refetchInterval: (query) => {
+      if (query.state.error) return false;
+
       const status = query.state.data?.status;
       const morePicksStatus = query.state.data?.morePicksStatus;
       if (status === 'failed') return false;
@@ -59,7 +72,7 @@ export function useRecommendation(id: string) {
       return false;
     },
     staleTime: Infinity,
-    retry: 3,
+    retry: shouldRetryRecommendationFetch,
   });
 
   return { ...query, morePicksTimedOut };
