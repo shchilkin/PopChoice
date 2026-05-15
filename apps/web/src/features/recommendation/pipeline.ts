@@ -9,6 +9,11 @@ import { getDbClient } from '@/clients/dbClient';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 
+import {
+  excludeMentionedLocalMovies,
+  excludeMentionedTMDBMovies,
+  getMentionedMovieTitleKeys,
+} from './candidateFilters';
 import { createEmbedding, refineQueryWithLLM } from './embedding';
 import { SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import {
@@ -87,6 +92,8 @@ export async function runRecommendationPipeline(
   locale: Locale,
   options: { onStageChange?: (stage: RecommendationStage) => Promise<void> | void } = {},
 ): Promise<ApiResponse> {
+  const mentionedTitleKeys = getMentionedMovieTitleKeys(allPeopleData);
+
   async function emitStage(stage: RecommendationStage): Promise<void> {
     try {
       await options.onStageChange?.(stage);
@@ -119,7 +126,10 @@ export async function runRecommendationPipeline(
 
   // Step 2: Find similar movies (local vector search)
   await emitStage('local-search');
-  let similarMovies = await getSimilarMovies(embedding);
+  let similarMovies = excludeMentionedLocalMovies(
+    await getSimilarMovies(embedding),
+    mentionedTitleKeys,
+  );
 
   // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
   let usedBroaderSearch = false;
@@ -135,7 +145,10 @@ export async function runRecommendationPipeline(
 
     const tmdbApiKey = process.env.TMDB_API_KEY;
     if (tmdbApiKey) {
-      const tmdbMovies = await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey);
+      const tmdbMovies = excludeMentionedTMDBMovies(
+        await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey),
+        mentionedTitleKeys,
+      );
 
       if (tmdbMovies.length > 0) {
         const localResultsForMerge = highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
