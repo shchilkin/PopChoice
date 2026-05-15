@@ -36,6 +36,10 @@ export default function QuizPage() {
 
   // groupNames is transient UI state only needed during GroupSetup
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
+  const [resultNavigation, setResultNavigation] = useState<{
+    mode: 'solo' | 'group';
+    peopleCount: number;
+  } | null>(null);
   // Guard against React StrictMode double-invoking the submit effect
   const submittingRef = useRef(false);
 
@@ -78,19 +82,20 @@ export default function QuizPage() {
 
         if (!res.ok) {
           // If the server can't process the quiz data, go back to quiz
+          setResultNavigation(null);
           submittingRef.current = false;
           send({ type: 'BACK' });
           return;
         }
 
         const { id } = (await res.json()) as { id: string };
-        // Leave the cached quiz route in a clean state. Next can preserve client route state
-        // between navigations, so the submission guard must be reset before we move away.
+        setResultNavigation({ mode, peopleCount: people.length });
         submittingRef.current = false;
         send({ type: 'RESET' });
         router.push(`/results/${id}`);
       } catch {
         // Network error — send the machine back so the user can retry
+        setResultNavigation(null);
         submittingRef.current = false;
         send({ type: 'BACK' });
       }
@@ -146,6 +151,15 @@ export default function QuizPage() {
   }
 
   // ── SUBMITTING ── recommendation creation is in flight via useEffect above
+  if (resultNavigation) {
+    return (
+      <QuizSubmittingState
+        mode={resultNavigation.mode}
+        peopleCount={resultNavigation.peopleCount}
+      />
+    );
+  }
+
   if (state.matches('submitting')) {
     return <QuizSubmittingState mode={mode} peopleCount={people.length} />;
   }
