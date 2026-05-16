@@ -1,9 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Recommendations table
--- future: add  user_id uuid REFERENCES users(id) ON DELETE SET NULL
 CREATE TABLE IF NOT EXISTS recommendations (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             bigint      REFERENCES users(id) ON DELETE SET NULL,
   slug                text        UNIQUE NOT NULL,              -- short nanoid(12) used in public URLs
   status              text        NOT NULL DEFAULT 'pending',   -- pending | processing | completed | failed
   stage               text        NOT NULL DEFAULT 'queued',    -- queued | preparing | embedding | local-search | tmdb-search | ai-ranking | posters | descriptions | complete | failed
@@ -14,8 +14,11 @@ CREATE TABLE IF NOT EXISTS recommendations (
   used_broader_search boolean,
   db_movie_count      integer,
   more_picks_status   text                                       -- null | pending | processing | completed | failed
-  -- future: user_id uuid, rating smallint CHECK (rating BETWEEN 1 AND 5)
+  -- future: rating smallint CHECK (rating BETWEEN 1 AND 5)
 );
+
+ALTER TABLE recommendations
+  ADD COLUMN IF NOT EXISTS user_id bigint REFERENCES users(id) ON DELETE SET NULL;
 
 ALTER TABLE recommendations
   ADD COLUMN IF NOT EXISTS slug text;
@@ -45,6 +48,10 @@ ALTER TABLE recommendations
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recommendations_slug
   ON recommendations (slug);
+
+CREATE INDEX IF NOT EXISTS idx_recommendations_user_id_created_at
+  ON recommendations (user_id, created_at DESC)
+  WHERE user_id IS NOT NULL;
 
 -- Individual movies linked to a recommendation
 CREATE TABLE IF NOT EXISTS recommendation_movies (

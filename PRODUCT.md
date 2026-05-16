@@ -37,6 +37,8 @@ WCAG AA compliance. Standard good practices: sufficient color contrast, keyboard
 
 ## Product Roadmap Notes
 
+- Improve the registration experience so users are signed in automatically after creating an account, or are guided into the app without being asked to log in again.
+- Add password recovery so users can restore access through a clear "forgot password" flow.
 - Avoid recommending a film the user explicitly mentioned as a favorite or reference title. That signal should shape taste, not become the answer; in most cases the user has already seen it.
 - Improve the results share card so a user can create and copy a stable share link. Social sharing can follow later, but the core need is "send this recommendation to someone" without friction.
 - Loading states must be truthful and terminal. If recommendation polling hits authorization, missing-result, worker, or network failures, the UI should show an actionable error instead of returning to an earlier loading state or spinning indefinitely.

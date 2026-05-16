@@ -67,6 +67,18 @@ export interface RecommendationWithMovies {
   morePicksStatus?: string | null;
 }
 
+export interface AccountRecommendationSummary {
+  slug: string;
+  status: RecommendationStatus;
+  stage: RecommendationStage;
+  createdAt: string;
+  completedAt: string | null;
+  peopleCount: number;
+  movieName: string | null;
+  movieYear: number | null;
+  posterURL: string | null;
+}
+
 export interface MovieRowToInsert {
   id: number;
   name: string;
@@ -88,16 +100,86 @@ export interface MovieRowToInsert {
 
 export async function createRecommendation(
   quizData: PersonFormData | PersonFormData[],
+  userId?: string,
 ): Promise<{ id: string; slug: string }> {
   const pool = getPool();
   const slug = nanoid(12);
   const result = await pool.query<{ id: string; slug: string }>(
-    `INSERT INTO recommendations (status, stage, quiz_data, slug) VALUES ('pending', 'queued', $1, $2) RETURNING id, slug`,
-    [JSON.stringify(quizData), slug],
+    `INSERT INTO recommendations (status, stage, quiz_data, slug, user_id)
+     VALUES ('pending', 'queued', $1, $2, $3)
+     RETURNING id, slug`,
+    [JSON.stringify(quizData), slug, userId ?? null],
   );
   const row = result.rows[0];
   if (!row) throw new Error('Failed to create recommendation row');
   return row;
+}
+
+export async function getUserRecommendationSummaries(
+  userId: string,
+  limit = 20,
+): Promise<AccountRecommendationSummary[]> {
+  const pool = getPool();
+  const result = await pool.query<{
+    slug: string;
+    status: RecommendationStatus;
+    stage: RecommendationStage | null;
+    created_at: Date | string;
+    completed_at: Date | string | null;
+    quiz_data: unknown;
+    poster_url: string | null;
+    localized_name: string | null;
+    tmdb_name: string | null;
+    tmdb_year: number | null;
+    m_name: string | null;
+    m_year: number | null;
+  }>(
+    `SELECT
+       r.slug,
+       r.status,
+       r.stage,
+       r.created_at,
+       r.completed_at,
+       r.quiz_data,
+       rm.poster_url,
+       rm.localized_name,
+       rm.tmdb_name,
+       rm.tmdb_year,
+       m.name AS m_name,
+       m.year AS m_year
+     FROM recommendations r
+     LEFT JOIN LATERAL (
+       SELECT *
+         FROM recommendation_movies
+        WHERE recommendation_id = r.id
+        ORDER BY is_main_recommendation DESC, position ASC
+        LIMIT 1
+     ) rm ON true
+     LEFT JOIN movies m ON m.id = rm.movie_id
+     WHERE r.user_id = $1
+     ORDER BY r.created_at DESC
+     LIMIT $2`,
+    [userId, limit],
+  );
+
+  return result.rows.map((row) => {
+    const createdAt =
+      row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at;
+    const completedAt =
+      row.completed_at instanceof Date ? row.completed_at.toISOString() : row.completed_at;
+
+    return {
+      slug: row.slug,
+      status: row.status,
+      stage: row.stage ?? (row.status === 'completed' ? 'complete' : 'queued'),
+      createdAt,
+      completedAt,
+      peopleCount: getQuizPeopleCount(row.quiz_data),
+      movieName: row.localized_name ?? row.tmdb_name ?? row.m_name ?? null,
+      movieYear: row.tmdb_year ?? row.m_year ?? null,
+      posterURL: row.poster_url,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
