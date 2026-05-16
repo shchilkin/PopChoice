@@ -813,7 +813,7 @@ export const fi: Translations = {
     submitButton: 'Luo tili',
     submitting: 'Luodaan tiliä…',
     successTitle: 'Tili luotu!',
-    successMessage: 'Voit nyt kirjautua PopChoiceen.',
+    successMessage: 'Olet kirjautunut sisään ja voit tallentaa valintasi.',
     backToHome: 'Etusivulle',
     alreadyHaveAccount: 'Onko sinulla jo tili?',
     logIn: 'Kirjaudu sisään',

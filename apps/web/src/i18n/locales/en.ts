@@ -806,7 +806,7 @@ export const en = {
     submitButton: 'Create account',
     submitting: 'Creating account…',
     successTitle: 'Account created!',
-    successMessage: 'You can now sign in to PopChoice.',
+    successMessage: 'You are signed in and ready to save your picks.',
     backToHome: 'Back to home',
     alreadyHaveAccount: 'Already have an account?',
     logIn: 'Log in',

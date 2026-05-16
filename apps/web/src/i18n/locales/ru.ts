@@ -817,7 +817,7 @@ export const ru: Translations = {
     submitButton: 'Создать аккаунт',
     submitting: 'Создаём аккаунт…',
     successTitle: 'Аккаунт создан!',
-    successMessage: 'Теперь вы можете войти в PopChoice.',
+    successMessage: 'Вы уже вошли и можете сохранять подборки.',
     backToHome: 'На главную',
     alreadyHaveAccount: 'Уже есть аккаунт?',
     logIn: 'Войти',
