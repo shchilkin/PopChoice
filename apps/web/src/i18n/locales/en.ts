@@ -163,6 +163,12 @@ export const en = {
     groupSubmitBridgeTitle: 'Finding the overlap',
     groupSubmitBridgeBody:
       'We are weighing shared moods, favorite films, and compromise picks for a movie the room can agree on.',
+    submitFailedEyebrow: 'Recommendation paused',
+    submitFailedTitle: 'Search did not start',
+    submitFailedBody:
+      'Something interrupted the handoff to recommendations. Your answers are still here, so you can try again or adjust the last step.',
+    submitFailedRetry: 'Try again',
+    submitFailedBack: 'Back to quiz',
     queuedLabel: 'Warming up the projector',
     realProgressLabel: 'Building your shortlist',
     stages: {

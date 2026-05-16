@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { use, useEffect, useMemo } from 'react';
 
 import { RecommendationFetchError, useRecommendation } from '@/hooks/useRecommendation';
+import { createFreshQuizHref } from '@/lib/quizNavigation';
 import { type MovieRecommendation } from '@/utils/client';
 
 import { RecommendationResultsView } from './RecommendationResultsView';
@@ -16,10 +17,6 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   const id = typeof routeParams.id === 'string' ? routeParams.id : '';
 
   const { data, error, isError, refetch, morePicksTimedOut } = useRecommendation(id);
-
-  useEffect(() => {
-    window.sessionStorage.removeItem('pop-choice:quiz-handoff');
-  }, []);
 
   // Derive movies from the completed poll response — no secondary fetch needed because
   // poster URLs are fetched during the BullMQ job and stored in recommendation_movies.
@@ -58,11 +55,15 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   if (isError) {
     const variant =
       error instanceof RecommendationFetchError && error.status === 404 ? 'missing' : 'failed';
-    return <ResultsErrorState variant={variant} onRetry={() => router.push('/quiz')} />;
+    return (
+      <ResultsErrorState variant={variant} onRetry={() => router.push(createFreshQuizHref())} />
+    );
   }
 
   if (status === 'failed') {
-    return <ResultsErrorState variant="failed" onRetry={() => router.push('/quiz')} />;
+    return (
+      <ResultsErrorState variant="failed" onRetry={() => router.push(createFreshQuizHref())} />
+    );
   }
 
   if (!data || status === 'pending' || status === 'processing') {
@@ -70,7 +71,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   }
 
   if (movies.length === 0) {
-    return <ResultsErrorState variant="empty" onRetry={() => router.push('/quiz')} />;
+    return <ResultsErrorState variant="empty" onRetry={() => router.push(createFreshQuizHref())} />;
   }
 
   return (

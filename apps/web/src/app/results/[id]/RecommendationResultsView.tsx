@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
+import { createFreshQuizHref } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 import { type MovieRecommendation } from '@/utils/client';
 
@@ -508,7 +509,7 @@ export function RecommendationResultsView({
         className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
       >
         <button
-          onClick={() => router.push('/quiz')}
+          onClick={() => router.push(createFreshQuizHref())}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: 'var(--pc-ghost)',
@@ -529,7 +530,7 @@ export function RecommendationResultsView({
         </button>
 
         <button
-          onClick={() => router.push('/quiz')}
+          onClick={() => router.push(createFreshQuizHref())}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: `linear-gradient(135deg, ${palette.purple}, #6D28D9)`,

@@ -2,9 +2,8 @@
 
 import { useMachine } from '@xstate/react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, startTransition, useEffect, useRef, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -29,76 +28,33 @@ import type { PersonAnswers } from './types';
 
 const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
-type ResultNavigation = {
-  mode: 'solo' | 'group';
-  peopleCount: number;
-};
 
-const QUIZ_HANDOFF_STORAGE_KEY = 'pop-choice:quiz-handoff';
-const QUIZ_HANDOFF_TTL_MS = 30_000;
-
-function readStoredQuizHandoff(): ResultNavigation | null {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const raw = window.sessionStorage.getItem(QUIZ_HANDOFF_STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as ResultNavigation & { expiresAt?: number };
-    if (
-      (parsed.mode !== 'solo' && parsed.mode !== 'group') ||
-      typeof parsed.peopleCount !== 'number' ||
-      typeof parsed.expiresAt !== 'number' ||
-      parsed.expiresAt < Date.now()
-    ) {
-      window.sessionStorage.removeItem(QUIZ_HANDOFF_STORAGE_KEY);
-      return null;
-    }
-
-    return {
-      mode: parsed.mode,
-      peopleCount: parsed.peopleCount,
-    };
-  } catch {
-    window.sessionStorage.removeItem(QUIZ_HANDOFF_STORAGE_KEY);
-    return null;
-  }
-}
-
-function storeQuizHandoff(handoff: ResultNavigation) {
-  if (typeof window === 'undefined') return;
-
-  window.sessionStorage.setItem(
-    QUIZ_HANDOFF_STORAGE_KEY,
-    JSON.stringify({
-      ...handoff,
-      expiresAt: Date.now() + QUIZ_HANDOFF_TTL_MS,
-    }),
+export default function QuizPage() {
+  return (
+    <Suspense fallback={<QuizSubmittingState mode="solo" peopleCount={1} />}>
+      <QuizPageContent />
+    </Suspense>
   );
 }
 
-function clearQuizHandoff() {
-  if (typeof window === 'undefined') return;
-
-  window.sessionStorage.removeItem(QUIZ_HANDOFF_STORAGE_KEY);
-}
-
-export default function QuizPage() {
+function QuizPageContent() {
   const [state, send] = useMachine(quizMachine);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
 
   // groupNames is transient UI state only needed during GroupSetup
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
-  const [resultNavigation, setResultNavigation] = useState<ResultNavigation | null>(
-    readStoredQuizHandoff,
-  );
   // Guard against React StrictMode double-invoking the submit effect
   const submittingRef = useRef(false);
+  const navigationStartedRef = useRef(false);
+  const restartHandledRef = useRef<string | null>(null);
 
-  const { people, currentPersonIdx, dir, mode } = state.context;
+  const { people, currentPersonIdx, dir, mode, recommendationId } = state.context;
   const currentPerson = people[currentPersonIdx];
   const isSubmitting = state.matches('submitting');
+  const isNavigatingToResults = state.matches('navigatingToResults');
+  const restartToken = searchParams.get('restart');
 
   // Derive which step we're on from the state value (no counter in context)
   const questionsStep =
@@ -108,14 +64,25 @@ export default function QuizPage() {
   const currentStepIdx = questionsStep ? STEP_KEYS.indexOf(questionsStep) : -1;
   const isLastStep = questionsStep === 'favoriteActor';
 
+  useEffect(() => {
+    if (!restartToken || restartHandledRef.current === restartToken) return;
+
+    restartHandledRef.current = restartToken;
+    submittingRef.current = false;
+    navigationStartedRef.current = false;
+    startTransition(() => {
+      setGroupNames(['', '']);
+    });
+    send({ type: 'RESET' });
+    router.replace('/quiz', { scroll: false });
+  }, [restartToken, router, send]);
+
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
     if (!isSubmitting) return;
     // Prevent double-submission from React StrictMode or re-renders
     if (submittingRef.current) return;
     submittingRef.current = true;
-    const handoff = { mode, peopleCount: people.length };
-    storeQuizHandoff(handoff);
 
     async function submit() {
       const resolved =
@@ -136,34 +103,31 @@ export default function QuizPage() {
         });
 
         if (!res.ok) {
-          // If the server can't process the quiz data, go back to quiz
-          clearQuizHandoff();
-          setResultNavigation(null);
           submittingRef.current = false;
-          send({ type: 'BACK' });
+          send({ type: 'SUBMIT_FAILURE' });
           return;
         }
 
         const { id } = (await res.json()) as { id: string };
-        // Commit the handoff screen before resetting the machine. Otherwise the
-        // intro state can briefly render while Next is navigating to results.
-        flushSync(() => {
-          setResultNavigation(handoff);
-        });
         submittingRef.current = false;
-        send({ type: 'RESET' });
-        router.push(`/results/${id}`);
+        send({ type: 'SUBMIT_SUCCESS', id });
       } catch {
-        // Network error — send the machine back so the user can retry
-        clearQuizHandoff();
-        setResultNavigation(null);
         submittingRef.current = false;
-        send({ type: 'BACK' });
+        send({ type: 'SUBMIT_FAILURE' });
       }
     }
 
     void submit();
-  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, router, send]);
+  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, send]);
+
+  useEffect(() => {
+    const hasPendingRestart = Boolean(restartToken && restartHandledRef.current !== restartToken);
+    if (hasPendingRestart || !isNavigatingToResults || !recommendationId) return;
+    if (navigationStartedRef.current) return;
+
+    navigationStartedRef.current = true;
+    router.replace(`/results/${recommendationId}`);
+  }, [isNavigatingToResults, recommendationId, restartToken, router]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     send({ type: 'UPDATE_PERSON', updates });
@@ -185,6 +149,74 @@ export default function QuizPage() {
       default:
         return false;
     }
+  }
+
+  // ── SUBMITTING / NAVIGATING ── keep this screen mounted until results loads
+  if (isSubmitting || isNavigatingToResults) {
+    return <QuizSubmittingState mode={mode} peopleCount={people.length} />;
+  }
+
+  if (state.matches('submitFailed')) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-5 min-h-[80vh]">
+        <div className="max-w-sm w-full text-center">
+          <p
+            className="mb-3"
+            style={{
+              color: 'var(--pc-gold-text)',
+              fontSize: '0.72rem',
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {t.loading.submitFailedEyebrow}
+          </p>
+          <h2
+            className="mb-3"
+            style={{
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              fontSize: '2rem',
+              letterSpacing: '0.06em',
+              color: 'var(--pc-t1)',
+            }}
+          >
+            {t.loading.submitFailedTitle}
+          </h2>
+          <p
+            className="mb-6"
+            style={{ color: 'var(--pc-t2)', fontSize: '0.92rem', lineHeight: 1.6 }}
+          >
+            {t.loading.submitFailedBody}
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={() => send({ type: 'RETRY_SUBMIT' })}
+              className="rounded-full px-5 py-3 font-semibold transition-transform hover:scale-[1.01]"
+              style={{
+                background: 'var(--pc-cta)',
+                color: 'var(--pc-cta-text)',
+              }}
+            >
+              {t.loading.submitFailedRetry}
+            </button>
+            <button
+              type="button"
+              onClick={() => send({ type: 'BACK' })}
+              className="rounded-full px-5 py-3 font-semibold"
+              style={{
+                background: 'var(--pc-ghost)',
+                color: 'var(--pc-t2)',
+              }}
+            >
+              {t.loading.submitFailedBack}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // ── INTRO ──
@@ -209,20 +241,6 @@ export default function QuizPage() {
         }
       />
     );
-  }
-
-  // ── SUBMITTING ── recommendation creation is in flight via useEffect above
-  if (resultNavigation) {
-    return (
-      <QuizSubmittingState
-        mode={resultNavigation.mode}
-        peopleCount={resultNavigation.peopleCount}
-      />
-    );
-  }
-
-  if (state.matches('submitting')) {
-    return <QuizSubmittingState mode={mode} peopleCount={people.length} />;
   }
 
   // ── BETWEEN PERSONS ──

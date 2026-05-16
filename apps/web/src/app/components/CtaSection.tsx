@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
+import { createFreshQuizHref } from '@/lib/quizNavigation';
 
 const POPCORN_IMG =
   'https://images.unsplash.com/photo-1770597105062-648a2fbfa052?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3Bjb3JuJTIwYnVja2V0JTIwbW92aWUlMjBuaWdodHxlbnwxfHx8fDE3NzQ4OTQzNTF8MA&ixlib=rb-4.1.0&q=80&w=1080';
@@ -61,7 +62,7 @@ export function CtaSection() {
           {t.cta.description}
         </p>
         <button
-          onClick={() => router.push('/quiz')}
+          onClick={() => router.push(createFreshQuizHref())}
           className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl transition-all duration-200 active:scale-95"
           style={{
             background: 'var(--pc-cta)',

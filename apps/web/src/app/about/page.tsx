@@ -3,10 +3,12 @@
 import { Play } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { Breadcrumbs, TMDBAttribution } from '@/components';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
+import { createFreshQuizHref } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
 import { FAQSection } from './components/FAQSection';
@@ -14,6 +16,7 @@ import { HowItWorksSection } from './components/HowItWorksSection';
 import { TechStackSection } from './components/TechStackSection';
 
 export default function AboutPage() {
+  const router = useRouter();
   const { isDark } = usePCTheme();
   const { t } = useLanguage();
 
@@ -151,6 +154,10 @@ export default function AboutPage() {
         </p>
         <Link
           href="/quiz"
+          onClick={(event) => {
+            event.preventDefault();
+            router.push(createFreshQuizHref());
+          }}
           className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl transition-all duration-200 hover:opacity-90 active:scale-95"
           style={{
             background: 'var(--pc-cta)',

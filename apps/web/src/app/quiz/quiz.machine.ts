@@ -9,6 +9,8 @@ type QuizContext = {
   people: PersonAnswers[];
   currentPersonIdx: number;
   dir: 1 | -1;
+  recommendationId: string | null;
+  submitError: string | null;
 };
 
 type QuizEvent =
@@ -19,6 +21,9 @@ type QuizEvent =
   | { type: 'BACK' }
   | { type: 'UPDATE_PERSON'; updates: Partial<PersonAnswers> }
   | { type: 'CONTINUE' }
+  | { type: 'SUBMIT_SUCCESS'; id: string }
+  | { type: 'SUBMIT_FAILURE'; message?: string }
+  | { type: 'RETRY_SUBMIT' }
   | { type: 'RESET' };
 
 export const quizMachine = setup({
@@ -40,9 +45,15 @@ export const quizMachine = setup({
         people: [emptyPerson(event.youLabel)],
         currentPersonIdx: 0,
         dir: 1 as const,
+        recommendationId: null,
+        submitError: null,
       };
     }),
-    setupGroup: assign({ mode: 'group' as const }),
+    setupGroup: assign({
+      mode: 'group' as const,
+      recommendationId: null,
+      submitError: null,
+    }),
     setupGroupQuestions: assign(({ event }) => {
       if (event.type !== 'START_GROUP_QUESTIONS') return {};
       const valid = event.names.filter((n) => n.trim().length > 0);
@@ -51,6 +62,8 @@ export const quizMachine = setup({
         people: names.map(emptyPerson),
         currentPersonIdx: 0,
         dir: 1 as const,
+        recommendationId: null,
+        submitError: null,
       };
     }),
     setDirForward: assign({ dir: 1 as const }),
@@ -76,6 +89,26 @@ export const quizMachine = setup({
       people: [],
       currentPersonIdx: 0,
       dir: 1 as const,
+      recommendationId: null,
+      submitError: null,
+    }),
+    clearSubmitState: assign({
+      recommendationId: null,
+      submitError: null,
+    }),
+    setRecommendationId: assign(({ event }) => {
+      if (event.type !== 'SUBMIT_SUCCESS') return {};
+      return {
+        recommendationId: event.id,
+        submitError: null,
+      };
+    }),
+    setSubmitError: assign(({ event }) => {
+      if (event.type !== 'SUBMIT_FAILURE') return {};
+      return {
+        recommendationId: null,
+        submitError: event.message ?? null,
+      };
     }),
   },
 }).createMachine({
@@ -86,6 +119,8 @@ export const quizMachine = setup({
     people: [],
     currentPersonIdx: 0,
     dir: 1,
+    recommendationId: null,
+    submitError: null,
   },
   states: {
     intro: {
@@ -147,7 +182,7 @@ export const quizMachine = setup({
                 target: '#quiz.betweenPersons',
                 actions: 'setDirForward',
               },
-              { target: '#quiz.submitting' },
+              { target: '#quiz.submitting', actions: 'clearSubmitState' },
             ],
             BACK: { target: 'tone', actions: 'setDirBackward' },
           },
@@ -165,6 +200,26 @@ export const quizMachine = setup({
     },
     submitting: {
       on: {
+        SUBMIT_SUCCESS: {
+          target: 'navigatingToResults',
+          actions: 'setRecommendationId',
+        },
+        SUBMIT_FAILURE: {
+          target: 'submitFailed',
+          actions: 'setSubmitError',
+        },
+        RESET: { target: 'intro', actions: 'resetQuiz' },
+      },
+    },
+    navigatingToResults: {
+      on: {
+        RESET: { target: 'intro', actions: 'resetQuiz' },
+      },
+    },
+    submitFailed: {
+      on: {
+        RETRY_SUBMIT: { target: 'submitting', actions: 'clearSubmitState' },
+        BACK: { target: '#quiz.questions.favoriteActor', actions: 'setDirBackward' },
         RESET: { target: 'intro', actions: 'resetQuiz' },
       },
     },

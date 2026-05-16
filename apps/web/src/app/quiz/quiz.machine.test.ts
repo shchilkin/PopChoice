@@ -29,6 +29,9 @@ const EVENTS = [
   { type: 'NEXT' as const },
   { type: 'BACK' as const },
   { type: 'CONTINUE' as const },
+  { type: 'SUBMIT_SUCCESS' as const, id: 'rec_123' },
+  { type: 'SUBMIT_FAILURE' as const, message: 'failed' },
+  { type: 'RETRY_SUBMIT' as const },
 ];
 
 const paths = model.getShortestPaths({ events: EVENTS });
@@ -87,6 +90,19 @@ describe('quiz machine – forward paths (model-based)', () => {
           submitting: () => {
             expect(actor.getSnapshot().value).toBe('submitting');
           },
+
+          navigatingToResults: () => {
+            const { value, context } = actor.getSnapshot();
+            expect(value).toBe('navigatingToResults');
+            expect(context.recommendationId).toBe('rec_123');
+          },
+
+          submitFailed: () => {
+            const { value, context } = actor.getSnapshot();
+            expect(value).toBe('submitFailed');
+            expect(context.recommendationId).toBeNull();
+            expect(context.submitError).toBe('failed');
+          },
         },
 
         events: {
@@ -97,6 +113,9 @@ describe('quiz machine – forward paths (model-based)', () => {
           NEXT: () => actor.send({ type: 'NEXT' }),
           BACK: () => actor.send({ type: 'BACK' }),
           CONTINUE: () => actor.send({ type: 'CONTINUE' }),
+          SUBMIT_SUCCESS: () => actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' }),
+          SUBMIT_FAILURE: () => actor.send({ type: 'SUBMIT_FAILURE', message: 'failed' }),
+          RETRY_SUBMIT: () => actor.send({ type: 'RETRY_SUBMIT' }),
         },
       });
     });
@@ -184,5 +203,67 @@ describe('quiz machine – BACK navigation', () => {
     expect(snapshot.value).toBe('intro');
     expect(snapshot.context.people).toEqual([]);
     expect(snapshot.context.currentPersonIdx).toBe(0);
+    expect(snapshot.context.recommendationId).toBeNull();
+    expect(snapshot.context.submitError).toBeNull();
+  });
+
+  it('successful submission waits in navigatingToResults instead of resetting to intro', () => {
+    const actor = makeActor();
+    actor.send({ type: 'START_SOLO', youLabel: 'You' });
+
+    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' });
+
+    const snapshot = actor.getSnapshot();
+    expect(snapshot.value).toBe('navigatingToResults');
+    expect(snapshot.context.recommendationId).toBe('rec_123');
+    expect(snapshot.context.people).toHaveLength(1);
+  });
+
+  it('RESET from navigatingToResults starts a fresh quiz', () => {
+    const actor = makeActor();
+    actor.send({ type: 'START_SOLO', youLabel: 'You' });
+
+    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' });
+    actor.send({ type: 'RESET' });
+
+    const snapshot = actor.getSnapshot();
+    expect(snapshot.value).toBe('intro');
+    expect(snapshot.context.people).toEqual([]);
+    expect(snapshot.context.recommendationId).toBeNull();
+  });
+
+  it('failed submission preserves answers and can retry', () => {
+    const actor = makeActor();
+    actor.send({ type: 'START_SOLO', youLabel: 'You' });
+
+    actor.send({ type: 'UPDATE_PERSON', updates: { favoriteMovie: 'Heat' } });
+    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    actor.send({ type: 'SUBMIT_FAILURE', message: 'network' });
+
+    let snapshot = actor.getSnapshot();
+    expect(snapshot.value).toBe('submitFailed');
+    expect(snapshot.context.people[0]?.favoriteMovie).toBe('Heat');
+    expect(snapshot.context.submitError).toBe('network');
+
+    actor.send({ type: 'RETRY_SUBMIT' });
+
+    snapshot = actor.getSnapshot();
+    expect(snapshot.value).toBe('submitting');
+    expect(snapshot.context.people[0]?.favoriteMovie).toBe('Heat');
+    expect(snapshot.context.submitError).toBeNull();
+  });
+
+  it('failed submission can return to the final quiz step', () => {
+    const actor = makeActor();
+    actor.send({ type: 'START_SOLO', youLabel: 'You' });
+
+    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    actor.send({ type: 'SUBMIT_FAILURE' });
+    actor.send({ type: 'BACK' });
+
+    const snapshot = actor.getSnapshot();
+    expect(snapshot.matches({ questions: 'favoriteActor' })).toBe(true);
   });
 });
