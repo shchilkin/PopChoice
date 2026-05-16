@@ -35,7 +35,7 @@ type AccountResponse = {
 };
 
 type LoadState =
-  | { status: 'idle' | 'loading' }
+  | { status: 'idle' }
   | { status: 'loaded'; data: AccountResponse }
   | { status: 'error' };
 
@@ -49,7 +49,6 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
-      setState({ status: 'idle' });
       return;
     }
 
@@ -60,7 +59,6 @@ export default function AccountPage() {
       timedOut = true;
       controller.abort();
     }, ACCOUNT_FETCH_TIMEOUT_MS);
-    setState({ status: 'loading' });
 
     async function loadAccount() {
       try {
@@ -98,10 +96,7 @@ export default function AccountPage() {
     };
   }, [auth.status]);
 
-  if (
-    auth.status === 'unknown' ||
-    (auth.status === 'authenticated' && (state.status === 'idle' || state.status === 'loading'))
-  ) {
+  if (auth.status === 'unknown' || (auth.status === 'authenticated' && state.status === 'idle')) {
     return (
       <AccountShell>
         <AccountLoadingState label={a.loading} />
