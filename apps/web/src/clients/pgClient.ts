@@ -437,7 +437,11 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
 // ---------------------------------------------------------------------------
 
 function createDelete<T>(pool: PgPool, table: string): QueryDelete<T> {
-  function makeDeleteByColumn(column: string, op: '=' | '!=', value: unknown): PromiseLike<QueryResult<T>> {
+  function makeDeleteByColumn(
+    column: string,
+    op: '=' | '!=',
+    value: unknown,
+  ): PromiseLike<QueryResult<T>> {
     assertSafeIdentifier(column, 'column name');
     const sql = `DELETE FROM "${table}" WHERE "${column}" ${op} $1`;
     return {
