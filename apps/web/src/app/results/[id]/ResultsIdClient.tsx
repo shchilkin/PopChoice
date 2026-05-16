@@ -17,10 +17,6 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
 
   const { data, error, isError, refetch, morePicksTimedOut } = useRecommendation(id);
 
-  useEffect(() => {
-    window.sessionStorage.removeItem('pop-choice:quiz-handoff');
-  }, []);
-
   // Derive movies from the completed poll response — no secondary fetch needed because
   // poster URLs are fetched during the BullMQ job and stored in recommendation_movies.
   const movies = useMemo<MovieRecommendation[]>(() => {

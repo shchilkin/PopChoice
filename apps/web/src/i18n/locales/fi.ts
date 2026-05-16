@@ -165,6 +165,12 @@ export const fi: Translations = {
     groupSubmitBridgeTitle: 'Etsimme yhteistä osumaa',
     groupSubmitBridgeBody:
       'Punnitsemme yhteisiä tunnelmia, lempielokuvia ja kompromisseja, jotta koko porukka saa hyvän valinnan.',
+    submitFailedEyebrow: 'Haku pysähtyi',
+    submitFailedTitle: 'Haku ei käynnistynyt',
+    submitFailedBody:
+      'Jokin katkaisi siirtymän suosituksiin. Vastauksesi ovat yhä tallessa, joten voit yrittää uudelleen tai muuttaa viimeistä kohtaa.',
+    submitFailedRetry: 'Yritä uudelleen',
+    submitFailedBack: 'Takaisin kyselyyn',
     queuedLabel: 'Lämmitetään projektoria',
     realProgressLabel: 'Kootaan suosikkilistaasi',
     stages: {

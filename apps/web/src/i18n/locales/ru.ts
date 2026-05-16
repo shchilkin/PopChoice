@@ -168,6 +168,12 @@ export const ru: Translations = {
     groupSubmitBridgeTitle: 'Ищем общее совпадение',
     groupSubmitBridgeBody:
       'Сравниваем общие настроения, любимые фильмы и компромиссные варианты, чтобы выбрать фильм для всей компании.',
+    submitFailedEyebrow: 'Поиск на паузе',
+    submitFailedTitle: 'Поиск не запустился',
+    submitFailedBody:
+      'Что-то помешало передать ответы в рекомендации. Ответы сохранены на экране: можно попробовать ещё раз или изменить последний шаг.',
+    submitFailedRetry: 'Попробовать ещё раз',
+    submitFailedBack: 'Вернуться к квизу',
     queuedLabel: 'Готовим проектор',
     realProgressLabel: 'Собираем вашу подборку',
     stages: {
