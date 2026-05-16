@@ -106,6 +106,16 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Reuse config packages where duplication exists across app/services.
 - Align CI checks to the new boundaries and ownership model.
 
+### Operational Observability Track
+
+- Enable Coolify notifications for failed deploys, failed backups, server disk/resource warnings, and unhealthy or restarting containers where supported.
+- Add external uptime monitoring for `https://pop-choice.shchilkin.dev/api/health`, then consider a deeper synthetic recommendation smoke check.
+- Add application error tracking for frontend, API routes, and workers so browser errors, API exceptions, and background job failures are visible outside Coolify logs.
+- Improve structured log correlation by carrying `requestId`, `recommendationId`, `recommendationSlug`, `jobId`, and `stage` through web and worker logs.
+- Make BullMQ job failures easier to diagnose by logging retry count, final failure state, recommendation identifiers, and stage at failure.
+- Ship Docker/Coolify logs to a searchable log store once local log scrolling becomes painful.
+- Track lightweight operational metrics: recommendation success/failure counts, average recommendation duration, queue depth, failed jobs, OpenAI/TMDB timeout counts, and DB/Redis health failures.
+
 ## Priority Items for the Next 30 Days
 
 1. [x] Write a short boundary definition for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients`.
