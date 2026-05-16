@@ -314,6 +314,26 @@ describe('pgClient', () => {
     expect(result.error).toBeNull();
   });
 
+  it('from().delete().eq() executes a DELETE query with equality filter', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    const client = createPgDbClient();
+    const result = await client.from('users').delete().eq('id', 42);
+
+    expect(mockQuery).toHaveBeenCalledWith('DELETE FROM "users" WHERE "id" = $1', [42]);
+    expect(result.error).toBeNull();
+  });
+
+  it('from().delete().eq() handles errors gracefully', async () => {
+    mockQuery.mockRejectedValue(new Error('foreign key violation'));
+
+    const client = createPgDbClient();
+    const result = await client.from('users').delete().eq('id', 42);
+
+    expect(result.data).toBeNull();
+    expect(result.error).toEqual({ message: 'foreign key violation' });
+  });
+
   // -----------------------------------------------------------------------
   // RPC (stored procedure calls)
   // -----------------------------------------------------------------------

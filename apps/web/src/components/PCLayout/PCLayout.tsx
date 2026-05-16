@@ -340,7 +340,7 @@ export function PCLayout({ children }: { children: ReactNode }) {
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/design-system', label: t.nav.styleGuide },
     ...(isAuthenticated
-      ? []
+      ? [{ href: '/delete-account', label: t.nav.deleteAccount }]
       : [
           { href: '/login', label: t.nav.logIn },
           { href: '/register', label: t.nav.signUp },
