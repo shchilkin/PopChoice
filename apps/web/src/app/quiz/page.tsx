@@ -2,8 +2,8 @@
 
 import { useMachine } from '@xstate/react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, startTransition, useEffect, useRef, useState } from 'react';
 
 import { ProgressDots } from '@/components/ProgressDots';
 import { useLanguage } from '@/i18n';
@@ -30,19 +30,31 @@ const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as c
 type StepKey = (typeof STEP_KEYS)[number];
 
 export default function QuizPage() {
+  return (
+    <Suspense fallback={<QuizSubmittingState mode="solo" peopleCount={1} />}>
+      <QuizPageContent />
+    </Suspense>
+  );
+}
+
+function QuizPageContent() {
   const [state, send] = useMachine(quizMachine);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useLanguage();
 
   // groupNames is transient UI state only needed during GroupSetup
   const [groupNames, setGroupNames] = useState<string[]>(['', '']);
   // Guard against React StrictMode double-invoking the submit effect
   const submittingRef = useRef(false);
+  const navigationStartedRef = useRef(false);
+  const restartHandledRef = useRef<string | null>(null);
 
   const { people, currentPersonIdx, dir, mode, recommendationId } = state.context;
   const currentPerson = people[currentPersonIdx];
   const isSubmitting = state.matches('submitting');
   const isNavigatingToResults = state.matches('navigatingToResults');
+  const restartToken = searchParams.get('restart');
 
   // Derive which step we're on from the state value (no counter in context)
   const questionsStep =
@@ -51,6 +63,19 @@ export default function QuizPage() {
       : null;
   const currentStepIdx = questionsStep ? STEP_KEYS.indexOf(questionsStep) : -1;
   const isLastStep = questionsStep === 'favoriteActor';
+
+  useEffect(() => {
+    if (!restartToken || restartHandledRef.current === restartToken) return;
+
+    restartHandledRef.current = restartToken;
+    submittingRef.current = false;
+    navigationStartedRef.current = false;
+    startTransition(() => {
+      setGroupNames(['', '']);
+    });
+    send({ type: 'RESET' });
+    router.replace('/quiz', { scroll: false });
+  }, [restartToken, router, send]);
 
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
@@ -96,10 +121,13 @@ export default function QuizPage() {
   }, [isSubmitting, mode, people, t.quiz.intro.youLabel, send]);
 
   useEffect(() => {
-    if (!isNavigatingToResults || !recommendationId) return;
+    const hasPendingRestart = Boolean(restartToken && restartHandledRef.current !== restartToken);
+    if (hasPendingRestart || !isNavigatingToResults || !recommendationId) return;
+    if (navigationStartedRef.current) return;
 
+    navigationStartedRef.current = true;
     router.replace(`/results/${recommendationId}`);
-  }, [isNavigatingToResults, recommendationId, router]);
+  }, [isNavigatingToResults, recommendationId, restartToken, router]);
 
   function updateCurrentPerson(updates: Partial<PersonAnswers>) {
     send({ type: 'UPDATE_PERSON', updates });

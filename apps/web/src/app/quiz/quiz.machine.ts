@@ -211,7 +211,11 @@ export const quizMachine = setup({
         RESET: { target: 'intro', actions: 'resetQuiz' },
       },
     },
-    navigatingToResults: {},
+    navigatingToResults: {
+      on: {
+        RESET: { target: 'intro', actions: 'resetQuiz' },
+      },
+    },
     submitFailed: {
       on: {
         RETRY_SUBMIT: { target: 'submitting', actions: 'clearSubmitState' },

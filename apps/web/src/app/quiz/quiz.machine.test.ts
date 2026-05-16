@@ -220,6 +220,20 @@ describe('quiz machine – BACK navigation', () => {
     expect(snapshot.context.people).toHaveLength(1);
   });
 
+  it('RESET from navigatingToResults starts a fresh quiz', () => {
+    const actor = makeActor();
+    actor.send({ type: 'START_SOLO', youLabel: 'You' });
+
+    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' });
+    actor.send({ type: 'RESET' });
+
+    const snapshot = actor.getSnapshot();
+    expect(snapshot.value).toBe('intro');
+    expect(snapshot.context.people).toEqual([]);
+    expect(snapshot.context.recommendationId).toBeNull();
+  });
+
   it('failed submission preserves answers and can retry', () => {
     const actor = makeActor();
     actor.send({ type: 'START_SOLO', youLabel: 'You' });

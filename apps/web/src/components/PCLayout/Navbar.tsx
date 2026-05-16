@@ -9,6 +9,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
+import { createFreshQuizHref } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
 export function Navbar() {
@@ -31,6 +32,11 @@ export function Navbar() {
     { href: '/login', label: t.nav.logIn },
     { href: '/register', label: t.nav.signUp },
   ];
+
+  function startFreshQuiz() {
+    setMobileMenuOpen(false);
+    window.location.assign(createFreshQuizHref());
+  }
 
   return (
     <>
@@ -106,6 +112,10 @@ export function Navbar() {
           {!isLanding && (
             <Link
               href="/quiz"
+              onClick={(event) => {
+                event.preventDefault();
+                startFreshQuiz();
+              }}
               className="ml-1 px-3 py-2 rounded-xl text-sm"
               style={{
                 background: 'var(--pc-cta)',
@@ -191,7 +201,10 @@ export function Navbar() {
             {!isLanding && (
               <Link
                 href="/quiz"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  startFreshQuiz();
+                }}
                 className="flex-1 text-center px-3 py-2.5 rounded-xl text-sm"
                 style={{
                   background: 'var(--pc-cta)',
