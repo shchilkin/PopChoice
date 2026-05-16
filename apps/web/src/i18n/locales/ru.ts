@@ -8,6 +8,7 @@ export const ru: Translations = {
     signUp: 'Регистрация',
     logIn: 'Войти',
     logOut: 'Выйти',
+    deleteAccount: 'Удалить аккаунт',
     toggleTheme: 'Переключить тему',
     switchLanguage: 'Переключить язык',
     openMenu: 'Открыть меню',
@@ -862,7 +863,7 @@ export const ru: Translations = {
     submitButton: 'Удалить мой аккаунт',
     submitting: 'Удаляем аккаунт…',
     successTitle: 'Аккаунт удалён',
-    successMessage: 'Ваш аккаунт и все связанные данные были безвозвратно удалены.',
+    successMessage: 'Ваш аккаунт был безвозвратно удалён.',
     backToHome: 'На главную',
     errors: {
       emailRequired: 'Введите электронную почту.',

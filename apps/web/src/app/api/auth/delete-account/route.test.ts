@@ -17,6 +17,7 @@ vi.mock('@/clients/dbClient', () => ({
 
 import { getDbClient } from '@/clients/dbClient';
 import { verifyPassword } from '@/lib/auth/password';
+import { SESSION_COOKIE } from '@/lib/auth/session';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 import { POST } from './route';
@@ -67,7 +68,12 @@ function makeMockDb(overrides: Record<string, unknown> = {}): DbClient {
 function makeRequest(body: unknown) {
   return new NextRequest('http://localhost/api/auth/delete-account', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: 'http://localhost',
+      'X-CSRF-Token': 'csrf-token',
+      Cookie: '__csrf=csrf-token',
+    },
     body: JSON.stringify(body),
   });
 }
@@ -93,6 +99,22 @@ describe('POST /api/auth/delete-account', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toEqual({ ok: true });
+    expect(res.headers.get('set-cookie')).toContain(`${SESSION_COOKIE}=`);
+  });
+
+  it('returns 403 when CSRF header is missing', async () => {
+    const res = await POST(
+      new NextRequest('http://localhost/api/auth/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'http://localhost',
+          Cookie: '__csrf=csrf-token',
+        },
+        body: JSON.stringify(validBody),
+      }),
+    );
+    expect(res.status).toBe(403);
   });
 
   it('returns 422 when email is missing', async () => {
@@ -113,7 +135,12 @@ describe('POST /api/auth/delete-account', () => {
   it('returns 400 when request body is not valid JSON', async () => {
     const req = new NextRequest('http://localhost/api/auth/delete-account', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://localhost',
+        'X-CSRF-Token': 'csrf-token',
+        Cookie: '__csrf=csrf-token',
+      },
       body: 'not json',
     });
     const res = await POST(req);
@@ -164,9 +191,11 @@ describe('POST /api/auth/delete-account', () => {
     const db = makeMockDb({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
-          eq: vi.fn().mockReturnValue(
-            Promise.resolve({ data: null, error: { message: 'connection error' } }),
-          ),
+          eq: vi
+            .fn()
+            .mockReturnValue(
+              Promise.resolve({ data: null, error: { message: 'connection error' } }),
+            ),
         })),
       })),
     });
@@ -180,14 +209,16 @@ describe('POST /api/auth/delete-account', () => {
     const db = makeMockDb({
       from: vi.fn(() => ({
         select: vi.fn(() => ({
-          eq: vi.fn().mockReturnValue(
-            Promise.resolve({ data: [{ id: 1, password_hash: 'salt:hash' }], error: null }),
-          ),
+          eq: vi
+            .fn()
+            .mockReturnValue(
+              Promise.resolve({ data: [{ id: 1, password_hash: 'salt:hash' }], error: null }),
+            ),
         })),
         delete: vi.fn(() => ({
-          eq: vi.fn().mockReturnValue(
-            Promise.resolve({ data: null, error: { message: 'delete failed' } }),
-          ),
+          eq: vi
+            .fn()
+            .mockReturnValue(Promise.resolve({ data: null, error: { message: 'delete failed' } })),
         })),
       })),
     });

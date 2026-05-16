@@ -5,7 +5,9 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 
+import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 
 interface FormState {
@@ -20,6 +22,7 @@ interface FieldErrors {
 }
 
 export default function DeleteAccountPage() {
+  const { refreshSession } = useAuth();
   const { t } = useLanguage();
   const d = t.deleteAccount;
 
@@ -54,11 +57,16 @@ export default function DeleteAccountPage() {
     try {
       const res = await fetch('/api/auth/delete-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCsrfToken(),
+        },
         body: JSON.stringify({ email: form.email.trim(), password: form.password }),
       });
 
       if (res.status === 200) {
+        await refreshSession();
         setSuccess(true);
         return;
       }

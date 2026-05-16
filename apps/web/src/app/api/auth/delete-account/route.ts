@@ -3,8 +3,10 @@ import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
 import { verifyPassword } from '@/lib/auth/password';
+import { clearSessionCookie } from '@/lib/auth/session';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import { isSameOriginBrowserRequest } from '@/lib/withAuth';
 
 // ---------------------------------------------------------------------------
 // Input schema
@@ -21,10 +23,18 @@ const deleteAccountSchema = z.object({
 
 // Auth endpoints are expensive (scrypt) — use a tighter limit than the default.
 const AUTH_RATE_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
+const CSRF_COOKIE = '__csrf';
 
 export async function POST(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req, AUTH_RATE_LIMIT);
   if (rateLimitResponse) return rateLimitResponse;
+
+  const csrfHeader = req.headers.get('x-csrf-token');
+  const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
+  if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie || !isSameOriginBrowserRequest(req)) {
+    logger.warn('Account deletion rejected: CSRF check failed');
+    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+  }
 
   let body: unknown;
   try {
@@ -86,5 +96,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   logger.info({ userId: user.id }, 'User account deleted');
-  return NextResponse.json({ ok: true }, { status: 200 });
+  const response = NextResponse.json({ ok: true }, { status: 200 });
+  clearSessionCookie(response);
+  return response;
 }

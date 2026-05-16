@@ -8,6 +8,7 @@ export const en = {
     signUp: 'Sign Up',
     logIn: 'Log In',
     logOut: 'Log Out',
+    deleteAccount: 'Delete Account',
     toggleTheme: 'Toggle theme',
     switchLanguage: 'Switch language',
     openMenu: 'Open menu',
@@ -851,7 +852,7 @@ export const en = {
     submitButton: 'Delete my account',
     submitting: 'Deleting account…',
     successTitle: 'Account deleted',
-    successMessage: 'Your account and all associated data have been permanently deleted.',
+    successMessage: 'Your account has been permanently deleted.',
     backToHome: 'Back to home',
     errors: {
       emailRequired: 'Email is required.',

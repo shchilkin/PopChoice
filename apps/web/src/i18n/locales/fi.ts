@@ -8,6 +8,7 @@ export const fi: Translations = {
     signUp: 'Rekisteröidy',
     logIn: 'Kirjaudu sisään',
     logOut: 'Kirjaudu ulos',
+    deleteAccount: 'Poista tili',
     toggleTheme: 'Vaihda teema',
     switchLanguage: 'Vaihda kieli',
     openMenu: 'Avaa valikko',
@@ -858,7 +859,7 @@ export const fi: Translations = {
     submitButton: 'Poista tilini',
     submitting: 'Poistetaan tiliä…',
     successTitle: 'Tili poistettu',
-    successMessage: 'Tilisi ja kaikki siihen liittyvät tiedot on poistettu pysyvästi.',
+    successMessage: 'Tilisi on poistettu pysyvästi.',
     backToHome: 'Etusivulle',
     errors: {
       emailRequired: 'Sähköpostiosoite vaaditaan.',
