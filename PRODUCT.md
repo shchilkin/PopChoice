@@ -37,8 +37,33 @@ WCAG AA compliance. Standard good practices: sufficient color contrast, keyboard
 
 ## Product Roadmap Notes
 
-- Improve the registration experience so users are signed in automatically after creating an account, or are guided into the app without being asked to log in again.
-- Add password recovery so users can restore access through a clear "forgot password" flow.
+- Continue improving account foundations:
+  - Profile basics: display name, avatar, and a clear account settings surface.
+  - Editable saved recommendations: let users add, remove, rename, annotate, or change saved items without leaving the account page.
+  - Password recovery: add a clear "forgot password" flow.
+  - Magic-link login: let users sign in from an emailed one-time link without remembering a password.
+  - Social login: support trusted providers such as Google once the local auth flow is stable.
 - Avoid recommending a film the user explicitly mentioned as a favorite or reference title. That signal should shape taste, not become the answer; in most cases the user has already seen it.
 - Improve the results share card so a user can create and copy a stable share link. Social sharing can follow later, but the core need is "send this recommendation to someone" without friction.
 - Loading states must be truthful and terminal. If recommendation polling hits authorization, missing-result, worker, or network failures, the UI should show an actionable error instead of returning to an earlier loading state or spinning indefinitely.
+- Add an account taste profile that becomes more useful over time:
+  - Store explicit likes, dislikes, skipped films, watched films, and feedback on individual recommendations.
+  - Derive lightweight taste signals from completed quizzes, opened results, saved picks, more-picks requests, and rejected suggestions.
+  - Make the taste profile inspectable and editable, so users can correct PopChoice when it learns the wrong lesson.
+- Add recommendation feedback after every result:
+  - Capture whether the pick was useful, already watched, wrong mood, too obvious, too obscure, or close-but-not-quite.
+  - Store feedback alongside the recommendation inputs, selected movie, candidate list, match score, and model/version metadata.
+  - Use feedback first for analytics and debugging, then for ranking weights, exclusion rules, and personalized follow-up suggestions.
+- Revise the recommendation flow around learning:
+  - Treat favorite movies as examples of taste unless the user explicitly says "recommend something like this but I have not seen it."
+  - Add a "not this" or "seen it" action that reranks alternatives without forcing the user to retake the quiz.
+  - Make the transition from quiz to results resilient: one source of truth for pending, completed, failed, and retry states.
+  - Consider a Tinder-style discovery mode for logged-in users: quick swipe decisions that build taste without a full quiz.
+- Add watchlist and availability features:
+  - Let users request a movie that is missing from the catalog.
+  - Notify users when a requested movie is added or when a saved recommendation becomes available in the catalog.
+  - Keep notifications opt-in and useful: account email first, richer channels later only if users ask for them.
+- Explore achievements and light gamification:
+  - Achievements for trying group mode, rating recommendations, building a taste profile, exploring new genres, or watching older/classic films.
+  - Level/progress systems should reward useful participation, not empty clicks.
+  - Gamification must remain secondary to the core promise: quickly finding a movie worth watching.
