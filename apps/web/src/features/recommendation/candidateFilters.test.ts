@@ -95,7 +95,13 @@ describe('candidateFilters', () => {
 
   it('filters candidates the signed-in user marked as already watched', () => {
     const signals = getFeedbackCandidateSignals([
-      { kind: 'already_watched', movieName: 'The Matrix', movieYear: 1999 },
+      {
+        kind: 'watched',
+        movieKey: 'title:matrix:1999',
+        tmdbId: null,
+        movieName: 'The Matrix',
+        movieYear: 1999,
+      },
     ]);
 
     expect(
@@ -143,6 +149,43 @@ describe('candidateFilters', () => {
 
     const result = applyFeedbackToLocalMovies([arrival, interstellar, primer, pastLives], signals);
 
-    expect(result.map((candidate) => candidate.name)).toEqual(['Past Lives']);
+    expect(result.map((candidate) => candidate.name)).toEqual(['Past Lives', 'Arrival']);
+    expect(result.find((candidate) => candidate.name === 'Arrival')?.similarity).toBeCloseTo(0.83);
+  });
+
+  it('filters TMDB candidates by durable movie identity when available', () => {
+    const signals = getFeedbackCandidateSignals([
+      {
+        kind: 'watched',
+        movieKey: 'tmdb:475557',
+        tmdbId: 475557,
+        movieName: 'Joker',
+        movieYear: 2019,
+      },
+    ]);
+
+    expect(
+      excludeFeedbackTMDBMovies(
+        [
+          {
+            id: 475557,
+            title: 'A completely different localized title',
+            overview: 'A lonely comedian spirals.',
+            release_date: '2019-10-02',
+            vote_average: 8.1,
+            poster_path: null,
+          },
+          {
+            id: 603,
+            title: 'The Matrix',
+            overview: 'Reality bends.',
+            release_date: '1999-03-31',
+            vote_average: 8.2,
+            poster_path: null,
+          },
+        ],
+        signals,
+      ).map((candidate) => candidate.title),
+    ).toEqual(['The Matrix']);
   });
 });

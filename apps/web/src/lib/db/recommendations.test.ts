@@ -130,6 +130,7 @@ describe('getUserRecommendationSummaries', () => {
           quiz_data: [{ name: 'Alex' }, { name: 'Sam' }],
           poster_url: 'https://example.com/poster.jpg',
           localized_name: 'Localized Movie',
+          tmdb_id: 123,
           tmdb_name: null,
           tmdb_year: null,
           m_name: 'Movie',
@@ -167,7 +168,10 @@ describe('getUserRecommendationSummaries', () => {
 describe('createRecommendationFeedback', () => {
   beforeEach(() => {
     vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
-    mockQuery.mockReset();
+    mockConnect.mockReset();
+    mockClientQuery.mockReset();
+    mockRelease.mockReset();
+    mockConnect.mockResolvedValue(mockClient);
   });
 
   afterEach(() => {
@@ -175,7 +179,24 @@ describe('createRecommendationFeedback', () => {
   });
 
   it('stores feedback for a completed recommendation slug', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'feedback-id' }] });
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{ id: 'feedback-id', recommendation_id: 'rec-id' }],
+      }) // INSERT feedback
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 123,
+            movie_name: 'Joker',
+            movie_year: 2019,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Джокер',
+          },
+        ],
+      }) // SELECT main movie
+      .mockResolvedValueOnce({}) // UPSERT interaction
+      .mockResolvedValueOnce({}); // COMMIT
 
     const result = await createRecommendationFeedback({
       slug: 'rec-slug',
@@ -184,14 +205,25 @@ describe('createRecommendationFeedback', () => {
     });
 
     expect(result).toEqual({ id: 'feedback-id' });
-    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    const [sql, params] = mockClientQuery.mock.calls[1] as [string, unknown[]];
     expect(sql).toContain('recommendation_feedback');
     expect(sql).toContain("status = 'completed'");
     expect(params).toEqual(['rec-slug', '42', 'already_watched']);
+    const [interactionSql, interactionParams] = mockClientQuery.mock.calls[3] as [
+      string,
+      unknown[],
+    ];
+    expect(interactionSql).toContain('user_movie_interactions');
+    expect(interactionParams).toContain('tmdb:123');
+    expect(interactionParams).toContain('watched');
+    expect(mockRelease).toHaveBeenCalledOnce();
   });
 
   it('returns null when no completed recommendation is found', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [] });
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // INSERT feedback
+      .mockResolvedValueOnce({}); // COMMIT
 
     const result = await createRecommendationFeedback({
       slug: 'missing',
@@ -199,8 +231,9 @@ describe('createRecommendationFeedback', () => {
     });
 
     expect(result).toBeNull();
-    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    const [, params] = mockClientQuery.mock.calls[1] as [string, unknown[]];
     expect(params).toEqual(['missing', null, 'wrong_mood']);
+    expect(mockClientQuery).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -221,21 +254,44 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
   it('returns movies attached to actionable user feedback', async () => {
     mockQuery.mockResolvedValueOnce({
       rows: [
-        { kind: 'already_watched', movie_name: 'Joker', movie_year: 2019 },
-        { kind: 'wrong_mood', movie_name: 'Arrival', movie_year: 2016 },
-        { kind: 'too_obvious', movie_name: null, movie_year: null },
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:475557',
+          tmdb_id: 475557,
+          movie_name: 'Joker',
+          movie_year: 2019,
+        },
+        {
+          kind: 'wrong_mood',
+          movie_key: 'title:arrival:2016',
+          tmdb_id: null,
+          movie_name: 'Arrival',
+          movie_year: 2016,
+        },
       ],
     });
 
     const result = await getUserRecommendationFeedbackMoviePreferences('42');
 
     expect(result).toEqual([
-      { kind: 'already_watched', movieName: 'Joker', movieYear: 2019 },
-      { kind: 'wrong_mood', movieName: 'Arrival', movieYear: 2016 },
+      {
+        kind: 'watched',
+        movieKey: 'tmdb:475557',
+        tmdbId: 475557,
+        movieName: 'Joker',
+        movieYear: 2019,
+      },
+      {
+        kind: 'wrong_mood',
+        movieKey: 'title:arrival:2016',
+        tmdbId: null,
+        movieName: 'Arrival',
+        movieYear: 2016,
+      },
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain('recommendation_feedback');
-    expect(sql).toContain("rf.kind IN ('already_watched', 'wrong_mood', 'too_obvious')");
+    expect(sql).toContain('user_movie_interactions');
+    expect(sql).toContain("kind IN ('watched', 'not_interested', 'wrong_mood')");
     expect(params).toEqual(['42', 100]);
   });
 });

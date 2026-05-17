@@ -14,6 +14,7 @@ import {
   hasFavoriteActorSignal,
 } from '@/features/recommendation/groupResultInsights';
 import logger from '@/lib/logger';
+import { getMovieIdentityKey } from '@/lib/movieIdentity';
 
 import type { RecommendationStage } from '@/features/recommendation/stages';
 import type { PersonFormData } from '@/features/recommendation/types';
@@ -47,6 +48,7 @@ export type RecommendationFeedbackKind =
   | 'too_obvious'
   | 'too_obscure'
   | 'close';
+export type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
 
 export interface RecommendationMovie {
   id: number;
@@ -90,7 +92,9 @@ export interface AccountRecommendationSummary {
 }
 
 export interface UserRecommendationFeedbackMoviePreference {
-  kind: RecommendationFeedbackKind;
+  kind: UserMovieInteractionKind;
+  movieKey: string;
+  tmdbId: number | null;
   movieName: string;
   movieYear: number | null;
 }
@@ -108,6 +112,24 @@ export interface MovieRowToInsert {
   localizedName?: string;
   isMainRecommendation: boolean;
   fromTMDB: boolean;
+}
+
+function getInteractionKindForFeedback(
+  kind: RecommendationFeedbackKind,
+): UserMovieInteractionKind | null {
+  switch (kind) {
+    case 'already_watched':
+      return 'watched';
+    case 'useful':
+      return 'liked';
+    case 'wrong_mood':
+      return 'wrong_mood';
+    case 'too_obvious':
+    case 'too_obscure':
+      return 'not_interested';
+    case 'close':
+      return null;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +158,7 @@ export async function getUserRecommendationSummaries(
   limit = 20,
 ): Promise<AccountRecommendationSummary[]> {
   const pool = getPool();
+  const queryLimit = Math.min(Math.max(limit * 3, limit), 100);
   const result = await pool.query<{
     slug: string;
     status: RecommendationStatus;
@@ -145,6 +168,7 @@ export async function getUserRecommendationSummaries(
     quiz_data: unknown;
     poster_url: string | null;
     localized_name: string | null;
+    tmdb_id: number | null;
     tmdb_name: string | null;
     tmdb_year: number | null;
     m_name: string | null;
@@ -160,6 +184,7 @@ export async function getUserRecommendationSummaries(
        r.quiz_data,
        rm.poster_url,
        rm.localized_name,
+       rm.tmdb_id,
        rm.tmdb_name,
        rm.tmdb_year,
        m.name AS m_name,
@@ -185,28 +210,50 @@ export async function getUserRecommendationSummaries(
      WHERE r.user_id = $1
      ORDER BY r.created_at DESC
      LIMIT $2`,
-    [userId, limit],
+    [userId, queryLimit],
   );
 
-  return result.rows.map((row) => {
+  const summaries = result.rows.map((row) => {
     const createdAt =
       row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at;
     const completedAt =
       row.completed_at instanceof Date ? row.completed_at.toISOString() : row.completed_at;
+    const movieName = row.localized_name ?? row.tmdb_name ?? row.m_name ?? null;
+    const movieYear = row.tmdb_year ?? row.m_year ?? null;
 
     return {
-      slug: row.slug,
-      status: row.status,
-      stage: row.stage ?? (row.status === 'completed' ? 'complete' : 'queued'),
-      createdAt,
-      completedAt,
-      peopleCount: getQuizPeopleCount(row.quiz_data),
-      movieName: row.localized_name ?? row.tmdb_name ?? row.m_name ?? null,
-      movieYear: row.tmdb_year ?? row.m_year ?? null,
-      posterURL: row.poster_url,
-      feedbackKind: row.feedback_kind,
+      movieKey: getMovieIdentityKey({
+        tmdbId: row.tmdb_id,
+        title: movieName,
+        year: movieYear,
+      }),
+      summary: {
+        slug: row.slug,
+        status: row.status,
+        stage: row.stage ?? (row.status === 'completed' ? 'complete' : 'queued'),
+        createdAt,
+        completedAt,
+        peopleCount: getQuizPeopleCount(row.quiz_data),
+        movieName,
+        movieYear,
+        posterURL: row.poster_url,
+        feedbackKind: row.feedback_kind,
+      },
     };
   });
+
+  const seenMovieKeys = new Set<string>();
+  const deduped: AccountRecommendationSummary[] = [];
+
+  for (const { movieKey, summary } of summaries) {
+    const key = movieKey ?? `slug:${summary.slug}`;
+    if (seenMovieKeys.has(key)) continue;
+    seenMovieKeys.add(key);
+    deduped.push(summary);
+    if (deduped.length >= limit) break;
+  }
+
+  return deduped;
 }
 
 export async function getUserRecommendationFeedbackMoviePreferences(
@@ -215,41 +262,33 @@ export async function getUserRecommendationFeedbackMoviePreferences(
 ): Promise<UserRecommendationFeedbackMoviePreference[]> {
   const pool = getPool();
   const result = await pool.query<{
-    kind: RecommendationFeedbackKind;
-    movie_name: string | null;
+    kind: UserMovieInteractionKind;
+    movie_key: string;
+    tmdb_id: number | null;
+    movie_name: string;
     movie_year: number | null;
   }>(
     `SELECT
-       rf.kind,
-       COALESCE(rm.localized_name, rm.tmdb_name, m.name) AS movie_name,
-       COALESCE(rm.tmdb_year, m.year) AS movie_year
-     FROM recommendation_feedback rf
-     JOIN recommendations r ON r.id = rf.recommendation_id
-     LEFT JOIN LATERAL (
-       SELECT *
-         FROM recommendation_movies
-        WHERE recommendation_id = r.id
-        ORDER BY is_main_recommendation DESC, position ASC
-        LIMIT 1
-     ) rm ON true
-     LEFT JOIN movies m ON m.id = rm.movie_id
-     WHERE rf.user_id = $1
-       AND rf.kind IN ('already_watched', 'wrong_mood', 'too_obvious')
-     ORDER BY rf.created_at DESC
+       kind,
+       movie_key,
+       tmdb_id,
+       movie_name,
+       movie_year
+     FROM user_movie_interactions
+     WHERE user_id = $1
+       AND kind IN ('watched', 'not_interested', 'wrong_mood')
+     ORDER BY updated_at DESC
      LIMIT $2`,
     [userId, limit],
   );
 
-  return result.rows.flatMap((row) => {
-    if (!row.movie_name) return [];
-    return [
-      {
-        kind: row.kind,
-        movieName: row.movie_name,
-        movieYear: row.movie_year,
-      },
-    ];
-  });
+  return result.rows.map((row) => ({
+    kind: row.kind,
+    movieKey: row.movie_key,
+    tmdbId: row.tmdb_id,
+    movieName: row.movie_name,
+    movieYear: row.movie_year,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -505,17 +544,99 @@ export async function createRecommendationFeedback({
   userId?: string;
 }): Promise<{ id: string } | null> {
   const pool = getPool();
-  const result = await pool.query<{ id: string }>(
-    `INSERT INTO recommendation_feedback (recommendation_id, user_id, kind)
-     SELECT id, $2, $3
-       FROM recommendations
-      WHERE slug = $1
-        AND status = 'completed'
-      RETURNING id`,
-    [slug, userId ?? null, kind],
-  );
+  const client = await pool.connect();
 
-  return result.rows[0] ?? null;
+  try {
+    await client.query('BEGIN');
+
+    const feedbackResult = await client.query<{ id: string; recommendation_id: string }>(
+      `INSERT INTO recommendation_feedback (recommendation_id, user_id, kind)
+       SELECT id, $2, $3
+         FROM recommendations
+        WHERE slug = $1
+          AND status = 'completed'
+        RETURNING id, recommendation_id`,
+      [slug, userId ?? null, kind],
+    );
+
+    const feedback = feedbackResult.rows[0];
+    if (!feedback) {
+      await client.query('COMMIT');
+      return null;
+    }
+
+    const interactionKind = userId ? getInteractionKindForFeedback(kind) : null;
+    if (interactionKind) {
+      const movieResult = await client.query<{
+        tmdb_id: number | null;
+        poster_url: string | null;
+        localized_name: string | null;
+        movie_name: string | null;
+        movie_year: number | null;
+      }>(
+        `SELECT
+           rm.tmdb_id,
+           rm.poster_url,
+           rm.localized_name,
+           COALESCE(rm.tmdb_name, m.name) AS movie_name,
+           COALESCE(rm.tmdb_year, m.year) AS movie_year
+         FROM recommendation_movies rm
+         LEFT JOIN movies m ON m.id = rm.movie_id
+         WHERE rm.recommendation_id = $1
+         ORDER BY rm.is_main_recommendation DESC, rm.position ASC
+         LIMIT 1`,
+        [feedback.recommendation_id],
+      );
+
+      const movie = movieResult.rows[0];
+      const movieKey = movie
+        ? getMovieIdentityKey({
+            tmdbId: movie.tmdb_id,
+            title: movie.movie_name,
+            year: movie.movie_year,
+          })
+        : null;
+
+      if (movie?.movie_name && movieKey) {
+        await client.query(
+          `INSERT INTO user_movie_interactions (
+             user_id, movie_key, tmdb_id, movie_name, movie_year, poster_url,
+             localized_name, kind, source_recommendation_id
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           ON CONFLICT (user_id, movie_key)
+           DO UPDATE SET
+             tmdb_id = COALESCE(EXCLUDED.tmdb_id, user_movie_interactions.tmdb_id),
+             movie_name = EXCLUDED.movie_name,
+             movie_year = EXCLUDED.movie_year,
+             poster_url = COALESCE(EXCLUDED.poster_url, user_movie_interactions.poster_url),
+             localized_name = COALESCE(EXCLUDED.localized_name, user_movie_interactions.localized_name),
+             kind = EXCLUDED.kind,
+             source_recommendation_id = EXCLUDED.source_recommendation_id,
+             updated_at = now()`,
+          [
+            userId,
+            movieKey,
+            movie.tmdb_id,
+            movie.movie_name,
+            movie.movie_year,
+            movie.poster_url,
+            movie.localized_name,
+            interactionKind,
+            feedback.recommendation_id,
+          ],
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+    return { id: feedback.id };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // ---------------------------------------------------------------------------
