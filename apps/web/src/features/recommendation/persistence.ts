@@ -15,8 +15,9 @@ import type {
 
 export async function createRecommendationRecord(
   quizData: RecommendationRequestBody,
+  userId?: string,
 ): Promise<{ id: string; slug: string }> {
-  return createRecommendation(quizData);
+  return createRecommendation(quizData, userId);
 }
 
 export async function getRecommendationRecord(

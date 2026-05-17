@@ -5,6 +5,8 @@ import { Queue } from 'bullmq';
 import express from 'express';
 import IORedis from 'ioredis';
 
+import { redisOptionsFromUrl } from '../src/lib/redisConnection';
+
 const PORT = Number(process.env.PORT ?? process.env.BULL_BOARD_PORT ?? 3001);
 const REDIS_URL = process.env.REDIS_URL;
 
@@ -13,7 +15,7 @@ if (!REDIS_URL) {
   process.exit(1);
 }
 
-const connection = new IORedis(REDIS_URL, { maxRetriesPerRequest: null });
+const connection = new IORedis(redisOptionsFromUrl(REDIS_URL, { maxRetriesPerRequest: null }));
 
 const seedQueue = new Queue('movie-seed', { connection });
 const recommendationQueue = new Queue('recommendation', { connection });

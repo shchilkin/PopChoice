@@ -11,7 +11,7 @@ import { withAuth } from '@/lib/withAuth';
 // ---------------------------------------------------------------------------
 // POST /api/recommendations — create a new recommendation job
 // ---------------------------------------------------------------------------
-async function postHandler(req: NextRequest): Promise<Response> {
+async function postHandler(req: NextRequest, clientId: string): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
@@ -49,7 +49,13 @@ async function postHandler(req: NextRequest): Promise<Response> {
   }
 
   try {
-    const created = await createAndStartRecommendation(validatedBody, allPeopleData, locale);
+    const userId = clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
+    const created = await createAndStartRecommendation(
+      validatedBody,
+      allPeopleData,
+      locale,
+      userId,
+    );
     return NextResponse.json({ id: created.slug }, { status: 201 });
   } catch (err) {
     logger.error({ err }, 'Failed to create recommendation row');

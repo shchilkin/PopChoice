@@ -37,8 +37,10 @@ vi.mock('@/lib/logger', () => ({
 // Import after mocks are established
 import {
   claimMorePicksSlot,
+  createRecommendation,
   getRecommendationTMDBExcludeIds,
   getRecommendationWithMovies,
+  getUserRecommendationSummaries,
   insertMorePicksMovies,
   insertRecommendationMovies,
   updateMorePicksStatus,
@@ -64,6 +66,94 @@ function makeMovie(overrides: Partial<MovieRowToInsert> = {}): MovieRowToInsert 
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------------------
+// createRecommendation
+// ---------------------------------------------------------------------------
+
+describe('createRecommendation', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('stores the optional owner user id when present', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'rec-id', slug: 'abc123' }] });
+
+    const result = await createRecommendation({ favoriteMovie: 'Arrival' } as never, '42');
+
+    expect(result).toEqual({ id: 'rec-id', slug: 'abc123' });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('user_id');
+    expect(params[2]).toBe('42');
+  });
+
+  it('stores null owner for anonymous recommendations', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'rec-id', slug: 'abc123' }] });
+
+    await createRecommendation({ favoriteMovie: 'Arrival' } as never);
+
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[2]).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getUserRecommendationSummaries
+// ---------------------------------------------------------------------------
+
+describe('getUserRecommendationSummaries', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns saved recommendation summaries without raw quiz data', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          slug: 'rec-slug',
+          status: 'completed',
+          stage: 'complete',
+          created_at: new Date('2026-05-15T10:00:00.000Z'),
+          completed_at: null,
+          quiz_data: [{ name: 'Alex' }, { name: 'Sam' }],
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Localized Movie',
+          tmdb_name: null,
+          tmdb_year: null,
+          m_name: 'Movie',
+          m_year: 2024,
+        },
+      ],
+    });
+
+    const result = await getUserRecommendationSummaries('42');
+
+    expect(result).toEqual([
+      {
+        slug: 'rec-slug',
+        status: 'completed',
+        stage: 'complete',
+        createdAt: '2026-05-15T10:00:00.000Z',
+        completedAt: null,
+        peopleCount: 2,
+        movieName: 'Localized Movie',
+        movieYear: 2024,
+        posterURL: 'https://example.com/poster.jpg',
+      },
+    ]);
+    expect(result[0]).not.toHaveProperty('quizData');
+  });
+});
 
 // ---------------------------------------------------------------------------
 // claimMorePicksSlot

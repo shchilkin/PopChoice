@@ -16,6 +16,7 @@ vi.mock('@/clients/dbClient', () => ({
 }));
 
 import { getDbClient } from '@/clients/dbClient';
+import { SESSION_COOKIE } from '@/lib/auth/session';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 import { POST } from './route';
@@ -75,11 +76,12 @@ describe('POST /api/auth/register', () => {
     vi.clearAllMocks();
   });
 
-  it('returns 201 on successful registration', async () => {
+  it('returns 201 and signs in on successful registration', async () => {
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(201);
     const data = await res.json();
     expect(data).toEqual({ ok: true });
+    expect(res.headers.get('set-cookie')).toContain(`${SESSION_COOKIE}=`);
   });
 
   it('returns 422 when email is missing', async () => {

@@ -17,8 +17,9 @@ export async function createAndStartRecommendation(
   quizData: RecommendationRequestBody,
   allPeopleData: PersonFormData[],
   locale: Locale,
+  userId?: string,
 ): Promise<{ id: string; slug: string }> {
-  const created = await createRecommendationRecord(quizData);
+  const created = await createRecommendationRecord(quizData, userId);
   const recommendationId = created.id;
   const recommendationSlug = created.slug;
 
