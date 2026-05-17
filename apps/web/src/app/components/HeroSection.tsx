@@ -3,12 +3,11 @@
 import { Play, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
 
 import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
-import { createFreshQuizHref } from '@/lib/quizNavigation';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 
 // Loaded client-side only so Math.random() does not cause hydration mismatches
 const FilmParticles = dynamic(() => import('./FilmParticles'), { ssr: false });
@@ -20,7 +19,6 @@ const PosterBackground = dynamic(
 );
 
 export function HeroSection() {
-  const router = useRouter();
   const { isDark } = usePCTheme();
   const { t } = useLanguage();
 
@@ -113,7 +111,7 @@ export function HeroSection() {
           className="flex flex-col sm:flex-row items-center gap-4"
         >
           <button
-            onClick={() => router.push(createFreshQuizHref())}
+            onClick={navigateToFreshQuiz}
             className="group relative flex items-center gap-3 px-8 py-4 rounded-2xl transition-all duration-300 active:scale-95"
             style={{
               background: 'var(--pc-cta)',

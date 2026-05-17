@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyFeedbackToLocalMovies,
   excludeMentionedLocalMovies,
   excludeMentionedTMDBMovies,
+  excludeFeedbackTMDBMovies,
+  getFeedbackCandidateSignals,
   getMentionedMovieTitleKeys,
   isMentionedMovieTitle,
 } from './candidateFilters';
@@ -88,5 +91,58 @@ describe('candidateFilters', () => {
         mentioned,
       ).map((candidate) => candidate.title),
     ).toEqual(['Paprika']);
+  });
+
+  it('filters candidates the signed-in user marked as already watched', () => {
+    const signals = getFeedbackCandidateSignals([
+      { kind: 'already_watched', movieName: 'The Matrix', movieYear: 1999 },
+    ]);
+
+    expect(
+      applyFeedbackToLocalMovies([movie('Matrix'), movie('Dark City')], signals).map(
+        (candidate) => candidate.name,
+      ),
+    ).toEqual(['Dark City']);
+
+    expect(
+      excludeFeedbackTMDBMovies(
+        [
+          {
+            id: 1,
+            title: 'The Matrix',
+            overview: 'Reality bends.',
+            release_date: '1999-03-31',
+            vote_average: 8.2,
+            poster_path: null,
+          },
+          {
+            id: 2,
+            title: 'Dark City',
+            overview: 'A noir mystery.',
+            release_date: '1998-02-27',
+            vote_average: 7.3,
+            poster_path: null,
+          },
+        ],
+        signals,
+      ).map((candidate) => candidate.title),
+    ).toEqual(['Dark City']);
+  });
+
+  it('filters exact repeat candidates with negative feedback', () => {
+    const signals = getFeedbackCandidateSignals([
+      { kind: 'wrong_mood', movieName: 'Arrival', movieYear: 2016 },
+      { kind: 'too_obvious', movieName: 'Interstellar', movieYear: 2014 },
+      { kind: 'too_obscure', movieName: 'Primer', movieYear: 2004 },
+      { kind: 'useful', movieName: 'Past Lives', movieYear: 2023 },
+    ]);
+    const arrival = { ...movie('Arrival'), similarity: 0.91 };
+    const interstellar = { ...movie('Interstellar'), similarity: 0.9 };
+    const primer = { ...movie('Primer'), similarity: 0.89 };
+    const pastLives = { ...movie('Past Lives'), similarity: 0.85 };
+
+    const result = applyFeedbackToLocalMovies([arrival, interstellar, primer, pastLives], signals);
+
+    expect(result.map((candidate) => candidate.name)).toEqual(['Past Lives']);
   });
 });

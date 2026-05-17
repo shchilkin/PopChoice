@@ -256,6 +256,8 @@ export const en = {
     feedbackClose: 'Close',
     decisionNoteLabel: 'Why this pick',
     soloDecisionNote:
+      '{name} won because it lines up with your mood, tone, and era, not just one genre.',
+    soloDecisionNoteWithActor:
       '{name} won because it lines up with your mood, tone, era, and favorite actor cue, not just one genre.',
     groupDecisionNote:
       '{name} won as the most watchable overlap for {people} people, balancing shared mood with tone and era.',

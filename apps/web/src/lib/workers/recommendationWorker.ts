@@ -28,7 +28,7 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
   const worker = new Worker<RecommendationJobData>(
     RECOMMENDATION_QUEUE_NAME,
     async (job) => {
-      const { recommendationId, quizData, locale } = job.data;
+      const { recommendationId, quizData, locale, userId } = job.data;
 
       logger.info({ recommendationId, jobId: job.id }, 'Recommendation job started');
 
@@ -41,6 +41,7 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
         // Run the full AI pipeline
         const result = await runRecommendationPipeline(allPeopleData, locale, {
           onStageChange: (stage) => markRecommendationStage(recommendationId, stage),
+          userId,
         });
 
         const movieCount = await completeRecommendationRecord(recommendationId, result);

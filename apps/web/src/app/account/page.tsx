@@ -15,6 +15,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
 type RecommendationFeedbackKind =
@@ -234,6 +235,10 @@ export default function AccountPage() {
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link
               href="/quiz"
+              onClick={(event) => {
+                event.preventDefault();
+                navigateToFreshQuiz();
+              }}
               className="rounded-xl px-5 py-3 text-sm font-semibold"
               style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
             >

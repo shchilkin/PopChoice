@@ -44,6 +44,10 @@ export const personFormDataSchema = z.object({
     .trim()
     .min(1, 'Tone preference is required')
     .max(100, 'Tone preference must be 100 characters or fewer'),
+  favoriteActor: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().trim().max(100, 'Favorite actor must be 100 characters or fewer').optional(),
+  ),
 });
 
 export const requestBodySchema = z.union([

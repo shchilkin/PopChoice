@@ -6,12 +6,16 @@
  */
 
 import { getDbClient } from '@/clients/dbClient';
+import { getUserRecommendationFeedbackMoviePreferences } from '@/lib/db/recommendations';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 
 import {
+  applyFeedbackToLocalMovies,
   excludeMentionedLocalMovies,
   excludeMentionedTMDBMovies,
+  excludeFeedbackTMDBMovies,
+  getFeedbackCandidateSignals,
   getMentionedMovieTitleKeys,
 } from './candidateFilters';
 import { createEmbedding, refineQueryWithLLM } from './embedding';
@@ -90,7 +94,10 @@ async function withTimeout<T>(
 export async function runRecommendationPipeline(
   allPeopleData: PersonFormData[],
   locale: Locale,
-  options: { onStageChange?: (stage: RecommendationStage) => Promise<void> | void } = {},
+  options: {
+    onStageChange?: (stage: RecommendationStage) => Promise<void> | void;
+    userId?: string;
+  } = {},
 ): Promise<ApiResponse> {
   const mentionedTitleKeys = getMentionedMovieTitleKeys(allPeopleData);
 
@@ -103,9 +110,9 @@ export async function runRecommendationPipeline(
   }
 
   // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM,
-  // while the DB movie count is fetched in parallel (both are independent of each other).
+  // while the DB movie count and user feedback are fetched in parallel (all are independent).
   await emitStage('preparing');
-  const [refinedQueryTags, dbMovieCountResult] = await Promise.all([
+  const [refinedQueryTags, dbMovieCountResult, feedbackPreferences] = await Promise.all([
     refineQueryWithLLM(allPeopleData),
     (async () => {
       try {
@@ -117,7 +124,17 @@ export async function runRecommendationPipeline(
         return null;
       }
     })(),
+    (async () => {
+      if (!options.userId) return [];
+      try {
+        return await getUserRecommendationFeedbackMoviePreferences(options.userId);
+      } catch (err) {
+        logger.warn({ err }, 'Failed to load user recommendation feedback preferences');
+        return [];
+      }
+    })(),
   ]);
+  const feedbackSignals = getFeedbackCandidateSignals(feedbackPreferences);
 
   // Step 1: Create embedding
   await emitStage('embedding');
@@ -127,7 +144,11 @@ export async function runRecommendationPipeline(
   // Step 2: Find similar movies (local vector search)
   await emitStage('local-search');
   const localSimilarMovies = await getSimilarMovies(embedding);
-  let similarMovies = excludeMentionedLocalMovies(localSimilarMovies, mentionedTitleKeys);
+  const mentionedFilteredLocalMovies = excludeMentionedLocalMovies(
+    localSimilarMovies,
+    mentionedTitleKeys,
+  );
+  let similarMovies = applyFeedbackToLocalMovies(mentionedFilteredLocalMovies, feedbackSignals);
 
   // Step 3: Hybrid search — fall back to TMDB if local results are insufficient
   let usedBroaderSearch = false;
@@ -143,9 +164,12 @@ export async function runRecommendationPipeline(
 
     const tmdbApiKey = process.env.TMDB_API_KEY;
     if (tmdbApiKey) {
-      const tmdbMovies = excludeMentionedTMDBMovies(
-        await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey),
-        mentionedTitleKeys,
+      const tmdbMovies = excludeFeedbackTMDBMovies(
+        excludeMentionedTMDBMovies(
+          await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey),
+          mentionedTitleKeys,
+        ),
+        feedbackSignals,
       );
 
       if (tmdbMovies.length > 0) {
@@ -165,7 +189,10 @@ export async function runRecommendationPipeline(
           .slice(0, slotsRemaining);
         const newTMDBMatches = await scoreAndConvertTMDBMovies(filteredTMDBMovies, embedding);
         const tmdbEmbeddings = newTMDBMatches.embeddings;
-        const newTMDBMatchList = newTMDBMatches.matches;
+        const newTMDBMatchList = applyFeedbackToLocalMovies(
+          newTMDBMatches.matches,
+          feedbackSignals,
+        );
 
         similarMovies = [...localResultsForMerge, ...newTMDBMatchList].slice(0, MAX_TOTAL_MOVIES);
 
@@ -222,6 +249,24 @@ export async function runRecommendationPipeline(
       }
     } else {
       logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
+    }
+  }
+
+  if (similarMovies.length === 0) {
+    const feedbackPreservedFallbackMovies = applyFeedbackToLocalMovies(
+      localSimilarMovies,
+      feedbackSignals,
+    ).slice(0, MAX_TOTAL_MOVIES);
+    if (feedbackPreservedFallbackMovies.length > 0) {
+      logger.warn(
+        {
+          feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
+          feedbackDownrankTitleCount: feedbackSignals.downrankTitleKeys.size,
+          fallbackCount: feedbackPreservedFallbackMovies.length,
+        },
+        'Mentioned-title filtering and TMDB fallback did not refill results; relaxing mentioned-title filters while preserving feedback filters',
+      );
+      similarMovies = feedbackPreservedFallbackMovies;
     }
   }
 

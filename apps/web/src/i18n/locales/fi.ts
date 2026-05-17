@@ -258,6 +258,8 @@ export const fi: Translations = {
     feedbackClose: 'Lähellä',
     decisionNoteLabel: 'Miksi tämä valinta',
     soloDecisionNote:
+      '{name} nousi kärkeen, koska se osuu tunnelmaasi, sävyysi ja aikakauteen, ei vain yhteen genreen.',
+    soloDecisionNoteWithActor:
       '{name} nousi kärkeen, koska se osuu tunnelmaasi, sävyysi, aikakauteen ja lempinäyttelijän vihjeeseen, ei vain yhteen genreen.',
     groupDecisionNote:
       '{name} nousi katsottavimmaksi yhteiseksi valinnaksi {people} henkilölle, tasapainottaen yhteisen tunnelman, sävyn ja aikakauden.',
