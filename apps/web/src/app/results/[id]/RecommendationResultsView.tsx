@@ -4,6 +4,9 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Frown,
+  Lightbulb,
   Loader2,
   RotateCcw,
   Share2,
@@ -28,6 +31,14 @@ import {
 } from '../components';
 
 import type { GroupResultInsights } from '@/features/recommendation/groupResultInsights';
+
+type FeedbackKind =
+  | 'useful'
+  | 'already_watched'
+  | 'wrong_mood'
+  | 'too_obvious'
+  | 'too_obscure'
+  | 'close';
 
 export function RecommendationResultsView({
   movies,
@@ -56,6 +67,8 @@ export function RecommendationResultsView({
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [noMorePicks, setNoMorePicks] = useState(false);
   const [shareState, setShareState] = useState<'idle' | 'copied'>('idle');
+  const [feedbackState, setFeedbackState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackKind | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const tmdbCarouselRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -145,6 +158,40 @@ export function RecommendationResultsView({
       window.setTimeout(() => setShareState('idle'), 2200);
     }
   };
+
+  const handleFeedback = async (kind: FeedbackKind) => {
+    if (!recommendationSlug || feedbackState === 'saving') return;
+    setSelectedFeedback(kind);
+    setFeedbackState('saving');
+
+    try {
+      const res = await fetch(`/api/recommendations/${recommendationSlug}/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCsrfToken(),
+        },
+        body: JSON.stringify({ kind }),
+      });
+
+      setFeedbackState(res.ok ? 'saved' : 'error');
+    } catch {
+      setFeedbackState('error');
+    }
+  };
+
+  const feedbackOptions: {
+    kind: FeedbackKind;
+    label: string;
+    icon: typeof Check;
+  }[] = [
+    { kind: 'useful', label: t.results.feedbackUseful, icon: Check },
+    { kind: 'already_watched', label: t.results.feedbackSeen, icon: Eye },
+    { kind: 'wrong_mood', label: t.results.feedbackWrongMood, icon: Frown },
+    { kind: 'too_obvious', label: t.results.feedbackTooObvious, icon: Lightbulb },
+    { kind: 'too_obscure', label: t.results.feedbackTooObscure, icon: Sparkles },
+    { kind: 'close', label: t.results.feedbackClose, icon: RotateCcw },
+  ];
 
   return (
     <div className="px-4 md:px-8 py-8 max-w-3xl mx-auto w-full">
@@ -286,6 +333,61 @@ export function RecommendationResultsView({
         </div>
         <MainMovieCard movie={mainMovie} isGroup={isGroupResult} />
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2 }}
+        className="mb-10 rounded-2xl px-4 py-4"
+        style={{
+          background: 'var(--pc-ghost)',
+          border: '1px solid var(--pc-bd2)',
+        }}
+      >
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p
+              className="uppercase tracking-widest"
+              style={{ color: 'var(--pc-gold-text)', fontSize: '0.68rem' }}
+            >
+              {t.results.feedbackPrompt}
+            </p>
+            <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.78rem' }}>
+              {feedbackState === 'saved'
+                ? t.results.feedbackThanks
+                : feedbackState === 'error'
+                  ? t.results.feedbackError
+                  : t.results.feedbackHint}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {feedbackOptions.map(({ kind, label, icon: Icon }) => {
+              const isSelected = selectedFeedback === kind;
+              const isBusy = feedbackState === 'saving' && isSelected;
+              return (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => void handleFeedback(kind)}
+                  disabled={feedbackState === 'saving' || !recommendationSlug}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-200 active:scale-95"
+                  style={{
+                    background: isSelected ? 'var(--pc-gold-subtle)' : 'transparent',
+                    border: '1px solid var(--pc-bd2)',
+                    color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+                    fontSize: '0.72rem',
+                    fontWeight: 600,
+                    cursor: feedbackState === 'saving' || !recommendationSlug ? 'wait' : 'pointer',
+                  }}
+                >
+                  {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
 
       {localOtherMovies.length > 0 && (
         <motion.div

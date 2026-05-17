@@ -17,6 +17,14 @@ import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
+type RecommendationFeedbackKind =
+  | 'useful'
+  | 'already_watched'
+  | 'wrong_mood'
+  | 'too_obvious'
+  | 'too_obscure'
+  | 'close';
+
 type RecommendationSummary = {
   slug: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
@@ -27,6 +35,7 @@ type RecommendationSummary = {
   movieName: string | null;
   movieYear: number | null;
   posterURL: string | null;
+  feedbackKind: RecommendationFeedbackKind | null;
 };
 
 type AccountResponse = {
@@ -361,6 +370,9 @@ function RecommendationRow({
     recommendation.movieName ??
     (recommendation.status === 'completed' ? labels.untitledCompleted : labels.pendingTitle);
   const statusLabel = labels.status[recommendation.status] ?? recommendation.status;
+  const feedbackLabel = recommendation.feedbackKind
+    ? labels.feedback[recommendation.feedbackKind]
+    : null;
 
   return (
     <Link
@@ -399,6 +411,18 @@ function RecommendationRow({
           <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
             {date}
           </span>
+          {feedbackLabel ? (
+            <span
+              className="rounded-full px-2.5 py-1 text-xs font-semibold"
+              style={{
+                background: 'var(--pc-gold-subtle)',
+                border: '1px solid var(--pc-gold-bd)',
+                color: 'var(--pc-gold-text)',
+              }}
+            >
+              {labels.feedbackLabel}: {feedbackLabel}
+            </span>
+          ) : null}
         </div>
         <h3 className="truncate text-lg font-semibold" style={{ color: 'var(--pc-t1)' }}>
           {title}
