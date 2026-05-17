@@ -43,6 +43,7 @@ import {
   getUserRecommendationSummaries,
   insertMorePicksMovies,
   insertRecommendationMovies,
+  createRecommendationFeedback,
   updateMorePicksStatus,
   updateRecommendationStatus,
   updateRecommendationStage,
@@ -152,6 +153,50 @@ describe('getUserRecommendationSummaries', () => {
       },
     ]);
     expect(result[0]).not.toHaveProperty('quizData');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createRecommendationFeedback
+// ---------------------------------------------------------------------------
+
+describe('createRecommendationFeedback', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('stores feedback for a completed recommendation slug', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'feedback-id' }] });
+
+    const result = await createRecommendationFeedback({
+      slug: 'rec-slug',
+      kind: 'already_watched',
+      userId: '42',
+    });
+
+    expect(result).toEqual({ id: 'feedback-id' });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('recommendation_feedback');
+    expect(sql).toContain("status = 'completed'");
+    expect(params).toEqual(['rec-slug', '42', 'already_watched']);
+  });
+
+  it('returns null when no completed recommendation is found', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    const result = await createRecommendationFeedback({
+      slug: 'missing',
+      kind: 'wrong_mood',
+    });
+
+    expect(result).toBeNull();
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params).toEqual(['missing', null, 'wrong_mood']);
   });
 });
 

@@ -97,3 +97,23 @@ ALTER TABLE recommendation_movies
 
 CREATE INDEX IF NOT EXISTS idx_recommendation_movies_rec_id
   ON recommendation_movies (recommendation_id);
+
+-- Lightweight user feedback for completed recommendations.
+CREATE TABLE IF NOT EXISTS recommendation_feedback (
+  id                uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  recommendation_id uuid        NOT NULL REFERENCES recommendations(id) ON DELETE CASCADE,
+  user_id           bigint      REFERENCES users(id) ON DELETE SET NULL,
+  kind              text        NOT NULL,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT recommendation_feedback_kind_check CHECK (
+    kind IN ('useful', 'already_watched', 'wrong_mood', 'too_obvious', 'too_obscure', 'close')
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_rec_id
+  ON recommendation_feedback (recommendation_id);
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_user_id_created_at
+  ON recommendation_feedback (user_id, created_at DESC)
+  WHERE user_id IS NOT NULL;

@@ -39,6 +39,13 @@ function getPool(): InstanceType<typeof Pool> {
 // ---------------------------------------------------------------------------
 
 export type RecommendationStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type RecommendationFeedbackKind =
+  | 'useful'
+  | 'already_watched'
+  | 'wrong_mood'
+  | 'too_obvious'
+  | 'too_obscure'
+  | 'close';
 
 export interface RecommendationMovie {
   id: number;
@@ -420,6 +427,29 @@ export async function getRecommendationWithMovies(
     groupInsights,
     morePicksStatus: rec.more_picks_status ?? null,
   };
+}
+
+export async function createRecommendationFeedback({
+  slug,
+  kind,
+  userId,
+}: {
+  slug: string;
+  kind: RecommendationFeedbackKind;
+  userId?: string;
+}): Promise<{ id: string } | null> {
+  const pool = getPool();
+  const result = await pool.query<{ id: string }>(
+    `INSERT INTO recommendation_feedback (recommendation_id, user_id, kind)
+     SELECT id, $2, $3
+       FROM recommendations
+      WHERE slug = $1
+        AND status = 'completed'
+      RETURNING id`,
+    [slug, userId ?? null, kind],
+  );
+
+  return result.rows[0] ?? null;
 }
 
 // ---------------------------------------------------------------------------
