@@ -5,7 +5,7 @@ import { Queue } from 'bullmq';
 import express from 'express';
 import IORedis from 'ioredis';
 
-import { redisOptionsFromUrl } from '../src/lib/redisConnection';
+import { redisOptionsFromUrl } from '@/lib/redisConnection';
 
 const PORT = Number(process.env.PORT ?? process.env.BULL_BOARD_PORT ?? 3001);
 const REDIS_URL = process.env.REDIS_URL;
