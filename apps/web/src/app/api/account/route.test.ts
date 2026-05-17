@@ -65,6 +65,8 @@ describe('GET /api/account', () => {
     const response = await GET(new NextRequest('http://localhost/api/account'));
 
     expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('vary')).toBe('Cookie');
     await expect(response.json()).resolves.toEqual({
       user: { email: 'alex@example.com' },
       recommendations: [{ slug: 'saved-rec' }],
