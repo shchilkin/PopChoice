@@ -60,7 +60,9 @@ describe('GET /api/account', () => {
         }),
       }),
     });
-    mockGetUserRecommendationSummaries.mockResolvedValueOnce([{ slug: 'saved-rec' }]);
+    mockGetUserRecommendationSummaries.mockResolvedValueOnce([
+      { slug: 'saved-rec', feedbackKind: 'already_watched' },
+    ]);
 
     const response = await GET(new NextRequest('http://localhost/api/account'));
 
@@ -69,7 +71,7 @@ describe('GET /api/account', () => {
     expect(response.headers.get('vary')).toBe('Cookie');
     await expect(response.json()).resolves.toEqual({
       user: { email: 'alex@example.com' },
-      recommendations: [{ slug: 'saved-rec' }],
+      recommendations: [{ slug: 'saved-rec', feedbackKind: 'already_watched' }],
     });
     expect(mockGetUserRecommendationSummaries).toHaveBeenCalledWith('42');
   });

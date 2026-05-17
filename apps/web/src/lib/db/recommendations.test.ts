@@ -133,6 +133,7 @@ describe('getUserRecommendationSummaries', () => {
           tmdb_year: null,
           m_name: 'Movie',
           m_year: 2024,
+          feedback_kind: 'useful',
         },
       ],
     });
@@ -150,9 +151,11 @@ describe('getUserRecommendationSummaries', () => {
         movieName: 'Localized Movie',
         movieYear: 2024,
         posterURL: 'https://example.com/poster.jpg',
+        feedbackKind: 'useful',
       },
     ]);
     expect(result[0]).not.toHaveProperty('quizData');
+    expect(mockQuery.mock.calls[0]?.[0]).toContain('recommendation_feedback');
   });
 });
 

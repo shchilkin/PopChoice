@@ -882,6 +882,15 @@ export const ru: Translations = {
     untitledCompleted: 'Готовая рекомендация',
     peopleCount: '{count} вкусовых профилей',
     openResult: 'Открыть результат',
+    feedbackLabel: 'Ваша оценка',
+    feedback: {
+      useful: 'Хороший выбор',
+      already_watched: 'Уже смотрел(а)',
+      wrong_mood: 'Не то настроение',
+      too_obvious: 'Слишком очевидно',
+      too_obscure: 'Слишком нишево',
+      close: 'Почти',
+    },
     status: {
       pending: 'В очереди',
       processing: 'Обрабатывается',

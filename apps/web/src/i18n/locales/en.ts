@@ -871,6 +871,15 @@ export const en = {
     untitledCompleted: 'Completed recommendation',
     peopleCount: '{count} taste profile(s)',
     openResult: 'Open result',
+    feedbackLabel: 'Your rating',
+    feedback: {
+      useful: 'Good pick',
+      already_watched: 'Seen it',
+      wrong_mood: 'Wrong mood',
+      too_obvious: 'Too obvious',
+      too_obscure: 'Too obscure',
+      close: 'Close',
+    },
     status: {
       pending: 'Pending',
       processing: 'Processing',

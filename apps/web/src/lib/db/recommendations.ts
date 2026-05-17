@@ -84,6 +84,7 @@ export interface AccountRecommendationSummary {
   movieName: string | null;
   movieYear: number | null;
   posterURL: string | null;
+  feedbackKind: RecommendationFeedbackKind | null;
 }
 
 export interface MovieRowToInsert {
@@ -140,6 +141,7 @@ export async function getUserRecommendationSummaries(
     tmdb_year: number | null;
     m_name: string | null;
     m_year: number | null;
+    feedback_kind: RecommendationFeedbackKind | null;
   }>(
     `SELECT
        r.slug,
@@ -153,7 +155,8 @@ export async function getUserRecommendationSummaries(
        rm.tmdb_name,
        rm.tmdb_year,
        m.name AS m_name,
-       m.year AS m_year
+       m.year AS m_year,
+       feedback.kind AS feedback_kind
      FROM recommendations r
      LEFT JOIN LATERAL (
        SELECT *
@@ -163,6 +166,14 @@ export async function getUserRecommendationSummaries(
         LIMIT 1
      ) rm ON true
      LEFT JOIN movies m ON m.id = rm.movie_id
+     LEFT JOIN LATERAL (
+       SELECT kind
+         FROM recommendation_feedback
+        WHERE recommendation_id = r.id
+          AND user_id = $1
+        ORDER BY created_at DESC
+        LIMIT 1
+     ) feedback ON true
      WHERE r.user_id = $1
      ORDER BY r.created_at DESC
      LIMIT $2`,
@@ -185,6 +196,7 @@ export async function getUserRecommendationSummaries(
       movieName: row.localized_name ?? row.tmdb_name ?? row.m_name ?? null,
       movieYear: row.tmdb_year ?? row.m_year ?? null,
       posterURL: row.poster_url,
+      feedbackKind: row.feedback_kind,
     };
   });
 }

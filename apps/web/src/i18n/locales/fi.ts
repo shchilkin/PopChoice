@@ -878,6 +878,15 @@ export const fi: Translations = {
     untitledCompleted: 'Valmis suositus',
     peopleCount: '{count} makuprofiilia',
     openResult: 'Avaa tulos',
+    feedbackLabel: 'Arviosi',
+    feedback: {
+      useful: 'Hyvä valinta',
+      already_watched: 'Nähty jo',
+      wrong_mood: 'Väärä tunnelma',
+      too_obvious: 'Liian ilmeinen',
+      too_obscure: 'Liian outo',
+      close: 'Lähellä',
+    },
     status: {
       pending: 'Odottaa',
       processing: 'Käsitellään',
