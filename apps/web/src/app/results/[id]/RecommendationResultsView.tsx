@@ -14,12 +14,11 @@ import {
   Users,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
-import { createFreshQuizHref } from '@/lib/quizNavigation';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 import { type MovieRecommendation } from '@/utils/client';
 
@@ -45,6 +44,7 @@ export function RecommendationResultsView({
   usedBroaderSearch,
   dbMovieCount,
   peopleCount = 1,
+  hasActorSignal = false,
   groupInsights,
   recommendationSlug,
   morePicksStatus,
@@ -55,13 +55,13 @@ export function RecommendationResultsView({
   usedBroaderSearch: boolean;
   dbMovieCount?: number;
   peopleCount?: number;
+  hasActorSignal?: boolean;
   groupInsights?: GroupResultInsights | null;
   recommendationSlug?: string;
   morePicksStatus?: string | null;
   morePicksTimedOut?: boolean;
   onMorePicksRequested?: () => Promise<unknown>;
 }) {
-  const router = useRouter();
   const { t, locale } = useLanguage();
   const [activeSuggestion, setActiveSuggestion] = useState<number | null>(null);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
@@ -134,7 +134,10 @@ export function RecommendationResultsView({
   if (!mainMovie) return null;
 
   const mainMovieName = mainMovie.localizedName ?? mainMovie.name;
-  const decisionNote = (isGroupResult ? t.results.groupDecisionNote : t.results.soloDecisionNote)
+  const soloDecisionNote = hasActorSignal
+    ? t.results.soloDecisionNoteWithActor
+    : t.results.soloDecisionNote;
+  const decisionNote = (isGroupResult ? t.results.groupDecisionNote : soloDecisionNote)
     .replace('{name}', mainMovieName)
     .replace('{people}', new Intl.NumberFormat(locale).format(peopleCount));
 
@@ -611,7 +614,7 @@ export function RecommendationResultsView({
         className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
       >
         <button
-          onClick={() => router.push(createFreshQuizHref())}
+          onClick={navigateToFreshQuiz}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: 'var(--pc-ghost)',
@@ -632,7 +635,7 @@ export function RecommendationResultsView({
         </button>
 
         <button
-          onClick={() => router.push(createFreshQuizHref())}
+          onClick={navigateToFreshQuiz}
           className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
           style={{
             background: `linear-gradient(135deg, ${palette.purple}, #6D28D9)`,

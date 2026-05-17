@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { use, useEffect, useMemo } from 'react';
 
 import { RecommendationFetchError, useRecommendation } from '@/hooks/useRecommendation';
-import { createFreshQuizHref } from '@/lib/quizNavigation';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { type MovieRecommendation } from '@/utils/client';
 
 import { RecommendationResultsView } from './RecommendationResultsView';
@@ -55,15 +55,11 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   if (isError) {
     const variant =
       error instanceof RecommendationFetchError && error.status === 404 ? 'missing' : 'failed';
-    return (
-      <ResultsErrorState variant={variant} onRetry={() => router.push(createFreshQuizHref())} />
-    );
+    return <ResultsErrorState variant={variant} onRetry={navigateToFreshQuiz} />;
   }
 
   if (status === 'failed') {
-    return (
-      <ResultsErrorState variant="failed" onRetry={() => router.push(createFreshQuizHref())} />
-    );
+    return <ResultsErrorState variant="failed" onRetry={navigateToFreshQuiz} />;
   }
 
   if (!data || status === 'pending' || status === 'processing') {
@@ -71,7 +67,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   }
 
   if (movies.length === 0) {
-    return <ResultsErrorState variant="empty" onRetry={() => router.push(createFreshQuizHref())} />;
+    return <ResultsErrorState variant="empty" onRetry={navigateToFreshQuiz} />;
   }
 
   return (
@@ -80,6 +76,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       usedBroaderSearch={data.usedBroaderSearch ?? false}
       dbMovieCount={data.dbMovieCount}
       peopleCount={peopleCount}
+      hasActorSignal={data.hasActorSignal ?? false}
       groupInsights={groupInsights}
       recommendationSlug={id}
       morePicksStatus={data.morePicksStatus}

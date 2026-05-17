@@ -29,7 +29,7 @@ export async function createAndStartRecommendation(
     try {
       await recommendationQueue.add(
         'recommendation',
-        { recommendationId, quizData, locale },
+        { recommendationId, quizData, locale, userId },
         RECOMMENDATION_JOB_OPTIONS,
       );
       logger.info({ recommendationId }, 'Recommendation job enqueued');
@@ -38,11 +38,11 @@ export async function createAndStartRecommendation(
         { err, recommendationId },
         'Failed to enqueue recommendation job — falling back to inline processing',
       );
-      void processInlineRecommendation(recommendationId, allPeopleData, locale);
+      void processInlineRecommendation(recommendationId, allPeopleData, locale, userId);
     }
   } else {
     logger.warn('Recommendation queue unavailable (no Redis) — processing inline');
-    void processInlineRecommendation(recommendationId, allPeopleData, locale);
+    void processInlineRecommendation(recommendationId, allPeopleData, locale, userId);
   }
 
   return created;
@@ -52,11 +52,13 @@ async function processInlineRecommendation(
   recommendationId: string,
   allPeopleData: PersonFormData[],
   locale: Locale,
+  userId?: string,
 ): Promise<void> {
   try {
     await markRecommendationProcessing(recommendationId);
     const result = await runRecommendationPipeline(allPeopleData, locale, {
       onStageChange: (stage) => markRecommendationStage(recommendationId, stage),
+      userId,
     });
 
     await completeRecommendationRecord(recommendationId, result);

@@ -22,6 +22,7 @@ export type RecommendationJobData = {
   recommendationId: string;
   quizData: PersonFormData | PersonFormData[];
   locale: Locale;
+  userId?: string;
 };
 
 export type MorePicksJobData = {

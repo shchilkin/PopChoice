@@ -44,6 +44,7 @@ import {
   insertMorePicksMovies,
   insertRecommendationMovies,
   createRecommendationFeedback,
+  getUserRecommendationFeedbackMoviePreferences,
   updateMorePicksStatus,
   updateRecommendationStatus,
   updateRecommendationStage,
@@ -200,6 +201,42 @@ describe('createRecommendationFeedback', () => {
     expect(result).toBeNull();
     const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(params).toEqual(['missing', null, 'wrong_mood']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getUserRecommendationFeedbackMoviePreferences
+// ---------------------------------------------------------------------------
+
+describe('getUserRecommendationFeedbackMoviePreferences', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns movies attached to actionable user feedback', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { kind: 'already_watched', movie_name: 'Joker', movie_year: 2019 },
+        { kind: 'wrong_mood', movie_name: 'Arrival', movie_year: 2016 },
+        { kind: 'too_obvious', movie_name: null, movie_year: null },
+      ],
+    });
+
+    const result = await getUserRecommendationFeedbackMoviePreferences('42');
+
+    expect(result).toEqual([
+      { kind: 'already_watched', movieName: 'Joker', movieYear: 2019 },
+      { kind: 'wrong_mood', movieName: 'Arrival', movieYear: 2016 },
+    ]);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('recommendation_feedback');
+    expect(sql).toContain("rf.kind IN ('already_watched', 'wrong_mood', 'too_obvious')");
+    expect(params).toEqual(['42', 100]);
   });
 });
 
@@ -631,6 +668,7 @@ describe('getRecommendationWithMovies', () => {
     const result = await getRecommendationWithMovies('slug-123');
 
     expect(result?.peopleCount).toBe(2);
+    expect(result?.hasActorSignal).toBe(true);
     expect(result?.groupInsights).toEqual(
       expect.objectContaining({
         participantNames: ['Alex', 'Sam'],

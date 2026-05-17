@@ -21,6 +21,11 @@ export function getQuizPeopleCount(quizData: unknown): number {
   return Array.isArray(quizData) ? Math.max(quizData.length, 1) : 1;
 }
 
+export function hasFavoriteActorSignal(quizData: unknown): boolean {
+  const people = Array.isArray(quizData) ? quizData : [quizData];
+  return people.some((person) => isRecord(person) && cleanString(person.favoriteActor) !== null);
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -11,6 +11,7 @@ import pg from 'pg';
 import {
   buildGroupResultInsights,
   getQuizPeopleCount,
+  hasFavoriteActorSignal,
 } from '@/features/recommendation/groupResultInsights';
 import logger from '@/lib/logger';
 
@@ -70,6 +71,7 @@ export interface RecommendationWithMovies {
   usedBroaderSearch?: boolean;
   dbMovieCount?: number;
   peopleCount?: number;
+  hasActorSignal?: boolean;
   groupInsights?: ReturnType<typeof buildGroupResultInsights>;
   morePicksStatus?: string | null;
 }
@@ -85,6 +87,12 @@ export interface AccountRecommendationSummary {
   movieYear: number | null;
   posterURL: string | null;
   feedbackKind: RecommendationFeedbackKind | null;
+}
+
+export interface UserRecommendationFeedbackMoviePreference {
+  kind: RecommendationFeedbackKind;
+  movieName: string;
+  movieYear: number | null;
 }
 
 export interface MovieRowToInsert {
@@ -198,6 +206,49 @@ export async function getUserRecommendationSummaries(
       posterURL: row.poster_url,
       feedbackKind: row.feedback_kind,
     };
+  });
+}
+
+export async function getUserRecommendationFeedbackMoviePreferences(
+  userId: string,
+  limit = 100,
+): Promise<UserRecommendationFeedbackMoviePreference[]> {
+  const pool = getPool();
+  const result = await pool.query<{
+    kind: RecommendationFeedbackKind;
+    movie_name: string | null;
+    movie_year: number | null;
+  }>(
+    `SELECT
+       rf.kind,
+       COALESCE(rm.localized_name, rm.tmdb_name, m.name) AS movie_name,
+       COALESCE(rm.tmdb_year, m.year) AS movie_year
+     FROM recommendation_feedback rf
+     JOIN recommendations r ON r.id = rf.recommendation_id
+     LEFT JOIN LATERAL (
+       SELECT *
+         FROM recommendation_movies
+        WHERE recommendation_id = r.id
+        ORDER BY is_main_recommendation DESC, position ASC
+        LIMIT 1
+     ) rm ON true
+     LEFT JOIN movies m ON m.id = rm.movie_id
+     WHERE rf.user_id = $1
+       AND rf.kind IN ('already_watched', 'wrong_mood', 'too_obvious')
+     ORDER BY rf.created_at DESC
+     LIMIT $2`,
+    [userId, limit],
+  );
+
+  return result.rows.flatMap((row) => {
+    if (!row.movie_name) return [];
+    return [
+      {
+        kind: row.kind,
+        movieName: row.movie_name,
+        movieYear: row.movie_year,
+      },
+    ];
   });
 }
 
@@ -328,6 +379,7 @@ export async function getRecommendationWithMovies(
   const rec = recResult.rows[0];
   if (!rec) return null;
   const peopleCount = getQuizPeopleCount(rec.quiz_data);
+  const hasActorSignal = hasFavoriteActorSignal(rec.quiz_data);
   const groupInsights = buildGroupResultInsights(rec.quiz_data);
 
   if (rec.status !== 'completed') {
@@ -339,6 +391,7 @@ export async function getRecommendationWithMovies(
       usedBroaderSearch: rec.used_broader_search ?? false,
       dbMovieCount: rec.db_movie_count ?? undefined,
       peopleCount,
+      hasActorSignal,
       groupInsights,
       morePicksStatus: rec.more_picks_status ?? null,
     };
@@ -436,6 +489,7 @@ export async function getRecommendationWithMovies(
     usedBroaderSearch: rec.used_broader_search ?? false,
     dbMovieCount: rec.db_movie_count ?? undefined,
     peopleCount,
+    hasActorSignal,
     groupInsights,
     morePicksStatus: rec.more_picks_status ?? null,
   };

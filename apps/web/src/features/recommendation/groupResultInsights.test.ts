@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildGroupResultInsights } from './groupResultInsights';
+import { buildGroupResultInsights, hasFavoriteActorSignal } from './groupResultInsights';
 
 describe('buildGroupResultInsights', () => {
   it('returns null for solo recommendations', () => {
@@ -75,5 +75,19 @@ describe('buildGroupResultInsights', () => {
       sharedMoods: ['Drama'],
       tonePreferences: ['Serious', 'Balanced'],
     });
+  });
+});
+
+describe('hasFavoriteActorSignal', () => {
+  it('detects actor input for solo and group quiz data', () => {
+    expect(hasFavoriteActorSignal({ favoriteActor: 'Amy Adams' })).toBe(true);
+    expect(hasFavoriteActorSignal([{ favoriteActor: '' }, { favoriteActor: 'Tony Leung' }])).toBe(
+      true,
+    );
+  });
+
+  it('returns false when no actor was provided', () => {
+    expect(hasFavoriteActorSignal({ favoriteMovie: 'Heat' })).toBe(false);
+    expect(hasFavoriteActorSignal([{ favoriteActor: '   ' }, null])).toBe(false);
   });
 });

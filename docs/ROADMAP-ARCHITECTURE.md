@@ -116,6 +116,17 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Ship Docker/Coolify logs to a searchable log store once local log scrolling becomes painful.
 - Track lightweight operational metrics: recommendation success/failure counts, average recommendation duration, queue depth, failed jobs, OpenAI/TMDB timeout counts, and DB/Redis health failures.
 
+### Product Feedback Track
+
+- Add an explicit watched-movies library for signed-in users so movies marked as watched are excluded from default recommendations instead of only being inferred from recommendation feedback.
+- Introduce a stable movie identity layer for recommendation memory: prefer TMDB ids when present, and fall back to normalized title plus release year for local-only movies. Use this identity to avoid treating local and TMDB copies of the same movie as separate choices.
+- Add a small `user_movie_interactions` model as the first implementation step. Store `watched`, `liked`, `not_interested`, and `wrong_mood` per signed-in user and movie identity, with upsert semantics so repeated feedback updates the same interaction instead of creating duplicates.
+- Filter `watched` and `not_interested` movies out of default recommendations for signed-in users. Down-rank `wrong_mood` instead of permanently excluding it, and use `liked` as a positive taste signal.
+- Deduplicate account recommendation history by movie identity or clearly group repeated recommendation attempts, so the profile does not look like the system is saving the same movie as separate discoveries.
+- Consider a separate "worth rewatching" angle for watched movies so strong matches can still appear intentionally, with copy that frames them as rewatch candidates instead of new discoveries.
+- Feed watched/not-interested/liked feedback into ranking so future recommendations avoid exact repeats and make the reason for reused titles transparent.
+- Keep the first implementation intentionally small: signed-in feedback should prevent obvious repeat recommendations by default. Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
+
 ## Priority Items for the Next 30 Days
 
 1. [x] Write a short boundary definition for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients`.
