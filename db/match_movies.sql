@@ -15,6 +15,7 @@ returns table (
   duration integer,
   score_rating float,
   year int,
+  tmdb_id bigint,
   similarity float,
   content text
 )
@@ -28,6 +29,7 @@ as $$
     movies.duration,
     movies.score_rating,
     movies.year,
+    movies.tmdb_id,
     1 - (movies.embedding <=> query_embedding) as similarity,
     -- Format content for API consumption
     format(

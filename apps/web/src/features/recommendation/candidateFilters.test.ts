@@ -188,4 +188,26 @@ describe('candidateFilters', () => {
       ).map((candidate) => candidate.title),
     ).toEqual(['The Matrix']);
   });
+
+  it('filters local candidates by TMDB identity when the local row has been matched', () => {
+    const signals = getFeedbackCandidateSignals([
+      {
+        kind: 'already_watched',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+      },
+    ]);
+
+    expect(
+      applyFeedbackToLocalMovies(
+        [
+          { ...movie('A localized title'), tmdbId: 129 },
+          { ...movie('Kiki’s Delivery Service'), tmdbId: 16859 },
+        ],
+        signals,
+      ).map((candidate) => candidate.name),
+    ).toEqual(['Kiki’s Delivery Service']);
+  });
 });

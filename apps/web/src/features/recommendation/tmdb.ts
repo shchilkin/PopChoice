@@ -261,6 +261,7 @@ function tmdbMovieToEnhancedMatch(
 
   return {
     id: -movie.id, // Negative ID distinguishes TMDB-sourced movies from local DB rows (positive bigserial IDs)
+    tmdbId: movie.id,
     name: movie.title,
     age_rating: 'NR',
     description: movie.overview || '',

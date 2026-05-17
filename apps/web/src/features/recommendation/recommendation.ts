@@ -78,7 +78,10 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
     return null;
   }
 
-  return data as EnhancedMovieMatch[];
+  return (data as Array<EnhancedMovieMatch & { tmdb_id?: number | null }>).map((movie) => ({
+    ...movie,
+    tmdbId: movie.tmdb_id ?? movie.tmdbId ?? null,
+  }));
 }
 
 /** Find similar movies in the local vector store. Returns an empty array if none found or DB unavailable. */

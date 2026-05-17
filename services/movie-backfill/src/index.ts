@@ -1,7 +1,7 @@
 /**
  * Movie Backfill Service — Entry Point
  *
- * Queries the database for movies with duration = 0 and backfills them
+ * Queries the database for movies missing TMDB identity or runtime and backfills them
  * by fetching runtime, age rating, and details from TMDB, then re-generates
  * embeddings and updates the database rows.
  *
@@ -29,16 +29,22 @@ import {
   extractUSCertification,
   fetchMovieDetails,
   movieToEmbeddingText,
-  searchMovie,
+  searchMovieMatch,
 } from './tmdb.js';
 
 /** A movie that passed all TMDB validations and is ready for embedding + DB update. */
 interface PendingUpdate {
   movie: IncompleteMovie;
   tmdbId: number;
+  matchConfidence: number;
   runtime: number;
   ageRating: string;
   embeddingText: string;
+}
+
+function isRuntimeCompatible(existingRuntime: number, tmdbRuntime: number): boolean {
+  if (existingRuntime <= 0) return true;
+  return Math.abs(existingRuntime - tmdbRuntime) <= 20;
 }
 
 async function main(): Promise<void> {
@@ -65,10 +71,12 @@ async function main(): Promise<void> {
     }
 
     const movies = await getIncompleteMovies(config.maxMovies);
-    logger.info('Fetched incomplete movies from database', { count: movies.length });
+    logger.info('Fetched movies needing TMDB identity or metadata backfill', {
+      count: movies.length,
+    });
 
     if (movies.length === 0) {
-      logger.info('No movies with missing duration found — nothing to do');
+      logger.info('No movies need TMDB identity or metadata backfill — nothing to do');
       return;
     }
 
@@ -87,37 +95,65 @@ async function main(): Promise<void> {
         batch.map(async (movie) => {
           totalProcessed++;
           try {
-            // 1. Search TMDB by title + year to get TMDB ID
-            const tmdbId = await searchMovie(config.tmdbApiKey, movie.name, movie.year);
-            if (tmdbId === null) {
-              logger.warn('Movie not found on TMDB — skipping', {
+            // 1. Search TMDB by title + year to get a conservative TMDB identity match.
+            const match = await searchMovieMatch(config.tmdbApiKey, movie.name, movie.year);
+            if (match.status === 'ambiguous') {
+              logger.warn('Ambiguous TMDB match — manual review needed', {
+                id: movie.id,
                 name: movie.name,
                 year: movie.year,
+                candidates: match.candidates,
+              });
+              totalSkipped++;
+              return;
+            }
+
+            if (match.status === 'not_found') {
+              logger.warn('Movie not confidently found on TMDB — skipping', {
+                id: movie.id,
+                name: movie.name,
+                year: movie.year,
+                candidates: match.candidates,
               });
               totalSkipped++;
               return;
             }
 
             // 2. Fetch full movie details
-            const details = await fetchMovieDetails(config.tmdbApiKey, tmdbId);
+            const details = await fetchMovieDetails(config.tmdbApiKey, match.tmdbId);
             if (!details) {
               logger.warn('Failed to fetch movie details from TMDB — skipping', {
                 name: movie.name,
                 year: movie.year,
-                tmdbId,
+                tmdbId: match.tmdbId,
               });
               totalSkipped++;
               return;
             }
 
-            // 3. Extract runtime — skip if not available
-            const runtime = details.runtime;
+            // 3. Extract runtime — skip if neither TMDB nor the database has it.
+            const runtime = details.runtime ?? movie.duration;
             if (!runtime || runtime === 0) {
               logger.warn('TMDB returned no runtime for movie — skipping', {
                 name: movie.name,
                 year: movie.year,
-                tmdbId,
+                tmdbId: match.tmdbId,
                 runtime,
+              });
+              totalSkipped++;
+              return;
+            }
+
+            if (!isRuntimeCompatible(movie.duration, runtime)) {
+              logger.warn('TMDB candidate runtime mismatch — manual review needed', {
+                id: movie.id,
+                name: movie.name,
+                year: movie.year,
+                existingRuntime: movie.duration,
+                tmdbId: match.tmdbId,
+                tmdbRuntime: runtime,
+                matchConfidence: match.confidence,
+                candidates: match.candidates,
               });
               totalSkipped++;
               return;
@@ -143,7 +179,8 @@ async function main(): Promise<void> {
                 id: movie.id,
                 name: movie.name,
                 year: movie.year,
-                tmdbId,
+                tmdbId: match.tmdbId,
+                matchConfidence: match.confidence,
                 runtime,
                 ageRating,
               });
@@ -152,7 +189,14 @@ async function main(): Promise<void> {
             }
 
             // Collect for batch embedding in Phase 2
-            pendingUpdates.push({ movie, tmdbId, runtime, ageRating, embeddingText });
+            pendingUpdates.push({
+              movie,
+              tmdbId: match.tmdbId,
+              matchConfidence: match.confidence,
+              runtime,
+              ageRating,
+              embeddingText,
+            });
           } catch (err) {
             logger.warn('Failed to backfill movie — skipping', {
               id: movie.id,
@@ -198,13 +242,21 @@ async function main(): Promise<void> {
           }
 
           try {
-            await updateMovie(update.movie.id, update.runtime, update.ageRating, embedding);
+            await updateMovie(
+              update.movie.id,
+              update.runtime,
+              update.ageRating,
+              update.tmdbId,
+              update.matchConfidence,
+              embedding,
+            );
 
             logger.info('Movie backfilled successfully', {
               id: update.movie.id,
               name: update.movie.name,
               year: update.movie.year,
               tmdbId: update.tmdbId,
+              matchConfidence: update.matchConfidence,
               runtime: update.runtime,
               ageRating: update.ageRating,
             });

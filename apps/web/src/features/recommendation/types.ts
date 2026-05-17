@@ -138,6 +138,7 @@ export type EnhancedMovieMatch = {
   duration: number;
   score_rating: number;
   year: number;
+  tmdbId?: number | null;
   similarity: number;
   content: string;
   /** Pre-populated poster URL, e.g. from TMDB discover response — skips re-lookup if set. */

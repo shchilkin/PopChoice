@@ -93,7 +93,7 @@ export function getFeedbackCandidateSignals(
 }
 
 function getLocalMovieIdentityKey(movie: EnhancedMovieMatch): string | null {
-  return getMovieIdentityKey({ title: movie.name, year: movie.year });
+  return getMovieIdentityKey({ tmdbId: movie.tmdbId, title: movie.name, year: movie.year });
 }
 
 function getTMDBMovieIdentityKey(movie: TMDBDiscoverMovie): string | null {
