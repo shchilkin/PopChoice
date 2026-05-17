@@ -1,36 +1,28 @@
+import { getMovieIdentityKey, getMovieTitleKey, getYearFromReleaseDate } from '@/lib/movieIdentity';
+
 import type { TMDBDiscoverMovie } from './tmdb';
 import type { EnhancedMovieMatch, PersonFormData } from './types';
-import type { RecommendationFeedbackKind } from '@/lib/db/recommendations';
+import type {
+  RecommendationFeedbackKind,
+  UserMovieInteractionKind,
+} from '@/lib/db/recommendations';
 
 export type FeedbackMoviePreference = {
-  kind: RecommendationFeedbackKind;
+  kind: RecommendationFeedbackKind | UserMovieInteractionKind;
+  movieKey?: string | null;
+  tmdbId?: number | null;
   movieName: string;
   movieYear: number | null;
 };
 
 export type FeedbackCandidateSignals = {
+  excludedMovieKeys: Set<string>;
   excludedTitleKeys: Set<string>;
+  downrankMovieKeys: Set<string>;
   downrankTitleKeys: Set<string>;
 };
 
 const FEEDBACK_DOWNRANK_AMOUNT = 0.08;
-
-function normalizeMovieTitle(title: string): string {
-  return title
-    .toLocaleLowerCase()
-    .normalize('NFKD')
-    .replace(/\p{M}+/gu, '')
-    .replace(/&/g, ' and ')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim()
-    .replace(/^(the|a|an)\s+/, '')
-    .replace(/\s+/g, ' ');
-}
-
-function getMovieTitleKey(title: string): string | null {
-  const normalized = normalizeMovieTitle(title);
-  return normalized.length > 0 ? normalized : null;
-}
 
 export function getMentionedMovieTitleKeys(allPeopleData: PersonFormData[]): Set<string> {
   return new Set(
@@ -65,54 +57,106 @@ export function excludeMentionedTMDBMovies(
 export function getFeedbackCandidateSignals(
   preferences: FeedbackMoviePreference[],
 ): FeedbackCandidateSignals {
+  const excludedMovieKeys = new Set<string>();
   const excludedTitleKeys = new Set<string>();
+  const downrankMovieKeys = new Set<string>();
   const downrankTitleKeys = new Set<string>();
 
   for (const preference of preferences) {
+    const movieKey =
+      preference.movieKey ??
+      getMovieIdentityKey({
+        tmdbId: preference.tmdbId,
+        title: preference.movieName,
+        year: preference.movieYear,
+      });
     const titleKey = getMovieTitleKey(preference.movieName);
-    if (!titleKey) continue;
 
     if (
       preference.kind === 'already_watched' ||
-      preference.kind === 'wrong_mood' ||
+      preference.kind === 'watched' ||
+      preference.kind === 'not_interested' ||
       preference.kind === 'too_obvious' ||
       preference.kind === 'too_obscure'
     ) {
-      excludedTitleKeys.add(titleKey);
+      if (movieKey) excludedMovieKeys.add(movieKey);
+      if (titleKey) excludedTitleKeys.add(titleKey);
     }
 
-    if (preference.kind === 'wrong_mood' || preference.kind === 'too_obvious') {
-      downrankTitleKeys.add(titleKey);
+    if (preference.kind === 'wrong_mood') {
+      if (movieKey) downrankMovieKeys.add(movieKey);
+      if (titleKey) downrankTitleKeys.add(titleKey);
     }
   }
 
-  return { excludedTitleKeys, downrankTitleKeys };
+  return { excludedMovieKeys, excludedTitleKeys, downrankMovieKeys, downrankTitleKeys };
 }
 
-function isFeedbackExcludedTitle(title: string, signals: FeedbackCandidateSignals): boolean {
-  const titleKey = getMovieTitleKey(title);
-  if (!titleKey) return false;
-  return signals.excludedTitleKeys.has(titleKey);
+function getLocalMovieIdentityKey(movie: EnhancedMovieMatch): string | null {
+  return getMovieIdentityKey({ tmdbId: movie.tmdbId, title: movie.name, year: movie.year });
 }
 
-function isFeedbackDownrankedTitle(title: string, signals: FeedbackCandidateSignals): boolean {
-  const titleKey = getMovieTitleKey(title);
-  if (!titleKey) return false;
-  return signals.downrankTitleKeys.has(titleKey);
+function getTMDBMovieIdentityKey(movie: TMDBDiscoverMovie): string | null {
+  return getMovieIdentityKey({
+    tmdbId: movie.id,
+    title: movie.title,
+    year: getYearFromReleaseDate(movie.release_date),
+  });
+}
+
+function isFeedbackExcludedLocalMovie(
+  movie: EnhancedMovieMatch,
+  signals: FeedbackCandidateSignals,
+): boolean {
+  const movieKey = getLocalMovieIdentityKey(movie);
+  const titleKey = getMovieTitleKey(movie.name);
+  return Boolean(
+    (movieKey && signals.excludedMovieKeys.has(movieKey)) ||
+    (titleKey && signals.excludedTitleKeys.has(titleKey)),
+  );
+}
+
+function isFeedbackDownrankedLocalMovie(
+  movie: EnhancedMovieMatch,
+  signals: FeedbackCandidateSignals,
+): boolean {
+  const movieKey = getLocalMovieIdentityKey(movie);
+  const titleKey = getMovieTitleKey(movie.name);
+  return Boolean(
+    (movieKey && signals.downrankMovieKeys.has(movieKey)) ||
+    (titleKey && signals.downrankTitleKeys.has(titleKey)),
+  );
+}
+
+function isFeedbackExcludedTMDBMovie(
+  movie: TMDBDiscoverMovie,
+  signals: FeedbackCandidateSignals,
+): boolean {
+  const movieKey = getTMDBMovieIdentityKey(movie);
+  const titleKey = getMovieTitleKey(movie.title);
+  return Boolean(
+    (movieKey && signals.excludedMovieKeys.has(movieKey)) ||
+    (titleKey && signals.excludedTitleKeys.has(titleKey)),
+  );
 }
 
 export function applyFeedbackToLocalMovies(
   movies: EnhancedMovieMatch[],
   signals: FeedbackCandidateSignals,
 ): EnhancedMovieMatch[] {
-  if (signals.excludedTitleKeys.size === 0 && signals.downrankTitleKeys.size === 0) {
+  if (
+    signals.excludedMovieKeys.size === 0 &&
+    signals.excludedTitleKeys.size === 0 &&
+    signals.downrankMovieKeys.size === 0 &&
+    signals.downrankTitleKeys.size === 0
+  ) {
     return movies;
   }
 
   return movies
-    .filter((movie) => !isFeedbackExcludedTitle(movie.name, signals))
+    .filter((movie) => !isFeedbackExcludedLocalMovie(movie, signals))
     .map((movie) => {
-      if (!isFeedbackDownrankedTitle(movie.name, signals)) return movie;
+      if (!isFeedbackDownrankedLocalMovie(movie, signals)) return movie;
 
       return {
         ...movie,
@@ -126,6 +170,6 @@ export function excludeFeedbackTMDBMovies(
   movies: TMDBDiscoverMovie[],
   signals: FeedbackCandidateSignals,
 ): TMDBDiscoverMovie[] {
-  if (signals.excludedTitleKeys.size === 0) return movies;
-  return movies.filter((movie) => !isFeedbackExcludedTitle(movie.title, signals));
+  if (signals.excludedMovieKeys.size === 0 && signals.excludedTitleKeys.size === 0) return movies;
+  return movies.filter((movie) => !isFeedbackExcludedTMDBMovie(movie, signals));
 }

@@ -5,6 +5,7 @@ import {
   fetchMovieDetails,
   movieToEmbeddingText,
   searchMovie,
+  searchMovieMatch,
 } from './tmdb.js';
 
 import type { TMDBMovieDetails } from './tmdb.js';
@@ -167,10 +168,13 @@ describe('searchMovie', () => {
   }
 
   it('returns id of first result that matches year exactly', async () => {
-    mockFetch({ results: [{ id: 42, title: 'Inception', release_date: '2010-07-16' }] });
+    mockFetch(
+      { results: [{ id: 42, title: 'Inception', release_date: '2010-07-16' }] },
+      { results: [] },
+    );
     const id = await searchMovie(API_KEY, 'Inception', 2010);
     expect(id).toBe(42);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
     const options = vi.mocked(fetch).mock.calls[0][1];
     expect(options).toMatchObject({
       signal: expect.any(AbortSignal),
@@ -178,7 +182,10 @@ describe('searchMovie', () => {
   });
 
   it('accepts a result within ±1 year tolerance', async () => {
-    mockFetch({ results: [{ id: 7, title: 'Movie', release_date: '2011-01-01' }] });
+    mockFetch(
+      { results: [{ id: 7, title: 'Movie', release_date: '2011-01-01' }] },
+      { results: [] },
+    );
     const id = await searchMovie(API_KEY, 'Movie', 2010);
     expect(id).toBe(7);
   });
@@ -216,6 +223,23 @@ describe('searchMovie', () => {
     mockFetch({ results: [] });
     const id = await searchMovie(API_KEY, 'Ghost Movie', 0);
     expect(id).toBeNull();
+  });
+
+  it('reports ambiguous matches for manual review instead of auto-picking', async () => {
+    mockFetch(
+      {
+        results: [
+          { id: 1, title: 'Hamlet', release_date: '1996-12-25' },
+          { id: 2, title: 'Hamlet', release_date: '1996-05-10' },
+        ],
+      },
+      { results: [] },
+    );
+
+    const result = await searchMovieMatch(API_KEY, 'Hamlet', 1996);
+
+    expect(result.status).toBe('ambiguous');
+    expect(result.candidates.map((candidate) => candidate.id)).toEqual([1, 2]);
   });
 
   it('returns null when TMDB search response has an invalid shape', async () => {

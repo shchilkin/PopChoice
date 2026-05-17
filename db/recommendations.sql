@@ -117,3 +117,30 @@ CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_rec_id
 CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_user_id_created_at
   ON recommendation_feedback (user_id, created_at DESC)
   WHERE user_id IS NOT NULL;
+
+-- Durable per-user movie memory derived from feedback. This lets future
+-- recommendations avoid movies the signed-in user already marked as watched or
+-- not relevant, regardless of which recommendation produced that feedback.
+CREATE TABLE IF NOT EXISTS user_movie_interactions (
+  id                       uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id                  bigint      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  movie_key                text        NOT NULL,
+  tmdb_id                  bigint,
+  movie_name               text        NOT NULL,
+  movie_year               integer,
+  poster_url               text,
+  localized_name           text,
+  kind                     text        NOT NULL,
+  source_recommendation_id uuid        REFERENCES recommendations(id) ON DELETE SET NULL,
+  created_at               timestamptz NOT NULL DEFAULT now(),
+  updated_at               timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT user_movie_interactions_kind_check CHECK (
+    kind IN ('watched', 'liked', 'not_interested', 'wrong_mood')
+  )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_movie_interactions_user_key
+  ON user_movie_interactions (user_id, movie_key);
+
+CREATE INDEX IF NOT EXISTS idx_user_movie_interactions_user_kind_updated_at
+  ON user_movie_interactions (user_id, kind, updated_at DESC);

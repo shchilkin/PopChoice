@@ -26,7 +26,9 @@ export interface TMDBMovieDetails {
 const tmdbSearchResultSchema = z.object({
   id: z.number(),
   title: z.string(),
+  original_title: z.string().optional(),
   release_date: z.string(),
+  popularity: z.number().optional(),
 });
 
 type TMDBSearchResult = z.infer<typeof tmdbSearchResultSchema>;
@@ -37,20 +39,94 @@ const tmdbSearchResponseSchema = z.object({
 
 /** Year tolerance (in years) when disambiguating TMDB search results. */
 const YEAR_TOLERANCE = 1;
+const CONFIDENT_MATCH_THRESHOLD = 0.9;
+const LOW_YEAR_CONFIDENT_MATCH_THRESHOLD = 0.82;
+const AMBIGUOUS_SCORE_GAP = 0.08;
 
-/**
- * Pick the first TMDB result whose release_date year is within YEAR_TOLERANCE of targetYear.
- */
-function pickByYear(results: TMDBSearchResult[], targetYear: number): number | null {
-  for (const result of results) {
-    const releaseYear = result.release_date
-      ? parseInt(result.release_date.substring(0, 4), 10)
-      : NaN;
-    if (!Number.isNaN(releaseYear) && Math.abs(releaseYear - targetYear) <= YEAR_TOLERANCE) {
-      return result.id;
+export type TMDBSearchCandidate = {
+  id: number;
+  title: string;
+  originalTitle?: string;
+  releaseYear: number | null;
+  confidence: number;
+};
+
+export type TMDBMovieSearchResult =
+  | {
+      status: 'matched';
+      tmdbId: number;
+      confidence: number;
+      title: string;
+      releaseYear: number | null;
+      candidates: TMDBSearchCandidate[];
     }
-  }
-  return null;
+  | {
+      status: 'ambiguous';
+      candidates: TMDBSearchCandidate[];
+    }
+  | {
+      status: 'not_found';
+      candidates: TMDBSearchCandidate[];
+    };
+
+function parseReleaseYear(releaseDate: string): number | null {
+  const year = releaseDate ? parseInt(releaseDate.substring(0, 4), 10) : NaN;
+  return Number.isFinite(year) ? year : null;
+}
+
+function normalizeTitle(title: string): string {
+  return title
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/&/g, ' and ')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/^(the|a|an)\s+/, '')
+    .replace(/\s+/g, ' ');
+}
+
+function titleConfidence(candidate: TMDBSearchResult, targetTitle: string): number {
+  const target = normalizeTitle(targetTitle);
+  const title = normalizeTitle(candidate.title);
+  const originalTitle = candidate.original_title ? normalizeTitle(candidate.original_title) : '';
+
+  if (!target || (!title && !originalTitle)) return 0;
+  if (target === title || target === originalTitle) return 0.75;
+  return 0;
+}
+
+function yearConfidence(candidateYear: number | null, targetYear: number): number {
+  if (targetYear <= 0) return 0.1;
+  if (candidateYear === null) return 0;
+
+  const delta = Math.abs(candidateYear - targetYear);
+  if (delta === 0) return 0.25;
+  if (delta <= YEAR_TOLERANCE) return 0.15;
+  return -0.5;
+}
+
+function scoreCandidate(
+  candidate: TMDBSearchResult,
+  targetTitle: string,
+  targetYear: number,
+): number {
+  const releaseYear = parseReleaseYear(candidate.release_date);
+  return titleConfidence(candidate, targetTitle) + yearConfidence(releaseYear, targetYear);
+}
+
+function toCandidate(
+  candidate: TMDBSearchResult,
+  targetTitle: string,
+  targetYear: number,
+): TMDBSearchCandidate {
+  return {
+    id: candidate.id,
+    title: candidate.title,
+    originalTitle: candidate.original_title,
+    releaseYear: parseReleaseYear(candidate.release_date),
+    confidence: scoreCandidate(candidate, targetTitle, targetYear),
+  };
 }
 
 /**
@@ -121,20 +197,60 @@ export async function searchMovie(
   title: string,
   year: number,
 ): Promise<number | null> {
-  if (year > 0) {
-    // 1. Year-scoped search
-    const scopedResults = await tmdbSearch(apiKey, title, year);
-    const id = pickByYear(scopedResults, year);
-    if (id !== null) return id;
+  const match = await searchMovieMatch(apiKey, title, year);
+  return match.status === 'matched' ? match.tmdbId : null;
+}
 
-    // 2. Year-less fallback — TMDB may rank differently without the year filter
+export async function searchMovieMatch(
+  apiKey: string,
+  title: string,
+  year: number,
+): Promise<TMDBMovieSearchResult> {
+  const collected = new Map<number, TMDBSearchResult>();
+
+  if (year > 0) {
+    const scopedResults = await tmdbSearch(apiKey, title, year);
+    for (const result of scopedResults) collected.set(result.id, result);
+
     const broadResults = await tmdbSearch(apiKey, title, null);
-    return pickByYear(broadResults, year);
+    for (const result of broadResults) collected.set(result.id, result);
+  } else {
+    const results = await tmdbSearch(apiKey, title, null);
+    for (const result of results) collected.set(result.id, result);
   }
 
-  // year === 0 — year unknown, return first result without year validation
-  const results = await tmdbSearch(apiKey, title, null);
-  return results.length > 0 ? results[0].id : null;
+  const candidates = Array.from(collected.values())
+    .map((candidate) => toCandidate(candidate, title, year))
+    .filter((candidate) => candidate.confidence > 0)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 5);
+
+  const best = candidates[0];
+  if (!best) return { status: 'not_found', candidates };
+
+  const threshold = year > 0 ? CONFIDENT_MATCH_THRESHOLD : LOW_YEAR_CONFIDENT_MATCH_THRESHOLD;
+  const runnerUp = candidates[1];
+  const isAmbiguous =
+    runnerUp &&
+    runnerUp.confidence >= LOW_YEAR_CONFIDENT_MATCH_THRESHOLD &&
+    best.confidence - runnerUp.confidence <= AMBIGUOUS_SCORE_GAP;
+
+  if (isAmbiguous) {
+    return { status: 'ambiguous', candidates };
+  }
+
+  if (best.confidence < threshold) {
+    return { status: 'not_found', candidates };
+  }
+
+  return {
+    status: 'matched',
+    tmdbId: best.id,
+    confidence: best.confidence,
+    title: best.title,
+    releaseYear: best.releaseYear,
+    candidates,
+  };
 }
 
 /**
