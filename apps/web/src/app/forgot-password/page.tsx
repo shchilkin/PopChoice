@@ -186,15 +186,17 @@ export default function ForgotPasswordPage() {
           </form>
         )}
 
-        <p className="text-center text-sm mt-6" style={{ color: 'var(--pc-t3)' }}>
-          <Link
-            href="/login"
-            className="font-medium transition-colors duration-200"
-            style={{ color: 'var(--pc-gold-text)' }}
-          >
-            {l.backToLogin}
-          </Link>
-        </p>
+        {!submitted && (
+          <p className="text-center text-sm mt-6" style={{ color: 'var(--pc-t3)' }}>
+            <Link
+              href="/login"
+              className="font-medium transition-colors duration-200"
+              style={{ color: 'var(--pc-gold-text)' }}
+            >
+              {l.backToLogin}
+            </Link>
+          </p>
+        )}
       </motion.div>
     </div>
   );
