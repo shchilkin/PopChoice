@@ -76,7 +76,7 @@
     "eslint-config-next": "^16.2.6",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-storybook": "^10.3.6",
+    "eslint-plugin-storybook": "^10.4.0",
     "eslint-plugin-unused-imports": "^4.4.1",
     "msw": "^2.14.3",
     "msw-storybook-addon": "^2.0.7",
