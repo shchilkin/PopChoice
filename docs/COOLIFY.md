@@ -68,6 +68,9 @@ TMDB_API_KEY=...
 LOG_LEVEL=info
 API_KEY_HMAC_SECRET=...
 VALID_API_KEYS=...
+RESEND_API_KEY=...
+EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
+EMAIL_REPLY_TO=support@your-domain.example
 ```
 
 Set `NEXT_PUBLIC_BASE_URL` to the URL users see in their browser, without a
@@ -103,6 +106,22 @@ Compose resource environment:
 API_KEY_HMAC_SECRET={{ project.API_KEY_HMAC_SECRET }}
 VALID_API_KEYS={{ project.VALID_API_KEYS }}
 ```
+
+### Password reset email
+
+Password reset requests use Resend in production. Create a Resend API key and
+verify a sending domain such as `mail.your-domain.example`, then set these
+variables on the Coolify Compose resource:
+
+```env
+RESEND_API_KEY={{ project.RESEND_API_KEY }}
+EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
+EMAIL_REPLY_TO=support@your-domain.example
+```
+
+`EMAIL_REPLY_TO` is optional. In local development and previews, the app exposes
+the reset URL after a successful forgot-password request so the flow can be
+tested without sending real mail. In production, the URL is sent only by email.
 
 ## First deploy
 
