@@ -22,8 +22,9 @@ export async function createRecommendationRecord(
 
 export async function getRecommendationRecord(
   slug: string,
+  viewerUserId?: string,
 ): Promise<RecommendationWithMovies | null> {
-  return getRecommendationWithMovies(slug);
+  return getRecommendationWithMovies(slug, viewerUserId);
 }
 
 export async function markRecommendationProcessing(recommendationId: string): Promise<void> {
