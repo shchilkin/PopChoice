@@ -915,6 +915,14 @@ export const fi: Translations = {
     savedTitle: 'Suositushistoria',
     emptyTitle: 'Ei vielä tallennettuja suosituksia',
     emptyBody: 'Tee kysely kirjautuneena, niin tuloksesi ilmestyvät tänne.',
+    memoryTitle: 'Elokuvamuisti',
+    memoryBody:
+      'PopChoice käyttää näitä signaaleja, jotta se ei ehdota uudelleen elokuvia, jotka olet jo nähnyt tai merkinnyt hutivalinnaksi.',
+    memoryEmptyTitle: 'Elokuvamuisti on vielä tyhjä',
+    memoryEmptyBody:
+      'Arvioi suosituksia, niin PopChoice oppii, mitä kannattaa välttää seuraavalla kerralla.',
+    forgetMovie: 'Unohda tämä elokuva',
+    memoryForgetError: 'Elokuvaa ei voitu unohtaa. Yritä uudelleen.',
     pendingTitle: 'Suositus on kesken',
     untitledCompleted: 'Valmis suositus',
     peopleCount: '{count} makuprofiilia',
@@ -927,6 +935,12 @@ export const fi: Translations = {
       too_obvious: 'Liian ilmeinen',
       too_obscure: 'Liian outo',
       close: 'Lähellä',
+    },
+    memoryKind: {
+      watched: 'Nähty jo',
+      liked: 'Pidetty',
+      not_interested: 'Ei kiinnosta',
+      wrong_mood: 'Väärä tunnelma',
     },
     status: {
       pending: 'Odottaa',

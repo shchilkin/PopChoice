@@ -44,6 +44,13 @@ The main remaining risks are:
 - [x] The register route now delegates user-creation workflow to a feature module instead of owning DB writes directly.
 - [x] Poster utility routes now delegate TMDB fetch and proxy logic through the integration layer instead of owning raw fetch behavior.
 - [x] Recommendation feature modules now import concrete clients directly instead of relying on the broad `@/clients` barrel.
+- [x] A stable movie identity helper exists for recommendation memory, preferring TMDB ids and falling back to normalized title plus release year.
+- [x] Favorite/reference movies mentioned in the quiz are excluded from recommendation candidates while still contributing to taste matching.
+- [x] Recommendation feedback is captured from the results page and stored separately from generated recommendation payloads.
+- [x] Signed-in feedback is persisted into `user_movie_interactions` with upsert semantics for `watched`, `liked`, `not_interested`, and `wrong_mood`.
+- [x] Feedback-derived recommendation memory now filters watched/not-interested movies and down-ranks wrong-mood movies for signed-in users.
+- [x] Account recommendation history is deduplicated by movie identity so repeated recommendation attempts do not appear as separate discoveries.
+- [x] Result pages expose a share action that creates/copies a stable recommendation URL.
 
 ### Issues Still Present
 
@@ -116,16 +123,46 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Ship Docker/Coolify logs to a searchable log store once local log scrolling becomes painful.
 - Track lightweight operational metrics: recommendation success/failure counts, average recommendation duration, queue depth, failed jobs, OpenAI/TMDB timeout counts, and DB/Redis health failures.
 
+### Security and Reliability Track
+
+- Add per-call OpenAI timeout handling with cancellation where supported, and map upstream timeout failures to clear 504-style API responses.
+- Add request body size limits for externally facing routes before expensive parsing, moderation, embedding, or recommendation work begins.
+- Add retry/backoff and circuit-breaker behavior for expensive external dependencies where retrying is safe.
+- Sanitize client-facing error responses so internal exception details, upstream payloads, and infrastructure hints stay out of API responses.
+- Validate required environment variables on application startup for web, workers, and root services so misconfigured deployments fail early.
+- Clarify idempotency and retry behavior for recommendation creation, worker retries, more-picks jobs, and failed queue recovery.
+- Add dependency/security scanning, static security checks, and periodic security review expectations to CI or maintenance workflows.
+
+### Data Quality Track
+
+- Add a lightweight review path for TMDB backfill cases that are ambiguous, missing metadata, or rejected because runtime/year confidence is too low.
+- Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, and stale TMDB metadata.
+- Periodically refresh TMDB-backed metadata for older records without destabilizing existing recommendation history.
+- Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.
+- Define migration/versioning expectations for schema changes, including production migration safety, rollback notes, and seed/backfill coordination.
+
+### Account Platform Track
+
+- Add a user profile model for display name, avatar, and account settings metadata.
+- Add account settings APIs and UI for profile edits, saved recommendation edits, and taste-profile management.
+- Design a provider identity model before adding magic-link or social login so local credentials and external providers can coexist cleanly.
+- Add saved-recommendation mutations for rename, annotate, remove, and organize actions without leaving the account page.
+- Make taste memory inspectable and editable so users can correct watched, liked, not-interested, and wrong-mood signals.
+- Plan scalable account memory views before the list grows: search, signal filters, pagination or virtualized lists, and compact rows for large watched/liked histories.
+
+### Accessibility and UI Quality Track
+
+- Add recurring accessibility checks for keyboard navigation, focus states, labels, color contrast, and reduced-motion behavior.
+- Add focused tests or visual checks for the quiz, loading/results handoff, account pages, and feedback controls.
+- Keep design-system examples aligned with production components so UI regressions are easier to spot before release.
+
 ### Product Feedback Track
 
 - Add an explicit watched-movies library for signed-in users so movies marked as watched are excluded from default recommendations instead of only being inferred from recommendation feedback.
-- Introduce a stable movie identity layer for recommendation memory: prefer TMDB ids when present, and fall back to normalized title plus release year for local-only movies. Use this identity to avoid treating local and TMDB copies of the same movie as separate choices.
-- Add a small `user_movie_interactions` model as the first implementation step. Store `watched`, `liked`, `not_interested`, and `wrong_mood` per signed-in user and movie identity, with upsert semantics so repeated feedback updates the same interaction instead of creating duplicates.
-- Filter `watched` and `not_interested` movies out of default recommendations for signed-in users. Down-rank `wrong_mood` instead of permanently excluding it, and use `liked` as a positive taste signal.
-- Deduplicate account recommendation history by movie identity or clearly group repeated recommendation attempts, so the profile does not look like the system is saving the same movie as separate discoveries.
+- Use `liked` feedback as a positive taste signal in ranking. The interaction is stored today, but current ranking primarily uses negative memory for exclusion/down-ranking.
 - Consider a separate "worth rewatching" angle for watched movies so strong matches can still appear intentionally, with copy that frames them as rewatch candidates instead of new discoveries.
-- Feed watched/not-interested/liked feedback into ranking so future recommendations avoid exact repeats and make the reason for reused titles transparent.
-- Keep the first implementation intentionally small: signed-in feedback should prevent obvious repeat recommendations by default. Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
+- Make the reason for reused titles transparent when feedback history intentionally allows a repeat.
+- Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
 
 ## Priority Items for the Next 30 Days
 

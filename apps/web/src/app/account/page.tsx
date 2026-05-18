@@ -3,10 +3,15 @@
 import {
   AlertCircle,
   ArrowRight,
+  Ban,
   Clapperboard,
+  Eye,
   Film,
+  Frown,
+  Heart,
   Sparkles,
   Trash2,
+  X,
   UserRound,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -15,6 +20,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
+import { getCsrfToken } from '@/lib/csrfClient';
 import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
@@ -39,15 +45,34 @@ type RecommendationSummary = {
   feedbackKind: RecommendationFeedbackKind | null;
 };
 
+type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
+
+type MovieMemorySummary = {
+  movieKey: string;
+  tmdbId: number | null;
+  movieName: string;
+  movieYear: number | null;
+  posterURL: string | null;
+  localizedName: string | null;
+  kind: UserMovieInteractionKind;
+  updatedAt: string;
+};
+
 type AccountResponse = {
   user: { email: string };
   recommendations: RecommendationSummary[];
+  movieMemory: MovieMemorySummary[];
 };
 
 type LoadState =
   | { status: 'idle' }
   | { status: 'loaded'; data: AccountResponse }
   | { status: 'error' };
+
+type MemoryActionState =
+  | { status: 'forgetting'; movieKey: string }
+  | { status: 'error'; movieKey: string }
+  | null;
 
 const ACCOUNT_FETCH_TIMEOUT_MS = 10000;
 
@@ -56,6 +81,7 @@ export default function AccountPage() {
   const { locale, t } = useLanguage();
   const a = t.account;
   const [state, setState] = useState<LoadState>({ status: 'idle' });
+  const [memoryAction, setMemoryAction] = useState<MemoryActionState>(null);
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
@@ -86,7 +112,13 @@ export default function AccountPage() {
 
         const data = (await response.json()) as AccountResponse;
         if (!cancelled) {
-          setState({ status: 'loaded', data });
+          setState({
+            status: 'loaded',
+            data: {
+              ...data,
+              movieMemory: Array.isArray(data.movieMemory) ? data.movieMemory : [],
+            },
+          });
         }
       } catch {
         if (!cancelled || timedOut) {
@@ -194,7 +226,43 @@ export default function AccountPage() {
     return null;
   }
 
-  const { user, recommendations } = state.data;
+  async function handleForgetMovie(movieKey: string) {
+    setMemoryAction({ status: 'forgetting', movieKey });
+
+    try {
+      const response = await fetch('/api/account/movie-memory', {
+        method: 'DELETE',
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': getCsrfToken(),
+        },
+        body: JSON.stringify({ movieKey }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to forget movie memory');
+      }
+
+      setState((current) =>
+        current.status === 'loaded'
+          ? {
+              status: 'loaded',
+              data: {
+                ...current.data,
+                movieMemory: current.data.movieMemory.filter((item) => item.movieKey !== movieKey),
+              },
+            }
+          : current,
+      );
+      setMemoryAction(null);
+    } catch {
+      setMemoryAction({ status: 'error', movieKey });
+    }
+  }
+
+  const { user, recommendations, movieMemory } = state.data;
 
   return (
     <AccountShell>
@@ -305,6 +373,14 @@ export default function AccountPage() {
             </div>
           )}
         </section>
+
+        <MovieMemorySection
+          items={movieMemory}
+          labels={a}
+          locale={locale}
+          action={memoryAction}
+          onForget={handleForgetMovie}
+        />
       </motion.section>
     </AccountShell>
   );
@@ -446,6 +522,167 @@ function RecommendationRow({
       </div>
     </Link>
   );
+}
+
+function MovieMemorySection({
+  items,
+  labels,
+  locale,
+  action,
+  onForget,
+}: {
+  items: MovieMemorySummary[];
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+  action: MemoryActionState;
+  onForget: (movieKey: string) => void;
+}) {
+  return (
+    <section className="mx-auto mt-12 max-w-4xl">
+      <div className="mb-4 flex items-center justify-center gap-3">
+        <Eye size={18} style={{ color: 'var(--pc-gold-text)' }} />
+        <h2
+          className="uppercase"
+          style={{
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            letterSpacing: '0.12em',
+            color: 'var(--pc-gold-text)',
+          }}
+        >
+          {labels.memoryTitle}
+        </h2>
+      </div>
+      <p className="mx-auto mb-5 max-w-2xl text-center text-sm" style={{ color: 'var(--pc-t3)' }}>
+        {labels.memoryBody}
+      </p>
+
+      {action?.status === 'error' ? (
+        <div
+          className="mb-3 rounded-2xl px-4 py-3 text-sm"
+          style={{
+            background: `${palette.red}12`,
+            border: `1px solid ${palette.red}35`,
+            color: palette.red,
+          }}
+        >
+          {labels.memoryForgetError}
+        </div>
+      ) : null}
+
+      {items.length === 0 ? (
+        <div
+          className="rounded-2xl px-6 py-8 text-center"
+          style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+        >
+          <h3 className="mb-2 text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
+            {labels.memoryEmptyTitle}
+          </h3>
+          <p className="mx-auto max-w-md text-sm" style={{ color: 'var(--pc-t2)' }}>
+            {labels.memoryEmptyBody}
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {items.map((item) => (
+            <MovieMemoryCard
+              key={item.movieKey}
+              item={item}
+              labels={labels}
+              locale={locale}
+              isForgetting={action?.status === 'forgetting' && action.movieKey === item.movieKey}
+              onForget={() => onForget(item.movieKey)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MovieMemoryCard({
+  item,
+  labels,
+  locale,
+  isForgetting,
+  onForget,
+}: {
+  item: MovieMemorySummary;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+  isForgetting: boolean;
+  onForget: () => void;
+}) {
+  const date = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(item.updatedAt));
+  const title = item.localizedName ?? item.movieName;
+
+  return (
+    <div
+      className="grid grid-cols-[64px_1fr_auto] items-center gap-3 rounded-2xl p-3"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <div
+        className="flex aspect-[2/3] w-16 items-center justify-center overflow-hidden rounded-xl"
+        style={{ background: 'var(--pc-ghost)' }}
+      >
+        {item.posterURL ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.posterURL} alt="" className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <Film size={18} style={{ color: 'var(--pc-t3)' }} />
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
+          <span
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={{
+              background: 'var(--pc-gold-subtle)',
+              border: '1px solid var(--pc-gold-bd)',
+              color: 'var(--pc-gold-text)',
+            }}
+          >
+            <MemoryKindIcon kind={item.kind} />
+            {labels.memoryKind[item.kind]}
+          </span>
+          <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
+            {date}
+          </span>
+        </div>
+        <h3 className="truncate text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
+          {title}
+          {item.movieYear ? ` (${item.movieYear})` : ''}
+        </h3>
+      </div>
+
+      <button
+        type="button"
+        onClick={onForget}
+        disabled={isForgetting}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl transition-opacity disabled:opacity-60"
+        style={{
+          background: 'var(--pc-ghost)',
+          border: '1px solid var(--pc-bd2)',
+          color: 'var(--pc-t2)',
+        }}
+        aria-label={labels.forgetMovie}
+        title={labels.forgetMovie}
+      >
+        <X size={17} />
+      </button>
+    </div>
+  );
+}
+
+function MemoryKindIcon({ kind }: { kind: UserMovieInteractionKind }) {
+  if (kind === 'watched') return <Eye size={12} />;
+  if (kind === 'liked') return <Heart size={12} />;
+  if (kind === 'wrong_mood') return <Frown size={12} />;
+  return <Ban size={12} />;
 }
 
 function statusBackground(status: RecommendationSummary['status']) {
