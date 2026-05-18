@@ -6,7 +6,7 @@ export const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
 const PASSWORD_RESET_SUBJECT = 'Reset your PopChoice password';
 
-export function createPasswordResetToken(): string {
+export function createAccountRecoveryToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
@@ -24,7 +24,7 @@ function getPasswordResetTokenHashSecret(): string {
   return 'popchoice-dev-password-reset-token-secret';
 }
 
-export function hashPasswordResetToken(token: string): string {
+export function createAccountRecoveryTokenDigest(token: string): string {
   return createHmac('sha256', getPasswordResetTokenHashSecret()).update(token).digest('hex');
 }
 

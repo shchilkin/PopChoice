@@ -3,7 +3,7 @@ import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
 import { hashPassword } from '@/lib/auth/password';
-import { hashPasswordResetToken } from '@/lib/auth/passwordReset';
+import { createAccountRecoveryTokenDigest } from '@/lib/auth/passwordReset';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 import { isSameOriginBrowserRequest } from '@/lib/withAuth';
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const newPasswordHash = await hashPassword(parsed.data.password);
-  const tokenHash = hashPasswordResetToken(parsed.data.token);
+  const tokenHash = createAccountRecoveryTokenDigest(parsed.data.token);
 
   const result = await db.rpc('consume_password_reset_token', {
     p_token_hash: tokenHash,

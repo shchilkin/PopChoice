@@ -10,9 +10,9 @@ vi.mock('@/lib/logger', () => ({
 
 import logger from '@/lib/logger';
 
-import { hashPasswordResetToken, sendPasswordResetEmail } from './passwordReset';
+import { createAccountRecoveryTokenDigest, sendPasswordResetEmail } from './passwordReset';
 
-describe('hashPasswordResetToken', () => {
+describe('createAccountRecoveryTokenDigest', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -20,10 +20,10 @@ describe('hashPasswordResetToken', () => {
   it('creates a stable keyed digest without storing the raw token', () => {
     vi.stubEnv('API_KEY_HMAC_SECRET', 'test-hmac-secret');
 
-    const digest = hashPasswordResetToken('reset-token');
+    const digest = createAccountRecoveryTokenDigest('reset-token');
 
     expect(digest).toMatch(/^[a-f0-9]{64}$/);
-    expect(digest).toBe(hashPasswordResetToken('reset-token'));
+    expect(digest).toBe(createAccountRecoveryTokenDigest('reset-token'));
     expect(digest).not.toContain('reset-token');
   });
 
@@ -32,7 +32,7 @@ describe('hashPasswordResetToken', () => {
     vi.stubEnv('API_KEY_HMAC_SECRET', '');
     vi.stubEnv('AUTH_SESSION_SECRET', '');
 
-    expect(() => hashPasswordResetToken('reset-token')).toThrow(
+    expect(() => createAccountRecoveryTokenDigest('reset-token')).toThrow(
       'Password reset token hashing secret is not configured.',
     );
   });

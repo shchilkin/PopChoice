@@ -10,7 +10,7 @@ vi.mock('@/lib/auth/password', () => ({
 }));
 
 vi.mock('@/lib/auth/passwordReset', () => ({
-  hashPasswordResetToken: vi.fn((token: string) => `hash:${token}`),
+  createAccountRecoveryTokenDigest: vi.fn((token: string) => `hash:${token}`),
 }));
 
 vi.mock('@/clients/dbClient', () => ({
@@ -19,7 +19,7 @@ vi.mock('@/clients/dbClient', () => ({
 
 import { getDbClient } from '@/clients/dbClient';
 import { hashPassword } from '@/lib/auth/password';
-import { hashPasswordResetToken } from '@/lib/auth/passwordReset';
+import { createAccountRecoveryTokenDigest } from '@/lib/auth/passwordReset';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 import { POST } from './route';
@@ -71,7 +71,7 @@ describe('POST /api/auth/reset-password', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
     expect(hashPassword).toHaveBeenCalledWith('new-password');
-    expect(hashPasswordResetToken).toHaveBeenCalledWith('reset-token-with-enough-length');
+    expect(createAccountRecoveryTokenDigest).toHaveBeenCalledWith('reset-token-with-enough-length');
     expect(db.rpc).toHaveBeenCalledWith('consume_password_reset_token', {
       p_token_hash: 'hash:reset-token-with-enough-length',
       p_new_password_hash: 'new-password-hash',

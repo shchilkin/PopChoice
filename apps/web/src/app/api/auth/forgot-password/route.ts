@@ -4,9 +4,9 @@ import z from 'zod';
 import { getDbClient } from '@/clients/dbClient';
 import {
   buildPasswordResetUrl,
-  createPasswordResetToken,
+  createAccountRecoveryToken,
+  createAccountRecoveryTokenDigest,
   getPasswordResetExpiry,
-  hashPasswordResetToken,
   sendPasswordResetEmail,
   shouldExposePasswordResetUrl,
 } from '@/lib/auth/passwordReset';
@@ -72,8 +72,8 @@ export async function POST(req: NextRequest): Promise<Response> {
   let resetUrl: string | undefined;
 
   if (user) {
-    const token = createPasswordResetToken();
-    const tokenHash = hashPasswordResetToken(token);
+    const token = createAccountRecoveryToken();
+    const tokenHash = createAccountRecoveryTokenDigest(token);
     resetUrl = buildPasswordResetUrl(req, token);
 
     const insertResult = await db.from('password_reset_tokens').insert({

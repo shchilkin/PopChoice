@@ -7,9 +7,9 @@ vi.mock('@/lib/rateLimit', () => ({
 
 vi.mock('@/lib/auth/passwordReset', () => ({
   buildPasswordResetUrl: vi.fn(() => 'http://localhost/reset-password?token=reset-token'),
-  createPasswordResetToken: vi.fn(() => 'reset-token'),
+  createAccountRecoveryToken: vi.fn(() => 'reset-token'),
+  createAccountRecoveryTokenDigest: vi.fn((token: string) => `hash:${token}`),
   getPasswordResetExpiry: vi.fn(() => '2030-01-01T00:00:00.000Z'),
-  hashPasswordResetToken: vi.fn((token: string) => `hash:${token}`),
   sendPasswordResetEmail: vi.fn(() => Promise.resolve()),
   shouldExposePasswordResetUrl: vi.fn(() => true),
 }));
@@ -20,7 +20,7 @@ vi.mock('@/clients/dbClient', () => ({
 
 import { getDbClient } from '@/clients/dbClient';
 import {
-  hashPasswordResetToken,
+  createAccountRecoveryTokenDigest,
   sendPasswordResetEmail,
   shouldExposePasswordResetUrl,
 } from '@/lib/auth/passwordReset';
@@ -95,7 +95,7 @@ describe('POST /api/auth/forgot-password', () => {
       ok: true,
       resetUrl: 'http://localhost/reset-password?token=reset-token',
     });
-    expect(hashPasswordResetToken).toHaveBeenCalledWith('reset-token');
+    expect(createAccountRecoveryTokenDigest).toHaveBeenCalledWith('reset-token');
     expect(db.from).toHaveBeenCalledWith('password_reset_tokens');
     expect(sendPasswordResetEmail).toHaveBeenCalledWith(
       'alice@example.com',
