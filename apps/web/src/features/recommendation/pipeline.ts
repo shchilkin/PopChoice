@@ -9,6 +9,7 @@ import { getDbClient } from '@/clients/dbClient';
 import { getUserRecommendationFeedbackMoviePreferences } from '@/lib/db/recommendations';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { getMovieTitleKey } from '@/lib/movieIdentity';
 
 import {
   applyFeedbackToLocalMovies,
@@ -47,6 +48,24 @@ class EnqueueTimeoutError extends Error {
     super(message);
     this.name = 'EnqueueTimeoutError';
   }
+}
+
+function findRecommendedMovieByTitle<TMovie extends { id: number; name: string }>(
+  movies: TMovie[],
+  recommendedTitle: string,
+): TMovie | undefined {
+  const recommendedTitleKey = getMovieTitleKey(recommendedTitle);
+  if (recommendedTitleKey) {
+    const exactMatch = movies.find((movie) => getMovieTitleKey(movie.name) === recommendedTitleKey);
+    if (exactMatch) return exactMatch;
+  }
+
+  const normalizedRecommendedTitle = recommendedTitle.toLowerCase();
+  return movies.find(
+    (movie) =>
+      movie.name.toLowerCase().includes(normalizedRecommendedTitle) ||
+      normalizedRecommendedTitle.includes(movie.name.toLowerCase()),
+  );
 }
 
 async function withTimeout<T>(
@@ -271,19 +290,15 @@ export async function runRecommendationPipeline(
   }
 
   if (similarMovies.length === 0) {
-    const fallbackMovies = localSimilarMovies.slice(0, MAX_TOTAL_MOVIES);
-    if (fallbackMovies.length === 0) {
-      throw new Error('No similar movies found.');
-    }
-
     logger.warn(
       {
         mentionedTitleCount: mentionedTitleKeys.size,
-        fallbackCount: fallbackMovies.length,
+        feedbackExcludedMovieCount: feedbackSignals.excludedMovieKeys.size,
+        feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
       },
-      'Mentioned-title filtering removed every candidate and TMDB fallback did not refill results; relaxing filter as last resort',
+      'No recommendation candidates remain after preserving user memory filters',
     );
-    similarMovies = fallbackMovies;
+    throw new Error('No similar movies found after applying recommendation history filters.');
   }
 
   // Step 4: Get recommendation from OpenAI
@@ -309,10 +324,9 @@ export async function runRecommendationPipeline(
   );
 
   // Find the recommended movie
-  const recommendedMovie = moviesWithDescriptions.find(
-    (movie) =>
-      movie.name.toLowerCase().includes(responseMessage.title.toLowerCase()) ||
-      responseMessage.title.toLowerCase().includes(movie.name.toLowerCase()),
+  const recommendedMovie = findRecommendedMovieByTitle(
+    moviesWithDescriptions,
+    responseMessage.title,
   );
 
   logger.info(
@@ -337,6 +351,7 @@ export async function runRecommendationPipeline(
       : undefined,
     similarMovies: moviesWithDescriptions.map((movie) => ({
       id: Number(movie.id),
+      tmdbId: movie.tmdbId ?? (Number(movie.id) < 0 ? Math.abs(Number(movie.id)) : null),
       name: movie.name,
       year: movie.year,
       similarity: Number.isFinite(movie.similarity) ? movie.similarity : 0,

@@ -101,6 +101,7 @@ export const apiResponseSchema = z.object({
     .array(
       z.object({
         id: z.number(),
+        tmdbId: z.number().nullable().optional(),
         name: z.string(),
         year: z.number(),
         similarity: z.number(),

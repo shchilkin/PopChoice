@@ -252,24 +252,34 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
   });
 
   it('returns movies attached to actionable user feedback', async () => {
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          kind: 'watched',
-          movie_key: 'tmdb:475557',
-          tmdb_id: 475557,
-          movie_name: 'Joker',
-          movie_year: 2019,
-        },
-        {
-          kind: 'wrong_mood',
-          movie_key: 'title:arrival:2016',
-          tmdb_id: null,
-          movie_name: 'Arrival',
-          movie_year: 2016,
-        },
-      ],
-    });
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            kind: 'watched',
+            movie_key: 'tmdb:475557',
+            tmdb_id: 475557,
+            movie_name: 'Joker',
+            movie_year: 2019,
+          },
+          {
+            kind: 'wrong_mood',
+            movie_key: 'title:arrival:2016',
+            tmdb_id: null,
+            movie_name: 'Arrival',
+            movie_year: 2016,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 129,
+            movie_name: 'Spirited Away',
+            movie_year: 2001,
+          },
+        ],
+      });
 
     const result = await getUserRecommendationFeedbackMoviePreferences('42');
 
@@ -288,11 +298,19 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
         movieName: 'Arrival',
         movieYear: 2016,
       },
+      {
+        kind: 'recently_recommended',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+      },
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('user_movie_interactions');
     expect(sql).toContain("kind IN ('watched', 'not_interested', 'wrong_mood')");
     expect(params).toEqual(['42', 100]);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -620,6 +638,24 @@ describe('insertRecommendationMovies', () => {
 
     const [, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
     expect(params).toContain(77);
+  });
+
+  it('stores a matched TMDB id for local recommendations', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({}) // UPDATE recommendations metadata
+      .mockResolvedValueOnce({}) // INSERT
+      .mockResolvedValueOnce({}); // COMMIT
+
+    await insertRecommendationMovies(
+      'rec-id',
+      [makeMovie({ id: 42, tmdbId: 129, fromTMDB: false })],
+      false,
+    );
+
+    const [, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
+    expect(params).toContain(129);
+    expect(params).toContain(42);
   });
 });
 

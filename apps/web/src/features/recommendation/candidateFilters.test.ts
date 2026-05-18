@@ -210,4 +210,50 @@ describe('candidateFilters', () => {
       ).map((candidate) => candidate.name),
     ).toEqual(['Kiki’s Delivery Service']);
   });
+
+  it('filters recent completed recommendations so signed-in users do not get immediate repeats', () => {
+    const signals = getFeedbackCandidateSignals([
+      {
+        kind: 'recently_recommended',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+      },
+    ]);
+
+    expect(
+      applyFeedbackToLocalMovies(
+        [
+          { ...movie('Spirited Away'), tmdbId: 129 },
+          { ...movie('Princess Mononoke'), tmdbId: 128 },
+        ],
+        signals,
+      ).map((candidate) => candidate.name),
+    ).toEqual(['Princess Mononoke']);
+
+    expect(
+      excludeFeedbackTMDBMovies(
+        [
+          {
+            id: 129,
+            title: '千と千尋の神隠し',
+            overview: 'A girl enters a world of spirits.',
+            release_date: '2001-07-20',
+            vote_average: 8.5,
+            poster_path: null,
+          },
+          {
+            id: 128,
+            title: 'Princess Mononoke',
+            overview: 'A prince is caught in a conflict.',
+            release_date: '1997-07-12',
+            vote_average: 8.3,
+            poster_path: null,
+          },
+        ],
+        signals,
+      ).map((candidate) => candidate.title),
+    ).toEqual(['Princess Mononoke']);
+  });
 });
