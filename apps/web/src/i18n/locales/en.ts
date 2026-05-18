@@ -221,6 +221,8 @@ export const en = {
     noResultsTitle: 'Nothing matched…',
     noResultsHint: 'Try again with a different vibe.',
     sharedResultBadge: 'Shared result',
+    sharedResultNotice: 'Shared with you',
+    sharedFeedbackHint: 'Only the account that created this recommendation can rate it.',
     missingResultTitle: 'This pick left the theater',
     missingResultHint:
       'That shared result is no longer available. Start a fresh quiz and PopChoice will find a new film for tonight.',
@@ -867,6 +869,7 @@ export const en = {
     sentBody: 'If that account exists, a password reset link is on its way.',
     devResetLink: 'Open development reset link',
     backToLogin: 'Back to log in',
+    requestAnother: 'Request another link',
     errors: {
       emailRequired: 'Email is required.',
       emailInvalid: 'Please enter a valid email address.',

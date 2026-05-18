@@ -223,6 +223,8 @@ export const fi: Translations = {
     noResultsTitle: 'Ei osumia…',
     noResultsHint: 'Kokeile eri tunnelmalla.',
     sharedResultBadge: 'Jaettu tulos',
+    sharedResultNotice: 'Jaettu sinulle',
+    sharedFeedbackHint: 'Vain suosituksen luonut tili voi arvioida tämän tuloksen.',
     missingResultTitle: 'Tämä valinta poistui salista',
     missingResultHint:
       'Jaettu tulos ei ole enää saatavilla. Aloita uusi testi, niin PopChoice löytää uuden elokuvan täksi illaksi.',
@@ -874,6 +876,7 @@ export const fi: Translations = {
     sentBody: 'Jos tili löytyy, salasanan palautuslinkki on matkalla.',
     devResetLink: 'Avaa kehitysympäristön palautuslinkki',
     backToLogin: 'Takaisin kirjautumiseen',
+    requestAnother: 'Pyydä uusi linkki',
     errors: {
       emailRequired: 'Sähköpostiosoite vaaditaan.',
       emailInvalid: 'Anna kelvollinen sähköpostiosoite.',

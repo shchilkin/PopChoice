@@ -225,6 +225,8 @@ export const ru: Translations = {
     noResultsTitle: 'Ничего не нашлось…',
     noResultsHint: 'Попробуйте с другим настроением.',
     sharedResultBadge: 'Общий результат',
+    sharedResultNotice: 'Результат прислали вам',
+    sharedFeedbackHint: 'Оценить рекомендацию может только аккаунт, который её создал.',
     missingResultTitle: 'Этот выбор уже ушёл из зала',
     missingResultHint:
       'Эта ссылка на результат больше недоступна. Начните новый тест, и PopChoice подберёт фильм на сегодня.',
@@ -878,6 +880,7 @@ export const ru: Translations = {
     sentBody: 'Если такой аккаунт существует, ссылка для сброса уже в пути.',
     devResetLink: 'Открыть ссылку для разработки',
     backToLogin: 'Назад ко входу',
+    requestAnother: 'Отправить ещё одну ссылку',
     errors: {
       emailRequired: 'Введите электронную почту.',
       emailInvalid: 'Введите корректный адрес почты.',

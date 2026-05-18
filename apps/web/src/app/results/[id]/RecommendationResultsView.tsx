@@ -49,6 +49,8 @@ export function RecommendationResultsView({
   recommendationSlug,
   morePicksStatus,
   morePicksTimedOut,
+  viewerCanRate = false,
+  isSharedResult = false,
   onMorePicksRequested,
 }: {
   movies: MovieRecommendation[];
@@ -60,6 +62,8 @@ export function RecommendationResultsView({
   recommendationSlug?: string;
   morePicksStatus?: string | null;
   morePicksTimedOut?: boolean;
+  viewerCanRate?: boolean;
+  isSharedResult?: boolean;
   onMorePicksRequested?: () => Promise<unknown>;
 }) {
   const { t, locale } = useLanguage();
@@ -163,7 +167,7 @@ export function RecommendationResultsView({
   };
 
   const handleFeedback = async (kind: FeedbackKind) => {
-    if (!recommendationSlug || feedbackState === 'saving') return;
+    if (!recommendationSlug || !viewerCanRate || feedbackState === 'saving') return;
     setSelectedFeedback(kind);
     setFeedbackState('saving');
 
@@ -256,6 +260,21 @@ export function RecommendationResultsView({
             {shareState === 'copied' ? t.results.shareCopied : t.results.shareResult}
           </button>
         </div>
+        {isSharedResult && (
+          <div className="mt-3 flex justify-center">
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
+              style={{
+                background: 'var(--pc-ghost)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t3)',
+              }}
+            >
+              <Share2 size={12} />
+              {t.results.sharedResultNotice}
+            </div>
+          </div>
+        )}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -337,60 +356,78 @@ export function RecommendationResultsView({
         <MainMovieCard movie={mainMovie} isGroup={isGroupResult} />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="mb-10 rounded-2xl px-4 py-4"
-        style={{
-          background: 'var(--pc-ghost)',
-          border: '1px solid var(--pc-bd2)',
-        }}
-      >
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p
-              className="uppercase tracking-widest"
-              style={{ color: 'var(--pc-gold-text)', fontSize: '0.68rem' }}
-            >
-              {t.results.feedbackPrompt}
-            </p>
-            <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.78rem' }}>
-              {feedbackState === 'saved'
-                ? t.results.feedbackThanks
-                : feedbackState === 'error'
-                  ? t.results.feedbackError
-                  : t.results.feedbackHint}
-            </p>
+      {viewerCanRate ? (
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="mb-10 rounded-2xl px-4 py-4"
+          style={{
+            background: 'var(--pc-ghost)',
+            border: '1px solid var(--pc-bd2)',
+          }}
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p
+                className="uppercase tracking-widest"
+                style={{ color: 'var(--pc-gold-text)', fontSize: '0.68rem' }}
+              >
+                {t.results.feedbackPrompt}
+              </p>
+              <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.78rem' }}>
+                {feedbackState === 'saved'
+                  ? t.results.feedbackThanks
+                  : feedbackState === 'error'
+                    ? t.results.feedbackError
+                    : t.results.feedbackHint}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {feedbackOptions.map(({ kind, label, icon: Icon }) => {
+                const isSelected = selectedFeedback === kind;
+                const isBusy = feedbackState === 'saving' && isSelected;
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => void handleFeedback(kind)}
+                    disabled={feedbackState === 'saving' || !recommendationSlug}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-200 active:scale-95"
+                    style={{
+                      background: isSelected ? 'var(--pc-gold-subtle)' : 'transparent',
+                      border: '1px solid var(--pc-bd2)',
+                      color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      cursor:
+                        feedbackState === 'saving' || !recommendationSlug ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {feedbackOptions.map(({ kind, label, icon: Icon }) => {
-              const isSelected = selectedFeedback === kind;
-              const isBusy = feedbackState === 'saving' && isSelected;
-              return (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => void handleFeedback(kind)}
-                  disabled={feedbackState === 'saving' || !recommendationSlug}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-200 active:scale-95"
-                  style={{
-                    background: isSelected ? 'var(--pc-gold-subtle)' : 'transparent',
-                    border: '1px solid var(--pc-bd2)',
-                    color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    cursor: feedbackState === 'saving' || !recommendationSlug ? 'wait' : 'pointer',
-                  }}
-                >
-                  {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      ) : isSharedResult ? (
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="mb-10 rounded-2xl px-4 py-4 text-center"
+          style={{
+            background: 'var(--pc-ghost)',
+            border: '1px solid var(--pc-bd2)',
+            color: 'var(--pc-t4)',
+            fontSize: '0.78rem',
+          }}
+        >
+          {t.results.sharedFeedbackHint}
+        </motion.div>
+      ) : null}
 
       {localOtherMovies.length > 0 && (
         <motion.div

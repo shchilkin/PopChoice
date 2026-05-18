@@ -77,6 +77,8 @@ export interface RecommendationWithMovies {
   hasActorSignal?: boolean;
   groupInsights?: ReturnType<typeof buildGroupResultInsights>;
   morePicksStatus?: string | null;
+  viewerCanRate?: boolean;
+  isSharedResult?: boolean;
 }
 
 export interface AccountRecommendationSummary {
@@ -511,6 +513,7 @@ export async function insertRecommendationMovies(
 
 export async function getRecommendationWithMovies(
   slug: string,
+  viewerUserId?: string,
 ): Promise<RecommendationWithMovies | null> {
   const pool = getPool();
 
@@ -524,9 +527,10 @@ export async function getRecommendationWithMovies(
     db_movie_count: number | null;
     quiz_data: unknown;
     more_picks_status: string | null;
+    user_id: string | null;
   }>(
     `SELECT
-       id, status, error, stage, used_broader_search, db_movie_count, quiz_data, more_picks_status
+       id, status, error, stage, used_broader_search, db_movie_count, quiz_data, more_picks_status, user_id
        FROM recommendations
       WHERE slug = $1`,
     [slug],
@@ -534,6 +538,8 @@ export async function getRecommendationWithMovies(
 
   const rec = recResult.rows[0];
   if (!rec) return null;
+  const viewerCanRate = Boolean(viewerUserId && rec.user_id && rec.user_id === viewerUserId);
+  const isSharedResult = Boolean(rec.user_id && rec.user_id !== viewerUserId);
   const peopleCount = getQuizPeopleCount(rec.quiz_data);
   const hasActorSignal = hasFavoriteActorSignal(rec.quiz_data);
   const groupInsights = buildGroupResultInsights(rec.quiz_data);
@@ -550,6 +556,8 @@ export async function getRecommendationWithMovies(
       hasActorSignal,
       groupInsights,
       morePicksStatus: rec.more_picks_status ?? null,
+      viewerCanRate,
+      isSharedResult,
     };
   }
 
@@ -648,6 +656,8 @@ export async function getRecommendationWithMovies(
     hasActorSignal,
     groupInsights,
     morePicksStatus: rec.more_picks_status ?? null,
+    viewerCanRate,
+    isSharedResult,
   };
 }
 
@@ -672,6 +682,7 @@ export async function createRecommendationFeedback({
          FROM recommendations
         WHERE slug = $1
           AND status = 'completed'
+          AND user_id = $2
         RETURNING id, recommendation_id`,
       [slug, userId ?? null, kind],
     );
