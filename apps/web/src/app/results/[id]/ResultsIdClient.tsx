@@ -81,6 +81,8 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       recommendationSlug={id}
       morePicksStatus={data.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}
+      viewerCanRate={data.viewerCanRate ?? false}
+      isSharedResult={data.isSharedResult ?? false}
       onMorePicksRequested={refetch}
     />
   );

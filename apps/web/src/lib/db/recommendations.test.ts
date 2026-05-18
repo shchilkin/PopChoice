@@ -210,6 +210,7 @@ describe('createRecommendationFeedback', () => {
     const [sql, params] = mockClientQuery.mock.calls[1] as [string, unknown[]];
     expect(sql).toContain('recommendation_feedback');
     expect(sql).toContain("status = 'completed'");
+    expect(sql).toContain('user_id = $2');
     expect(params).toEqual(['rec-slug', '42', 'already_watched']);
     const [interactionSql, interactionParams] = mockClientQuery.mock.calls[3] as [
       string,
@@ -767,6 +768,7 @@ describe('getRecommendationWithMovies', () => {
             db_movie_count: 12,
             quiz_data: null,
             more_picks_status: null,
+            user_id: '42',
           },
         ],
       })
@@ -797,10 +799,12 @@ describe('getRecommendationWithMovies', () => {
         ],
       });
 
-    const result = await getRecommendationWithMovies('slug-123');
+    const result = await getRecommendationWithMovies('slug-123', '42');
 
     expect(result?.movies[0]?.id).toBe(-321);
     expect(result?.stage).toBe('complete');
+    expect(result?.viewerCanRate).toBe(true);
+    expect(result?.isSharedResult).toBe(false);
   });
 
   it('returns redacted group metadata instead of raw quiz data', async () => {
@@ -833,14 +837,17 @@ describe('getRecommendationWithMovies', () => {
               },
             ],
             more_picks_status: null,
+            user_id: 'owner-1',
           },
         ],
       })
       .mockResolvedValueOnce({ rows: [] });
 
-    const result = await getRecommendationWithMovies('slug-123');
+    const result = await getRecommendationWithMovies('slug-123', 'viewer-1');
 
     expect(result?.peopleCount).toBe(2);
+    expect(result?.viewerCanRate).toBe(false);
+    expect(result?.isSharedResult).toBe(true);
     expect(result?.hasActorSignal).toBe(true);
     expect(result?.groupInsights).toEqual(
       expect.objectContaining({

@@ -23,6 +23,14 @@ export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
 
+  function resetRequestForm() {
+    setEmail('');
+    setErrors({});
+    setSubmitting(false);
+    setSubmitted(false);
+    setDevResetUrl(null);
+  }
+
   function validate(): FieldErrors {
     const errs: FieldErrors = {};
     if (!email.trim()) {
@@ -126,6 +134,14 @@ export default function ForgotPasswordPage() {
             >
               {l.backToLogin}
             </Link>
+            <button
+              type="button"
+              onClick={resetRequestForm}
+              className="text-center text-sm font-semibold transition-colors duration-200"
+              style={{ color: 'var(--pc-gold-text)' }}
+            >
+              {l.requestAnother}
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
