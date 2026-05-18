@@ -148,6 +148,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Design a provider identity model before adding magic-link or social login so local credentials and external providers can coexist cleanly.
 - Add saved-recommendation mutations for rename, annotate, remove, and organize actions without leaving the account page.
 - Make taste memory inspectable and editable so users can correct watched, liked, not-interested, and wrong-mood signals.
+- Plan scalable account memory views before the list grows: search, signal filters, pagination or virtualized lists, and compact rows for large watched/liked histories.
 
 ### Accessibility and UI Quality Track
 

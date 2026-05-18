@@ -54,6 +54,7 @@ Already implemented from this list:
 - Loading states must be truthful and terminal. If recommendation polling hits authorization, missing-result, worker, or network failures, the UI should show an actionable error instead of returning to an earlier loading state or spinning indefinitely.
 - Add an account taste profile that becomes more useful over time:
   - Make stored likes, dislikes, skipped films, watched films, and feedback inspectable and editable.
+  - When movie memory grows beyond a handful of titles, replace the simple card grid with search, filters by signal, and a denser list/table mode.
   - Derive lightweight taste signals from completed quizzes, opened results, saved picks, more-picks requests, and rejected suggestions.
   - Make the taste profile inspectable and editable, so users can correct PopChoice when it learns the wrong lesson.
 - Continue improving recommendation feedback:
