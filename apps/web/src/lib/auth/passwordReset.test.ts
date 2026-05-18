@@ -10,7 +10,33 @@ vi.mock('@/lib/logger', () => ({
 
 import logger from '@/lib/logger';
 
-import { sendPasswordResetEmail } from './passwordReset';
+import { hashPasswordResetToken, sendPasswordResetEmail } from './passwordReset';
+
+describe('hashPasswordResetToken', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('creates a stable keyed digest without storing the raw token', () => {
+    vi.stubEnv('API_KEY_HMAC_SECRET', 'test-hmac-secret');
+
+    const digest = hashPasswordResetToken('reset-token');
+
+    expect(digest).toMatch(/^[a-f0-9]{64}$/);
+    expect(digest).toBe(hashPasswordResetToken('reset-token'));
+    expect(digest).not.toContain('reset-token');
+  });
+
+  it('fails closed in production when no hashing secret is configured', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('API_KEY_HMAC_SECRET', '');
+    vi.stubEnv('AUTH_SESSION_SECRET', '');
+
+    expect(() => hashPasswordResetToken('reset-token')).toThrow(
+      'Password reset token hashing secret is not configured.',
+    );
+  });
+});
 
 describe('sendPasswordResetEmail', () => {
   beforeEach(() => {
@@ -32,7 +58,7 @@ describe('sendPasswordResetEmail', () => {
     expect(logger.info).toHaveBeenCalledWith(
       {
         email: 'alice@example.com',
-        resetUrl: 'http://localhost/reset-password?token=abc',
+        resetUrl: 'http://localhost/reset-password?token=%5Bredacted%5D',
       },
       'Password reset link generated',
     );

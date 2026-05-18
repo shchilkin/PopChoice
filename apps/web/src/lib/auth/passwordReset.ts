@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 
 import logger from '@/lib/logger';
 
@@ -10,8 +10,22 @@ export function createPasswordResetToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
+function getPasswordResetTokenHashSecret(): string {
+  const secret = process.env.API_KEY_HMAC_SECRET?.trim() || process.env.AUTH_SESSION_SECRET?.trim();
+
+  if (secret) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Password reset token hashing secret is not configured.');
+  }
+
+  return 'popchoice-dev-password-reset-token-secret';
+}
+
 export function hashPasswordResetToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+  return createHmac('sha256', getPasswordResetTokenHashSecret()).update(token).digest('hex');
 }
 
 export function getPasswordResetExpiry(now = new Date()): string {
@@ -70,9 +84,21 @@ async function readResendError(response: Response): Promise<string | undefined> 
   }
 }
 
+function redactResetUrl(resetUrl: string): string {
+  try {
+    const url = new URL(resetUrl);
+    if (url.searchParams.has('token')) {
+      url.searchParams.set('token', '[redacted]');
+    }
+    return url.toString();
+  } catch {
+    return '[redacted]';
+  }
+}
+
 export async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
   if (shouldExposePasswordResetUrl()) {
-    logger.info({ email, resetUrl }, 'Password reset link generated');
+    logger.info({ email, resetUrl: redactResetUrl(resetUrl) }, 'Password reset link generated');
     return;
   }
 
