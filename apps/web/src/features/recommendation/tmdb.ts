@@ -401,6 +401,7 @@ export async function seedMovies(
       }
 
       const { error: insertError } = await db.from('movies').insert({
+        tmdb_id: movie.id,
         name: movie.title,
         year,
         age_rating: 'NR',

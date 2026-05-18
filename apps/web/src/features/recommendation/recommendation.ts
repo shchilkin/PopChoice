@@ -319,9 +319,7 @@ export async function enhanceSimilarMoviesWithPosters(
         return movie;
       }
       try {
-        // For TMDB-sourced movies, the ID is stored as negative (-tmdbId).
-        // Pass the real TMDB ID so getMovieInfo can do a direct lookup instead of a title search.
-        const tmdbId = movie.id < 0 ? -movie.id : undefined;
+        const tmdbId = movie.tmdbId ?? (movie.id < 0 ? -movie.id : undefined);
         const { posterURL, localizedName, localizedOverview } = await getMovieInfo(
           movie.name,
           locale,

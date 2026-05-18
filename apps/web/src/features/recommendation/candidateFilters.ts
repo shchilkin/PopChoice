@@ -4,11 +4,12 @@ import type { TMDBDiscoverMovie } from './tmdb';
 import type { EnhancedMovieMatch, PersonFormData } from './types';
 import type {
   RecommendationFeedbackKind,
+  UserRecommendationMemoryKind,
   UserMovieInteractionKind,
 } from '@/lib/db/recommendations';
 
 export type FeedbackMoviePreference = {
-  kind: RecommendationFeedbackKind | UserMovieInteractionKind;
+  kind: RecommendationFeedbackKind | UserMovieInteractionKind | UserRecommendationMemoryKind;
   movieKey?: string | null;
   tmdbId?: number | null;
   movieName: string;
@@ -75,6 +76,7 @@ export function getFeedbackCandidateSignals(
     if (
       preference.kind === 'already_watched' ||
       preference.kind === 'watched' ||
+      preference.kind === 'recently_recommended' ||
       preference.kind === 'not_interested' ||
       preference.kind === 'too_obvious' ||
       preference.kind === 'too_obscure'

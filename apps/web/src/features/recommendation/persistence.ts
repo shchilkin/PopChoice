@@ -64,6 +64,7 @@ export async function failRecommendationRecord(
 function toMovieRows(result: ApiResponse): MovieRowToInsert[] {
   return (result.similarMovies ?? []).map((movie) => ({
     id: movie.id,
+    tmdbId: movie.tmdbId ?? null,
     name: movie.name,
     year: movie.year,
     similarity: movie.similarity,
