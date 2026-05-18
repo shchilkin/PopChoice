@@ -100,6 +100,17 @@ export interface UserRecommendationFeedbackMoviePreference {
   movieYear: number | null;
 }
 
+export interface UserMovieMemorySummary {
+  kind: UserMovieInteractionKind;
+  movieKey: string;
+  tmdbId: number | null;
+  movieName: string;
+  movieYear: number | null;
+  posterURL: string | null;
+  localizedName: string | null;
+  updatedAt: string;
+}
+
 export interface MovieRowToInsert {
   id: number;
   tmdbId?: number | null;
@@ -340,6 +351,61 @@ export async function getUserRecommendationFeedbackMoviePreferences(
   }
 
   return preferences.slice(0, limit);
+}
+
+export async function getUserMovieMemorySummaries(
+  userId: string,
+  limit = 50,
+): Promise<UserMovieMemorySummary[]> {
+  const pool = getPool();
+  const result = await pool.query<{
+    kind: UserMovieInteractionKind;
+    movie_key: string;
+    tmdb_id: number | null;
+    movie_name: string;
+    movie_year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    updated_at: Date | string;
+  }>(
+    `SELECT
+       kind,
+       movie_key,
+       tmdb_id,
+       movie_name,
+       movie_year,
+       poster_url,
+       localized_name,
+       updated_at
+     FROM user_movie_interactions
+     WHERE user_id = $1
+     ORDER BY updated_at DESC
+     LIMIT $2`,
+    [userId, Math.min(Math.max(limit, 1), 100)],
+  );
+
+  return result.rows.map((row) => ({
+    kind: row.kind,
+    movieKey: row.movie_key,
+    tmdbId: row.tmdb_id,
+    movieName: row.movie_name,
+    movieYear: row.movie_year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
+  }));
+}
+
+export async function deleteUserMovieMemory(userId: string, movieKey: string): Promise<boolean> {
+  const pool = getPool();
+  const result = await pool.query(
+    `DELETE FROM user_movie_interactions
+      WHERE user_id = $1
+        AND movie_key = $2`,
+    [userId, movieKey],
+  );
+
+  return (result.rowCount ?? 0) > 0;
 }
 
 // ---------------------------------------------------------------------------

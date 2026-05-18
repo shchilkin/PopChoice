@@ -1,12 +1,17 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetSessionFromRequest, mockGetDbClient, mockGetUserRecommendationSummaries } =
-  vi.hoisted(() => ({
-    mockGetSessionFromRequest: vi.fn(),
-    mockGetDbClient: vi.fn(),
-    mockGetUserRecommendationSummaries: vi.fn(),
-  }));
+const {
+  mockGetSessionFromRequest,
+  mockGetDbClient,
+  mockGetUserRecommendationSummaries,
+  mockGetUserMovieMemorySummaries,
+} = vi.hoisted(() => ({
+  mockGetSessionFromRequest: vi.fn(),
+  mockGetDbClient: vi.fn(),
+  mockGetUserRecommendationSummaries: vi.fn(),
+  mockGetUserMovieMemorySummaries: vi.fn(),
+}));
 
 vi.mock('@/lib/auth/session', () => ({
   getSessionFromRequest: mockGetSessionFromRequest,
@@ -18,6 +23,7 @@ vi.mock('@/clients/dbClient', () => ({
 
 vi.mock('@/lib/db/recommendations', () => ({
   getUserRecommendationSummaries: mockGetUserRecommendationSummaries,
+  getUserMovieMemorySummaries: mockGetUserMovieMemorySummaries,
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -31,6 +37,7 @@ describe('GET /api/account', () => {
     mockGetSessionFromRequest.mockReset();
     mockGetDbClient.mockReset();
     mockGetUserRecommendationSummaries.mockReset();
+    mockGetUserMovieMemorySummaries.mockReset();
   });
 
   it('returns 401 without a session', async () => {
@@ -63,6 +70,9 @@ describe('GET /api/account', () => {
     mockGetUserRecommendationSummaries.mockResolvedValueOnce([
       { slug: 'saved-rec', feedbackKind: 'already_watched' },
     ]);
+    mockGetUserMovieMemorySummaries.mockResolvedValueOnce([
+      { movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' },
+    ]);
 
     const response = await GET(new NextRequest('http://localhost/api/account'));
 
@@ -72,7 +82,9 @@ describe('GET /api/account', () => {
     await expect(response.json()).resolves.toEqual({
       user: { email: 'alex@example.com' },
       recommendations: [{ slug: 'saved-rec', feedbackKind: 'already_watched' }],
+      movieMemory: [{ movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' }],
     });
     expect(mockGetUserRecommendationSummaries).toHaveBeenCalledWith('42');
+    expect(mockGetUserMovieMemorySummaries).toHaveBeenCalledWith('42');
   });
 });

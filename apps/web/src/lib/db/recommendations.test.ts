@@ -38,8 +38,10 @@ vi.mock('@/lib/logger', () => ({
 import {
   claimMorePicksSlot,
   createRecommendation,
+  deleteUserMovieMemory,
   getRecommendationTMDBExcludeIds,
   getRecommendationWithMovies,
+  getUserMovieMemorySummaries,
   getUserRecommendationSummaries,
   insertMorePicksMovies,
   insertRecommendationMovies,
@@ -311,6 +313,85 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
     expect(sql).toContain("kind IN ('watched', 'not_interested', 'wrong_mood')");
     expect(params).toEqual(['42', 100]);
     expect(mockQuery).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// user movie memory summaries
+// ---------------------------------------------------------------------------
+
+describe('getUserMovieMemorySummaries', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns explicit movie memory ordered by most recent update', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:129',
+          tmdb_id: 129,
+          movie_name: 'Spirited Away',
+          movie_year: 2001,
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Унесённые призраками',
+          updated_at: new Date('2026-05-17T10:00:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await getUserMovieMemorySummaries('42');
+
+    expect(result).toEqual([
+      {
+        kind: 'watched',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        updatedAt: '2026-05-17T10:00:00.000Z',
+      },
+    ]);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('FROM user_movie_interactions');
+    expect(sql).toContain('ORDER BY updated_at DESC');
+    expect(params).toEqual(['42', 50]);
+  });
+});
+
+describe('deleteUserMovieMemory', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('deletes one movie memory item for the user', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+    const result = await deleteUserMovieMemory('42', 'tmdb:129');
+
+    expect(result).toBe(true);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('DELETE FROM user_movie_interactions');
+    expect(params).toEqual(['42', 'tmdb:129']);
+  });
+
+  it('returns false when no row was deleted', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 0 });
+
+    await expect(deleteUserMovieMemory('42', 'tmdb:129')).resolves.toBe(false);
   });
 });
 

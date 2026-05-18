@@ -908,6 +908,13 @@ export const en = {
     savedTitle: 'Recommendation history',
     emptyTitle: 'No saved recommendations yet',
     emptyBody: 'Take the quiz while signed in and your results will appear here.',
+    memoryTitle: 'Movie memory',
+    memoryBody:
+      'PopChoice uses these signals to avoid repeating movies you have already seen or marked as a miss.',
+    memoryEmptyTitle: 'No movie memory yet',
+    memoryEmptyBody: 'Rate recommendations and PopChoice will learn what to avoid next time.',
+    forgetMovie: 'Forget this movie',
+    memoryForgetError: 'Could not forget this movie. Please try again.',
     pendingTitle: 'Recommendation in progress',
     untitledCompleted: 'Completed recommendation',
     peopleCount: '{count} taste profile(s)',
@@ -920,6 +927,12 @@ export const en = {
       too_obvious: 'Too obvious',
       too_obscure: 'Too obscure',
       close: 'Close',
+    },
+    memoryKind: {
+      watched: 'Seen it',
+      liked: 'Liked',
+      not_interested: 'Not interested',
+      wrong_mood: 'Wrong mood',
     },
     status: {
       pending: 'Pending',

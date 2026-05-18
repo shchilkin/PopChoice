@@ -919,6 +919,13 @@ export const ru: Translations = {
     savedTitle: 'История рекомендаций',
     emptyTitle: 'Пока нет сохранённых рекомендаций',
     emptyBody: 'Пройдите квиз после входа в аккаунт, и результаты появятся здесь.',
+    memoryTitle: 'Память о фильмах',
+    memoryBody:
+      'PopChoice использует эти сигналы, чтобы не повторять фильмы, которые вы уже видели или отметили как промах.',
+    memoryEmptyTitle: 'Память о фильмах пока пуста',
+    memoryEmptyBody: 'Оценивайте рекомендации, и PopChoice запомнит, что лучше не предлагать.',
+    forgetMovie: 'Забыть этот фильм',
+    memoryForgetError: 'Не удалось забыть фильм. Попробуйте ещё раз.',
     pendingTitle: 'Рекомендация в процессе',
     untitledCompleted: 'Готовая рекомендация',
     peopleCount: '{count} вкусовых профилей',
@@ -931,6 +938,12 @@ export const ru: Translations = {
       too_obvious: 'Слишком очевидно',
       too_obscure: 'Слишком нишево',
       close: 'Почти',
+    },
+    memoryKind: {
+      watched: 'Уже смотрел(а)',
+      liked: 'Понравилось',
+      not_interested: 'Не интересно',
+      wrong_mood: 'Не то настроение',
     },
     status: {
       pending: 'В очереди',
