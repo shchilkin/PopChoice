@@ -929,6 +929,7 @@ export const ru: Translations = {
     searchRecommendations: 'Искать по рекомендациям',
     searchMovieMemory: 'Искать в памяти о фильмах',
     clearFilters: 'Сбросить',
+    clearSearch: 'Очистить поиск',
     showingCount: 'Показано {visible} из {total}',
     noFilteredRecommendationsTitle: 'Подходящих рекомендаций нет',
     noFilteredRecommendationsBody: 'Попробуйте другой фильм, статус или оценку.',

@@ -926,6 +926,7 @@ export const fi: Translations = {
     searchRecommendations: 'Hae suosituksia',
     searchMovieMemory: 'Hae elokuvamuistista',
     clearFilters: 'Tyhjennä',
+    clearSearch: 'Tyhjennä haku',
     showingCount: 'Näytetään {visible}/{total}',
     noFilteredRecommendationsTitle: 'Ei sopivia suosituksia',
     noFilteredRecommendationsBody: 'Kokeile toista nimeä, tilaa tai arviota.',

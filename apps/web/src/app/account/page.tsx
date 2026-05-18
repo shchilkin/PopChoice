@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
@@ -416,6 +416,7 @@ export default function AccountPage() {
                 totalCount={recommendations.length}
                 countLabel={a.showingCount}
                 clearLabel={a.clearFilters}
+                clearSearchLabel={a.clearSearch}
                 hasActiveFilters={recommendationFiltersActive}
                 onClear={() => {
                   setRecommendationQuery('');
@@ -524,6 +525,7 @@ function AccountFilterControls({
   totalCount,
   countLabel,
   clearLabel,
+  clearSearchLabel,
   hasActiveFilters,
   onClear,
 }: {
@@ -537,13 +539,18 @@ function AccountFilterControls({
   totalCount: number;
   countLabel: string;
   clearLabel: string;
+  clearSearchLabel: string;
   hasActiveFilters: boolean;
   onClear: () => void;
 }) {
+  const searchId = useId();
+
   return (
     <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-      <label className="relative block min-w-0">
-        <span className="sr-only">{searchLabel}</span>
+      <div className="relative min-w-0">
+        <label className="sr-only" htmlFor={searchId}>
+          {searchLabel}
+        </label>
         <Search
           aria-hidden="true"
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
@@ -551,6 +558,7 @@ function AccountFilterControls({
           style={{ color: 'var(--pc-t3)' }}
         />
         <input
+          id={searchId}
           type="search"
           value={searchValue}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
@@ -567,12 +575,12 @@ function AccountFilterControls({
             onClick={() => onSearchChange('')}
             className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg"
             style={{ color: 'var(--pc-t3)' }}
-            aria-label={clearLabel}
+            aria-label={clearSearchLabel}
           >
             <X size={15} />
           </button>
         ) : null}
-      </label>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2 md:justify-end">
         <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
@@ -604,6 +612,7 @@ function AccountFilterControls({
               key={filter.value}
               type="button"
               onClick={() => onFilterChange(filter.value)}
+              aria-pressed={isSelected}
               className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
               style={{
                 background: isSelected ? 'var(--pc-gold-subtle)' : 'var(--pc-ghost)',
@@ -814,6 +823,7 @@ function MovieMemorySection({
             totalCount={items.length}
             countLabel={labels.showingCount}
             clearLabel={labels.clearFilters}
+            clearSearchLabel={labels.clearSearch}
             hasActiveFilters={hasActiveFilters}
             onClear={onClearFilters}
           />

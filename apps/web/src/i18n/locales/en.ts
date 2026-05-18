@@ -918,6 +918,7 @@ export const en = {
     searchRecommendations: 'Search recommendations',
     searchMovieMemory: 'Search movie memory',
     clearFilters: 'Clear filters',
+    clearSearch: 'Clear search',
     showingCount: 'Showing {visible} of {total}',
     noFilteredRecommendationsTitle: 'No recommendations match',
     noFilteredRecommendationsBody: 'Try a different title, status, or rating filter.',
