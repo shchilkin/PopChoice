@@ -9,6 +9,7 @@ import {
   Film,
   Frown,
   Heart,
+  Search,
   Sparkles,
   Trash2,
   X,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
@@ -74,7 +75,32 @@ type MemoryActionState =
   | { status: 'error'; movieKey: string }
   | null;
 
+type RecommendationFilter =
+  | 'all'
+  | 'rated'
+  | 'useful'
+  | 'already_watched'
+  | 'wrong_mood'
+  | 'not_interested';
+
+type MovieMemoryFilter = 'all' | UserMovieInteractionKind;
+
 const ACCOUNT_FETCH_TIMEOUT_MS = 10000;
+const RECOMMENDATION_FILTERS: RecommendationFilter[] = [
+  'all',
+  'rated',
+  'useful',
+  'already_watched',
+  'wrong_mood',
+  'not_interested',
+];
+const MOVIE_MEMORY_FILTERS: MovieMemoryFilter[] = [
+  'all',
+  'watched',
+  'liked',
+  'not_interested',
+  'wrong_mood',
+];
 
 export default function AccountPage() {
   const { auth } = useAuth();
@@ -82,6 +108,10 @@ export default function AccountPage() {
   const a = t.account;
   const [state, setState] = useState<LoadState>({ status: 'idle' });
   const [memoryAction, setMemoryAction] = useState<MemoryActionState>(null);
+  const [recommendationQuery, setRecommendationQuery] = useState('');
+  const [recommendationFilter, setRecommendationFilter] = useState<RecommendationFilter>('all');
+  const [memoryQuery, setMemoryQuery] = useState('');
+  const [memoryFilter, setMemoryFilter] = useState<MovieMemoryFilter>('all');
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
@@ -263,6 +293,16 @@ export default function AccountPage() {
   }
 
   const { user, recommendations, movieMemory } = state.data;
+  const filteredRecommendations = filterRecommendations(
+    recommendations,
+    recommendationQuery,
+    recommendationFilter,
+    a,
+  );
+  const filteredMovieMemory = filterMovieMemory(movieMemory, memoryQuery, memoryFilter, a);
+  const recommendationFiltersActive =
+    isSearchActive(recommendationQuery) || recommendationFilter !== 'all';
+  const memoryFiltersActive = isSearchActive(memoryQuery) || memoryFilter !== 'all';
 
   return (
     <AccountShell>
@@ -361,24 +401,65 @@ export default function AccountPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-3">
-              {recommendations.map((recommendation) => (
-                <RecommendationRow
-                  key={recommendation.slug}
-                  recommendation={recommendation}
-                  locale={locale}
-                  labels={a}
+            <>
+              <AccountFilterControls
+                searchLabel={a.searchRecommendations}
+                searchValue={recommendationQuery}
+                onSearchChange={setRecommendationQuery}
+                selectedFilter={recommendationFilter}
+                onFilterChange={(value) => setRecommendationFilter(value as RecommendationFilter)}
+                filters={RECOMMENDATION_FILTERS.map((filter) => ({
+                  value: filter,
+                  label: a.recommendationFilters[filter],
+                }))}
+                visibleCount={filteredRecommendations.length}
+                totalCount={recommendations.length}
+                countLabel={a.showingCount}
+                clearLabel={a.clearFilters}
+                clearSearchLabel={a.clearSearch}
+                hasActiveFilters={recommendationFiltersActive}
+                onClear={() => {
+                  setRecommendationQuery('');
+                  setRecommendationFilter('all');
+                }}
+              />
+
+              {filteredRecommendations.length === 0 ? (
+                <FilteredEmptyState
+                  title={a.noFilteredRecommendationsTitle}
+                  body={a.noFilteredRecommendationsBody}
                 />
-              ))}
-            </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredRecommendations.map((recommendation) => (
+                    <RecommendationRow
+                      key={recommendation.slug}
+                      recommendation={recommendation}
+                      locale={locale}
+                      labels={a}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
 
         <MovieMemorySection
           items={movieMemory}
+          visibleItems={filteredMovieMemory}
           labels={a}
           locale={locale}
           action={memoryAction}
+          searchValue={memoryQuery}
+          selectedFilter={memoryFilter}
+          hasActiveFilters={memoryFiltersActive}
+          onSearchChange={setMemoryQuery}
+          onFilterChange={(value) => setMemoryFilter(value as MovieMemoryFilter)}
+          onClearFilters={() => {
+            setMemoryQuery('');
+            setMemoryFilter('all');
+          }}
           onForget={handleForgetMovie}
         />
       </motion.section>
@@ -429,6 +510,137 @@ function AccountLoadingState({ label }: { label: string }) {
           </motion.div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function AccountFilterControls({
+  searchLabel,
+  searchValue,
+  onSearchChange,
+  selectedFilter,
+  onFilterChange,
+  filters,
+  visibleCount,
+  totalCount,
+  countLabel,
+  clearLabel,
+  clearSearchLabel,
+  hasActiveFilters,
+  onClear,
+}: {
+  searchLabel: string;
+  searchValue: string;
+  onSearchChange: (value: string) => void;
+  selectedFilter: string;
+  onFilterChange: (value: string) => void;
+  filters: Array<{ value: string; label: string }>;
+  visibleCount: number;
+  totalCount: number;
+  countLabel: string;
+  clearLabel: string;
+  clearSearchLabel: string;
+  hasActiveFilters: boolean;
+  onClear: () => void;
+}) {
+  const searchId = useId();
+
+  return (
+    <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <div className="relative min-w-0">
+        <label className="sr-only" htmlFor={searchId}>
+          {searchLabel}
+        </label>
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
+          size={17}
+          style={{ color: 'var(--pc-t3)' }}
+        />
+        <input
+          id={searchId}
+          type="search"
+          value={searchValue}
+          onChange={(event) => onSearchChange(event.currentTarget.value)}
+          placeholder={searchLabel}
+          className="h-11 w-full rounded-xl border bg-transparent pl-10 pr-10 text-sm outline-none transition-colors focus:border-[var(--pc-gold-bd)]"
+          style={{
+            borderColor: 'var(--pc-bd2)',
+            color: 'var(--pc-t1)',
+          }}
+        />
+        {searchValue ? (
+          <button
+            type="button"
+            onClick={() => onSearchChange('')}
+            className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg"
+            style={{ color: 'var(--pc-t3)' }}
+            aria-label={clearSearchLabel}
+          >
+            <X size={15} />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 md:justify-end">
+        <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
+          {countLabel
+            .replace('{visible}', String(visibleCount))
+            .replace('{total}', String(totalCount))}
+        </span>
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            onClick={onClear}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold"
+            style={{
+              background: 'var(--pc-ghost)',
+              border: '1px solid var(--pc-bd2)',
+              color: 'var(--pc-t2)',
+            }}
+          >
+            {clearLabel}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap gap-2 md:col-span-2" role="group" aria-label={searchLabel}>
+        {filters.map((filter) => {
+          const isSelected = selectedFilter === filter.value;
+          return (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => onFilterChange(filter.value)}
+              aria-pressed={isSelected}
+              className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={{
+                background: isSelected ? 'var(--pc-gold-subtle)' : 'var(--pc-ghost)',
+                border: isSelected ? '1px solid var(--pc-gold-bd)' : '1px solid var(--pc-bd2)',
+                color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+              }}
+            >
+              {filter.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FilteredEmptyState({ title, body }: { title: string; body: string }) {
+  return (
+    <div
+      className="rounded-2xl px-6 py-8 text-center"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <h3 className="mb-2 text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
+        {title}
+      </h3>
+      <p className="mx-auto max-w-md text-sm" style={{ color: 'var(--pc-t2)' }}>
+        {body}
+      </p>
     </div>
   );
 }
@@ -526,15 +738,29 @@ function RecommendationRow({
 
 function MovieMemorySection({
   items,
+  visibleItems,
   labels,
   locale,
   action,
+  searchValue,
+  selectedFilter,
+  hasActiveFilters,
+  onSearchChange,
+  onFilterChange,
+  onClearFilters,
   onForget,
 }: {
   items: MovieMemorySummary[];
+  visibleItems: MovieMemorySummary[];
   labels: ReturnType<typeof useLanguage>['t']['account'];
   locale: string;
   action: MemoryActionState;
+  searchValue: string;
+  selectedFilter: MovieMemoryFilter;
+  hasActiveFilters: boolean;
+  onSearchChange: (value: string) => void;
+  onFilterChange: (value: string) => void;
+  onClearFilters: () => void;
   onForget: (movieKey: string) => void;
 }) {
   return (
@@ -582,18 +808,48 @@ function MovieMemorySection({
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {items.map((item) => (
-            <MovieMemoryCard
-              key={item.movieKey}
-              item={item}
-              labels={labels}
-              locale={locale}
-              isForgetting={action?.status === 'forgetting' && action.movieKey === item.movieKey}
-              onForget={() => onForget(item.movieKey)}
+        <>
+          <AccountFilterControls
+            searchLabel={labels.searchMovieMemory}
+            searchValue={searchValue}
+            onSearchChange={onSearchChange}
+            selectedFilter={selectedFilter}
+            onFilterChange={onFilterChange}
+            filters={MOVIE_MEMORY_FILTERS.map((filter) => ({
+              value: filter,
+              label: labels.memoryFilters[filter],
+            }))}
+            visibleCount={visibleItems.length}
+            totalCount={items.length}
+            countLabel={labels.showingCount}
+            clearLabel={labels.clearFilters}
+            clearSearchLabel={labels.clearSearch}
+            hasActiveFilters={hasActiveFilters}
+            onClear={onClearFilters}
+          />
+
+          {visibleItems.length === 0 ? (
+            <FilteredEmptyState
+              title={labels.noFilteredMemoryTitle}
+              body={labels.noFilteredMemoryBody}
             />
-          ))}
-        </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {visibleItems.map((item) => (
+                <MovieMemoryCard
+                  key={item.movieKey}
+                  item={item}
+                  labels={labels}
+                  locale={locale}
+                  isForgetting={
+                    action?.status === 'forgetting' && action.movieKey === item.movieKey
+                  }
+                  onForget={() => onForget(item.movieKey)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -695,4 +951,95 @@ function statusColor(status: RecommendationSummary['status']) {
   if (status === 'completed') return palette.green;
   if (status === 'failed') return palette.red;
   return 'var(--pc-gold-text)';
+}
+
+function filterRecommendations(
+  recommendations: RecommendationSummary[],
+  query: string,
+  filter: RecommendationFilter,
+  labels: ReturnType<typeof useLanguage>['t']['account'],
+) {
+  const normalizedQuery = normalizeSearch(query);
+  return recommendations.filter((recommendation) => {
+    if (!matchesRecommendationFilter(recommendation, filter)) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    return recommendationSearchText(recommendation, labels).includes(normalizedQuery);
+  });
+}
+
+function filterMovieMemory(
+  items: MovieMemorySummary[],
+  query: string,
+  filter: MovieMemoryFilter,
+  labels: ReturnType<typeof useLanguage>['t']['account'],
+) {
+  const normalizedQuery = normalizeSearch(query);
+  return items.filter((item) => {
+    if (filter !== 'all' && item.kind !== filter) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    return movieMemorySearchText(item, labels).includes(normalizedQuery);
+  });
+}
+
+function matchesRecommendationFilter(
+  recommendation: RecommendationSummary,
+  filter: RecommendationFilter,
+) {
+  if (filter === 'all') return true;
+  if (filter === 'rated') return Boolean(recommendation.feedbackKind);
+  if (filter === 'not_interested') {
+    return (
+      recommendation.feedbackKind === 'too_obvious' || recommendation.feedbackKind === 'too_obscure'
+    );
+  }
+  return recommendation.feedbackKind === filter;
+}
+
+function recommendationSearchText(
+  recommendation: RecommendationSummary,
+  labels: ReturnType<typeof useLanguage>['t']['account'],
+) {
+  return normalizeSearch(
+    [
+      recommendation.movieName,
+      recommendation.movieYear,
+      labels.status[recommendation.status],
+      recommendation.feedbackKind ? labels.feedback[recommendation.feedbackKind] : null,
+    ]
+      .filter(Boolean)
+      .join(' '),
+  );
+}
+
+function movieMemorySearchText(
+  item: MovieMemorySummary,
+  labels: ReturnType<typeof useLanguage>['t']['account'],
+) {
+  return normalizeSearch(
+    [item.movieName, item.localizedName, item.movieYear, labels.memoryKind[item.kind]]
+      .filter(Boolean)
+      .join(' '),
+  );
+}
+
+function normalizeSearch(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLocaleLowerCase();
+}
+
+function isSearchActive(value: string) {
+  return normalizeSearch(value).length > 0;
 }
