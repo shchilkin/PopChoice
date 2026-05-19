@@ -36,6 +36,7 @@ vi.mock('@/lib/logger', () => ({
 
 // Import after mocks are established
 import {
+  addUserMovieMemoryFromCatalog,
   claimMorePicksSlot,
   createRecommendation,
   deleteUserMovieMemory,
@@ -47,6 +48,7 @@ import {
   insertRecommendationMovies,
   createRecommendationFeedback,
   getUserRecommendationFeedbackMoviePreferences,
+  searchMovieCatalogForMemory,
   updateMorePicksStatus,
   updateRecommendationStatus,
   updateRecommendationStage,
@@ -365,6 +367,94 @@ describe('getUserMovieMemorySummaries', () => {
     expect(sql).toContain('FROM user_movie_interactions');
     expect(sql).toContain('ORDER BY updated_at DESC');
     expect(params).toEqual(['42', 50]);
+  });
+});
+
+describe('searchMovieCatalogForMemory', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns local catalog matches for manual movie memory', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 129, tmdb_id: 129, name: 'Spirited Away', year: 2001 }],
+    });
+
+    const result = await searchMovieCatalogForMemory('spirited');
+
+    expect(result).toEqual([{ id: 129, tmdbId: 129, movieName: 'Spirited Away', movieYear: 2001 }]);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('FROM movies');
+    expect(sql).toContain('ILIKE');
+    expect(params).toEqual(['%spirited%', 8]);
+  });
+
+  it('does not search for very short queries', async () => {
+    await expect(searchMovieCatalogForMemory('s')).resolves.toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe('addUserMovieMemoryFromCatalog', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('upserts a watched movie memory item from the local catalog', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [{ tmdb_id: 129, name: 'Spirited Away', year: 2001 }],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            kind: 'watched',
+            movie_key: 'tmdb:129',
+            tmdb_id: 129,
+            movie_name: 'Spirited Away',
+            movie_year: 2001,
+            poster_url: null,
+            localized_name: null,
+            updated_at: new Date('2026-05-20T12:00:00.000Z'),
+          },
+        ],
+      });
+
+    const result = await addUserMovieMemoryFromCatalog('42', 129, 'watched');
+
+    expect(result).toEqual({
+      kind: 'watched',
+      movieKey: 'tmdb:129',
+      tmdbId: 129,
+      movieName: 'Spirited Away',
+      movieYear: 2001,
+      posterURL: null,
+      localizedName: null,
+      updatedAt: '2026-05-20T12:00:00.000Z',
+    });
+    const [lookupSql, lookupParams] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(lookupSql).toContain('FROM movies');
+    expect(lookupParams).toEqual([129]);
+    const [upsertSql, upsertParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    expect(upsertSql).toContain('INSERT INTO user_movie_interactions');
+    expect(upsertParams).toEqual(['42', 'tmdb:129', 129, 'Spirited Away', 2001, 'watched']);
+  });
+
+  it('returns null when the catalog movie is missing', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await expect(addUserMovieMemoryFromCatalog('42', 999, 'watched')).resolves.toBeNull();
+    expect(mockQuery).toHaveBeenCalledOnce();
   });
 });
 

@@ -113,6 +113,13 @@ export interface UserMovieMemorySummary {
   updatedAt: string;
 }
 
+export interface MovieMemoryCatalogSearchResult {
+  id: number;
+  tmdbId: number | null;
+  movieName: string;
+  movieYear: number | null;
+}
+
 export interface MovieRowToInsert {
   id: number;
   tmdbId?: number | null;
@@ -396,6 +403,119 @@ export async function getUserMovieMemorySummaries(
     localizedName: row.localized_name,
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   }));
+}
+
+function mapUserMovieMemoryRow(row: {
+  kind: UserMovieInteractionKind;
+  movie_key: string;
+  tmdb_id: number | null;
+  movie_name: string;
+  movie_year: number | null;
+  poster_url: string | null;
+  localized_name: string | null;
+  updated_at: Date | string;
+}): UserMovieMemorySummary {
+  return {
+    kind: row.kind,
+    movieKey: row.movie_key,
+    tmdbId: row.tmdb_id,
+    movieName: row.movie_name,
+    movieYear: row.movie_year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
+  };
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+export async function searchMovieCatalogForMemory(
+  query: string,
+  limit = 8,
+): Promise<MovieMemoryCatalogSearchResult[]> {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) return [];
+
+  const pool = getPool();
+  const result = await pool.query<{
+    id: number;
+    tmdb_id: number | null;
+    name: string;
+    year: number | null;
+  }>(
+    `SELECT id, tmdb_id, name, year
+       FROM movies
+      WHERE name ILIKE $1 ESCAPE '\\'
+      ORDER BY year DESC, name ASC
+      LIMIT $2`,
+    [`%${escapeLikePattern(trimmedQuery)}%`, Math.min(Math.max(limit, 1), 12)],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    tmdbId: row.tmdb_id,
+    movieName: row.name,
+    movieYear: row.year,
+  }));
+}
+
+export async function addUserMovieMemoryFromCatalog(
+  userId: string,
+  movieId: number,
+  kind: UserMovieInteractionKind = 'watched',
+): Promise<UserMovieMemorySummary | null> {
+  const pool = getPool();
+  const movieResult = await pool.query<{
+    tmdb_id: number | null;
+    name: string;
+    year: number | null;
+  }>(
+    `SELECT tmdb_id, name, year
+       FROM movies
+      WHERE id = $1
+      LIMIT 1`,
+    [movieId],
+  );
+
+  const movie = movieResult.rows[0];
+  if (!movie) return null;
+
+  const movieKey = getMovieIdentityKey({
+    tmdbId: movie.tmdb_id,
+    title: movie.name,
+    year: movie.year,
+  });
+  if (!movieKey) return null;
+
+  const upsertResult = await pool.query<{
+    kind: UserMovieInteractionKind;
+    movie_key: string;
+    tmdb_id: number | null;
+    movie_name: string;
+    movie_year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    updated_at: Date | string;
+  }>(
+    `INSERT INTO user_movie_interactions (
+       user_id, movie_key, tmdb_id, movie_name, movie_year, poster_url, localized_name, kind
+     )
+     VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6)
+     ON CONFLICT (user_id, movie_key)
+     DO UPDATE SET
+       tmdb_id = COALESCE(EXCLUDED.tmdb_id, user_movie_interactions.tmdb_id),
+       movie_name = EXCLUDED.movie_name,
+       movie_year = EXCLUDED.movie_year,
+       kind = EXCLUDED.kind,
+       updated_at = now()
+     RETURNING kind, movie_key, tmdb_id, movie_name, movie_year, poster_url, localized_name, updated_at`,
+    [userId, movieKey, movie.tmdb_id, movie.name, movie.year, kind],
+  );
+
+  const row = upsertResult.rows[0];
+  return row ? mapUserMovieMemoryRow(row) : null;
 }
 
 export async function deleteUserMovieMemory(userId: string, movieKey: string): Promise<boolean> {
