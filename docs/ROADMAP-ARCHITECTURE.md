@@ -135,7 +135,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### Data Quality Track
 
-- Add a lightweight review path for TMDB backfill cases that are ambiguous, missing metadata, or rejected because runtime/year confidence is too low.
+- Persist TMDB backfill review cases in `tmdb_match_reviews`, then add an admin/back-office UI to resolve ambiguous matches, missing metadata, or rejected runtime/year confidence cases.
 - Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, and stale TMDB metadata.
 - Periodically refresh TMDB-backed metadata for older records without destabilizing existing recommendation history.
 - Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.

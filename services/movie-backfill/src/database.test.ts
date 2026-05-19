@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import pg from 'pg';
-import { initDatabase, checkTableExists, closeDatabase } from './database.js';
+import {
+  checkTableExists,
+  closeDatabase,
+  ensureTMDBMatchReviewSchema,
+  initDatabase,
+  recordTMDBMatchReview,
+} from './database.js';
 
 vi.mock('pg', () => {
   const mPool = {
@@ -52,6 +58,69 @@ describe('database', () => {
         ['non_existent_table'],
       );
       expect(result).toBe(false);
+    });
+  });
+
+  describe('ensureTMDBMatchReviewSchema', () => {
+    it('creates the TMDB match review table and indexes', async () => {
+      poolMock.query.mockResolvedValueOnce({ rows: [] });
+
+      await ensureTMDBMatchReviewSchema();
+
+      expect(poolMock.query).toHaveBeenCalledTimes(1);
+      const [sql] = poolMock.query.mock.calls[0];
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS tmdb_match_reviews');
+      expect(sql).toContain('idx_tmdb_match_reviews_movie_reason');
+      expect(sql).toContain('idx_tmdb_match_reviews_status_updated_at');
+    });
+  });
+
+  describe('recordTMDBMatchReview', () => {
+    it('upserts an open review for ambiguous TMDB matches', async () => {
+      poolMock.query.mockResolvedValueOnce({ rows: [] });
+
+      await recordTMDBMatchReview({
+        movie: {
+          id: '42',
+          name: 'Solaris',
+          year: 1972,
+          duration: 166,
+          score_rating: 8.1,
+          description: 'A psychologist is sent to a space station.',
+        },
+        reason: 'ambiguous_match',
+        candidates: [
+          {
+            id: 593,
+            title: 'Solaris',
+            originalTitle: 'Solaris',
+            releaseYear: 1972,
+            confidence: 1,
+          },
+        ],
+        notes: 'TMDB returned multiple candidates.',
+      });
+
+      expect(poolMock.query).toHaveBeenCalledTimes(1);
+      const [sql, params] = poolMock.query.mock.calls[0];
+      expect(sql).toContain('INSERT INTO tmdb_match_reviews');
+      expect(sql).toContain('ON CONFLICT (movie_id, reason) DO UPDATE');
+      expect(params).toEqual([
+        '42',
+        'Solaris',
+        1972,
+        'ambiguous_match',
+        JSON.stringify([
+          {
+            id: 593,
+            title: 'Solaris',
+            originalTitle: 'Solaris',
+            releaseYear: 1972,
+            confidence: 1,
+          },
+        ]),
+        'TMDB returned multiple candidates.',
+      ]);
     });
   });
 });

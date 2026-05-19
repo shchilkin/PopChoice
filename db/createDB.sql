@@ -37,6 +37,31 @@ CREATE UNIQUE INDEX IF NOT EXISTS movies_tmdb_id_unique
   ON movies (tmdb_id)
   WHERE tmdb_id IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS tmdb_match_reviews (
+  id bigserial PRIMARY KEY,
+  movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+  movie_name text NOT NULL,
+  movie_year int NOT NULL,
+  reason text NOT NULL,
+  status text NOT NULL DEFAULT 'open',
+  candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tmdb_match_reviews_reason_check CHECK (
+    reason IN ('ambiguous_match', 'runtime_mismatch')
+  ),
+  CONSTRAINT tmdb_match_reviews_status_check CHECK (
+    status IN ('open', 'resolved', 'ignored')
+  )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tmdb_match_reviews_movie_reason
+  ON tmdb_match_reviews (movie_id, reason);
+
+CREATE INDEX IF NOT EXISTS idx_tmdb_match_reviews_status_updated_at
+  ON tmdb_match_reviews (status, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS users (
   id bigserial PRIMARY KEY,
   email text NOT NULL,

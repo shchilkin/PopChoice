@@ -18,10 +18,13 @@ import { loadConfig } from './config.js';
 import {
   checkTableExists,
   closeDatabase,
+  ensureTMDBMatchReviewSchema,
   getIncompleteMovies,
   initDatabase,
+  recordTMDBMatchReview,
   updateMovie,
   type IncompleteMovie,
+  type RecordTMDBMatchReviewInput,
 } from './database.js';
 import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
@@ -47,6 +50,24 @@ function isRuntimeCompatible(existingRuntime: number, tmdbRuntime: number): bool
   return Math.abs(existingRuntime - tmdbRuntime) <= 20;
 }
 
+async function maybeRecordTMDBMatchReview(
+  config: ReturnType<typeof loadConfig>,
+  input: RecordTMDBMatchReviewInput,
+): Promise<void> {
+  if (config.dryRun) {
+    logger.info('DRY RUN: would record TMDB match review', {
+      id: input.movie.id,
+      name: input.movie.name,
+      year: input.movie.year,
+      reason: input.reason,
+      candidateCount: input.candidates.length,
+    });
+    return;
+  }
+
+  await recordTMDBMatchReview(input);
+}
+
 async function main(): Promise<void> {
   const config = loadConfig();
 
@@ -69,6 +90,8 @@ async function main(): Promise<void> {
       logger.info("Table 'movies' does not exist — skipping backfill");
       return;
     }
+
+    await ensureTMDBMatchReviewSchema();
 
     const movies = await getIncompleteMovies(config.maxMovies);
     logger.info('Fetched movies needing TMDB identity or metadata backfill', {
@@ -103,6 +126,12 @@ async function main(): Promise<void> {
                 name: movie.name,
                 year: movie.year,
                 candidates: match.candidates,
+              });
+              await maybeRecordTMDBMatchReview(config, {
+                movie,
+                reason: 'ambiguous_match',
+                candidates: match.candidates,
+                notes: 'TMDB returned multiple high-confidence title/year candidates.',
               });
               totalSkipped++;
               return;
@@ -154,6 +183,12 @@ async function main(): Promise<void> {
                 tmdbRuntime: runtime,
                 matchConfidence: match.confidence,
                 candidates: match.candidates,
+              });
+              await maybeRecordTMDBMatchReview(config, {
+                movie,
+                reason: 'runtime_mismatch',
+                candidates: match.candidates,
+                notes: `Existing runtime ${movie.duration} min did not match TMDB runtime ${runtime} min for candidate ${match.tmdbId}.`,
               });
               totalSkipped++;
               return;
