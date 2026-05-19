@@ -173,6 +173,7 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
 - **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** — Practical phased direction for cleaner boundaries and future monorepo evolution
+- **[Recommendation Roadmap](./docs/RECOMMENDATION-ROADMAP.md)** — Staged plan for improving quiz accuracy, adding taste swipe mode, and moving toward TMDB-first discovery
 - **[Design Guidelines](./docs/design-guidelines.md)** — UI/UX design guidelines
 
 ## 🗂 Project Structure

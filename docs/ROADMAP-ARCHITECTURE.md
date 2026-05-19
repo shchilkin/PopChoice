@@ -55,6 +55,7 @@ The main remaining risks are:
 ### Issues Still Present
 
 - The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
+- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
 
@@ -163,6 +164,15 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Consider a separate "worth rewatching" angle for watched movies so strong matches can still appear intentionally, with copy that frames them as rewatch candidates instead of new discoveries.
 - Make the reason for reused titles transparent when feedback history intentionally allows a repeat.
 - Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
+
+### Recommendation Experience Track
+
+- Treat quiz answers, swipe reactions, account memory, and result feedback as inputs into a shared taste-signal model.
+- Rework the guided quiz around "what do you want tonight?" instead of relying on a favorite movie, broad genre labels, and optional actor input.
+- Add an alternate taste-swipe mode for users who have watched many films and prefer to react to concrete movie cards instead of answering abstract questions.
+- Move toward TMDB-first candidate generation: use TMDB for broad discovery and keep the local database as a cache/enrichment/reranking layer rather than the whole movie universe.
+- Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.
+- See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md) for the staged plan.
 
 ## Priority Items for the Next 30 Days
 

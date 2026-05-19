@@ -75,12 +75,14 @@ export const TONES: {
 ];
 
 export const QUESTION_LABELS = [
-  'Favorite film',
-  'Old or new?',
-  'Your mood',
-  'Pick a tone',
-  'Favorite actor',
+  'Reference point',
+  'Search lane',
+  "Tonight's vibe",
+  'Energy level',
+  'Optional actor',
 ];
+
+export const NO_REFERENCE_MOVIE = 'No specific reference movie';
 
 export function emptyPerson(name = ''): PersonAnswers {
   return {

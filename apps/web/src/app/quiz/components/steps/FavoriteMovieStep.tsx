@@ -4,6 +4,8 @@ import { Clapperboard } from 'lucide-react';
 
 import { useLanguage } from '@/i18n';
 
+import { NO_REFERENCE_MOVIE } from '../../constants';
+
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteMovieStepProps {
@@ -94,26 +96,32 @@ export function FavoriteMovieStep({
           {t.quiz.favoriteMovie.popularPicks}
         </p>
         <div className="flex flex-wrap gap-2">
-          {['The Dark Knight', 'Inception', 'Parasite', 'Pulp Fiction', 'The Matrix', 'Coco'].map(
-            (film) => (
-              <button
-                key={film}
-                onClick={() => onUpdate({ favoriteMovie: film })}
-                className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
-                style={{
-                  background:
-                    person.favoriteMovie === film ? 'var(--pc-gold-tint)' : 'var(--pc-ghost)',
-                  border:
-                    person.favoriteMovie === film
-                      ? '1px solid var(--pc-gold-bd-strong)'
-                      : '1px solid var(--pc-bd1)',
-                  color: person.favoriteMovie === film ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-                }}
-              >
-                {film}
-              </button>
-            ),
-          )}
+          {[
+            { label: t.quiz.favoriteMovie.noReference, value: NO_REFERENCE_MOVIE },
+            { label: 'The Dark Knight', value: 'The Dark Knight' },
+            { label: 'Inception', value: 'Inception' },
+            { label: 'Parasite', value: 'Parasite' },
+            { label: 'Pulp Fiction', value: 'Pulp Fiction' },
+            { label: 'The Matrix', value: 'The Matrix' },
+            { label: 'Coco', value: 'Coco' },
+          ].map((film) => (
+            <button
+              key={film.value}
+              onClick={() => onUpdate({ favoriteMovie: film.value })}
+              className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
+              style={{
+                background:
+                  person.favoriteMovie === film.value ? 'var(--pc-gold-tint)' : 'var(--pc-ghost)',
+                border:
+                  person.favoriteMovie === film.value
+                    ? '1px solid var(--pc-gold-bd-strong)'
+                    : '1px solid var(--pc-bd1)',
+                color: person.favoriteMovie === film.value ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+              }}
+            >
+              {film.label}
+            </button>
+          ))}
         </div>
       </div>
 
