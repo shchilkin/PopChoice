@@ -212,9 +212,7 @@ export const quizMachine = setup({
       },
     },
     navigatingToResults: {
-      on: {
-        RESET: { target: 'intro', actions: 'resetQuiz' },
-      },
+      type: 'final',
     },
     submitFailed: {
       on: {
