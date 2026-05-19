@@ -9,7 +9,7 @@ import { withAuth } from '@/lib/withAuth';
 // ---------------------------------------------------------------------------
 async function getHandler(
   _req: NextRequest,
-  _clientId: string,
+  clientId: string,
   { id }: { id: string },
 ): Promise<Response> {
   if (!id || typeof id !== 'string') {
@@ -17,7 +17,8 @@ async function getHandler(
   }
 
   try {
-    const result = await getRecommendationRecord(id);
+    const viewerUserId = clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
+    const result = await getRecommendationRecord(id, viewerUserId);
 
     if (!result) {
       return NextResponse.json({ error: 'Recommendation not found' }, { status: 404 });

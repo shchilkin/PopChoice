@@ -37,11 +37,19 @@ vi.mock('@/lib/logger', () => ({
 // Import after mocks are established
 import {
   claimMorePicksSlot,
+  createRecommendation,
+  deleteUserMovieMemory,
   getRecommendationTMDBExcludeIds,
   getRecommendationWithMovies,
+  getUserMovieMemorySummaries,
+  getUserRecommendationSummaries,
   insertMorePicksMovies,
   insertRecommendationMovies,
+  createRecommendationFeedback,
+  getUserRecommendationFeedbackMoviePreferences,
   updateMorePicksStatus,
+  updateRecommendationStatus,
+  updateRecommendationStage,
 } from './recommendations';
 
 import type { MovieRowToInsert } from './recommendations';
@@ -62,6 +70,331 @@ function makeMovie(overrides: Partial<MovieRowToInsert> = {}): MovieRowToInsert 
     ...overrides,
   };
 }
+
+// ---------------------------------------------------------------------------
+// createRecommendation
+// ---------------------------------------------------------------------------
+
+describe('createRecommendation', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('stores the optional owner user id when present', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'rec-id', slug: 'abc123' }] });
+
+    const result = await createRecommendation({ favoriteMovie: 'Arrival' } as never, '42');
+
+    expect(result).toEqual({ id: 'rec-id', slug: 'abc123' });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('user_id');
+    expect(params[2]).toBe('42');
+  });
+
+  it('stores null owner for anonymous recommendations', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'rec-id', slug: 'abc123' }] });
+
+    await createRecommendation({ favoriteMovie: 'Arrival' } as never);
+
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[2]).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getUserRecommendationSummaries
+// ---------------------------------------------------------------------------
+
+describe('getUserRecommendationSummaries', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns saved recommendation summaries without raw quiz data', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          slug: 'rec-slug',
+          status: 'completed',
+          stage: 'complete',
+          created_at: new Date('2026-05-15T10:00:00.000Z'),
+          completed_at: null,
+          quiz_data: [{ name: 'Alex' }, { name: 'Sam' }],
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Localized Movie',
+          tmdb_id: 123,
+          tmdb_name: null,
+          tmdb_year: null,
+          m_name: 'Movie',
+          m_year: 2024,
+          feedback_kind: 'useful',
+        },
+      ],
+    });
+
+    const result = await getUserRecommendationSummaries('42');
+
+    expect(result).toEqual([
+      {
+        slug: 'rec-slug',
+        status: 'completed',
+        stage: 'complete',
+        createdAt: '2026-05-15T10:00:00.000Z',
+        completedAt: null,
+        peopleCount: 2,
+        movieName: 'Localized Movie',
+        movieYear: 2024,
+        posterURL: 'https://example.com/poster.jpg',
+        feedbackKind: 'useful',
+      },
+    ]);
+    expect(result[0]).not.toHaveProperty('quizData');
+    expect(mockQuery.mock.calls[0]?.[0]).toContain('recommendation_feedback');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createRecommendationFeedback
+// ---------------------------------------------------------------------------
+
+describe('createRecommendationFeedback', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockConnect.mockReset();
+    mockClientQuery.mockReset();
+    mockRelease.mockReset();
+    mockConnect.mockResolvedValue(mockClient);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('stores feedback for a completed recommendation slug', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{ id: 'feedback-id', recommendation_id: 'rec-id' }],
+      }) // INSERT feedback
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 123,
+            movie_name: 'Joker',
+            movie_year: 2019,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Джокер',
+          },
+        ],
+      }) // SELECT main movie
+      .mockResolvedValueOnce({}) // UPSERT interaction
+      .mockResolvedValueOnce({}); // COMMIT
+
+    const result = await createRecommendationFeedback({
+      slug: 'rec-slug',
+      kind: 'already_watched',
+      userId: '42',
+    });
+
+    expect(result).toEqual({ id: 'feedback-id' });
+    const [sql, params] = mockClientQuery.mock.calls[1] as [string, unknown[]];
+    expect(sql).toContain('recommendation_feedback');
+    expect(sql).toContain("status = 'completed'");
+    expect(sql).toContain('user_id = $2');
+    expect(params).toEqual(['rec-slug', '42', 'already_watched']);
+    const [interactionSql, interactionParams] = mockClientQuery.mock.calls[3] as [
+      string,
+      unknown[],
+    ];
+    expect(interactionSql).toContain('user_movie_interactions');
+    expect(interactionParams).toContain('tmdb:123');
+    expect(interactionParams).toContain('watched');
+    expect(mockRelease).toHaveBeenCalledOnce();
+  });
+
+  it('returns null when no completed recommendation is found', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({ rows: [] }) // INSERT feedback
+      .mockResolvedValueOnce({}); // COMMIT
+
+    const result = await createRecommendationFeedback({
+      slug: 'missing',
+      kind: 'wrong_mood',
+    });
+
+    expect(result).toBeNull();
+    const [, params] = mockClientQuery.mock.calls[1] as [string, unknown[]];
+    expect(params).toEqual(['missing', null, 'wrong_mood']);
+    expect(mockClientQuery).toHaveBeenCalledTimes(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getUserRecommendationFeedbackMoviePreferences
+// ---------------------------------------------------------------------------
+
+describe('getUserRecommendationFeedbackMoviePreferences', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns movies attached to actionable user feedback', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            kind: 'watched',
+            movie_key: 'tmdb:475557',
+            tmdb_id: 475557,
+            movie_name: 'Joker',
+            movie_year: 2019,
+          },
+          {
+            kind: 'wrong_mood',
+            movie_key: 'title:arrival:2016',
+            tmdb_id: null,
+            movie_name: 'Arrival',
+            movie_year: 2016,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 129,
+            movie_name: 'Spirited Away',
+            movie_year: 2001,
+          },
+        ],
+      });
+
+    const result = await getUserRecommendationFeedbackMoviePreferences('42');
+
+    expect(result).toEqual([
+      {
+        kind: 'watched',
+        movieKey: 'tmdb:475557',
+        tmdbId: 475557,
+        movieName: 'Joker',
+        movieYear: 2019,
+      },
+      {
+        kind: 'wrong_mood',
+        movieKey: 'title:arrival:2016',
+        tmdbId: null,
+        movieName: 'Arrival',
+        movieYear: 2016,
+      },
+      {
+        kind: 'recently_recommended',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+      },
+    ]);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('user_movie_interactions');
+    expect(sql).toContain("kind IN ('watched', 'not_interested', 'wrong_mood')");
+    expect(params).toEqual(['42', 100]);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// user movie memory summaries
+// ---------------------------------------------------------------------------
+
+describe('getUserMovieMemorySummaries', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns explicit movie memory ordered by most recent update', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:129',
+          tmdb_id: 129,
+          movie_name: 'Spirited Away',
+          movie_year: 2001,
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Унесённые призраками',
+          updated_at: new Date('2026-05-17T10:00:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await getUserMovieMemorySummaries('42');
+
+    expect(result).toEqual([
+      {
+        kind: 'watched',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        updatedAt: '2026-05-17T10:00:00.000Z',
+      },
+    ]);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('FROM user_movie_interactions');
+    expect(sql).toContain('ORDER BY updated_at DESC');
+    expect(params).toEqual(['42', 50]);
+  });
+});
+
+describe('deleteUserMovieMemory', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('deletes one movie memory item for the user', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+    const result = await deleteUserMovieMemory('42', 'tmdb:129');
+
+    expect(result).toBe(true);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('DELETE FROM user_movie_interactions');
+    expect(params).toEqual(['42', 'tmdb:129']);
+  });
+
+  it('returns false when no row was deleted', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 0 });
+
+    await expect(deleteUserMovieMemory('42', 'tmdb:129')).resolves.toBe(false);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // claimMorePicksSlot
@@ -180,6 +513,77 @@ describe('updateMorePicksStatus', () => {
 
     const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(params).toContain(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateRecommendationStatus
+// ---------------------------------------------------------------------------
+
+describe('updateRecommendationStatus', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({ rows: [] });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('sets stage to complete when recommendation completes', async () => {
+    await updateRecommendationStatus('rec-id', 'completed');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('stage = COALESCE($4, stage)');
+    expect(params[0]).toBe('completed');
+    expect(params[3]).toBe('complete');
+    expect(params[4]).toBe('rec-id');
+  });
+
+  it('sets stage to failed when recommendation fails', async () => {
+    await updateRecommendationStatus('rec-id', 'failed', 'pipeline failed');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[0]).toBe('failed');
+    expect(params[1]).toBe('pipeline failed');
+    expect(params[3]).toBe('failed');
+  });
+
+  it('preserves the current stage for non-terminal statuses', async () => {
+    await updateRecommendationStatus('rec-id', 'processing');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(params[0]).toBe('processing');
+    expect(params[3]).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// updateRecommendationStage
+// ---------------------------------------------------------------------------
+
+describe('updateRecommendationStage', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue({ rows: [] });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('updates the recommendation stage without changing status', async () => {
+    await updateRecommendationStage('rec-id', 'embedding');
+
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('UPDATE recommendations SET stage = $1');
+    expect(params).toEqual(['embedding', 'rec-id']);
   });
 });
 
@@ -317,6 +721,24 @@ describe('insertRecommendationMovies', () => {
     const [, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
     expect(params).toContain(77);
   });
+
+  it('stores a matched TMDB id for local recommendations', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({}) // UPDATE recommendations metadata
+      .mockResolvedValueOnce({}) // INSERT
+      .mockResolvedValueOnce({}); // COMMIT
+
+    await insertRecommendationMovies(
+      'rec-id',
+      [makeMovie({ id: 42, tmdbId: 129, fromTMDB: false })],
+      false,
+    );
+
+    const [, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
+    expect(params).toContain(129);
+    expect(params).toContain(42);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -340,11 +762,13 @@ describe('getRecommendationWithMovies', () => {
           {
             id: 'rec-id',
             status: 'completed',
+            stage: 'complete',
             error: null,
             used_broader_search: false,
             db_movie_count: 12,
             quiz_data: null,
             more_picks_status: null,
+            user_id: '42',
           },
         ],
       })
@@ -375,8 +799,63 @@ describe('getRecommendationWithMovies', () => {
         ],
       });
 
-    const result = await getRecommendationWithMovies('slug-123');
+    const result = await getRecommendationWithMovies('slug-123', '42');
 
     expect(result?.movies[0]?.id).toBe(-321);
+    expect(result?.stage).toBe('complete');
+    expect(result?.viewerCanRate).toBe(true);
+    expect(result?.isSharedResult).toBe(false);
+  });
+
+  it('returns redacted group metadata instead of raw quiz data', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'rec-id',
+            status: 'completed',
+            stage: 'complete',
+            error: null,
+            used_broader_search: false,
+            db_movie_count: 12,
+            quiz_data: [
+              {
+                name: 'Alex',
+                favoriteMovie: 'Arrival',
+                newVsClassic: 'New',
+                moodPreference: ['Drama', 'Sci-Fi'],
+                tonePreference: 'Balanced',
+                favoriteActor: 'Amy Adams',
+              },
+              {
+                name: 'Sam',
+                favoriteMovie: 'Paddington 2',
+                newVsClassic: 'Both new and classic',
+                moodPreference: ['Comedy', 'Drama'],
+                tonePreference: 'Light and fun',
+                favoriteActor: 'Amy Adams',
+              },
+            ],
+            more_picks_status: null,
+            user_id: 'owner-1',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await getRecommendationWithMovies('slug-123', 'viewer-1');
+
+    expect(result?.peopleCount).toBe(2);
+    expect(result?.viewerCanRate).toBe(false);
+    expect(result?.isSharedResult).toBe(true);
+    expect(result?.hasActorSignal).toBe(true);
+    expect(result?.groupInsights).toEqual(
+      expect.objectContaining({
+        participantNames: ['Alex', 'Sam'],
+        sharedMoods: ['Drama'],
+        favoriteActors: ['Amy Adams'],
+      }),
+    );
+    expect(result).not.toHaveProperty('quizData');
   });
 });

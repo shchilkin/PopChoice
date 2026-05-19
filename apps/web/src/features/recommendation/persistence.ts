@@ -2,26 +2,40 @@ import {
   createRecommendation,
   getRecommendationWithMovies,
   insertRecommendationMovies,
+  updateRecommendationStage,
   updateRecommendationStatus,
 } from '@/lib/db/recommendations';
 
 import type { ApiResponse, RecommendationRequestBody } from './types';
-import type { MovieRowToInsert, RecommendationWithMovies } from '@/lib/db/recommendations';
+import type {
+  MovieRowToInsert,
+  RecommendationStage,
+  RecommendationWithMovies,
+} from '@/lib/db/recommendations';
 
 export async function createRecommendationRecord(
   quizData: RecommendationRequestBody,
+  userId?: string,
 ): Promise<{ id: string; slug: string }> {
-  return createRecommendation(quizData);
+  return createRecommendation(quizData, userId);
 }
 
 export async function getRecommendationRecord(
   slug: string,
+  viewerUserId?: string,
 ): Promise<RecommendationWithMovies | null> {
-  return getRecommendationWithMovies(slug);
+  return getRecommendationWithMovies(slug, viewerUserId);
 }
 
 export async function markRecommendationProcessing(recommendationId: string): Promise<void> {
   await updateRecommendationStatus(recommendationId, 'processing');
+}
+
+export async function markRecommendationStage(
+  recommendationId: string,
+  stage: RecommendationStage,
+): Promise<void> {
+  await updateRecommendationStage(recommendationId, stage);
 }
 
 export async function completeRecommendationRecord(
@@ -51,6 +65,7 @@ export async function failRecommendationRecord(
 function toMovieRows(result: ApiResponse): MovieRowToInsert[] {
   return (result.similarMovies ?? []).map((movie) => ({
     id: movie.id,
+    tmdbId: movie.tmdbId ?? null,
     name: movie.name,
     year: movie.year,
     similarity: movie.similarity,

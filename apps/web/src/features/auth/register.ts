@@ -19,7 +19,7 @@ export class RegisterUserError extends Error {
   }
 }
 
-export async function registerUser(input: z.infer<typeof registerSchema>): Promise<void> {
+export async function registerUser(input: z.infer<typeof registerSchema>): Promise<string> {
   const normalizedEmail = input.email.toLowerCase().trim();
 
   const db = getDbClient();
@@ -43,5 +43,11 @@ export async function registerUser(input: z.infer<typeof registerSchema>): Promi
   }
 
   const userId = (result.data?.[0] as { id?: unknown })?.id;
+  if (!userId) {
+    logger.error('User insert did not return an id');
+    throw new RegisterUserError('Failed to insert user', 503, { error: 'Service unavailable.' });
+  }
+
   logger.info({ userId }, 'New user registered');
+  return String(userId);
 }

@@ -3,6 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
+import { PARTICIPANT_NAME_MAX_LENGTH } from '@/features/recommendation/limits';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
@@ -15,6 +16,9 @@ interface GroupSetupProps {
 
 export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: GroupSetupProps) {
   const { t } = useLanguage();
+  const namedPeople = groupNames.map((name) => name.trim()).filter(Boolean);
+  const namedPeopleCount = namedPeople.length;
+  const canStart = namedPeopleCount >= 2;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
@@ -41,6 +45,17 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           <p style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', marginTop: 6 }}>
             {t.quiz.groupSetup.subtitle}
           </p>
+          <p
+            className="mt-4 inline-flex rounded-full px-3 py-1 text-xs"
+            style={{
+              background: 'var(--pc-gold-wash)',
+              border: '1px solid var(--pc-gold-bd)',
+              color: 'var(--pc-gold-text)',
+              fontWeight: 700,
+            }}
+          >
+            {t.quiz.groupSetup.countLabel.replace('{count}', String(namedPeopleCount))}
+          </p>
         </div>
 
         <div className="flex flex-col gap-3 mb-6">
@@ -58,6 +73,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               </div>
               <input
                 value={name}
+                maxLength={PARTICIPANT_NAME_MAX_LENGTH}
                 onChange={(e) =>
                   onGroupNamesChange(groupNames.map((n, j) => (j === i ? e.target.value : n)))
                 }
@@ -118,6 +134,49 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           </button>
         )}
 
+        {namedPeople.length > 0 && (
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p
+                style={{
+                  color: 'var(--pc-t3)',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {t.quiz.groupSetup.orderTitle}
+              </p>
+              <p style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>
+                {t.quiz.groupSetup.orderHint}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {namedPeople.map((name, index) => (
+                <span
+                  key={`${name}-${index}`}
+                  className="rounded-full px-3 py-1 text-xs"
+                  style={{
+                    background: index === 0 ? 'var(--pc-gold-wash)' : 'var(--pc-ghost)',
+                    border: index === 0 ? '1px solid var(--pc-gold-bd)' : '1px solid var(--pc-bd2)',
+                    color: index === 0 ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+                    fontWeight: 700,
+                  }}
+                >
+                  {index + 1}. {name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!canStart && (
+          <p className="mb-4 text-center text-xs" style={{ color: 'var(--pc-t4)' }}>
+            {t.quiz.groupSetup.twoNamesHint}
+          </p>
+        )}
+
         <div className="flex gap-3">
           <button
             onClick={onBack}
@@ -132,11 +191,14 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           </button>
           <button
             onClick={onStart}
+            disabled={!canStart}
             className="flex-1 py-3 rounded-xl text-sm transition-all duration-200"
             style={{
               background: 'var(--pc-cta)',
               color: 'var(--pc-cta-text)',
               fontWeight: 700,
+              opacity: canStart ? 1 : 0.5,
+              cursor: canStart ? 'pointer' : 'not-allowed',
             }}
           >
             {t.quiz.groupSetup.letsGo}

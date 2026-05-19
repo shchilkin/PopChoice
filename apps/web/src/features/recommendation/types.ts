@@ -1,10 +1,20 @@
 import z from 'zod';
 
+import { PARTICIPANT_NAME_MAX_LENGTH } from './limits';
+
 // ---------------------------------------------------------------------------
 // Request validation schemas
 // ---------------------------------------------------------------------------
 
 export const personFormDataSchema = z.object({
+  name: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z
+      .string()
+      .trim()
+      .max(PARTICIPANT_NAME_MAX_LENGTH, 'Name must be 80 characters or fewer')
+      .optional(),
+  ),
   favoriteMovie: z
     .string()
     .trim()
@@ -34,6 +44,10 @@ export const personFormDataSchema = z.object({
     .trim()
     .min(1, 'Tone preference is required')
     .max(100, 'Tone preference must be 100 characters or fewer'),
+  favoriteActor: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().trim().max(100, 'Favorite actor must be 100 characters or fewer').optional(),
+  ),
 });
 
 export const requestBodySchema = z.union([
@@ -87,6 +101,7 @@ export const apiResponseSchema = z.object({
     .array(
       z.object({
         id: z.number(),
+        tmdbId: z.number().nullable().optional(),
         name: z.string(),
         year: z.number(),
         similarity: z.number(),
@@ -124,6 +139,7 @@ export type EnhancedMovieMatch = {
   duration: number;
   score_rating: number;
   year: number;
+  tmdbId?: number | null;
   similarity: number;
   content: string;
   /** Pre-populated poster URL, e.g. from TMDB discover response — skips re-lookup if set. */

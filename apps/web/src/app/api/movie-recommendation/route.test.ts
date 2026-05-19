@@ -9,16 +9,17 @@ vi.mock('@/lib/rateLimit', () => ({
 // Mock moderation — defaults to safe; overridden per test as needed.
 // checkForPromptInjection is a pure function, so we expose a controllable mock.
 const mockModerateInput = vi.fn<
-  () => Promise<{ flagged: false } | { flagged: true; categories: string[] }>
+  (texts: string[]) => Promise<{ flagged: false } | { flagged: true; categories: string[] }>
 >(() => Promise.resolve({ flagged: false }));
 const mockCheckForPromptInjection = vi.fn<(text: string) => boolean>(() => false);
-const mockJudgeForMoviePlatform = vi.fn<() => Promise<{ suitable: boolean }>>(() =>
-  Promise.resolve({ suitable: true }),
-);
+const mockJudgeForMoviePlatform = vi.fn<
+  (inputs: { field: string; value: string }[]) => Promise<{ suitable: boolean }>
+>(() => Promise.resolve({ suitable: true }));
 vi.mock('@/utils/ai/moderation', () => ({
-  moderateInput: () => mockModerateInput(),
+  moderateInput: (texts: string[]) => mockModerateInput(texts),
   checkForPromptInjection: (text: string) => mockCheckForPromptInjection(text),
-  judgeForMoviePlatform: () => mockJudgeForMoviePlatform(),
+  judgeForMoviePlatform: (inputs: { field: string; value: string }[]) =>
+    mockJudgeForMoviePlatform(inputs),
   ALWAYS_BLOCK_CATEGORIES: new Set(['sexual/minors', 'self-harm/instructions']),
 }));
 
@@ -176,6 +177,20 @@ describe('POST /api/movie-recommendation — moderation', () => {
     expect(data).toHaveProperty('error');
     // Injection response intentionally omits flaggedCategories (no moderation API call made)
     expect(data).not.toHaveProperty('flaggedCategories');
+  });
+
+  it('checks participant names for prompt injection and moderation', async () => {
+    const body = [
+      { ...validBody, name: 'Alex' },
+      { ...validBody, name: 'Sam' },
+    ];
+
+    const response = await POST(makeRequest(body));
+
+    expect(response.status).not.toBe(422);
+    expect(mockCheckForPromptInjection).toHaveBeenCalledWith('Alex');
+    expect(mockCheckForPromptInjection).toHaveBeenCalledWith('Sam');
+    expect(mockModerateInput).toHaveBeenCalledWith(expect.arrayContaining(['Alex', 'Sam']));
   });
 
   it('returns 400 when request body is invalid', async () => {
@@ -483,6 +498,97 @@ describe('POST /api/movie-recommendation — query enrichment', () => {
           }),
         }),
       );
+    });
+
+    it('passes group viewer preferences into the final recommendation call', async () => {
+      const req = makeRequest([
+        { ...validPerson, name: 'Alex', favoriteMovie: 'Arrival' },
+        { ...validPerson, name: 'Sam', favoriteMovie: 'Paddington 2', tonePreference: 'light' },
+      ]);
+
+      const res = await POST(req);
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const recommendationCall = calls.find((callArgs) => callArgs[0].response_format);
+      expect(recommendationCall).toBeDefined();
+
+      const userMessage = recommendationCall?.[0].messages.find(
+        (message) => message.role === 'user',
+      );
+      expect(userMessage?.content).toContain('Available movie context');
+      expect(userMessage?.content).toContain('Viewer preferences');
+      expect(userMessage?.content).toContain('Group of 2 people preferences');
+      expect(userMessage?.content).toContain('Alex');
+      expect(userMessage?.content).toContain('Sam');
+      expect(userMessage?.content).toContain('Paddington 2');
+      expect(userMessage?.content).not.toContain('name: Alex');
+      expect(userMessage?.content).not.toContain('name: Sam');
+    });
+
+    it('uses favorite movies as taste signals but excludes them from recommendation candidates', async () => {
+      const { getDbClient } = vi.mocked(await import('@/clients/dbClient'));
+      (getDbClient as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce({
+          isConfigured: vi.fn().mockReturnValue(true),
+          from: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue({ count: 2, error: null }),
+          }),
+        })
+        .mockReturnValueOnce({
+          rpc: vi.fn().mockResolvedValue({
+            data: [
+              {
+                id: 1,
+                name: 'The Dark Knight',
+                age_rating: 'PG-13',
+                description: 'A masked hero faces chaos.',
+                duration: 152,
+                score_rating: 9,
+                year: 2008,
+                similarity: 0.98,
+                content: 'The Dark Knight (2008) — A masked hero faces chaos.',
+              },
+              {
+                id: 2,
+                name: 'Heat',
+                age_rating: 'R',
+                description: 'A tense crime drama about cops and robbers.',
+                duration: 170,
+                score_rating: 8.3,
+                year: 1995,
+                similarity: 0.9,
+                content: 'Heat (1995) — A tense crime drama about cops and robbers.',
+              },
+            ],
+            error: null,
+          }),
+        });
+      mockChatCompletionsCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ title: 'Heat', description: 'A strong fit.' }),
+            },
+          },
+        ],
+      });
+
+      const res = await POST(makeRequest(validBody));
+      expect(res.status).not.toBe(500);
+
+      const calls = mockChatCompletionsCreate.mock.calls as unknown as [ChatCompletionCallArg][];
+      const recommendationCall = calls.find((callArgs) => callArgs[0].response_format);
+      const userMessage = recommendationCall?.[0].messages.find(
+        (message) => message.role === 'user',
+      );
+      const [candidateContext, viewerPreferences] = String(userMessage?.content ?? '').split(
+        'Viewer preferences:',
+      );
+
+      expect(candidateContext).toContain('Heat');
+      expect(candidateContext).not.toContain('The Dark Knight');
+      expect(viewerPreferences).toContain('The Dark Knight');
     });
 
     it('calls chat.completions.create with the enrichment system prompt when favoriteMovieWhy is provided', async () => {

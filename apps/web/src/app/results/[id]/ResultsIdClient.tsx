@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useMemo } from 'react';
 
-import { useRecommendation } from '@/hooks/useRecommendation';
+import { RecommendationFetchError, useRecommendation } from '@/hooks/useRecommendation';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { type MovieRecommendation } from '@/utils/client';
 
 import { RecommendationResultsView } from './RecommendationResultsView';
@@ -15,7 +16,7 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   const router = useRouter();
   const id = typeof routeParams.id === 'string' ? routeParams.id : '';
 
-  const { data, isError, refetch, morePicksTimedOut } = useRecommendation(id);
+  const { data, error, isError, refetch, morePicksTimedOut } = useRecommendation(id);
 
   // Derive movies from the completed poll response — no secondary fetch needed because
   // poster URLs are fetched during the BullMQ job and stored in recommendation_movies.
@@ -37,6 +38,9 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
     }));
   }, [data]);
 
+  const peopleCount = data?.peopleCount ?? 1;
+  const groupInsights = data?.groupInsights ?? null;
+
   useEffect(() => {
     if (!id) {
       router.replace('/quiz');
@@ -44,15 +48,26 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
   }, [id, router]);
 
   const status = data?.status;
+  const stage = data?.stage;
 
   if (!id) return null;
 
-  if (isError || status === 'failed') {
-    return <ResultsErrorState onRetry={() => router.push('/quiz')} />;
+  if (isError) {
+    const variant =
+      error instanceof RecommendationFetchError && error.status === 404 ? 'missing' : 'failed';
+    return <ResultsErrorState variant={variant} onRetry={navigateToFreshQuiz} />;
   }
 
-  if (!data || status === 'pending' || status === 'processing' || movies.length === 0) {
-    return <ResultsLoadingState status={status} />;
+  if (status === 'failed') {
+    return <ResultsErrorState variant="failed" onRetry={navigateToFreshQuiz} />;
+  }
+
+  if (!data || status === 'pending' || status === 'processing') {
+    return <ResultsLoadingState status={status} stage={stage} />;
+  }
+
+  if (movies.length === 0) {
+    return <ResultsErrorState variant="empty" onRetry={navigateToFreshQuiz} />;
   }
 
   return (
@@ -60,9 +75,14 @@ export function ResultsIdClient({ params }: { params: Promise<{ id: string }> })
       movies={movies}
       usedBroaderSearch={data.usedBroaderSearch ?? false}
       dbMovieCount={data.dbMovieCount}
+      peopleCount={peopleCount}
+      hasActorSignal={data.hasActorSignal ?? false}
+      groupInsights={groupInsights}
       recommendationSlug={id}
       morePicksStatus={data.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}
+      viewerCanRate={data.viewerCanRate ?? false}
+      isSharedResult={data.isSharedResult ?? false}
       onMorePicksRequested={refetch}
     />
   );

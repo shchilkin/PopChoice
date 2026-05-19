@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Breadcrumbs, TMDBAttribution } from '@/components';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
 import { FAQSection } from './components/FAQSection';
@@ -151,6 +152,10 @@ export default function AboutPage() {
         </p>
         <Link
           href="/quiz"
+          onClick={(event) => {
+            event.preventDefault();
+            navigateToFreshQuiz();
+          }}
           className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl transition-all duration-200 hover:opacity-90 active:scale-95"
           style={{
             background: 'var(--pc-cta)',

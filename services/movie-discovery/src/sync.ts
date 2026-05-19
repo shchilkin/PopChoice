@@ -164,6 +164,9 @@ export async function runSync(config: Config): Promise<void> {
       description: basic.overview || 'No description available.',
       duration: runtime,
       score_rating: basic.vote_average,
+      tmdb_id: basic.id,
+      tmdb_match_confidence: 1,
+      tmdb_match_source: 'tmdb_discovery',
     };
 
     finalPartialRecords.push(record);

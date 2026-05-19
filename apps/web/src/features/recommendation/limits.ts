@@ -1,0 +1,1 @@
+export const PARTICIPANT_NAME_MAX_LENGTH = 80;

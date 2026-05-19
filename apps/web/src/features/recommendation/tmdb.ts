@@ -261,6 +261,7 @@ function tmdbMovieToEnhancedMatch(
 
   return {
     id: -movie.id, // Negative ID distinguishes TMDB-sourced movies from local DB rows (positive bigserial IDs)
+    tmdbId: movie.id,
     name: movie.title,
     age_rating: 'NR',
     description: movie.overview || '',
@@ -400,6 +401,7 @@ export async function seedMovies(
       }
 
       const { error: insertError } = await db.from('movies').insert({
+        tmdb_id: movie.id,
         name: movie.title,
         year,
         age_rating: 'NR',

@@ -46,10 +46,18 @@ export function withAuth(handler: RouteHandler) {
       }
     }
 
-    // 2. Prefer API key auth for external/service callers.
-    const clientId = await validateApiKey(req);
-    if (clientId !== null) {
-      return handler(req, clientId);
+    const hasApiKeyCredential = Boolean(
+      req.headers.get('authorization') || req.headers.get('x-api-key'),
+    );
+    const shouldUseDevAuthBypass =
+      process.env.NODE_ENV !== 'production' && !process.env.VALID_API_KEYS;
+
+    // 2. Prefer API key auth for external/service callers when a key is actually supplied.
+    if (hasApiKeyCredential || shouldUseDevAuthBypass) {
+      const clientId = await validateApiKey(req);
+      if (clientId !== null) {
+        return handler(req, clientId);
+      }
     }
 
     // 3. Same-origin browser fallback with a valid CSRF pair.

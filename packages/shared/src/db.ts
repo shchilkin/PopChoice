@@ -11,6 +11,9 @@ export interface MovieRecord {
   description: string;
   duration: number;
   score_rating: number;
+  tmdb_id?: number | null;
+  tmdb_match_confidence?: number | null;
+  tmdb_match_source?: 'tmdb_discovery' | 'backfill_auto' | 'manual' | null;
   embedding: number[];
 }
 
@@ -111,12 +114,43 @@ export async function ensureSchema(): Promise<void> {
       duration integer NOT NULL,
       score_rating float NOT NULL,
       year int NOT NULL,
+      tmdb_id bigint,
+      tmdb_match_confidence float,
+      tmdb_match_source text,
+      tmdb_matched_at timestamptz,
       embedding vector(3072),
       UNIQUE(name, year)
     );
   `);
 
   await getPool().query(`
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS tmdb_id bigint;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS tmdb_match_confidence float;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS tmdb_match_source text;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS tmdb_matched_at timestamptz;
+
+    ALTER TABLE movies
+      DROP CONSTRAINT IF EXISTS movies_tmdb_match_source_check;
+
+    ALTER TABLE movies
+      ADD CONSTRAINT movies_tmdb_match_source_check
+      CHECK (tmdb_match_source IS NULL OR tmdb_match_source IN ('tmdb_discovery', 'backfill_auto', 'manual'));
+
+    CREATE UNIQUE INDEX IF NOT EXISTS movies_tmdb_id_unique
+      ON movies (tmdb_id)
+      WHERE tmdb_id IS NOT NULL;
+  `);
+
+  await getPool().query(`
+    DROP FUNCTION IF EXISTS match_movies(vector, float, int);
+
     CREATE OR REPLACE FUNCTION match_movies (
       query_embedding vector(3072),
       match_threshold float DEFAULT 0.1,
@@ -130,6 +164,7 @@ export async function ensureSchema(): Promise<void> {
       duration integer,
       score_rating float,
       year int,
+      tmdb_id bigint,
       similarity float,
       content text
     )
@@ -142,6 +177,7 @@ export async function ensureSchema(): Promise<void> {
         movies.duration,
         movies.score_rating,
         movies.year,
+        movies.tmdb_id,
         1 - (movies.embedding <=> query_embedding) AS similarity,
         format(
           '%s (%s) | %s | Duration: %s min | Rating: %s/10%s%s',
@@ -182,10 +218,15 @@ export async function insertMovies(
 
     try {
       const result = await getPool().query<{ id: number }>(
-        `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
-         SELECT n, y, ar, d, du, sr, e::vector
-         FROM unnest($1::text[], $2::int[], $3::text[], $4::text[], $5::int[], $6::float8[], $7::text[])
-           AS t(n, y, ar, d, du, sr, e)
+        `INSERT INTO movies (
+           name, year, age_rating, description, duration, score_rating,
+           tmdb_id, tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
+         )
+         SELECT n, y, ar, d, du, sr, tid, conf, src, CASE WHEN tid IS NULL THEN NULL ELSE now() END, e::vector
+         FROM unnest(
+           $1::text[], $2::int[], $3::text[], $4::text[], $5::int[], $6::float8[],
+           $7::bigint[], $8::float8[], $9::text[], $10::text[]
+         ) AS t(n, y, ar, d, du, sr, tid, conf, src, e)
          ON CONFLICT (name, year) DO NOTHING
          RETURNING id`,
         [
@@ -195,6 +236,9 @@ export async function insertMovies(
           batch.map((m) => m.description),
           batch.map((m) => m.duration),
           batch.map((m) => m.score_rating),
+          batch.map((m) => m.tmdb_id ?? null),
+          batch.map((m) => m.tmdb_match_confidence ?? null),
+          batch.map((m) => m.tmdb_match_source ?? null),
           batch.map((m) => JSON.stringify(m.embedding)),
         ],
       );
@@ -212,8 +256,11 @@ export async function insertMovies(
       for (const movie of batch) {
         try {
           const result = await getPool().query<{ id: number }>(
-            `INSERT INTO movies (name, year, age_rating, description, duration, score_rating, embedding)
-             VALUES ($1, $2, $3, $4, $5, $6, $7::vector)
+            `INSERT INTO movies (
+               name, year, age_rating, description, duration, score_rating,
+               tmdb_id, tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
+             )
+             VALUES ($1, $2, $3, $4, $5, $6, $7::bigint, $8::float8, $9::text, CASE WHEN $7 IS NULL THEN NULL ELSE now() END, $10::vector)
              ON CONFLICT (name, year) DO NOTHING
              RETURNING id`,
             [
@@ -223,6 +270,9 @@ export async function insertMovies(
               movie.description,
               movie.duration,
               movie.score_rating,
+              movie.tmdb_id ?? null,
+              movie.tmdb_match_confidence ?? null,
+              movie.tmdb_match_source ?? null,
               JSON.stringify(movie.embedding),
             ],
           );

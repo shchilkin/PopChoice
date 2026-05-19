@@ -16,6 +16,7 @@ RETURNS TABLE (
   duration integer,
   score_rating float,
   year int,
+  tmdb_id bigint,
   similarity float,
   content text
 )
@@ -23,7 +24,7 @@ LANGUAGE sql STABLE
 AS $$
   SELECT
     movies.id, movies.name, movies.age_rating, movies.description,
-    movies.duration, movies.score_rating, movies.year,
+    movies.duration, movies.score_rating, movies.year, movies.tmdb_id,
     1 - (movies.embedding <=> query_embedding) AS similarity,
     format(
       '%s (%s) | %s | Duration: %s min | Rating: %s/10%s%s',

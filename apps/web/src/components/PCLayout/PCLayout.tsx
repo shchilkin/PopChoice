@@ -19,6 +19,7 @@ import { Mascot } from '@/components/Mascot';
 import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 import { type Translations } from '@/i18n/locales/en';
+import { createFreshQuizHref } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
 type NavLink = {
@@ -160,6 +161,11 @@ function LayoutNavigation({
   const currentPath = pathname ?? '';
   const isLanding = currentPath === '/';
 
+  function startFreshQuiz() {
+    setMobileMenuOpen(false);
+    window.location.assign(createFreshQuizHref());
+  }
+
   useEffect(() => {
     startTransition(() => {
       setMobileMenuOpen(false);
@@ -211,6 +217,10 @@ function LayoutNavigation({
         {!isLanding && (
           <Link
             href="/quiz"
+            onClick={(event) => {
+              event.preventDefault();
+              startFreshQuiz();
+            }}
             className="ml-1 px-3 py-2 rounded-xl text-sm"
             style={{
               background: 'var(--pc-cta)',
@@ -298,7 +308,10 @@ function LayoutNavigation({
             {!isLanding && (
               <Link
                 href="/quiz"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  startFreshQuiz();
+                }}
                 className="flex-1 text-center px-3 py-2.5 rounded-xl text-sm"
                 style={{
                   background: 'var(--pc-cta)',
@@ -327,7 +340,7 @@ export function PCLayout({ children }: { children: ReactNode }) {
     { href: '/available-movies', label: t.nav.availableMovies },
     { href: '/design-system', label: t.nav.styleGuide },
     ...(isAuthenticated
-      ? []
+      ? [{ href: '/account', label: t.nav.account }]
       : [
           { href: '/login', label: t.nav.logIn },
           { href: '/register', label: t.nav.signUp },

@@ -34,3 +34,42 @@ Cinematic, Confident, Playful. The "Cinematic Concierge" — culturally aware, o
 ## Accessibility & Inclusion
 
 WCAG AA compliance. Standard good practices: sufficient color contrast, keyboard navigation, reduced-motion support via `prefers-reduced-motion`. No specialized accommodations required beyond baseline.
+
+## Product Roadmap Notes
+
+Already implemented from this list:
+
+- Password recovery through the forgot/reset password flow.
+- Favorite/reference movies are used as taste signals but excluded from recommendation candidates.
+- Results can be shared through a stable recommendation URL.
+- Recommendation feedback is captured after results and stored alongside recommendation history.
+- Signed-in feedback is converted into durable movie memory for watched, liked, not-interested, and wrong-mood signals.
+- Account recommendation history is deduplicated by movie identity.
+
+- Continue improving account foundations:
+  - Profile basics: display name, avatar, and a clear account settings surface.
+  - Editable saved recommendations: let users add, remove, rename, annotate, or change saved items without leaving the account page.
+  - Magic-link login: let users sign in from an emailed one-time link without remembering a password.
+  - Social login: support trusted providers such as Google once the local auth flow is stable.
+- Loading states must be truthful and terminal. If recommendation polling hits authorization, missing-result, worker, or network failures, the UI should show an actionable error instead of returning to an earlier loading state or spinning indefinitely.
+- Add an account taste profile that becomes more useful over time:
+  - Make stored likes, dislikes, skipped films, watched films, and feedback inspectable and editable.
+  - When movie memory grows beyond a handful of titles, replace the simple card grid with search, filters by signal, and a denser list/table mode.
+  - Derive lightweight taste signals from completed quizzes, opened results, saved picks, more-picks requests, and rejected suggestions.
+  - Make the taste profile inspectable and editable, so users can correct PopChoice when it learns the wrong lesson.
+- Continue improving recommendation feedback:
+  - Use `liked` feedback as a positive ranking signal, not only as stored memory.
+  - Make feedback history visible enough for analytics/debugging without exposing internal metadata awkwardly in the product UI.
+  - Use feedback for richer personalized follow-up suggestions.
+- Revise the recommendation flow around learning:
+  - Add a "not this" or "seen it" action that reranks alternatives without forcing the user to retake the quiz.
+  - Make the transition from quiz to results resilient: one source of truth for pending, completed, failed, and retry states.
+  - Consider a Tinder-style discovery mode for logged-in users: quick swipe decisions that build taste without a full quiz.
+- Add watchlist and availability features:
+  - Let users request a movie that is missing from the catalog.
+  - Notify users when a requested movie is added or when a saved recommendation becomes available in the catalog.
+  - Keep notifications opt-in and useful: account email first, richer channels later only if users ask for them.
+- Explore achievements and light gamification:
+  - Achievements for trying group mode, rating recommendations, building a taste profile, exploring new genres, or watching older/classic films.
+  - Level/progress systems should reward useful participation, not empty clicks.
+  - Gamification must remain secondary to the core promise: quickly finding a movie worth watching.

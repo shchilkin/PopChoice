@@ -25,6 +25,7 @@ export async function getRecommendationInputBlock(
 ): Promise<RecommendationInputBlock | null> {
   const injectionDetected = allPeopleData.some(
     (person) =>
+      checkForPromptInjection(person.name ?? '') ||
       checkForPromptInjection(person.favoriteMovie) ||
       checkForPromptInjection(person.favoriteMovieWhy ?? ''),
   );
@@ -36,6 +37,7 @@ export async function getRecommendationInputBlock(
   const textsToModerate = allPeopleData.flatMap((person) =>
     [
       person.favoriteMovie,
+      person.name,
       person.newVsClassic,
       person.tonePreference,
       person.favoriteMovieWhy,
@@ -63,6 +65,7 @@ export async function getRecommendationInputBlock(
   }
 
   const labeledInputs = allPeopleData.flatMap((person) => [
+    ...(person.name ? [{ field: 'name', value: person.name }] : []),
     { field: 'favoriteMovie', value: person.favoriteMovie },
     { field: 'newVsClassic', value: person.newVsClassic },
     { field: 'tonePreference', value: person.tonePreference },

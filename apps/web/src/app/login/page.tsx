@@ -207,13 +207,22 @@ export default function LoginPage() {
 
           {/* Password */}
           <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="password"
-              className="text-sm font-medium"
-              style={{ color: 'var(--pc-t2)' }}
-            >
-              {l.passwordLabel}
-            </label>
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium"
+                style={{ color: 'var(--pc-t2)' }}
+              >
+                {l.passwordLabel}
+              </label>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium transition-colors duration-200"
+                style={{ color: 'var(--pc-gold-text)' }}
+              >
+                {l.forgotPassword}
+              </Link>
+            </div>
             <input
               id="password"
               type="password"

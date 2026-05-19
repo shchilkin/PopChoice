@@ -2,6 +2,7 @@ import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 
 import logger from '@/lib/logger';
+import { redisOptionsFromUrl } from '@/lib/redisConnection';
 
 import type { SerializableTMDBEmbeddings, TMDBDiscoverMovie } from '@/features/recommendation/tmdb';
 import type { PersonFormData } from '@/features/recommendation/types';
@@ -21,6 +22,7 @@ export type RecommendationJobData = {
   recommendationId: string;
   quizData: PersonFormData | PersonFormData[];
   locale: Locale;
+  userId?: string;
 };
 
 export type MorePicksJobData = {
@@ -51,9 +53,11 @@ export function createBullMQConnection(): IORedis | null {
   const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) return null;
 
-  bullMQConnection = new IORedis(redisUrl, {
-    maxRetriesPerRequest: null,
-  });
+  bullMQConnection = new IORedis(
+    redisOptionsFromUrl(redisUrl, {
+      maxRetriesPerRequest: null,
+    }),
+  );
 
   bullMQConnection.on('connect', () => {
     logger.info('BullMQ Redis client connected');

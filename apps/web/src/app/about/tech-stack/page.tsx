@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { Breadcrumbs } from '@/components';
 import { useLanguage } from '@/i18n';
+import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
 const GROUP_COLORS = [palette.gold, palette.purple, palette.teal, palette.amber] as const;
@@ -144,6 +145,10 @@ export default function TechStackPage() {
         </Link>
         <Link
           href="/quiz"
+          onClick={(event) => {
+            event.preventDefault();
+            navigateToFreshQuiz();
+          }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all duration-200 hover:opacity-90 active:scale-95"
           style={{
             background: 'var(--pc-cta)',

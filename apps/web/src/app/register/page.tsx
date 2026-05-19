@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 
+import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
@@ -22,6 +23,7 @@ interface FieldErrors {
 }
 
 export default function RegisterPage() {
+  const { refreshSession } = useAuth();
   const { t } = useLanguage();
   const r = t.register;
 
@@ -64,10 +66,12 @@ export default function RegisterPage() {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ email: form.email.trim(), password: form.password }),
       });
 
       if (res.status === 201) {
+        await refreshSession();
         setSuccess(true);
         return;
       }
