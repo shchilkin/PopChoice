@@ -123,6 +123,36 @@ EMAIL_REPLY_TO=support@your-domain.example
 the reset URL after a successful forgot-password request so the flow can be
 tested without sending real mail. In production, the URL is sent only by email.
 
+### Version and build metadata
+
+PopChoice exposes non-secret build metadata at:
+
+```txt
+/api/build
+```
+
+The browser console also installs a small helper:
+
+```js
+PopChoice.version;
+PopChoice.commit;
+await PopChoice.info();
+```
+
+Set these optional variables on the Coolify Compose resource:
+
+```env
+APP_VERSION=0.1.0-beta.0
+APP_CHANNEL=beta
+APP_COMMIT_SHA=<current git commit sha>
+APP_GIT_BRANCH=development
+```
+
+If your Coolify version can include the source commit in the build/deploy
+environment, enable that option and map the exposed commit value to
+`APP_COMMIT_SHA`. If it is not set, the app reports the commit as `unknown`
+instead of guessing.
+
 ## First deploy
 
 Deploy the stack from Coolify. The startup order is:
@@ -155,6 +185,8 @@ Run this checklist after production deploys and after any infrastructure change:
 
 - `https://your-domain.example` loads with a trusted certificate.
 - `https://your-domain.example/api/health` returns `200`.
+- `https://your-domain.example/api/build` shows the expected beta version and
+  commit hash.
 - A quiz submission creates and completes a recommendation.
 - Worker logs show Redis readiness and recommendation job completion.
 - The latest PostgreSQL backup exists in the configured backup destination.
