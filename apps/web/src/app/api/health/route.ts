@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import pg from 'pg';
 import { createClient } from 'redis';
 
+import { getBuildInfo } from '@/lib/buildInfo';
 import logger from '@/lib/logger';
 
 const { Pool } = pg;
@@ -15,6 +16,11 @@ type HealthResponse = {
   checks: {
     postgres: CheckStatus;
     redis: CheckStatus;
+  };
+  build: {
+    version: string;
+    channel: string;
+    commit: string | null;
   };
   timestamp: string;
 };
@@ -116,11 +122,17 @@ async function checkRedis(): Promise<CheckStatus> {
 async function getHealthResponse(): Promise<CachedHealthResponse> {
   const [postgres, redis] = await Promise.all([checkPostgres(), checkRedis()]);
   const status: CheckStatus = postgres === 'ok' && redis === 'ok' ? 'ok' : 'error';
+  const buildInfo = getBuildInfo();
   const body: HealthResponse = {
     status,
     checks: {
       postgres,
       redis,
+    },
+    build: {
+      version: buildInfo.version,
+      channel: buildInfo.channel,
+      commit: buildInfo.commitShortSha,
     },
     timestamp: new Date().toISOString(),
   };

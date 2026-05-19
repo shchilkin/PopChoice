@@ -1,0 +1,1 @@
+export { BuildInfoConsole } from './BuildInfoConsole';
