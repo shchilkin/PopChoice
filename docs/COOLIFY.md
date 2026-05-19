@@ -153,6 +153,12 @@ environment, enable that option and map the exposed commit value to
 `APP_COMMIT_SHA`. If it is not set, the app reports the commit as `unknown`
 instead of guessing.
 
+For Docker Compose deployments, also enable Coolify's
+**Include Source Commit in Build** option. The web image persists those
+non-secret build arguments as fallback metadata, so `/api/build` can still
+report the commit when Coolify does not pass source metadata as runtime
+environment variables.
+
 ## First deploy
 
 Deploy the stack from Coolify. The startup order is:
