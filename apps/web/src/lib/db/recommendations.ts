@@ -307,17 +307,14 @@ export async function getUserRecommendationFeedbackMoviePreferences(
        COALESCE(rm.tmdb_name, m.name) AS movie_name,
        COALESCE(rm.tmdb_year, m.year) AS movie_year
      FROM recommendations r
-     JOIN LATERAL (
-       SELECT *
-         FROM recommendation_movies
-        WHERE recommendation_id = r.id
-        ORDER BY is_main_recommendation DESC, position ASC
-        LIMIT 1
-     ) rm ON true
+     JOIN recommendation_movies rm ON rm.recommendation_id = r.id
      LEFT JOIN movies m ON m.id = rm.movie_id
      WHERE r.user_id = $1
        AND r.status = 'completed'
-     ORDER BY COALESCE(r.completed_at, r.created_at) DESC
+       AND COALESCE(rm.tmdb_name, m.name) IS NOT NULL
+     ORDER BY COALESCE(r.completed_at, r.created_at) DESC,
+              rm.is_main_recommendation DESC,
+              rm.position ASC
      LIMIT $2`,
     [userId, limit],
   );
