@@ -2,12 +2,35 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { getBuildInfo } from './buildInfo';
 
+const buildMetadataEnvKeys = [
+  'APP_VERSION',
+  'APP_CHANNEL',
+  'APP_COMMIT_SHA',
+  'SOURCE_COMMIT',
+  'GITHUB_SHA',
+  'VERCEL_GIT_COMMIT_SHA',
+  'APP_GIT_BRANCH',
+  'SOURCE_BRANCH',
+  'COOLIFY_BRANCH',
+  'GITHUB_REF_NAME',
+  'VERCEL_GIT_COMMIT_REF',
+  'COOLIFY_RESOURCE_UUID',
+  'NEXT_PUBLIC_BASE_URL',
+] as const;
+
+function clearBuildMetadataEnv() {
+  for (const key of buildMetadataEnvKeys) {
+    vi.stubEnv(key, '');
+  }
+}
+
 describe('getBuildInfo', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
   it('returns beta defaults without deployment metadata', () => {
+    clearBuildMetadataEnv();
     vi.stubEnv('NODE_ENV', 'production');
 
     const info = getBuildInfo(new Date('2026-05-19T12:00:00.000Z'));
@@ -25,6 +48,7 @@ describe('getBuildInfo', () => {
   });
 
   it('uses explicit app metadata and shortens commit hash', () => {
+    clearBuildMetadataEnv();
     vi.stubEnv('APP_VERSION', '0.2.0-beta.3');
     vi.stubEnv('APP_CHANNEL', 'beta');
     vi.stubEnv('APP_COMMIT_SHA', 'abcdef1234567890abcdef1234567890abcdef12');
@@ -44,6 +68,7 @@ describe('getBuildInfo', () => {
   });
 
   it('ignores invalid commit values instead of exposing arbitrary env content', () => {
+    clearBuildMetadataEnv();
     vi.stubEnv('APP_COMMIT_SHA', 'not a real commit; token=secret');
     vi.stubEnv('SOURCE_COMMIT', '1234567');
 
