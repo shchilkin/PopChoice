@@ -6,15 +6,24 @@ const buildMetadataEnvKeys = [
   'APP_VERSION',
   'APP_CHANNEL',
   'APP_COMMIT_SHA',
+  'BUILD_APP_COMMIT_SHA',
   'SOURCE_COMMIT',
+  'BUILD_SOURCE_COMMIT',
   'GITHUB_SHA',
+  'BUILD_GITHUB_SHA',
   'VERCEL_GIT_COMMIT_SHA',
+  'BUILD_VERCEL_GIT_COMMIT_SHA',
   'APP_GIT_BRANCH',
+  'BUILD_APP_GIT_BRANCH',
   'SOURCE_BRANCH',
+  'BUILD_SOURCE_BRANCH',
   'COOLIFY_BRANCH',
+  'BUILD_COOLIFY_BRANCH',
   'GITHUB_REF_NAME',
   'VERCEL_GIT_COMMIT_REF',
+  'BUILD_VERCEL_GIT_COMMIT_REF',
   'COOLIFY_RESOURCE_UUID',
+  'BUILD_COOLIFY_RESOURCE_UUID',
   'NEXT_PUBLIC_BASE_URL',
 ] as const;
 
@@ -76,5 +85,25 @@ describe('getBuildInfo', () => {
 
     expect(info.commitSha).toBe('1234567');
     expect(info.commitShortSha).toBe('1234567');
+  });
+
+  it('uses Dockerfile-baked build metadata when runtime metadata is blank', () => {
+    clearBuildMetadataEnv();
+    vi.stubEnv('APP_COMMIT_SHA', '');
+    vi.stubEnv('SOURCE_COMMIT', '');
+    vi.stubEnv('COOLIFY_BRANCH', '');
+    vi.stubEnv('COOLIFY_RESOURCE_UUID', '');
+    vi.stubEnv('BUILD_SOURCE_COMMIT', 'fedcba9876543210fedcba9876543210fedcba98');
+    vi.stubEnv('BUILD_COOLIFY_BRANCH', 'development');
+    vi.stubEnv('BUILD_COOLIFY_RESOURCE_UUID', 'ze0vvy05sc6qitaz0bjoikoj');
+
+    const info = getBuildInfo(new Date('2026-05-19T12:00:00.000Z'));
+
+    expect(info).toMatchObject({
+      commitSha: 'fedcba9876543210fedcba9876543210fedcba98',
+      commitShortSha: 'fedcba9',
+      branch: 'development',
+      resourceUuid: 'ze0vvy05sc6qitaz0bjoikoj',
+    });
   });
 });
