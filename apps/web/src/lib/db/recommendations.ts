@@ -538,8 +538,14 @@ export async function getRecommendationWithMovies(
 
   const rec = recResult.rows[0];
   if (!rec) return null;
-  const viewerCanRate = Boolean(viewerUserId && rec.user_id && rec.user_id === viewerUserId);
-  const isSharedResult = Boolean(rec.user_id && rec.user_id !== viewerUserId);
+  const ownerUserId = rec.user_id === null ? null : String(rec.user_id);
+  const normalizedViewerUserId = viewerUserId === undefined ? null : String(viewerUserId);
+  const viewerCanRate = Boolean(
+    normalizedViewerUserId && ownerUserId && ownerUserId === normalizedViewerUserId,
+  );
+  const isSharedResult = Boolean(
+    ownerUserId && (!normalizedViewerUserId || ownerUserId !== normalizedViewerUserId),
+  );
   const peopleCount = getQuizPeopleCount(rec.quiz_data);
   const hasActorSignal = hasFavoriteActorSignal(rec.quiz_data);
   const groupInsights = buildGroupResultInsights(rec.quiz_data);

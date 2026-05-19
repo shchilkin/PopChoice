@@ -807,6 +807,31 @@ describe('getRecommendationWithMovies', () => {
     expect(result?.isSharedResult).toBe(false);
   });
 
+  it('treats numeric database user ids as owned by the matching signed-in viewer', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'rec-id',
+            status: 'completed',
+            stage: 'complete',
+            error: null,
+            used_broader_search: false,
+            db_movie_count: 12,
+            quiz_data: null,
+            more_picks_status: null,
+            user_id: 42,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await getRecommendationWithMovies('slug-123', '42');
+
+    expect(result?.viewerCanRate).toBe(true);
+    expect(result?.isSharedResult).toBe(false);
+  });
+
   it('returns redacted group metadata instead of raw quiz data', async () => {
     mockQuery
       .mockResolvedValueOnce({
