@@ -13,6 +13,8 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 - 🎬 **AI-Powered Recommendations** - Uses OpenAI embeddings for semantic movie matching
 - 📊 **Interactive Questionnaire** - Collects user preferences through engaging questions
 - 🔍 **Vector Search** - Lightning-fast similarity search with pgvector
+- 🧠 **Account Movie Memory** - Signed-in users can mark watched/not-seen movies and improve future picks
+- 🔄 **Async Recommendation Jobs** - Persisted recommendation requests run through BullMQ workers with progress polling
 - 📱 **Responsive Design** - Works seamlessly on desktop and mobile
 - 🧪 **Component Library** - Built with Storybook for consistent UI components
 
@@ -168,6 +170,7 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
 - **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
+- **[Agent Guide](./AGENTS.md)** — Repo-specific guidance for AI/code agents working in this workspace
 - **[Architecture Boundaries](./docs/BOUNDARIES.md)** — Ownership rules for app, domain, infrastructure, and shared modules
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
@@ -184,11 +187,12 @@ apps/
 │       ├── app/           # Next.js app routes, pages, and HTTP boundaries
 │       ├── clients/       # Infrastructure client wrappers (DB, OpenAI, pg)
 │       ├── components/    # Reusable React components
+│       ├── features/      # Feature-owned orchestration (auth, movies, recommendation)
 │       ├── hooks/         # Custom React hooks
 │       ├── i18n/          # Internationalisation support
+│       ├── integrations/  # App-local external API wrappers such as TMDB
 │       ├── lib/           # Shared app-local infra helpers and adapters
 │       ├── mocks/         # MSW mock handlers
-│       ├── services/      # App-local service wrappers such as TMDB access
 │       ├── styles/        # Global styles
 │       └── utils/         # Reusable utilities and data helpers
 ├── bull-board/            # Queue monitoring app
@@ -215,7 +219,7 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 # Development
 npm run dev                         # Start development server (repo root)
 npm run build                       # Build for production (repo root)
-npm run start                       # Start production server (apps/web)
+npm run start --workspace=apps/web  # Start production server (apps/web)
 cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
 cd apps/web && npm run bull-board    # Launch BullMQ dashboard (apps/web)
 
@@ -236,9 +240,11 @@ npm run fix             # Fix all issues automatically
 # Database & Data
 npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
 npm run copy:env             # Sync root .env into apps/services workspaces
+npm run migrate:db           # Apply idempotent SQL migrations
 npm run populate-db          # Populate database with movie data
 npm run analyze-movies       # Analyze movie data for embeddings
 npm run calibrate-similarity # Calibrate vector similarity thresholds
+npm run test:services        # Run service test scripts via Turbo
 ```
 
 For detailed development workflows and project structure, see the **[Development Guide](./docs/DEVELOPMENT.md)**.
