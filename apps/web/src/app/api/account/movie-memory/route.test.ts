@@ -5,12 +5,14 @@ const {
   mockGetSessionFromRequest,
   mockAddUserMovieMemoryFromCatalog,
   mockDeleteUserMovieMemory,
+  mockGetMovieMemoryCandidatesForUser,
   mockSearchMovieCatalogForMemory,
   mockApplyRateLimit,
 } = vi.hoisted(() => ({
   mockGetSessionFromRequest: vi.fn(),
   mockAddUserMovieMemoryFromCatalog: vi.fn(),
   mockDeleteUserMovieMemory: vi.fn(),
+  mockGetMovieMemoryCandidatesForUser: vi.fn(),
   mockSearchMovieCatalogForMemory: vi.fn(),
   mockApplyRateLimit: vi.fn(),
 }));
@@ -22,6 +24,7 @@ vi.mock('@/lib/auth/session', () => ({
 vi.mock('@/lib/db/recommendations', () => ({
   addUserMovieMemoryFromCatalog: mockAddUserMovieMemoryFromCatalog,
   deleteUserMovieMemory: mockDeleteUserMovieMemory,
+  getMovieMemoryCandidatesForUser: mockGetMovieMemoryCandidatesForUser,
   searchMovieCatalogForMemory: mockSearchMovieCatalogForMemory,
 }));
 
@@ -70,9 +73,16 @@ function makeGetRequest(query = 'spirited') {
   );
 }
 
+function makeCandidatesRequest() {
+  return new NextRequest('http://localhost/api/account/movie-memory?mode=candidates', {
+    method: 'GET',
+  });
+}
+
 describe('GET /api/account/movie-memory', () => {
   beforeEach(() => {
     mockGetSessionFromRequest.mockReset();
+    mockGetMovieMemoryCandidatesForUser.mockReset();
     mockSearchMovieCatalogForMemory.mockReset();
     mockApplyRateLimit.mockReset();
     mockApplyRateLimit.mockResolvedValue(null);
@@ -84,6 +94,39 @@ describe('GET /api/account/movie-memory', () => {
     const response = await GET(makeGetRequest());
 
     expect(response.status).toBe(401);
+    expect(mockSearchMovieCatalogForMemory).not.toHaveBeenCalled();
+    expect(mockGetMovieMemoryCandidatesForUser).not.toHaveBeenCalled();
+  });
+
+  it('returns movie memory candidates for a signed-in user', async () => {
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockGetMovieMemoryCandidatesForUser.mockResolvedValueOnce([
+      {
+        id: 129,
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+      },
+    ]);
+
+    const response = await GET(makeCandidatesRequest());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      movies: [
+        {
+          id: 129,
+          tmdbId: 129,
+          movieName: 'Spirited Away',
+          movieYear: 2001,
+          posterURL: 'https://example.com/poster.jpg',
+          localizedName: 'Унесённые призраками',
+        },
+      ],
+    });
+    expect(mockGetMovieMemoryCandidatesForUser).toHaveBeenCalledWith('42', 20);
     expect(mockSearchMovieCatalogForMemory).not.toHaveBeenCalled();
   });
 
@@ -99,14 +142,30 @@ describe('GET /api/account/movie-memory', () => {
   it('returns catalog search results for a signed-in user', async () => {
     mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
     mockSearchMovieCatalogForMemory.mockResolvedValueOnce([
-      { id: 129, tmdbId: 129, movieName: 'Spirited Away', movieYear: 2001 },
+      {
+        id: 129,
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+      },
     ]);
 
     const response = await GET(makeGetRequest('spirited'));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      movies: [{ id: 129, tmdbId: 129, movieName: 'Spirited Away', movieYear: 2001 }],
+      movies: [
+        {
+          id: 129,
+          tmdbId: 129,
+          movieName: 'Spirited Away',
+          movieYear: 2001,
+          posterURL: 'https://example.com/poster.jpg',
+          localizedName: 'Унесённые призраками',
+        },
+      ],
     });
     expect(mockSearchMovieCatalogForMemory).toHaveBeenCalledWith('spirited');
   });
@@ -179,6 +238,38 @@ describe('POST /api/account/movie-memory', () => {
       },
     });
     expect(mockAddUserMovieMemoryFromCatalog).toHaveBeenCalledWith('42', 129, 'watched');
+  });
+
+  it('marks a catalog movie as not watched for the signed-in user', async () => {
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockAddUserMovieMemoryFromCatalog.mockResolvedValueOnce({
+      movieKey: 'tmdb:129',
+      tmdbId: 129,
+      movieName: 'Spirited Away',
+      movieYear: 2001,
+      posterURL: 'https://example.com/poster.jpg',
+      localizedName: 'Унесённые призраками',
+      kind: 'not_seen',
+      updatedAt: '2026-05-20T12:00:00.000Z',
+    });
+
+    const response = await POST(makePostRequest({ movieId: 129, kind: 'not_seen' }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: 'saved',
+      item: {
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        kind: 'not_seen',
+        updatedAt: '2026-05-20T12:00:00.000Z',
+      },
+    });
+    expect(mockAddUserMovieMemoryFromCatalog).toHaveBeenCalledWith('42', 129, 'not_seen');
   });
 
   it('returns 404 when the catalog movie is absent', async () => {

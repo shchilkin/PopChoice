@@ -9,7 +9,6 @@ import {
   Film,
   Frown,
   Heart,
-  Plus,
   Search,
   Sparkles,
   Trash2,
@@ -47,7 +46,7 @@ type RecommendationSummary = {
   feedbackKind: RecommendationFeedbackKind | null;
 };
 
-type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
+type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood' | 'not_seen';
 
 type MovieMemorySummary = {
   movieKey: string;
@@ -58,13 +57,6 @@ type MovieMemorySummary = {
   localizedName: string | null;
   kind: UserMovieInteractionKind;
   updatedAt: string;
-};
-
-type MovieMemoryCatalogSearchResult = {
-  id: number;
-  tmdbId: number | null;
-  movieName: string;
-  movieYear: number | null;
 };
 
 type AccountResponse = {
@@ -82,13 +74,6 @@ type MemoryActionState =
   | { status: 'forgetting'; movieKey: string }
   | { status: 'error'; movieKey: string }
   | null;
-
-type MovieMemoryCatalogSearchState =
-  | { status: 'idle' }
-  | { status: 'searching' }
-  | { status: 'loaded'; results: MovieMemoryCatalogSearchResult[] }
-  | { status: 'adding'; movieId: number; results: MovieMemoryCatalogSearchResult[] }
-  | { status: 'error'; reason: 'search' | 'add' };
 
 type RecommendationFilter =
   | 'all'
@@ -113,6 +98,7 @@ const MOVIE_MEMORY_FILTERS: MovieMemoryFilter[] = [
   'all',
   'watched',
   'liked',
+  'not_seen',
   'not_interested',
   'wrong_mood',
 ];
@@ -127,10 +113,6 @@ export default function AccountPage() {
   const [recommendationFilter, setRecommendationFilter] = useState<RecommendationFilter>('all');
   const [memoryQuery, setMemoryQuery] = useState('');
   const [memoryFilter, setMemoryFilter] = useState<MovieMemoryFilter>('all');
-  const [memoryCatalogQuery, setMemoryCatalogQuery] = useState('');
-  const [memoryCatalogSearch, setMemoryCatalogSearch] = useState<MovieMemoryCatalogSearchState>({
-    status: 'idle',
-  });
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
@@ -311,88 +293,6 @@ export default function AccountPage() {
     }
   }
 
-  async function handleSearchMovieCatalog() {
-    const query = memoryCatalogQuery.trim();
-    if (query.length < 2) {
-      setMemoryCatalogSearch({ status: 'loaded', results: [] });
-      return;
-    }
-
-    setMemoryCatalogSearch({ status: 'searching' });
-
-    try {
-      const response = await fetch(`/api/account/movie-memory?query=${encodeURIComponent(query)}`, {
-        method: 'GET',
-        cache: 'no-store',
-        credentials: 'same-origin',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to search movie catalog');
-      }
-
-      const data = (await response.json()) as { movies?: MovieMemoryCatalogSearchResult[] };
-      setMemoryCatalogSearch({
-        status: 'loaded',
-        results: Array.isArray(data.movies) ? data.movies : [],
-      });
-    } catch {
-      setMemoryCatalogSearch({ status: 'error', reason: 'search' });
-    }
-  }
-
-  async function handleAddWatchedMovie(movieId: number) {
-    const previousResults =
-      memoryCatalogSearch.status === 'loaded' || memoryCatalogSearch.status === 'adding'
-        ? memoryCatalogSearch.results
-        : [];
-    setMemoryCatalogSearch({ status: 'adding', movieId, results: previousResults });
-
-    try {
-      const response = await fetch('/api/account/movie-memory', {
-        method: 'POST',
-        cache: 'no-store',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': getCsrfToken(),
-        },
-        body: JSON.stringify({ movieId }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save movie memory item');
-      }
-
-      const data = (await response.json()) as { item?: MovieMemorySummary };
-      const savedItem = data.item;
-      if (!savedItem) {
-        throw new Error('Missing movie memory item');
-      }
-
-      setState((current) =>
-        current.status === 'loaded'
-          ? {
-              status: 'loaded',
-              data: {
-                ...current.data,
-                movieMemory: [
-                  savedItem,
-                  ...current.data.movieMemory.filter(
-                    (item) => item.movieKey !== savedItem.movieKey,
-                  ),
-                ],
-              },
-            }
-          : current,
-      );
-      setMemoryCatalogQuery('');
-      setMemoryCatalogSearch({ status: 'idle' });
-    } catch {
-      setMemoryCatalogSearch({ status: 'error', reason: 'add' });
-    }
-  }
-
   const { user, recommendations, movieMemory } = state.data;
   const filteredRecommendations = filterRecommendations(
     recommendations,
@@ -561,11 +461,6 @@ export default function AccountPage() {
             setMemoryQuery('');
             setMemoryFilter('all');
           }}
-          catalogSearchValue={memoryCatalogQuery}
-          catalogSearch={memoryCatalogSearch}
-          onCatalogSearchChange={setMemoryCatalogQuery}
-          onCatalogSearch={handleSearchMovieCatalog}
-          onAddWatchedMovie={handleAddWatchedMovie}
           onForget={handleForgetMovie}
         />
       </motion.section>
@@ -851,14 +746,9 @@ function MovieMemorySection({
   searchValue,
   selectedFilter,
   hasActiveFilters,
-  catalogSearchValue,
-  catalogSearch,
   onSearchChange,
   onFilterChange,
   onClearFilters,
-  onCatalogSearchChange,
-  onCatalogSearch,
-  onAddWatchedMovie,
   onForget,
 }: {
   items: MovieMemorySummary[];
@@ -869,14 +759,9 @@ function MovieMemorySection({
   searchValue: string;
   selectedFilter: MovieMemoryFilter;
   hasActiveFilters: boolean;
-  catalogSearchValue: string;
-  catalogSearch: MovieMemoryCatalogSearchState;
   onSearchChange: (value: string) => void;
   onFilterChange: (value: string) => void;
   onClearFilters: () => void;
-  onCatalogSearchChange: (value: string) => void;
-  onCatalogSearch: () => void;
-  onAddWatchedMovie: (movieId: number) => void;
   onForget: (movieKey: string) => void;
 }) {
   return (
@@ -911,14 +796,35 @@ function MovieMemorySection({
         </div>
       ) : null}
 
-      <MovieMemoryCatalogSearchPanel
-        labels={labels}
-        searchValue={catalogSearchValue}
-        searchState={catalogSearch}
-        onSearchValueChange={onCatalogSearchChange}
-        onSearch={onCatalogSearch}
-        onAddWatchedMovie={onAddWatchedMovie}
-      />
+      <Link
+        href="/account/movie-memory"
+        className="mb-5 flex flex-col gap-3 rounded-2xl p-4 transition-transform hover:-translate-y-0.5 md:flex-row md:items-center md:justify-between md:p-5"
+        style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+      >
+        <span className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
+          >
+            <Sparkles size={18} />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
+              {labels.movieMemoryCtaTitle}
+            </span>
+            <span className="mt-1 block text-sm" style={{ color: 'var(--pc-t3)' }}>
+              {labels.movieMemoryCtaBody}
+            </span>
+          </span>
+        </span>
+        <span
+          className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
+          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+        >
+          {labels.updateMovieMemory}
+          <ArrowRight size={16} />
+        </span>
+      </Link>
 
       {items.length === 0 ? (
         <div
@@ -977,133 +883,6 @@ function MovieMemorySection({
         </>
       )}
     </section>
-  );
-}
-
-function MovieMemoryCatalogSearchPanel({
-  labels,
-  searchValue,
-  searchState,
-  onSearchValueChange,
-  onSearch,
-  onAddWatchedMovie,
-}: {
-  labels: ReturnType<typeof useLanguage>['t']['account'];
-  searchValue: string;
-  searchState: MovieMemoryCatalogSearchState;
-  onSearchValueChange: (value: string) => void;
-  onSearch: () => void;
-  onAddWatchedMovie: (movieId: number) => void;
-}) {
-  const searchId = useId();
-  const isSearching = searchState.status === 'searching';
-  const results =
-    searchState.status === 'loaded' || searchState.status === 'adding' ? searchState.results : [];
-  const trimmedSearch = searchValue.trim();
-
-  return (
-    <div
-      className="mb-5 rounded-2xl p-4 md:p-5"
-      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
-    >
-      <div className="mb-4">
-        <h3 className="text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
-          {labels.addWatchedTitle}
-        </h3>
-        <p className="mt-1 text-sm" style={{ color: 'var(--pc-t3)' }}>
-          {labels.addWatchedBody}
-        </p>
-      </div>
-
-      <form
-        className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSearch();
-        }}
-      >
-        <label className="sr-only" htmlFor={searchId}>
-          {labels.catalogSearchPlaceholder}
-        </label>
-        <div className="relative min-w-0">
-          <Search
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2"
-            size={17}
-            style={{ color: 'var(--pc-t3)' }}
-          />
-          <input
-            id={searchId}
-            type="search"
-            value={searchValue}
-            onChange={(event) => onSearchValueChange(event.currentTarget.value)}
-            placeholder={labels.catalogSearchPlaceholder}
-            className="h-11 w-full rounded-xl border bg-transparent pl-10 pr-3 text-sm outline-none transition-colors focus:border-[var(--pc-gold-bd)]"
-            style={{
-              borderColor: 'var(--pc-bd2)',
-              color: 'var(--pc-t1)',
-            }}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={isSearching}
-          className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-opacity disabled:opacity-60"
-          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
-        >
-          {isSearching ? labels.status.processing : labels.searchCatalog}
-        </button>
-      </form>
-
-      {searchState.status === 'error' ? (
-        <p className="mt-3 text-sm" style={{ color: palette.red }}>
-          {searchState.reason === 'add' ? labels.memoryAddError : labels.catalogSearchError}
-        </p>
-      ) : null}
-
-      {searchState.status === 'loaded' && results.length === 0 && trimmedSearch.length >= 2 ? (
-        <p className="mt-3 text-sm" style={{ color: 'var(--pc-t3)' }}>
-          {labels.catalogSearchEmpty}
-        </p>
-      ) : null}
-
-      {results.length > 0 ? (
-        <div className="mt-3 grid gap-2">
-          {results.map((movie) => {
-            const isAdding = searchState.status === 'adding' && searchState.movieId === movie.id;
-            return (
-              <div
-                key={movie.id}
-                className="grid gap-2 rounded-xl px-3 py-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
-                style={{ background: 'var(--pc-ghost)', border: '1px solid var(--pc-bd1)' }}
-              >
-                <span
-                  className="min-w-0 truncate text-sm font-medium"
-                  style={{ color: 'var(--pc-t1)' }}
-                >
-                  {movie.movieName}
-                  {movie.movieYear ? ` (${movie.movieYear})` : ''}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onAddWatchedMovie(movie.id)}
-                  disabled={searchState.status === 'adding'}
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold transition-opacity disabled:opacity-60"
-                  style={{
-                    background: 'var(--pc-gold-subtle)',
-                    border: '1px solid var(--pc-gold-bd)',
-                    color: 'var(--pc-gold-text)',
-                  }}
-                >
-                  <Plus size={14} />
-                  {isAdding ? labels.status.processing : labels.markWatched}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -1189,6 +968,7 @@ function MovieMemoryCard({
 function MemoryKindIcon({ kind }: { kind: UserMovieInteractionKind }) {
   if (kind === 'watched') return <Eye size={12} />;
   if (kind === 'liked') return <Heart size={12} />;
+  if (kind === 'not_seen') return <Film size={12} />;
   if (kind === 'wrong_mood') return <Frown size={12} />;
   return <Ban size={12} />;
 }

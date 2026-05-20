@@ -5,6 +5,7 @@ import { getSessionFromRequest } from '@/lib/auth/session';
 import {
   addUserMovieMemoryFromCatalog,
   deleteUserMovieMemory,
+  getMovieMemoryCandidatesForUser,
   searchMovieCatalogForMemory,
 } from '@/lib/db/recommendations';
 import logger from '@/lib/logger';
@@ -29,6 +30,7 @@ const searchMovieMemorySchema = z
 const addMovieMemorySchema = z
   .object({
     movieId: z.coerce.number().int().positive(),
+    kind: z.enum(['watched', 'not_seen']).optional().default('watched'),
   })
   .strict();
 const CSRF_COOKIE = '__csrf';
@@ -53,6 +55,16 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
+
+  if (req.nextUrl.searchParams.get('mode') === 'candidates') {
+    try {
+      const movies = await getMovieMemoryCandidatesForUser(session.sub, 20);
+      return movieMemoryJson({ movies }, 200);
+    } catch (err) {
+      logger.error({ err, userId: session.sub }, 'Failed to load movie memory candidates');
+      return movieMemoryJson({ error: 'Failed to load movie memory candidates' }, 500);
+    }
+  }
 
   const parsed = searchMovieMemorySchema.safeParse({
     query: req.nextUrl.searchParams.get('query') ?? req.nextUrl.searchParams.get('q') ?? '',
@@ -91,7 +103,11 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   try {
-    const item = await addUserMovieMemoryFromCatalog(session.sub, parsed.data.movieId, 'watched');
+    const item = await addUserMovieMemoryFromCatalog(
+      session.sub,
+      parsed.data.movieId,
+      parsed.data.kind,
+    );
     if (!item) {
       return movieMemoryJson({ error: 'Movie not found' }, 404);
     }

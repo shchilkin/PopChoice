@@ -47,6 +47,7 @@ import {
   insertMorePicksMovies,
   insertRecommendationMovies,
   createRecommendationFeedback,
+  getMovieMemoryCandidatesForUser,
   getUserRecommendationFeedbackMoviePreferences,
   searchMovieCatalogForMemory,
   updateMorePicksStatus,
@@ -382,14 +383,33 @@ describe('searchMovieCatalogForMemory', () => {
 
   it('returns local catalog matches for manual movie memory', async () => {
     mockQuery.mockResolvedValueOnce({
-      rows: [{ id: 129, tmdb_id: 129, name: 'Spirited Away', year: 2001 }],
+      rows: [
+        {
+          id: 129,
+          tmdb_id: 129,
+          name: 'Spirited Away',
+          year: 2001,
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Унесённые призраками',
+        },
+      ],
     });
 
     const result = await searchMovieCatalogForMemory('spirited');
 
-    expect(result).toEqual([{ id: 129, tmdbId: 129, movieName: 'Spirited Away', movieYear: 2001 }]);
+    expect(result).toEqual([
+      {
+        id: 129,
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+      },
+    ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('FROM movies');
+    expect(sql).toContain('poster_url');
     expect(sql).toContain('ILIKE');
     expect(params).toEqual(['%spirited%', 8]);
   });
@@ -397,6 +417,79 @@ describe('searchMovieCatalogForMemory', () => {
   it('does not search for very short queries', async () => {
     await expect(searchMovieCatalogForMemory('s')).resolves.toEqual([]);
     expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe('getMovieMemoryCandidatesForUser', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns poster-first candidate movies excluding existing memory', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ movie_key: 'tmdb:129' }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          id: 129,
+          tmdb_id: 129,
+          name: 'Spirited Away',
+          year: 2001,
+          poster_url: 'https://example.com/spirited.jpg',
+          localized_name: 'Унесённые призраками',
+          score_rating: 8.6,
+        },
+        {
+          id: 680,
+          tmdb_id: 680,
+          name: 'Pulp Fiction',
+          year: 1994,
+          poster_url: 'https://example.com/pulp.jpg',
+          localized_name: null,
+          score_rating: 8.9,
+        },
+        {
+          id: 1,
+          tmdb_id: null,
+          name: 'Local Movie',
+          year: 2020,
+          poster_url: null,
+          localized_name: 'Локальный фильм',
+          score_rating: 7.1,
+        },
+      ],
+    });
+
+    const result = await getMovieMemoryCandidatesForUser('42', 2);
+
+    expect(result).toEqual([
+      {
+        id: 680,
+        tmdbId: 680,
+        movieName: 'Pulp Fiction',
+        movieYear: 1994,
+        posterURL: 'https://example.com/pulp.jpg',
+        localizedName: null,
+      },
+      {
+        id: 1,
+        tmdbId: null,
+        movieName: 'Local Movie',
+        movieYear: 2020,
+        posterURL: null,
+        localizedName: 'Локальный фильм',
+      },
+    ]);
+    const [memorySql, memoryParams] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(memorySql).toContain('user_movie_interactions');
+    expect(memoryParams).toEqual(['42']);
+    const [catalogSql, catalogParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    expect(catalogSql).toContain('FROM movies');
+    expect(catalogSql).toContain('score_rating');
+    expect(catalogParams).toEqual([80]);
   });
 });
 
@@ -413,7 +506,15 @@ describe('addUserMovieMemoryFromCatalog', () => {
   it('upserts a watched movie memory item from the local catalog', async () => {
     mockQuery
       .mockResolvedValueOnce({
-        rows: [{ tmdb_id: 129, name: 'Spirited Away', year: 2001 }],
+        rows: [
+          {
+            tmdb_id: 129,
+            name: 'Spirited Away',
+            year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+          },
+        ],
       })
       .mockResolvedValueOnce({
         rows: [
@@ -423,8 +524,8 @@ describe('addUserMovieMemoryFromCatalog', () => {
             tmdb_id: 129,
             movie_name: 'Spirited Away',
             movie_year: 2001,
-            poster_url: null,
-            localized_name: null,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
             updated_at: new Date('2026-05-20T12:00:00.000Z'),
           },
         ],
@@ -438,8 +539,8 @@ describe('addUserMovieMemoryFromCatalog', () => {
       tmdbId: 129,
       movieName: 'Spirited Away',
       movieYear: 2001,
-      posterURL: null,
-      localizedName: null,
+      posterURL: 'https://example.com/poster.jpg',
+      localizedName: 'Унесённые призраками',
       updatedAt: '2026-05-20T12:00:00.000Z',
     });
     const [lookupSql, lookupParams] = mockQuery.mock.calls[0] as [string, unknown[]];
@@ -447,7 +548,16 @@ describe('addUserMovieMemoryFromCatalog', () => {
     expect(lookupParams).toEqual([129]);
     const [upsertSql, upsertParams] = mockQuery.mock.calls[1] as [string, unknown[]];
     expect(upsertSql).toContain('INSERT INTO user_movie_interactions');
-    expect(upsertParams).toEqual(['42', 'tmdb:129', 129, 'Spirited Away', 2001, 'watched']);
+    expect(upsertParams).toEqual([
+      '42',
+      'tmdb:129',
+      129,
+      'Spirited Away',
+      2001,
+      'https://example.com/poster.jpg',
+      'Унесённые призраками',
+      'watched',
+    ]);
   });
 
   it('returns null when the catalog movie is missing', async () => {

@@ -48,7 +48,12 @@ export type RecommendationFeedbackKind =
   | 'too_obvious'
   | 'too_obscure'
   | 'close';
-export type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
+export type UserMovieInteractionKind =
+  | 'watched'
+  | 'liked'
+  | 'not_interested'
+  | 'wrong_mood'
+  | 'not_seen';
 export type UserRecommendationMemoryKind = UserMovieInteractionKind | 'recently_recommended';
 
 export interface RecommendationMovie {
@@ -118,6 +123,8 @@ export interface MovieMemoryCatalogSearchResult {
   tmdbId: number | null;
   movieName: string;
   movieYear: number | null;
+  posterURL: string | null;
+  localizedName: string | null;
 }
 
 export interface MovieRowToInsert {
@@ -444,11 +451,13 @@ export async function searchMovieCatalogForMemory(
     tmdb_id: number | null;
     name: string;
     year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
   }>(
-    `SELECT id, tmdb_id, name, year
+    `SELECT id, tmdb_id, name, year, poster_url, localized_name
        FROM movies
       WHERE name ILIKE $1 ESCAPE '\\'
-      ORDER BY year DESC, name ASC
+      ORDER BY (poster_url IS NULL), year DESC, name ASC
       LIMIT $2`,
     [`%${escapeLikePattern(trimmedQuery)}%`, Math.min(Math.max(limit, 1), 12)],
   );
@@ -458,7 +467,72 @@ export async function searchMovieCatalogForMemory(
     tmdbId: row.tmdb_id,
     movieName: row.name,
     movieYear: row.year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
   }));
+}
+
+export async function getMovieMemoryCandidatesForUser(
+  userId: string,
+  limit = 20,
+): Promise<MovieMemoryCatalogSearchResult[]> {
+  const pool = getPool();
+  const boundedLimit = Math.min(Math.max(limit, 1), 20);
+  const memoryResult = await pool.query<{ movie_key: string }>(
+    `SELECT movie_key
+       FROM user_movie_interactions
+      WHERE user_id = $1
+      LIMIT 1000`,
+    [userId],
+  );
+  const excludedKeys = new Set(memoryResult.rows.map((row) => row.movie_key));
+  const fetchLimit = Math.max(boundedLimit * 6, 80);
+  const result = await pool.query<{
+    id: number;
+    tmdb_id: number | null;
+    name: string;
+    year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    score_rating: number | null;
+  }>(
+    `SELECT id, tmdb_id, name, year, poster_url, localized_name, score_rating
+       FROM movies
+      ORDER BY (poster_url IS NULL), score_rating DESC NULLS LAST, year DESC NULLS LAST, name ASC
+      LIMIT $1`,
+    [fetchLimit],
+  );
+
+  const candidates: MovieMemoryCatalogSearchResult[] = [];
+  const candidateKeys = new Set<string>();
+
+  for (const row of result.rows) {
+    const movieKey = getMovieIdentityKey({
+      tmdbId: row.tmdb_id,
+      title: row.name,
+      year: row.year,
+    });
+
+    if (!movieKey || excludedKeys.has(movieKey) || candidateKeys.has(movieKey)) {
+      continue;
+    }
+
+    candidateKeys.add(movieKey);
+    candidates.push({
+      id: row.id,
+      tmdbId: row.tmdb_id,
+      movieName: row.name,
+      movieYear: row.year,
+      posterURL: row.poster_url,
+      localizedName: row.localized_name,
+    });
+
+    if (candidates.length >= boundedLimit) {
+      break;
+    }
+  }
+
+  return candidates;
 }
 
 export async function addUserMovieMemoryFromCatalog(
@@ -471,8 +545,10 @@ export async function addUserMovieMemoryFromCatalog(
     tmdb_id: number | null;
     name: string;
     year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
   }>(
-    `SELECT tmdb_id, name, year
+    `SELECT tmdb_id, name, year, poster_url, localized_name
        FROM movies
       WHERE id = $1
       LIMIT 1`,
@@ -502,16 +578,27 @@ export async function addUserMovieMemoryFromCatalog(
     `INSERT INTO user_movie_interactions (
        user_id, movie_key, tmdb_id, movie_name, movie_year, poster_url, localized_name, kind
      )
-     VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (user_id, movie_key)
      DO UPDATE SET
        tmdb_id = COALESCE(EXCLUDED.tmdb_id, user_movie_interactions.tmdb_id),
        movie_name = EXCLUDED.movie_name,
        movie_year = EXCLUDED.movie_year,
+       poster_url = COALESCE(EXCLUDED.poster_url, user_movie_interactions.poster_url),
+       localized_name = COALESCE(EXCLUDED.localized_name, user_movie_interactions.localized_name),
        kind = EXCLUDED.kind,
        updated_at = now()
      RETURNING kind, movie_key, tmdb_id, movie_name, movie_year, poster_url, localized_name, updated_at`,
-    [userId, movieKey, movie.tmdb_id, movie.name, movie.year, kind],
+    [
+      userId,
+      movieKey,
+      movie.tmdb_id,
+      movie.name,
+      movie.year,
+      movie.poster_url,
+      movie.localized_name,
+      kind,
+    ],
   );
 
   const row = upsertResult.rows[0];
