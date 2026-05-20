@@ -366,8 +366,14 @@ describe('getUserMovieMemorySummaries', () => {
       },
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain('FROM user_movie_interactions');
-    expect(sql).toContain('ORDER BY updated_at DESC');
+    expect(sql).toContain('FROM user_movie_interactions ui');
+    expect(sql).toContain(
+      'COALESCE(ui.poster_url, catalog_movie.poster_url, source_movie.poster_url)',
+    );
+    expect(sql).toContain('LEFT JOIN LATERAL');
+    expect(sql).toContain('FROM movies m');
+    expect(sql).toContain('FROM recommendation_movies rm');
+    expect(sql).toContain('ORDER BY ui.updated_at DESC');
     expect(params).toEqual(['42', 50]);
   });
 });

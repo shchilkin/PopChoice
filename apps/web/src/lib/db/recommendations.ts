@@ -385,17 +385,52 @@ export async function getUserMovieMemorySummaries(
     updated_at: Date | string;
   }>(
     `SELECT
-       kind,
-       movie_key,
-       tmdb_id,
-       movie_name,
-       movie_year,
-       poster_url,
-       localized_name,
-       updated_at
-     FROM user_movie_interactions
-     WHERE user_id = $1
-     ORDER BY updated_at DESC
+       ui.kind,
+       ui.movie_key,
+       COALESCE(ui.tmdb_id, catalog_movie.tmdb_id, source_movie.tmdb_id) AS tmdb_id,
+       ui.movie_name,
+       ui.movie_year,
+       COALESCE(ui.poster_url, catalog_movie.poster_url, source_movie.poster_url) AS poster_url,
+       COALESCE(ui.localized_name, catalog_movie.localized_name, source_movie.localized_name) AS localized_name,
+       ui.updated_at
+     FROM user_movie_interactions ui
+     LEFT JOIN LATERAL (
+       SELECT m.tmdb_id, m.poster_url, m.localized_name
+       FROM movies m
+       WHERE (ui.tmdb_id IS NOT NULL AND m.tmdb_id = ui.tmdb_id)
+          OR (lower(m.name) = lower(ui.movie_name) AND m.year IS NOT DISTINCT FROM ui.movie_year)
+       ORDER BY (m.poster_url IS NULL), m.id
+       LIMIT 1
+     ) catalog_movie ON true
+     LEFT JOIN LATERAL (
+       SELECT
+         rm.tmdb_id,
+         COALESCE(rm.poster_url, m.poster_url) AS poster_url,
+         COALESCE(rm.localized_name, m.localized_name) AS localized_name
+       FROM recommendation_movies rm
+       LEFT JOIN movies m ON m.id = rm.movie_id
+       WHERE rm.recommendation_id = ui.source_recommendation_id
+         AND (
+           (ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id)
+           OR (
+             lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year
+           )
+           OR rm.is_main_recommendation
+         )
+       ORDER BY
+         CASE
+           WHEN ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id THEN 0
+           WHEN lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year THEN 1
+           ELSE 2
+         END,
+         rm.is_main_recommendation DESC,
+         rm.position ASC
+       LIMIT 1
+     ) source_movie ON true
+     WHERE ui.user_id = $1
+     ORDER BY ui.updated_at DESC
      LIMIT $2`,
     [userId, Math.min(Math.max(limit, 1), 100)],
   );
