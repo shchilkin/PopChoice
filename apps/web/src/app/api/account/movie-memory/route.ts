@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getSessionFromRequest } from '@/lib/auth/session';
 import {
+  addUserMovieMemoryBatchFromCatalog,
   addUserMovieMemoryFromCatalog,
   deleteUserMovieMemory,
   getMovieMemoryCandidatesForUser,
@@ -31,6 +32,21 @@ const addMovieMemorySchema = z
   .object({
     movieId: z.coerce.number().int().positive(),
     kind: z.enum(['watched', 'not_seen']).optional().default('watched'),
+  })
+  .strict();
+const addMovieMemoryBatchSchema = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            movieId: z.coerce.number().int().positive(),
+            kind: z.enum(['watched', 'not_seen']).optional().default('watched'),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(50),
   })
   .strict();
 const CSRF_COOKIE = '__csrf';
@@ -97,6 +113,20 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   const payload = await req.json().catch(() => null);
+  const parsedBatch = addMovieMemoryBatchSchema.safeParse(payload);
+  if (parsedBatch.success) {
+    try {
+      const items = await addUserMovieMemoryBatchFromCatalog(session.sub, parsedBatch.data.items);
+      return movieMemoryJson(
+        { status: 'saved', items, requested: parsedBatch.data.items.length },
+        200,
+      );
+    } catch (err) {
+      logger.error({ err, userId: session.sub }, 'Failed to save movie memory batch');
+      return movieMemoryJson({ error: 'Failed to save movie memory items' }, 500);
+    }
+  }
+
   const parsed = addMovieMemorySchema.safeParse(payload);
   if (!parsed.success) {
     return movieMemoryJson({ error: 'Invalid movie memory item' }, 422);

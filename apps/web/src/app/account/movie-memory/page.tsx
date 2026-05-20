@@ -14,7 +14,15 @@ import {
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
@@ -49,6 +57,11 @@ type CatalogSearchState =
   | { status: 'loaded'; movies: MovieMemoryCandidate[] }
   | { status: 'error' };
 
+type PendingMovieMemoryItem = {
+  movieId: number;
+  kind: UserMovieInteractionKind;
+};
+
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
 
 export default function MovieMemoryPage() {
@@ -59,6 +72,7 @@ export default function MovieMemoryPage() {
   const [action, setAction] = useState<ActionState>({ status: 'idle' });
   const [catalogQuery, setCatalogQuery] = useState('');
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchState>({ status: 'idle' });
+  const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
 
   const loadCandidates = useCallback(async () => {
     setCandidates({ status: 'loading' });
@@ -98,6 +112,89 @@ export default function MovieMemoryPage() {
       return () => window.clearTimeout(loadTimer);
     }
   }, [auth.status, candidates.status, loadCandidates]);
+
+  const flushPendingDeckItems = useCallback(
+    async ({ keepalive = false, updateState = true } = {}) => {
+      const items = pendingDeckItems.current;
+      if (items.length === 0) return;
+
+      pendingDeckItems.current = [];
+
+      try {
+        const response = await fetch('/api/account/movie-memory', {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          keepalive,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': getCsrfToken(),
+          },
+          body: JSON.stringify({ items }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save movie memory batch');
+        }
+
+        if (updateState) {
+          setAction({ status: 'idle' });
+        }
+      } catch {
+        pendingDeckItems.current = [...items, ...pendingDeckItems.current];
+        if (updateState) {
+          setAction({ status: 'error' });
+        }
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const flushOnLeave = () => {
+      void flushPendingDeckItems({ keepalive: true, updateState: false });
+    };
+    const flushOnHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        flushOnLeave();
+      }
+    };
+
+    window.addEventListener('pagehide', flushOnLeave);
+    document.addEventListener('visibilitychange', flushOnHidden);
+
+    return () => {
+      flushOnLeave();
+      window.removeEventListener('pagehide', flushOnLeave);
+      document.removeEventListener('visibilitychange', flushOnHidden);
+    };
+  }, [flushPendingDeckItems]);
+
+  function saveDeckMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
+    pendingDeckItems.current = [
+      ...pendingDeckItems.current.filter((item) => item.movieId !== movieId),
+      { movieId, kind },
+    ];
+    setAction({ status: 'idle' });
+    setCandidates((current) => {
+      if (current.status !== 'loaded') return current;
+      const remainingMovies = current.movies.filter((movie) => movie.id !== movieId);
+      if (remainingMovies.length === 0) {
+        queueMicrotask(() => void flushPendingDeckItems());
+      }
+
+      return {
+        ...current,
+        movies: remainingMovies,
+        reviewed: current.reviewed + 1,
+      };
+    });
+    setCatalogSearch((current) =>
+      current.status === 'loaded'
+        ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
+        : current,
+    );
+  }
 
   async function saveMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
     setAction({ status: 'saving', movieId, kind });
@@ -279,7 +376,7 @@ export default function MovieMemoryPage() {
               counter={a.memoryDeckCounter
                 .replace('{current}', String(candidates.reviewed + 1))
                 .replace('{total}', String(candidates.total))}
-              onSave={saveMovieMemory}
+              onSave={saveDeckMovieMemory}
             />
           ) : (
             <CompletionPanel labels={a} onLoadMore={loadCandidates} />

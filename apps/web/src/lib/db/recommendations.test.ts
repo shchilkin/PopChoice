@@ -36,6 +36,7 @@ vi.mock('@/lib/logger', () => ({
 
 // Import after mocks are established
 import {
+  addUserMovieMemoryBatchFromCatalog,
   addUserMovieMemoryFromCatalog,
   claimMorePicksSlot,
   createRecommendation,
@@ -565,6 +566,71 @@ describe('addUserMovieMemoryFromCatalog', () => {
 
     await expect(addUserMovieMemoryFromCatalog('42', 999, 'watched')).resolves.toBeNull();
     expect(mockQuery).toHaveBeenCalledOnce();
+  });
+});
+
+describe('addUserMovieMemoryBatchFromCatalog', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('deduplicates movie ids and upserts the latest choice for each movie', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 129,
+            name: 'Spirited Away',
+            year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            kind: 'not_seen',
+            movie_key: 'tmdb:129',
+            tmdb_id: 129,
+            movie_name: 'Spirited Away',
+            movie_year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+            updated_at: new Date('2026-05-20T12:00:00.000Z'),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await addUserMovieMemoryBatchFromCatalog('42', [
+      { movieId: 129, kind: 'watched' },
+      { movieId: 129, kind: 'not_seen' },
+      { movieId: 999, kind: 'watched' },
+    ]);
+
+    expect(result).toEqual([
+      {
+        kind: 'not_seen',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        updatedAt: '2026-05-20T12:00:00.000Z',
+      },
+    ]);
+    expect(mockQuery).toHaveBeenCalledTimes(3);
+    expect(mockQuery.mock.calls[0]?.[1]).toEqual([129]);
+    const [, upsertParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    expect(upsertParams[7]).toBe('not_seen');
+    expect(mockQuery.mock.calls[2]?.[1]).toEqual([999]);
   });
 });
 

@@ -605,6 +605,28 @@ export async function addUserMovieMemoryFromCatalog(
   return row ? mapUserMovieMemoryRow(row) : null;
 }
 
+export async function addUserMovieMemoryBatchFromCatalog(
+  userId: string,
+  items: Array<{ movieId: number; kind?: UserMovieInteractionKind }>,
+): Promise<UserMovieMemorySummary[]> {
+  const dedupedItems = Array.from(
+    items
+      .reduce((map, item) => {
+        map.set(item.movieId, { movieId: item.movieId, kind: item.kind ?? 'watched' });
+        return map;
+      }, new Map<number, { movieId: number; kind: UserMovieInteractionKind }>())
+      .values(),
+  );
+  const saved: UserMovieMemorySummary[] = [];
+
+  for (const item of dedupedItems) {
+    const result = await addUserMovieMemoryFromCatalog(userId, item.movieId, item.kind);
+    if (result) saved.push(result);
+  }
+
+  return saved;
+}
+
 export async function deleteUserMovieMemory(userId: string, movieKey: string): Promise<boolean> {
   const pool = getPool();
   const result = await pool.query(

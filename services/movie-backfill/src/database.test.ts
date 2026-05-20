@@ -4,8 +4,10 @@ import {
   checkTableExists,
   closeDatabase,
   ensureTMDBMatchReviewSchema,
+  getIncompleteMovies,
   initDatabase,
   recordTMDBMatchReview,
+  updateMovie,
 } from './database.js';
 
 vi.mock('pg', () => {
@@ -75,6 +77,73 @@ describe('database', () => {
     });
   });
 
+  describe('getIncompleteMovies', () => {
+    it('selects movies that are missing TMDB identity, runtime, or poster data', async () => {
+      poolMock.query.mockResolvedValueOnce({
+        rows: [
+          {
+            id: '42',
+            name: 'Solaris',
+            year: 1972,
+            duration: 166,
+            score_rating: 8.1,
+            description: 'A psychologist is sent to a space station.',
+            tmdb_id: 593,
+          },
+        ],
+      });
+
+      const result = await getIncompleteMovies(10);
+
+      const [sql, params] = poolMock.query.mock.calls[0];
+      expect(sql).toContain('tmdb_id IS NULL OR duration = 0 OR poster_url IS NULL');
+      expect(sql).toContain('LIMIT $1');
+      expect(params).toEqual([10]);
+      expect(result).toEqual([
+        {
+          id: '42',
+          name: 'Solaris',
+          year: 1972,
+          duration: 166,
+          score_rating: 8.1,
+          description: 'A psychologist is sent to a space station.',
+          tmdb_id: 593,
+        },
+      ]);
+    });
+  });
+
+  describe('updateMovie', () => {
+    it('fills poster and localized title metadata when updating a movie', async () => {
+      poolMock.query.mockResolvedValueOnce({ rows: [] });
+
+      await updateMovie(
+        '42',
+        166,
+        'PG',
+        593,
+        1,
+        'https://image.tmdb.org/t/p/w500/poster.jpg',
+        'Солярис',
+        [0.1, 0.2],
+      );
+
+      const [sql, params] = poolMock.query.mock.calls[0];
+      expect(sql).toContain('poster_url = COALESCE($5, poster_url)');
+      expect(sql).toContain('localized_name = COALESCE($6, localized_name)');
+      expect(params).toEqual([
+        166,
+        'PG',
+        593,
+        1,
+        'https://image.tmdb.org/t/p/w500/poster.jpg',
+        'Солярис',
+        JSON.stringify([0.1, 0.2]),
+        '42',
+      ]);
+    });
+  });
+
   describe('recordTMDBMatchReview', () => {
     it('upserts an open review for ambiguous TMDB matches', async () => {
       poolMock.query.mockResolvedValueOnce({ rows: [] });
@@ -87,6 +156,7 @@ describe('database', () => {
           duration: 166,
           score_rating: 8.1,
           description: 'A psychologist is sent to a space station.',
+          tmdb_id: null,
         },
         reason: 'ambiguous_match',
         candidates: [

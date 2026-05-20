@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   mockGetSessionFromRequest,
+  mockAddUserMovieMemoryBatchFromCatalog,
   mockAddUserMovieMemoryFromCatalog,
   mockDeleteUserMovieMemory,
   mockGetMovieMemoryCandidatesForUser,
@@ -10,6 +11,7 @@ const {
   mockApplyRateLimit,
 } = vi.hoisted(() => ({
   mockGetSessionFromRequest: vi.fn(),
+  mockAddUserMovieMemoryBatchFromCatalog: vi.fn(),
   mockAddUserMovieMemoryFromCatalog: vi.fn(),
   mockDeleteUserMovieMemory: vi.fn(),
   mockGetMovieMemoryCandidatesForUser: vi.fn(),
@@ -22,6 +24,7 @@ vi.mock('@/lib/auth/session', () => ({
 }));
 
 vi.mock('@/lib/db/recommendations', () => ({
+  addUserMovieMemoryBatchFromCatalog: mockAddUserMovieMemoryBatchFromCatalog,
   addUserMovieMemoryFromCatalog: mockAddUserMovieMemoryFromCatalog,
   deleteUserMovieMemory: mockDeleteUserMovieMemory,
   getMovieMemoryCandidatesForUser: mockGetMovieMemoryCandidatesForUser,
@@ -174,6 +177,7 @@ describe('GET /api/account/movie-memory', () => {
 describe('POST /api/account/movie-memory', () => {
   beforeEach(() => {
     mockGetSessionFromRequest.mockReset();
+    mockAddUserMovieMemoryBatchFromCatalog.mockReset();
     mockAddUserMovieMemoryFromCatalog.mockReset();
     mockApplyRateLimit.mockReset();
     mockApplyRateLimit.mockResolvedValue(null);
@@ -270,6 +274,74 @@ describe('POST /api/account/movie-memory', () => {
       },
     });
     expect(mockAddUserMovieMemoryFromCatalog).toHaveBeenCalledWith('42', 129, 'not_seen');
+  });
+
+  it('saves a batch of movie memory choices for the signed-in user', async () => {
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockAddUserMovieMemoryBatchFromCatalog.mockResolvedValueOnce([
+      {
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        kind: 'watched',
+        updatedAt: '2026-05-20T12:00:00.000Z',
+      },
+      {
+        movieKey: 'tmdb:680',
+        tmdbId: 680,
+        movieName: 'Pulp Fiction',
+        movieYear: 1994,
+        posterURL: 'https://example.com/pulp.jpg',
+        localizedName: null,
+        kind: 'not_seen',
+        updatedAt: '2026-05-20T12:00:00.000Z',
+      },
+    ]);
+
+    const response = await POST(
+      makePostRequest({
+        items: [
+          { movieId: 129, kind: 'watched' },
+          { movieId: 680, kind: 'not_seen' },
+        ],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: 'saved',
+      requested: 2,
+      items: [
+        {
+          movieKey: 'tmdb:129',
+          tmdbId: 129,
+          movieName: 'Spirited Away',
+          movieYear: 2001,
+          posterURL: 'https://example.com/poster.jpg',
+          localizedName: 'Унесённые призраками',
+          kind: 'watched',
+          updatedAt: '2026-05-20T12:00:00.000Z',
+        },
+        {
+          movieKey: 'tmdb:680',
+          tmdbId: 680,
+          movieName: 'Pulp Fiction',
+          movieYear: 1994,
+          posterURL: 'https://example.com/pulp.jpg',
+          localizedName: null,
+          kind: 'not_seen',
+          updatedAt: '2026-05-20T12:00:00.000Z',
+        },
+      ],
+    });
+    expect(mockAddUserMovieMemoryBatchFromCatalog).toHaveBeenCalledWith('42', [
+      { movieId: 129, kind: 'watched' },
+      { movieId: 680, kind: 'not_seen' },
+    ]);
+    expect(mockAddUserMovieMemoryFromCatalog).not.toHaveBeenCalled();
   });
 
   it('returns 404 when the catalog movie is absent', async () => {
