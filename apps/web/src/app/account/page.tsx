@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
@@ -63,6 +63,11 @@ type AccountResponse = {
   user: { email: string };
   recommendations: RecommendationSummary[];
   movieMemory: MovieMemorySummary[];
+};
+
+type PosterLookupResult = {
+  id: number;
+  posterURL: string | null;
 };
 
 type LoadState =
@@ -113,6 +118,7 @@ export default function AccountPage() {
   const [recommendationFilter, setRecommendationFilter] = useState<RecommendationFilter>('all');
   const [memoryQuery, setMemoryQuery] = useState('');
   const [memoryFilter, setMemoryFilter] = useState<MovieMemoryFilter>('all');
+  const requestedMemoryPosters = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
@@ -168,6 +174,85 @@ export default function AccountPage() {
       window.clearTimeout(timeoutId);
     };
   }, [auth.status]);
+
+  useEffect(() => {
+    if (state.status !== 'loaded') return;
+
+    const missingPosterItems = state.data.movieMemory
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => !item.posterURL && !requestedMemoryPosters.current.has(item.movieKey));
+
+    if (missingPosterItems.length === 0) return;
+
+    for (const { item } of missingPosterItems) {
+      requestedMemoryPosters.current.add(item.movieKey);
+    }
+
+    let cancelled = false;
+
+    async function loadMemoryPosters() {
+      try {
+        const response = await fetch('/api/movie-posters', {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            movies: missingPosterItems.map(({ item, index }) => ({
+              id: index,
+              name: item.movieName,
+              year: item.movieYear ?? undefined,
+              tmdbId: item.tmdbId ?? undefined,
+            })),
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { results?: PosterLookupResult[] };
+        const postersByIndex = new Map(
+          (Array.isArray(data.results) ? data.results : [])
+            .filter((result) => result.posterURL)
+            .map((result) => [result.id, result.posterURL as string]),
+        );
+
+        if (cancelled || postersByIndex.size === 0) return;
+
+        setState((current) => {
+          if (current.status !== 'loaded') return current;
+
+          let changed = false;
+          const movieMemory = current.data.movieMemory.map((item, index) => {
+            const posterURL = postersByIndex.get(index);
+            if (item.posterURL || !posterURL) return item;
+
+            changed = true;
+            return { ...item, posterURL };
+          });
+
+          return changed
+            ? {
+                status: 'loaded',
+                data: {
+                  ...current.data,
+                  movieMemory,
+                },
+              }
+            : current;
+        });
+      } catch {
+        // Missing posters should not make the account page fail to load.
+      }
+    }
+
+    void loadMemoryPosters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state]);
 
   if (auth.status === 'unknown' || (auth.status === 'authenticated' && state.status === 'idle')) {
     return (
