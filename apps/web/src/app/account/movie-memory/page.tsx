@@ -62,6 +62,11 @@ type PendingMovieMemoryItem = {
   kind: UserMovieInteractionKind;
 };
 
+type PosterLookupResult = {
+  id: number;
+  posterURL: string | null;
+};
+
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
 
 export default function MovieMemoryPage() {
@@ -73,6 +78,7 @@ export default function MovieMemoryPage() {
   const [catalogQuery, setCatalogQuery] = useState('');
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchState>({ status: 'idle' });
   const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
+  const requestedMoviePosters = useRef<Set<number>>(new Set());
 
   const loadCandidates = useCallback(async () => {
     setCandidates({ status: 'loading' });
@@ -169,6 +175,103 @@ export default function MovieMemoryPage() {
       document.removeEventListener('visibilitychange', flushOnHidden);
     };
   }, [flushPendingDeckItems]);
+
+  useEffect(() => {
+    const missingPosters = new Map<number, MovieMemoryCandidate>();
+    if (candidates.status === 'loaded') {
+      for (const movie of candidates.movies) {
+        if (!movie.posterURL && !requestedMoviePosters.current.has(movie.id)) {
+          missingPosters.set(movie.id, movie);
+        }
+      }
+    }
+
+    if (catalogSearch.status === 'loaded') {
+      for (const movie of catalogSearch.movies) {
+        if (!movie.posterURL && !requestedMoviePosters.current.has(movie.id)) {
+          missingPosters.set(movie.id, movie);
+        }
+      }
+    }
+
+    if (missingPosters.size === 0) return;
+
+    for (const id of missingPosters.keys()) {
+      requestedMoviePosters.current.add(id);
+    }
+
+    let cancelled = false;
+
+    async function loadMissingPosters() {
+      try {
+        const response = await fetch('/api/movie-posters', {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            movies: Array.from(missingPosters.values()).map((movie) => ({
+              id: movie.id,
+              name: movie.movieName,
+              year: movie.movieYear ?? undefined,
+              tmdbId: movie.tmdbId ?? undefined,
+            })),
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { results?: PosterLookupResult[] };
+        const postersByMovieId = new Map(
+          (Array.isArray(data.results) ? data.results : [])
+            .filter((result) => result.posterURL)
+            .map((result) => [result.id, result.posterURL as string]),
+        );
+
+        if (cancelled || postersByMovieId.size === 0) return;
+
+        setCandidates((current) => {
+          if (current.status !== 'loaded') return current;
+
+          let changed = false;
+          const movies = current.movies.map((movie) => {
+            const posterURL = postersByMovieId.get(movie.id);
+            if (movie.posterURL || !posterURL) return movie;
+
+            changed = true;
+            return { ...movie, posterURL };
+          });
+
+          return changed ? { ...current, movies } : current;
+        });
+
+        setCatalogSearch((current) => {
+          if (current.status !== 'loaded') return current;
+
+          let changed = false;
+          const movies = current.movies.map((movie) => {
+            const posterURL = postersByMovieId.get(movie.id);
+            if (movie.posterURL || !posterURL) return movie;
+
+            changed = true;
+            return { ...movie, posterURL };
+          });
+
+          return changed ? { ...current, movies } : current;
+        });
+      } catch {
+        // Missing posters should not block the movie-memory trainer.
+      }
+    }
+
+    void loadMissingPosters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [candidates, catalogSearch]);
 
   function saveDeckMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
     pendingDeckItems.current = [
