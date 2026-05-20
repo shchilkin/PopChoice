@@ -91,7 +91,11 @@ export default function MovieMemoryPage() {
 
   useEffect(() => {
     if (auth.status === 'authenticated' && candidates.status === 'idle') {
-      void loadCandidates();
+      const loadTimer = window.setTimeout(() => {
+        void loadCandidates();
+      }, 0);
+
+      return () => window.clearTimeout(loadTimer);
     }
   }, [auth.status, candidates.status, loadCandidates]);
 
