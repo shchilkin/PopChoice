@@ -81,6 +81,12 @@ ALTER TABLE recommendation_movies
   ADD COLUMN IF NOT EXISTS from_tmdb boolean NOT NULL DEFAULT false;
 
 ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS poster_url text;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS localized_name text;
+
+ALTER TABLE recommendation_movies
   ADD COLUMN IF NOT EXISTS tmdb_name text;
 
 ALTER TABLE recommendation_movies

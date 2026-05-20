@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS movies (
   score_rating float NOT NULL,
   year int NOT NULL,
   tmdb_id bigint,
+  poster_url text,
+  localized_name text,
   tmdb_match_confidence float,
   tmdb_match_source text,
   tmdb_matched_at timestamptz,
@@ -21,6 +23,12 @@ CREATE TABLE IF NOT EXISTS movies (
 
 ALTER TABLE movies
   ADD COLUMN IF NOT EXISTS tmdb_id bigint;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS poster_url text;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS localized_name text;
 
 ALTER TABLE movies
   ADD COLUMN IF NOT EXISTS tmdb_match_confidence float;
