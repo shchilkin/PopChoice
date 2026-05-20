@@ -656,13 +656,28 @@ function MovieTrainingCard({
     >
       <div className="relative min-h-[520px] overflow-hidden">
         {movie.posterURL ? (
-          <Image
-            src={movie.posterURL}
-            alt={title}
-            fill
-            sizes="(min-width: 768px) 768px, 100vw"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
+          <>
+            <Image
+              src={movie.posterURL}
+              alt=""
+              fill
+              sizes="(min-width: 768px) 768px, 100vw"
+              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
+              aria-hidden="true"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: 'rgba(6,6,10,0.58)' }}
+              aria-hidden="true"
+            />
+            <Image
+              src={movie.posterURL}
+              alt={title}
+              fill
+              sizes="(min-width: 768px) 768px, 100vw"
+              className="absolute inset-0 h-full w-full object-contain p-5 pb-40 md:p-8 md:pb-44"
+            />
+          </>
         ) : (
           <div
             className="absolute inset-0 flex items-center justify-center"
