@@ -288,6 +288,11 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
             movie_name: 'Spirited Away',
             movie_year: 2001,
           },
+          {
+            tmdb_id: 128,
+            movie_name: 'Princess Mononoke',
+            movie_year: 1997,
+          },
         ],
       });
 
@@ -315,11 +320,28 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
         movieName: 'Spirited Away',
         movieYear: 2001,
       },
+      {
+        kind: 'recently_recommended',
+        movieKey: 'tmdb:128',
+        tmdbId: 128,
+        movieName: 'Princess Mononoke',
+        movieYear: 1997,
+      },
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('user_movie_interactions');
     expect(sql).toContain("kind IN ('watched', 'not_interested', 'wrong_mood')");
+    const [recentSql, recentParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    const recentWindowIndex = recentSql.indexOf('WITH recent_recommendations AS');
+    const recentWindowLimitIndex = recentSql.indexOf('LIMIT $2');
+    const movieJoinIndex = recentSql.indexOf('JOIN recommendation_movies rm');
+    expect(recentWindowIndex).toBeGreaterThanOrEqual(0);
+    expect(recentWindowLimitIndex).toBeGreaterThan(recentWindowIndex);
+    expect(movieJoinIndex).toBeGreaterThan(recentWindowLimitIndex);
+    expect(recentSql).not.toContain('JOIN LATERAL');
+    expect(recentSql).not.toContain('LIMIT 1');
     expect(params).toEqual(['42', 100]);
+    expect(recentParams).toEqual(['42', 100]);
     expect(mockQuery).toHaveBeenCalledTimes(2);
   });
 });
