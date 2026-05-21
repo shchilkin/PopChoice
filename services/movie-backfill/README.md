@@ -4,13 +4,16 @@ A one-shot script that backfills missing `duration` and `age_rating` data for mo
 
 ## What it does
 
-1. Queries the database for all movies where `duration = 0` (missing runtime).
-2. For each movie, searches TMDB by title + year to find the TMDB movie ID.
-3. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
-4. Re-generates the embedding for each movie (since the embedding text includes duration and age_rating).
-5. Updates the database row with the new `duration`, `age_rating`, and `embedding`.
+1. Queries the database for movies where `tmdb_id IS NULL` or `duration = 0`.
+2. For each movie, searches TMDB by title + year to find a conservative TMDB movie ID match.
+3. Writes ambiguous matches or runtime mismatches to `tmdb_match_reviews` for later manual review.
+4. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
+5. Re-generates the embedding for each movie (since the embedding text includes duration and age_rating).
+6. Updates the database row with the new `tmdb_id`, `duration`, `age_rating`, match confidence, and `embedding`.
 
 Movies for which TMDB returns no runtime are skipped (logged as warnings) so the script never replaces a `0` with another `0`.
+
+Ambiguous TMDB matches are intentionally not auto-applied. They are recorded in `tmdb_match_reviews` with candidate IDs, confidence scores, and a reason (`ambiguous_match` or `runtime_mismatch`) so a future admin/back-office view can resolve them safely.
 
 ## Environment Variables
 

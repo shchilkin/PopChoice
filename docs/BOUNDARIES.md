@@ -25,6 +25,20 @@ Owns route and page boundaries.
   - direct infrastructure workflows mixed with request handling
   - route-local modules that become the de facto home of domain logic
 
+### `src/features`
+
+Owns feature-level orchestration and domain-facing workflows that are reused by
+routes, workers, or pages.
+
+- Responsibilities:
+  - coordinate recommendation, auth, catalog, and similar product workflows
+  - hold feature constants, schemas, adapters, and workflow-specific tests
+  - expose stable functions for route handlers and workers to call
+- Should not own:
+  - low-level SDK/client construction
+  - generic cross-cutting infrastructure that belongs in `src/lib`
+  - standalone background process entrypoints that belong in root `services/*`
+
 ### `src/integrations`
 
 Owns app-local third-party integrations and external API access patterns used by the web app.
@@ -79,19 +93,20 @@ Owns reusable pure or near-pure helpers.
 
 ## Current Friction Points
 
-- Recommendation orchestration is reusable, but its current home under `src/app/api/...` still ties domain logic to route ownership.
-- Some API handlers still coordinate DB writes, queueing, and orchestration directly.
-- App-local external integrations and root `services/*` previously shared the same label, which made navigation and code review terminology ambiguous.
-- Documentation has historically described a flatter root-level `src/` structure than the actual workspace layout.
+- Compatibility re-export files still exist under `src/app/api/movie-recommendation`, so reviewers need to check whether new logic belongs in `src/features/recommendation` instead.
+- Some API handlers still coordinate DB writes, queueing, and orchestration directly where no feature-owned boundary has been extracted yet.
+- User movie memory currently uses `src/lib/db/recommendations.ts` directly from the route; future growth may justify a feature-owned account/movie-memory module.
+- Production and preview databases can be long-lived, so schema changes must stay additive and migration-aware.
 
 ## Decision Rules
 
 When adding new code, use these rules:
 
 1. If it parses HTTP input or returns HTTP output, it belongs in `src/app`.
-2. If it configures an SDK or connection, it belongs in `src/clients`.
-3. If it wraps infra concerns used across the app runtime, it belongs in `src/lib`.
-4. If it is a narrow reusable helper with minimal side effects, it belongs in `src/utils`.
-5. If it wraps an external API for the web app, it belongs in `src/integrations`.
-6. If it is a background process that should run independently of the web app, it belongs in root `services/*`.
-7. If a flow starts spanning multiple routes or runtimes, prefer extracting it toward a clearer domain-oriented module boundary instead of leaving it under a route folder.
+2. If it coordinates product behavior across routes, workers, or pages, it belongs in `src/features`.
+3. If it configures an SDK or connection, it belongs in `src/clients`.
+4. If it wraps infra concerns used across the app runtime, it belongs in `src/lib`.
+5. If it is a narrow reusable helper with minimal side effects, it belongs in `src/utils`.
+6. If it wraps an external API for the web app, it belongs in `src/integrations`.
+7. If it is a background process that should run independently of the web app, it belongs in root `services/*`.
+8. If a flow starts spanning multiple routes or runtimes, prefer extracting it toward a clearer feature/domain module boundary instead of leaving it under a route folder.

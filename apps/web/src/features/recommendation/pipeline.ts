@@ -9,7 +9,6 @@ import { getDbClient } from '@/clients/dbClient';
 import { getUserRecommendationFeedbackMoviePreferences } from '@/lib/db/recommendations';
 import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
-import { getMovieTitleKey } from '@/lib/movieIdentity';
 
 import {
   applyFeedbackToLocalMovies,
@@ -20,6 +19,10 @@ import {
   getMentionedMovieTitleKeys,
 } from './candidateFilters';
 import { createEmbedding, refineQueryWithLLM } from './embedding';
+import {
+  findCandidateByRecommendedTitle,
+  resolveGuardedRecommendation,
+} from './finalRecommendation';
 import { SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import {
   enhanceSimilarMoviesWithPosters,
@@ -48,24 +51,6 @@ class EnqueueTimeoutError extends Error {
     super(message);
     this.name = 'EnqueueTimeoutError';
   }
-}
-
-function findRecommendedMovieByTitle<TMovie extends { id: number; name: string }>(
-  movies: TMovie[],
-  recommendedTitle: string,
-): TMovie | undefined {
-  const recommendedTitleKey = getMovieTitleKey(recommendedTitle);
-  if (recommendedTitleKey) {
-    const exactMatch = movies.find((movie) => getMovieTitleKey(movie.name) === recommendedTitleKey);
-    if (exactMatch) return exactMatch;
-  }
-
-  const normalizedRecommendedTitle = recommendedTitle.toLowerCase();
-  return movies.find(
-    (movie) =>
-      movie.name.toLowerCase().includes(normalizedRecommendedTitle) ||
-      normalizedRecommendedTitle.includes(movie.name.toLowerCase()),
-  );
 }
 
 async function withTimeout<T>(
@@ -304,11 +289,43 @@ export async function runRecommendationPipeline(
   // Step 4: Get recommendation from OpenAI
   await emitStage('ai-ranking');
   const responseMessage = await getRecommendation(similarMovies, allPeopleData, locale);
-  logger.info({ recommendedTitle: responseMessage.title }, 'OpenAI recommendation received');
+  const guardedRecommendation = resolveGuardedRecommendation(
+    responseMessage,
+    similarMovies,
+    locale,
+  );
+
+  if (guardedRecommendation.replacedOutOfSetTitle) {
+    logger.warn(
+      {
+        requestedTitle: guardedRecommendation.requestedTitle,
+        fallbackTitle: guardedRecommendation.title,
+        candidateCount: similarMovies.length,
+        feedbackExcludedMovieCount: feedbackSignals.excludedMovieKeys.size,
+        feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
+      },
+      'OpenAI returned a movie outside filtered candidates; using strongest remaining candidate',
+    );
+  } else {
+    logger.info(
+      { recommendedTitle: guardedRecommendation.title },
+      'OpenAI recommendation received',
+    );
+  }
 
   // Step 5: Get localized poster + name for main recommendation
   await emitStage('posters');
-  const { posterURL } = await getMovieInfo(responseMessage.title, locale);
+  const guardedMovieTMDBId =
+    guardedRecommendation.movie.tmdbId ??
+    (Number(guardedRecommendation.movie.id) < 0
+      ? Math.abs(Number(guardedRecommendation.movie.id))
+      : undefined);
+  const { posterURL } = await getMovieInfo(
+    guardedRecommendation.title,
+    locale,
+    guardedRecommendation.movie.year,
+    guardedMovieTMDBId ?? undefined,
+  );
 
   // Step 6: Enhance similar movies with poster URLs and localized names (in batches)
   logger.info('Enhancing similar movies with posters');
@@ -324,10 +341,9 @@ export async function runRecommendationPipeline(
   );
 
   // Find the recommended movie
-  const recommendedMovie = findRecommendedMovieByTitle(
-    moviesWithDescriptions,
-    responseMessage.title,
-  );
+  const recommendedMovie =
+    moviesWithDescriptions.find((movie) => movie.id === guardedRecommendation.movie.id) ??
+    findCandidateByRecommendedTitle(moviesWithDescriptions, guardedRecommendation.title);
 
   logger.info(
     { movieCount: moviesWithDescriptions.length },
@@ -335,8 +351,8 @@ export async function runRecommendationPipeline(
   );
 
   return {
-    description: responseMessage.description,
-    title: responseMessage.title,
+    description: guardedRecommendation.description,
+    title: guardedRecommendation.title,
     posterURL: posterURL,
     movieDetails: recommendedMovie
       ? {

@@ -49,9 +49,13 @@ function normalizeVersion(value: string | null): string {
 export function getBuildInfo(now = new Date()): BuildInfo {
   const commitSha = firstValidCommitSha(
     process.env.APP_COMMIT_SHA,
+    process.env.BUILD_APP_COMMIT_SHA,
     process.env.SOURCE_COMMIT,
+    process.env.BUILD_SOURCE_COMMIT,
     process.env.GITHUB_SHA,
+    process.env.BUILD_GITHUB_SHA,
     process.env.VERCEL_GIT_COMMIT_SHA,
+    process.env.BUILD_VERCEL_GIT_COMMIT_SHA,
   );
 
   return {
@@ -62,13 +66,20 @@ export function getBuildInfo(now = new Date()): BuildInfo {
     commitShortSha: commitSha ? commitSha.slice(0, 7) : null,
     branch: firstNonEmpty(
       process.env.APP_GIT_BRANCH,
+      process.env.BUILD_APP_GIT_BRANCH,
       process.env.SOURCE_BRANCH,
+      process.env.BUILD_SOURCE_BRANCH,
       process.env.COOLIFY_BRANCH,
+      process.env.BUILD_COOLIFY_BRANCH,
       process.env.GITHUB_REF_NAME,
       process.env.VERCEL_GIT_COMMIT_REF,
+      process.env.BUILD_VERCEL_GIT_COMMIT_REF,
     ),
     environment: process.env.NODE_ENV ?? 'development',
-    resourceUuid: firstNonEmpty(process.env.COOLIFY_RESOURCE_UUID),
+    resourceUuid: firstNonEmpty(
+      process.env.COOLIFY_RESOURCE_UUID,
+      process.env.BUILD_COOLIFY_RESOURCE_UUID,
+    ),
     baseUrl: firstNonEmpty(process.env.NEXT_PUBLIC_BASE_URL),
     timestamp: now.toISOString(),
   };

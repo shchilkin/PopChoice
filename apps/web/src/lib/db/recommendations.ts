@@ -48,7 +48,12 @@ export type RecommendationFeedbackKind =
   | 'too_obvious'
   | 'too_obscure'
   | 'close';
-export type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
+export type UserMovieInteractionKind =
+  | 'watched'
+  | 'liked'
+  | 'not_interested'
+  | 'wrong_mood'
+  | 'not_seen';
 export type UserRecommendationMemoryKind = UserMovieInteractionKind | 'recently_recommended';
 
 export interface RecommendationMovie {
@@ -111,6 +116,38 @@ export interface UserMovieMemorySummary {
   posterURL: string | null;
   localizedName: string | null;
   updatedAt: string;
+}
+
+export interface MovieMemoryCatalogSearchResult {
+  id: number;
+  tmdbId: number | null;
+  movieName: string;
+  movieYear: number | null;
+  posterURL: string | null;
+  localizedName: string | null;
+  duration: number | null;
+  description: string | null;
+  localizedOverview: string | null;
+}
+
+export interface MovieMemoryCandidateStats {
+  catalogCount: number;
+  memoryCount: number;
+  availableCatalogCount: number;
+}
+
+export interface UserMovieMemoryPage {
+  items: UserMovieMemorySummary[];
+  total: number;
+  nextOffset: number | null;
+}
+
+export interface ExternalMovieMemoryInput {
+  tmdbId: number | null;
+  movieName: string;
+  movieYear: number | null;
+  posterURL: string | null;
+  localizedName: string | null;
 }
 
 export interface MovieRowToInsert {
@@ -302,23 +339,27 @@ export async function getUserRecommendationFeedbackMoviePreferences(
     movie_name: string | null;
     movie_year: number | null;
   }>(
-    `SELECT
+    `WITH recent_recommendations AS (
+       SELECT
+         id,
+         COALESCE(completed_at, created_at) AS recommended_at
+       FROM recommendations
+       WHERE user_id = $1
+         AND status = 'completed'
+       ORDER BY COALESCE(completed_at, created_at) DESC
+       LIMIT $2
+     )
+     SELECT
        rm.tmdb_id,
        COALESCE(rm.tmdb_name, m.name) AS movie_name,
        COALESCE(rm.tmdb_year, m.year) AS movie_year
-     FROM recommendations r
-     JOIN LATERAL (
-       SELECT *
-         FROM recommendation_movies
-        WHERE recommendation_id = r.id
-        ORDER BY is_main_recommendation DESC, position ASC
-        LIMIT 1
-     ) rm ON true
+     FROM recent_recommendations r
+     JOIN recommendation_movies rm ON rm.recommendation_id = r.id
      LEFT JOIN movies m ON m.id = rm.movie_id
-     WHERE r.user_id = $1
-       AND r.status = 'completed'
-     ORDER BY COALESCE(r.completed_at, r.created_at) DESC
-     LIMIT $2`,
+     WHERE COALESCE(rm.tmdb_name, m.name) IS NOT NULL
+     ORDER BY r.recommended_at DESC,
+              rm.is_main_recommendation DESC,
+              rm.position ASC`,
     [userId, limit],
   );
 
@@ -371,17 +412,52 @@ export async function getUserMovieMemorySummaries(
     updated_at: Date | string;
   }>(
     `SELECT
-       kind,
-       movie_key,
-       tmdb_id,
-       movie_name,
-       movie_year,
-       poster_url,
-       localized_name,
-       updated_at
-     FROM user_movie_interactions
-     WHERE user_id = $1
-     ORDER BY updated_at DESC
+       ui.kind,
+       ui.movie_key,
+       COALESCE(ui.tmdb_id, catalog_movie.tmdb_id, source_movie.tmdb_id) AS tmdb_id,
+       ui.movie_name,
+       ui.movie_year,
+       COALESCE(ui.poster_url, catalog_movie.poster_url, source_movie.poster_url) AS poster_url,
+       COALESCE(ui.localized_name, catalog_movie.localized_name, source_movie.localized_name) AS localized_name,
+       ui.updated_at
+     FROM user_movie_interactions ui
+     LEFT JOIN LATERAL (
+       SELECT m.tmdb_id, m.poster_url, m.localized_name
+       FROM movies m
+       WHERE (ui.tmdb_id IS NOT NULL AND m.tmdb_id = ui.tmdb_id)
+          OR (lower(m.name) = lower(ui.movie_name) AND m.year IS NOT DISTINCT FROM ui.movie_year)
+       ORDER BY (m.poster_url IS NULL), m.id
+       LIMIT 1
+     ) catalog_movie ON true
+     LEFT JOIN LATERAL (
+       SELECT
+         rm.tmdb_id,
+         COALESCE(rm.poster_url, m.poster_url) AS poster_url,
+         COALESCE(rm.localized_name, m.localized_name) AS localized_name
+       FROM recommendation_movies rm
+       LEFT JOIN movies m ON m.id = rm.movie_id
+       WHERE rm.recommendation_id = ui.source_recommendation_id
+         AND (
+           (ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id)
+           OR (
+             lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year
+           )
+           OR rm.is_main_recommendation
+         )
+       ORDER BY
+         CASE
+           WHEN ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id THEN 0
+           WHEN lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year THEN 1
+           ELSE 2
+         END,
+         rm.is_main_recommendation DESC,
+         rm.position ASC
+       LIMIT 1
+     ) source_movie ON true
+     WHERE ui.user_id = $1
+     ORDER BY ui.updated_at DESC
      LIMIT $2`,
     [userId, Math.min(Math.max(limit, 1), 100)],
   );
@@ -396,6 +472,367 @@ export async function getUserMovieMemorySummaries(
     localizedName: row.localized_name,
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   }));
+}
+
+export async function getUserMovieMemoryPage(
+  userId: string,
+  { limit = 50, offset = 0 } = {},
+): Promise<UserMovieMemoryPage> {
+  const pool = getPool();
+  const boundedLimit = Math.min(Math.max(limit, 1), 100);
+  const boundedOffset = Math.max(offset, 0);
+  const result = await pool.query<{
+    kind: UserMovieInteractionKind;
+    movie_key: string;
+    tmdb_id: number | null;
+    movie_name: string;
+    movie_year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    updated_at: Date | string;
+    total_count: string | number;
+  }>(
+    `SELECT
+       ui.kind,
+       ui.movie_key,
+       COALESCE(ui.tmdb_id, catalog_movie.tmdb_id, source_movie.tmdb_id) AS tmdb_id,
+       ui.movie_name,
+       ui.movie_year,
+       COALESCE(ui.poster_url, catalog_movie.poster_url, source_movie.poster_url) AS poster_url,
+       COALESCE(ui.localized_name, catalog_movie.localized_name, source_movie.localized_name) AS localized_name,
+       ui.updated_at,
+       COUNT(*) OVER() AS total_count
+     FROM user_movie_interactions ui
+     LEFT JOIN LATERAL (
+       SELECT m.tmdb_id, m.poster_url, m.localized_name
+       FROM movies m
+       WHERE (ui.tmdb_id IS NOT NULL AND m.tmdb_id = ui.tmdb_id)
+          OR (lower(m.name) = lower(ui.movie_name) AND m.year IS NOT DISTINCT FROM ui.movie_year)
+       ORDER BY (m.poster_url IS NULL), m.id
+       LIMIT 1
+     ) catalog_movie ON true
+     LEFT JOIN LATERAL (
+       SELECT
+         rm.tmdb_id,
+         COALESCE(rm.poster_url, m.poster_url) AS poster_url,
+         COALESCE(rm.localized_name, m.localized_name) AS localized_name
+       FROM recommendation_movies rm
+       LEFT JOIN movies m ON m.id = rm.movie_id
+       WHERE rm.recommendation_id = ui.source_recommendation_id
+         AND (
+           (ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id)
+           OR (
+             lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year
+           )
+           OR rm.is_main_recommendation
+         )
+       ORDER BY
+         CASE
+           WHEN ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id THEN 0
+           WHEN lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year THEN 1
+           ELSE 2
+         END,
+         rm.is_main_recommendation DESC,
+         rm.position ASC
+       LIMIT 1
+     ) source_movie ON true
+     WHERE ui.user_id = $1
+     ORDER BY ui.updated_at DESC, ui.movie_key ASC
+     LIMIT $2 OFFSET $3`,
+    [userId, boundedLimit, boundedOffset],
+  );
+
+  const total = Number(result.rows[0]?.total_count ?? boundedOffset + result.rows.length);
+  const nextOffset =
+    boundedOffset + result.rows.length < total ? boundedOffset + result.rows.length : null;
+
+  return {
+    items: result.rows.map(mapUserMovieMemoryRow),
+    total,
+    nextOffset,
+  };
+}
+
+function mapUserMovieMemoryRow(row: {
+  kind: UserMovieInteractionKind;
+  movie_key: string;
+  tmdb_id: number | null;
+  movie_name: string;
+  movie_year: number | null;
+  poster_url: string | null;
+  localized_name: string | null;
+  updated_at: Date | string;
+}): UserMovieMemorySummary {
+  return {
+    kind: row.kind,
+    movieKey: row.movie_key,
+    tmdbId: row.tmdb_id,
+    movieName: row.movie_name,
+    movieYear: row.movie_year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
+  };
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+export async function searchMovieCatalogForMemory(
+  query: string,
+  limit = 8,
+): Promise<MovieMemoryCatalogSearchResult[]> {
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length < 2) return [];
+
+  const pool = getPool();
+  const result = await pool.query<{
+    id: number;
+    tmdb_id: number | null;
+    name: string;
+    year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    duration: number | null;
+    description: string | null;
+  }>(
+    `SELECT id, tmdb_id, name, year, poster_url, localized_name, duration, description
+       FROM movies
+      WHERE name ILIKE $1 ESCAPE '\\'
+      ORDER BY (poster_url IS NULL), year DESC, name ASC
+      LIMIT $2`,
+    [`%${escapeLikePattern(trimmedQuery)}%`, Math.min(Math.max(limit, 1), 12)],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    tmdbId: row.tmdb_id,
+    movieName: row.name,
+    movieYear: row.year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
+    duration: row.duration,
+    description: row.description,
+    localizedOverview: null,
+  }));
+}
+
+export async function getMovieMemoryCandidatesForUser(
+  userId: string,
+  limit = 20,
+): Promise<MovieMemoryCatalogSearchResult[]> {
+  const pool = getPool();
+  const boundedLimit = Math.min(Math.max(limit, 1), 20);
+  const result = await pool.query<{
+    id: number;
+    tmdb_id: number | null;
+    name: string;
+    year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    duration: number | null;
+    description: string | null;
+    score_rating: number | null;
+  }>(
+    `SELECT id, tmdb_id, name, year, poster_url, localized_name, duration, description, score_rating
+       FROM movies m
+      WHERE NOT EXISTS (
+        SELECT 1
+          FROM user_movie_interactions ui
+         WHERE ui.user_id = $1
+           AND (
+             (
+               m.tmdb_id IS NOT NULL
+               AND (
+                 ui.tmdb_id = m.tmdb_id
+                 OR ui.movie_key = CONCAT('tmdb:', m.tmdb_id::text)
+               )
+             )
+             OR (
+               lower(ui.movie_name) = lower(m.name)
+               AND ui.movie_year IS NOT DISTINCT FROM m.year
+             )
+           )
+      )
+      ORDER BY (m.poster_url IS NULL), m.score_rating DESC NULLS LAST, m.year DESC NULLS LAST, m.name ASC
+      LIMIT $2`,
+    [userId, boundedLimit],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    tmdbId: row.tmdb_id,
+    movieName: row.name,
+    movieYear: row.year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
+    duration: row.duration,
+    description: row.description,
+    localizedOverview: null,
+  }));
+}
+
+export async function getMovieMemoryCandidateStatsForUser(
+  userId: string,
+): Promise<MovieMemoryCandidateStats> {
+  const pool = getPool();
+  const result = await pool.query<{
+    catalog_count: string | number;
+    memory_count: string | number;
+    available_catalog_count: string | number;
+  }>(
+    `SELECT
+       (SELECT COUNT(*) FROM movies) AS catalog_count,
+       (
+         SELECT COUNT(*)
+           FROM user_movie_interactions
+          WHERE user_id = $1
+       ) AS memory_count,
+       (
+         SELECT COUNT(*)
+           FROM movies m
+          WHERE NOT EXISTS (
+            SELECT 1
+              FROM user_movie_interactions ui
+             WHERE ui.user_id = $1
+               AND (
+                 (
+                   m.tmdb_id IS NOT NULL
+                   AND (
+                     ui.tmdb_id = m.tmdb_id
+                     OR ui.movie_key = CONCAT('tmdb:', m.tmdb_id::text)
+                   )
+                 )
+                 OR (
+                   lower(ui.movie_name) = lower(m.name)
+                   AND ui.movie_year IS NOT DISTINCT FROM m.year
+                 )
+               )
+          )
+       ) AS available_catalog_count`,
+    [userId],
+  );
+
+  const row = result.rows[0];
+  return {
+    catalogCount: Number(row?.catalog_count ?? 0),
+    memoryCount: Number(row?.memory_count ?? 0),
+    availableCatalogCount: Number(row?.available_catalog_count ?? 0),
+  };
+}
+
+export async function addUserMovieMemoryFromCatalog(
+  userId: string,
+  movieId: number,
+  kind: UserMovieInteractionKind = 'watched',
+): Promise<UserMovieMemorySummary | null> {
+  const pool = getPool();
+  const movieResult = await pool.query<{
+    tmdb_id: number | null;
+    name: string;
+    year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+  }>(
+    `SELECT tmdb_id, name, year, poster_url, localized_name
+       FROM movies
+      WHERE id = $1
+      LIMIT 1`,
+    [movieId],
+  );
+
+  const movie = movieResult.rows[0];
+  if (!movie) return null;
+
+  return addUserMovieMemoryFromExternalMovie(
+    userId,
+    {
+      tmdbId: movie.tmdb_id,
+      movieName: movie.name,
+      movieYear: movie.year,
+      posterURL: movie.poster_url,
+      localizedName: movie.localized_name,
+    },
+    kind,
+  );
+}
+
+export async function addUserMovieMemoryFromExternalMovie(
+  userId: string,
+  movie: ExternalMovieMemoryInput,
+  kind: UserMovieInteractionKind = 'watched',
+): Promise<UserMovieMemorySummary | null> {
+  const pool = getPool();
+  const movieKey = getMovieIdentityKey({
+    tmdbId: movie.tmdbId,
+    title: movie.movieName,
+    year: movie.movieYear,
+  });
+  if (!movieKey) return null;
+
+  const upsertResult = await pool.query<{
+    kind: UserMovieInteractionKind;
+    movie_key: string;
+    tmdb_id: number | null;
+    movie_name: string;
+    movie_year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    updated_at: Date | string;
+  }>(
+    `INSERT INTO user_movie_interactions (
+       user_id, movie_key, tmdb_id, movie_name, movie_year, poster_url, localized_name, kind
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (user_id, movie_key)
+     DO UPDATE SET
+       tmdb_id = COALESCE(EXCLUDED.tmdb_id, user_movie_interactions.tmdb_id),
+       movie_name = EXCLUDED.movie_name,
+       movie_year = EXCLUDED.movie_year,
+       poster_url = COALESCE(EXCLUDED.poster_url, user_movie_interactions.poster_url),
+       localized_name = COALESCE(EXCLUDED.localized_name, user_movie_interactions.localized_name),
+       kind = EXCLUDED.kind,
+       updated_at = now()
+     RETURNING kind, movie_key, tmdb_id, movie_name, movie_year, poster_url, localized_name, updated_at`,
+    [
+      userId,
+      movieKey,
+      movie.tmdbId,
+      movie.movieName,
+      movie.movieYear,
+      movie.posterURL,
+      movie.localizedName,
+      kind,
+    ],
+  );
+
+  const row = upsertResult.rows[0];
+  return row ? mapUserMovieMemoryRow(row) : null;
+}
+
+export async function addUserMovieMemoryBatchFromCatalog(
+  userId: string,
+  items: Array<{ movieId: number; kind?: UserMovieInteractionKind }>,
+): Promise<UserMovieMemorySummary[]> {
+  const dedupedItems = Array.from(
+    items
+      .reduce((map, item) => {
+        map.set(item.movieId, { movieId: item.movieId, kind: item.kind ?? 'watched' });
+        return map;
+      }, new Map<number, { movieId: number; kind: UserMovieInteractionKind }>())
+      .values(),
+  );
+  const saved: UserMovieMemorySummary[] = [];
+
+  for (const item of dedupedItems) {
+    const result = await addUserMovieMemoryFromCatalog(userId, item.movieId, item.kind);
+    if (result) saved.push(result);
+  }
+
+  return saved;
 }
 
 export async function deleteUserMovieMemory(userId: string, movieKey: string): Promise<boolean> {
