@@ -220,18 +220,19 @@ describe('quiz machine – BACK navigation', () => {
     expect(snapshot.context.people).toHaveLength(1);
   });
 
-  it('RESET from navigatingToResults starts a fresh quiz', () => {
+  it('navigatingToResults is final for the current quiz session', () => {
     const actor = makeActor();
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
     actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' });
+    actor.send({ type: 'BACK' });
     actor.send({ type: 'RESET' });
 
     const snapshot = actor.getSnapshot();
-    expect(snapshot.value).toBe('intro');
-    expect(snapshot.context.people).toEqual([]);
-    expect(snapshot.context.recommendationId).toBeNull();
+    expect(snapshot.value).toBe('navigatingToResults');
+    expect(snapshot.context.people).toHaveLength(1);
+    expect(snapshot.context.recommendationId).toBe('rec_123');
   });
 
   it('failed submission preserves answers and can retry', () => {
