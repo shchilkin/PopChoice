@@ -127,6 +127,12 @@ export interface MovieMemoryCatalogSearchResult {
   localizedName: string | null;
 }
 
+export interface MovieMemoryCandidateStats {
+  catalogCount: number;
+  memoryCount: number;
+  availableCatalogCount: number;
+}
+
 export interface MovieRowToInsert {
   id: number;
   tmdbId?: number | null;
@@ -513,15 +519,6 @@ export async function getMovieMemoryCandidatesForUser(
 ): Promise<MovieMemoryCatalogSearchResult[]> {
   const pool = getPool();
   const boundedLimit = Math.min(Math.max(limit, 1), 20);
-  const memoryResult = await pool.query<{ movie_key: string }>(
-    `SELECT movie_key
-       FROM user_movie_interactions
-      WHERE user_id = $1
-      LIMIT 1000`,
-    [userId],
-  );
-  const excludedKeys = new Set(memoryResult.rows.map((row) => row.movie_key));
-  const fetchLimit = Math.max(boundedLimit * 6, 80);
   const result = await pool.query<{
     id: number;
     tmdb_id: number | null;
@@ -532,42 +529,87 @@ export async function getMovieMemoryCandidatesForUser(
     score_rating: number | null;
   }>(
     `SELECT id, tmdb_id, name, year, poster_url, localized_name, score_rating
-       FROM movies
-      ORDER BY (poster_url IS NULL), score_rating DESC NULLS LAST, year DESC NULLS LAST, name ASC
-      LIMIT $1`,
-    [fetchLimit],
+       FROM movies m
+      WHERE NOT EXISTS (
+        SELECT 1
+          FROM user_movie_interactions ui
+         WHERE ui.user_id = $1
+           AND (
+             (
+               m.tmdb_id IS NOT NULL
+               AND (
+                 ui.tmdb_id = m.tmdb_id
+                 OR ui.movie_key = CONCAT('tmdb:', m.tmdb_id::text)
+               )
+             )
+             OR (
+               lower(ui.movie_name) = lower(m.name)
+               AND ui.movie_year IS NOT DISTINCT FROM m.year
+             )
+           )
+      )
+      ORDER BY (m.poster_url IS NULL), m.score_rating DESC NULLS LAST, m.year DESC NULLS LAST, m.name ASC
+      LIMIT $2`,
+    [userId, boundedLimit],
   );
 
-  const candidates: MovieMemoryCatalogSearchResult[] = [];
-  const candidateKeys = new Set<string>();
+  return result.rows.map((row) => ({
+    id: row.id,
+    tmdbId: row.tmdb_id,
+    movieName: row.name,
+    movieYear: row.year,
+    posterURL: row.poster_url,
+    localizedName: row.localized_name,
+  }));
+}
 
-  for (const row of result.rows) {
-    const movieKey = getMovieIdentityKey({
-      tmdbId: row.tmdb_id,
-      title: row.name,
-      year: row.year,
-    });
+export async function getMovieMemoryCandidateStatsForUser(
+  userId: string,
+): Promise<MovieMemoryCandidateStats> {
+  const pool = getPool();
+  const result = await pool.query<{
+    catalog_count: string | number;
+    memory_count: string | number;
+    available_catalog_count: string | number;
+  }>(
+    `SELECT
+       (SELECT COUNT(*) FROM movies) AS catalog_count,
+       (
+         SELECT COUNT(*)
+           FROM user_movie_interactions
+          WHERE user_id = $1
+       ) AS memory_count,
+       (
+         SELECT COUNT(*)
+           FROM movies m
+          WHERE NOT EXISTS (
+            SELECT 1
+              FROM user_movie_interactions ui
+             WHERE ui.user_id = $1
+               AND (
+                 (
+                   m.tmdb_id IS NOT NULL
+                   AND (
+                     ui.tmdb_id = m.tmdb_id
+                     OR ui.movie_key = CONCAT('tmdb:', m.tmdb_id::text)
+                   )
+                 )
+                 OR (
+                   lower(ui.movie_name) = lower(m.name)
+                   AND ui.movie_year IS NOT DISTINCT FROM m.year
+                 )
+               )
+          )
+       ) AS available_catalog_count`,
+    [userId],
+  );
 
-    if (!movieKey || excludedKeys.has(movieKey) || candidateKeys.has(movieKey)) {
-      continue;
-    }
-
-    candidateKeys.add(movieKey);
-    candidates.push({
-      id: row.id,
-      tmdbId: row.tmdb_id,
-      movieName: row.name,
-      movieYear: row.year,
-      posterURL: row.poster_url,
-      localizedName: row.localized_name,
-    });
-
-    if (candidates.length >= boundedLimit) {
-      break;
-    }
-  }
-
-  return candidates;
+  const row = result.rows[0];
+  return {
+    catalogCount: Number(row?.catalog_count ?? 0),
+    memoryCount: Number(row?.memory_count ?? 0),
+    availableCatalogCount: Number(row?.available_catalog_count ?? 0),
+  };
 }
 
 export async function addUserMovieMemoryFromCatalog(

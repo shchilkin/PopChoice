@@ -6,6 +6,7 @@ import {
   addUserMovieMemoryBatchFromCatalog,
   addUserMovieMemoryFromCatalog,
   deleteUserMovieMemory,
+  getMovieMemoryCandidateStatsForUser,
   getMovieMemoryCandidatesForUser,
   searchMovieCatalogForMemory,
 } from '@/lib/db/recommendations';
@@ -104,12 +105,26 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (isCandidatesRequest) {
     try {
       const movies = await getMovieMemoryCandidatesForUser(session.sub, CANDIDATE_LIMIT);
+      let emptyStats: Awaited<ReturnType<typeof getMovieMemoryCandidateStatsForUser>> | undefined;
+      if (movies.length === 0) {
+        try {
+          emptyStats = await getMovieMemoryCandidateStatsForUser(session.sub);
+        } catch (statsErr) {
+          logger.warn(
+            { err: statsErr, userId: session.sub, requestKind },
+            'Failed to collect empty movie memory candidate stats',
+          );
+        }
+      }
       logger.info(
         {
           userId: session.sub,
           requestKind,
           requested: CANDIDATE_LIMIT,
           returned: movies.length,
+          catalogCount: emptyStats?.catalogCount,
+          memoryCount: emptyStats?.memoryCount,
+          availableCatalogCount: emptyStats?.availableCatalogCount,
           durationMs: elapsedMs(startedAt),
         },
         'Movie memory candidates loaded',

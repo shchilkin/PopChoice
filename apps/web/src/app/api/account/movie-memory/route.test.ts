@@ -6,6 +6,7 @@ const {
   mockAddUserMovieMemoryBatchFromCatalog,
   mockAddUserMovieMemoryFromCatalog,
   mockDeleteUserMovieMemory,
+  mockGetMovieMemoryCandidateStatsForUser,
   mockGetMovieMemoryCandidatesForUser,
   mockSearchMovieCatalogForMemory,
   mockApplyRateLimit,
@@ -14,6 +15,7 @@ const {
   mockAddUserMovieMemoryBatchFromCatalog: vi.fn(),
   mockAddUserMovieMemoryFromCatalog: vi.fn(),
   mockDeleteUserMovieMemory: vi.fn(),
+  mockGetMovieMemoryCandidateStatsForUser: vi.fn(),
   mockGetMovieMemoryCandidatesForUser: vi.fn(),
   mockSearchMovieCatalogForMemory: vi.fn(),
   mockApplyRateLimit: vi.fn(),
@@ -27,6 +29,7 @@ vi.mock('@/lib/db/recommendations', () => ({
   addUserMovieMemoryBatchFromCatalog: mockAddUserMovieMemoryBatchFromCatalog,
   addUserMovieMemoryFromCatalog: mockAddUserMovieMemoryFromCatalog,
   deleteUserMovieMemory: mockDeleteUserMovieMemory,
+  getMovieMemoryCandidateStatsForUser: mockGetMovieMemoryCandidateStatsForUser,
   getMovieMemoryCandidatesForUser: mockGetMovieMemoryCandidatesForUser,
   searchMovieCatalogForMemory: mockSearchMovieCatalogForMemory,
 }));
@@ -85,6 +88,7 @@ function makeCandidatesRequest() {
 describe('GET /api/account/movie-memory', () => {
   beforeEach(() => {
     mockGetSessionFromRequest.mockReset();
+    mockGetMovieMemoryCandidateStatsForUser.mockReset();
     mockGetMovieMemoryCandidatesForUser.mockReset();
     mockSearchMovieCatalogForMemory.mockReset();
     mockApplyRateLimit.mockReset();
@@ -130,7 +134,24 @@ describe('GET /api/account/movie-memory', () => {
       ],
     });
     expect(mockGetMovieMemoryCandidatesForUser).toHaveBeenCalledWith('42', 20);
+    expect(mockGetMovieMemoryCandidateStatsForUser).not.toHaveBeenCalled();
     expect(mockSearchMovieCatalogForMemory).not.toHaveBeenCalled();
+  });
+
+  it('collects diagnostics when candidate loading returns no movies', async () => {
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockGetMovieMemoryCandidatesForUser.mockResolvedValueOnce([]);
+    mockGetMovieMemoryCandidateStatsForUser.mockResolvedValueOnce({
+      catalogCount: 48,
+      memoryCount: 48,
+      availableCatalogCount: 0,
+    });
+
+    const response = await GET(makeCandidatesRequest());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ movies: [] });
+    expect(mockGetMovieMemoryCandidateStatsForUser).toHaveBeenCalledWith('42');
   });
 
   it('returns 422 for a too-short query', async () => {

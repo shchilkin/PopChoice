@@ -43,6 +43,7 @@ import {
   deleteUserMovieMemory,
   getRecommendationTMDBExcludeIds,
   getRecommendationWithMovies,
+  getMovieMemoryCandidateStatsForUser,
   getUserMovieMemorySummaries,
   getUserRecommendationSummaries,
   insertMorePicksMovies,
@@ -438,17 +439,8 @@ describe('getMovieMemoryCandidatesForUser', () => {
   });
 
   it('returns poster-first candidate movies excluding existing memory', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ movie_key: 'tmdb:129' }] }).mockResolvedValueOnce({
+    mockQuery.mockResolvedValueOnce({
       rows: [
-        {
-          id: 129,
-          tmdb_id: 129,
-          name: 'Spirited Away',
-          year: 2001,
-          poster_url: 'https://example.com/spirited.jpg',
-          localized_name: 'Унесённые призраками',
-          score_rating: 8.6,
-        },
         {
           id: 680,
           tmdb_id: 680,
@@ -490,13 +482,31 @@ describe('getMovieMemoryCandidatesForUser', () => {
         localizedName: 'Локальный фильм',
       },
     ]);
-    const [memorySql, memoryParams] = mockQuery.mock.calls[0] as [string, unknown[]];
-    expect(memorySql).toContain('user_movie_interactions');
-    expect(memoryParams).toEqual(['42']);
-    const [catalogSql, catalogParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [catalogSql, catalogParams] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(catalogSql).toContain('FROM movies');
+    expect(catalogSql).toContain('NOT EXISTS');
+    expect(catalogSql).toContain('user_movie_interactions');
     expect(catalogSql).toContain('score_rating');
-    expect(catalogParams).toEqual([80]);
+    expect(catalogParams).toEqual(['42', 2]);
+  });
+
+  it('returns candidate diagnostics for empty decks', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ catalog_count: '48', memory_count: '48', available_catalog_count: '0' }],
+    });
+
+    const result = await getMovieMemoryCandidateStatsForUser('42');
+
+    expect(result).toEqual({
+      catalogCount: 48,
+      memoryCount: 48,
+      availableCatalogCount: 0,
+    });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('available_catalog_count');
+    expect(sql).toContain('NOT EXISTS');
+    expect(params).toEqual(['42']);
   });
 });
 
