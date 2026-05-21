@@ -9,6 +9,7 @@ import {
   Film,
   Frown,
   Heart,
+  Loader2,
   Search,
   Sparkles,
   Trash2,
@@ -17,7 +18,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
@@ -46,7 +47,7 @@ type RecommendationSummary = {
   feedbackKind: RecommendationFeedbackKind | null;
 };
 
-type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
+type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood' | 'not_seen';
 
 type MovieMemorySummary = {
   movieKey: string;
@@ -63,6 +64,14 @@ type AccountResponse = {
   user: { email: string };
   recommendations: RecommendationSummary[];
   movieMemory: MovieMemorySummary[];
+  movieMemoryTotal?: number;
+  movieMemoryNextOffset?: number | null;
+};
+
+type PosterLookupResult = {
+  id: number;
+  posterURL: string | null;
+  localizedName?: string | null;
 };
 
 type LoadState =
@@ -75,6 +84,8 @@ type MemoryActionState =
   | { status: 'error'; movieKey: string }
   | null;
 
+type MemoryPageState = { status: 'idle' } | { status: 'loading' } | { status: 'error' };
+
 type RecommendationFilter =
   | 'all'
   | 'rated'
@@ -86,6 +97,10 @@ type RecommendationFilter =
 type MovieMemoryFilter = 'all' | UserMovieInteractionKind;
 
 const ACCOUNT_FETCH_TIMEOUT_MS = 10000;
+const MOVIE_MEMORY_PAGE_SIZE = 50;
+const MEMORY_ROW_HEIGHT_PX = 142;
+const MEMORY_GRID_GAP_PX = 12;
+const MEMORY_GRID_OVERSCAN_ROWS = 3;
 const RECOMMENDATION_FILTERS: RecommendationFilter[] = [
   'all',
   'rated',
@@ -98,6 +113,7 @@ const MOVIE_MEMORY_FILTERS: MovieMemoryFilter[] = [
   'all',
   'watched',
   'liked',
+  'not_seen',
   'not_interested',
   'wrong_mood',
 ];
@@ -108,10 +124,12 @@ export default function AccountPage() {
   const a = t.account;
   const [state, setState] = useState<LoadState>({ status: 'idle' });
   const [memoryAction, setMemoryAction] = useState<MemoryActionState>(null);
+  const [memoryPageState, setMemoryPageState] = useState<MemoryPageState>({ status: 'idle' });
   const [recommendationQuery, setRecommendationQuery] = useState('');
   const [recommendationFilter, setRecommendationFilter] = useState<RecommendationFilter>('all');
   const [memoryQuery, setMemoryQuery] = useState('');
   const [memoryFilter, setMemoryFilter] = useState<MovieMemoryFilter>('all');
+  const requestedMemoryPosters = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (auth.status !== 'authenticated') {
@@ -147,6 +165,13 @@ export default function AccountPage() {
             data: {
               ...data,
               movieMemory: Array.isArray(data.movieMemory) ? data.movieMemory : [],
+              movieMemoryTotal:
+                typeof data.movieMemoryTotal === 'number'
+                  ? data.movieMemoryTotal
+                  : Array.isArray(data.movieMemory)
+                    ? data.movieMemory.length
+                    : 0,
+              movieMemoryNextOffset: data.movieMemoryNextOffset ?? null,
             },
           });
         }
@@ -167,6 +192,151 @@ export default function AccountPage() {
       window.clearTimeout(timeoutId);
     };
   }, [auth.status]);
+
+  useEffect(() => {
+    requestedMemoryPosters.current.clear();
+  }, [locale]);
+
+  useEffect(() => {
+    if (state.status !== 'loaded') return;
+
+    const missingPosterItems = state.data.movieMemory
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => {
+        const needsLocalizedName = locale !== 'en' && !item.localizedName;
+        return (
+          (!item.posterURL || needsLocalizedName) &&
+          !requestedMemoryPosters.current.has(item.movieKey)
+        );
+      });
+
+    if (missingPosterItems.length === 0) return;
+
+    for (const { item } of missingPosterItems) {
+      requestedMemoryPosters.current.add(item.movieKey);
+    }
+
+    let cancelled = false;
+
+    async function loadMemoryPosters() {
+      try {
+        const response = await fetch('/api/movie-posters', {
+          method: 'POST',
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            locale,
+            movies: missingPosterItems.map(({ item, index }) => ({
+              id: index,
+              name: item.movieName,
+              year: item.movieYear ?? undefined,
+              tmdbId: item.tmdbId ?? undefined,
+            })),
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { results?: PosterLookupResult[] };
+        const resultsByIndex = new Map(
+          (Array.isArray(data.results) ? data.results : []).map((result) => [result.id, result]),
+        );
+
+        if (cancelled || resultsByIndex.size === 0) return;
+
+        setState((current) => {
+          if (current.status !== 'loaded') return current;
+
+          let changed = false;
+          const movieMemory = current.data.movieMemory.map((item, index) => {
+            const result = resultsByIndex.get(index);
+            if (!result) return item;
+
+            const posterURL = item.posterURL ?? result.posterURL;
+            const localizedName = item.localizedName ?? result.localizedName ?? null;
+            if (posterURL === item.posterURL && localizedName === item.localizedName) return item;
+
+            changed = true;
+            return { ...item, posterURL, localizedName };
+          });
+
+          return changed
+            ? {
+                status: 'loaded',
+                data: {
+                  ...current.data,
+                  movieMemory,
+                },
+              }
+            : current;
+        });
+      } catch {
+        // Missing posters should not make the account page fail to load.
+      }
+    }
+
+    void loadMemoryPosters();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [state, locale]);
+
+  const loadMoreMovieMemory = useCallback(async () => {
+    if (state.status !== 'loaded' || memoryPageState.status === 'loading') return;
+
+    const nextOffset = state.data.movieMemoryNextOffset;
+    if (nextOffset == null) return;
+
+    setMemoryPageState({ status: 'loading' });
+
+    try {
+      const response = await fetch(
+        `/api/account/movie-memory?mode=list&offset=${nextOffset}&limit=${MOVIE_MEMORY_PAGE_SIZE}`,
+        {
+          method: 'GET',
+          cache: 'no-store',
+          credentials: 'same-origin',
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to load movie memory page');
+      }
+
+      const page = (await response.json()) as {
+        movieMemory?: MovieMemorySummary[];
+        total?: number;
+        nextOffset?: number | null;
+      };
+      const nextItems = Array.isArray(page.movieMemory) ? page.movieMemory : [];
+
+      setState((current) => {
+        if (current.status !== 'loaded') return current;
+        const existingKeys = new Set(current.data.movieMemory.map((item) => item.movieKey));
+        const movieMemory = [
+          ...current.data.movieMemory,
+          ...nextItems.filter((item) => !existingKeys.has(item.movieKey)),
+        ];
+
+        return {
+          status: 'loaded',
+          data: {
+            ...current.data,
+            movieMemory,
+            movieMemoryTotal: page.total ?? current.data.movieMemoryTotal ?? movieMemory.length,
+            movieMemoryNextOffset: page.nextOffset ?? null,
+          },
+        };
+      });
+      setMemoryPageState({ status: 'idle' });
+    } catch {
+      setMemoryPageState({ status: 'error' });
+    }
+  }, [memoryPageState.status, state]);
 
   if (auth.status === 'unknown' || (auth.status === 'authenticated' && state.status === 'idle')) {
     return (
@@ -282,6 +452,7 @@ export default function AccountPage() {
               data: {
                 ...current.data,
                 movieMemory: current.data.movieMemory.filter((item) => item.movieKey !== movieKey),
+                movieMemoryTotal: Math.max((current.data.movieMemoryTotal ?? 1) - 1, 0),
               },
             }
           : current,
@@ -448,6 +619,9 @@ export default function AccountPage() {
         <MovieMemorySection
           items={movieMemory}
           visibleItems={filteredMovieMemory}
+          totalItems={state.data.movieMemoryTotal ?? movieMemory.length}
+          hasMoreItems={state.data.movieMemoryNextOffset != null}
+          pageState={memoryPageState}
           labels={a}
           locale={locale}
           action={memoryAction}
@@ -460,6 +634,7 @@ export default function AccountPage() {
             setMemoryQuery('');
             setMemoryFilter('all');
           }}
+          onLoadMore={loadMoreMovieMemory}
           onForget={handleForgetMovie}
         />
       </motion.section>
@@ -739,6 +914,9 @@ function RecommendationRow({
 function MovieMemorySection({
   items,
   visibleItems,
+  totalItems,
+  hasMoreItems,
+  pageState,
   labels,
   locale,
   action,
@@ -748,10 +926,14 @@ function MovieMemorySection({
   onSearchChange,
   onFilterChange,
   onClearFilters,
+  onLoadMore,
   onForget,
 }: {
   items: MovieMemorySummary[];
   visibleItems: MovieMemorySummary[];
+  totalItems: number;
+  hasMoreItems: boolean;
+  pageState: MemoryPageState;
   labels: ReturnType<typeof useLanguage>['t']['account'];
   locale: string;
   action: MemoryActionState;
@@ -761,6 +943,7 @@ function MovieMemorySection({
   onSearchChange: (value: string) => void;
   onFilterChange: (value: string) => void;
   onClearFilters: () => void;
+  onLoadMore: () => void;
   onForget: (movieKey: string) => void;
 }) {
   return (
@@ -795,6 +978,36 @@ function MovieMemorySection({
         </div>
       ) : null}
 
+      <Link
+        href="/account/movie-memory"
+        className="mb-5 flex flex-col gap-3 rounded-2xl p-4 transition-transform hover:-translate-y-0.5 md:flex-row md:items-center md:justify-between md:p-5"
+        style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+      >
+        <span className="flex items-start gap-3">
+          <span
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
+          >
+            <Sparkles size={18} />
+          </span>
+          <span>
+            <span className="block text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
+              {labels.movieMemoryCtaTitle}
+            </span>
+            <span className="mt-1 block text-sm" style={{ color: 'var(--pc-t3)' }}>
+              {labels.movieMemoryCtaBody}
+            </span>
+          </span>
+        </span>
+        <span
+          className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
+          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+        >
+          {labels.updateMovieMemory}
+          <ArrowRight size={16} />
+        </span>
+      </Link>
+
       {items.length === 0 ? (
         <div
           className="rounded-2xl px-6 py-8 text-center"
@@ -820,7 +1033,7 @@ function MovieMemorySection({
               label: labels.memoryFilters[filter],
             }))}
             visibleCount={visibleItems.length}
-            totalCount={items.length}
+            totalCount={totalItems}
             countLabel={labels.showingCount}
             clearLabel={labels.clearFilters}
             clearSearchLabel={labels.clearSearch}
@@ -834,8 +1047,146 @@ function MovieMemorySection({
               body={labels.noFilteredMemoryBody}
             />
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {visibleItems.map((item) => (
+            <VirtualMovieMemoryGrid
+              items={visibleItems}
+              labels={labels}
+              locale={locale}
+              action={action}
+              loadedCount={items.length}
+              totalCount={totalItems}
+              hasMoreItems={hasMoreItems}
+              pageState={pageState}
+              onLoadMore={onLoadMore}
+              onForget={onForget}
+            />
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function VirtualMovieMemoryGrid({
+  items,
+  labels,
+  locale,
+  action,
+  loadedCount,
+  totalCount,
+  hasMoreItems,
+  pageState,
+  onLoadMore,
+  onForget,
+}: {
+  items: MovieMemorySummary[];
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+  action: MemoryActionState;
+  loadedCount: number;
+  totalCount: number;
+  hasMoreItems: boolean;
+  pageState: MemoryPageState;
+  onLoadMore: () => void;
+  onForget: (movieKey: string) => void;
+}) {
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const [columns, setColumns] = useState(2);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(620);
+  const isLoadingMore = pageState.status === 'loading';
+  const rowCount = Math.ceil(items.length / columns);
+  const startRow = Math.max(
+    Math.floor(scrollTop / (MEMORY_ROW_HEIGHT_PX + MEMORY_GRID_GAP_PX)) - MEMORY_GRID_OVERSCAN_ROWS,
+    0,
+  );
+  const visibleRowCount =
+    Math.ceil(viewportHeight / (MEMORY_ROW_HEIGHT_PX + MEMORY_GRID_GAP_PX)) +
+    MEMORY_GRID_OVERSCAN_ROWS * 2;
+  const endRow = Math.min(startRow + visibleRowCount, rowCount);
+  const virtualRows = useMemo(
+    () =>
+      Array.from({ length: Math.max(endRow - startRow, 0) }, (_, index) => {
+        const rowIndex = startRow + index;
+        const startIndex = rowIndex * columns;
+        return {
+          rowIndex,
+          items: items.slice(startIndex, startIndex + columns),
+        };
+      }),
+    [columns, endRow, items, startRow],
+  );
+  const topSpacer = startRow * (MEMORY_ROW_HEIGHT_PX + MEMORY_GRID_GAP_PX);
+  const bottomSpacer = Math.max(rowCount - endRow, 0) * (MEMORY_ROW_HEIGHT_PX + MEMORY_GRID_GAP_PX);
+
+  const updateViewport = useCallback(() => {
+    const node = scrollerRef.current;
+    if (!node) return;
+    setViewportHeight(node.clientHeight);
+    setScrollTop(node.scrollTop);
+    setColumns(window.matchMedia('(min-width: 768px)').matches ? 2 : 1);
+  }, []);
+
+  const maybeLoadMore = useCallback(() => {
+    const node = scrollerRef.current;
+    if (!node || !hasMoreItems || isLoadingMore || pageState.status === 'error') return;
+    if (node.scrollTop + node.clientHeight >= node.scrollHeight - 520) {
+      onLoadMore();
+    }
+  }, [hasMoreItems, isLoadingMore, onLoadMore, pageState.status]);
+
+  useEffect(() => {
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, [updateViewport]);
+
+  useEffect(() => {
+    maybeLoadMore();
+  }, [items.length, maybeLoadMore, viewportHeight]);
+
+  return (
+    <div>
+      <div
+        className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs"
+        style={{ color: 'var(--pc-t4)' }}
+      >
+        <span>
+          {labels.memoryLoadedCount
+            .replace('{loaded}', String(loadedCount))
+            .replace('{total}', String(totalCount))}
+        </span>
+        {pageState.status === 'error' ? (
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="rounded-full px-3 py-1.5 font-semibold transition hover:bg-[var(--pc-ghost)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+            style={{
+              border: '1px solid var(--pc-bd2)',
+              color: 'var(--pc-t2)',
+            }}
+          >
+            {labels.loadMoreMemoryRetry}
+          </button>
+        ) : null}
+      </div>
+      <div
+        ref={scrollerRef}
+        onScroll={() => {
+          updateViewport();
+          maybeLoadMore();
+        }}
+        className="max-h-[72vh] min-h-[360px] overflow-y-auto pr-1"
+        aria-label={labels.memoryTitle}
+      >
+        <div style={{ height: topSpacer }} aria-hidden="true" />
+        <div className="grid gap-3">
+          {virtualRows.map((row) => (
+            <div
+              key={row.rowIndex}
+              className="grid gap-3 md:grid-cols-2"
+              style={{ minHeight: MEMORY_ROW_HEIGHT_PX }}
+            >
+              {row.items.map((item) => (
                 <MovieMemoryCard
                   key={item.movieKey}
                   item={item}
@@ -848,10 +1199,29 @@ function MovieMemorySection({
                 />
               ))}
             </div>
-          )}
-        </>
-      )}
-    </section>
+          ))}
+        </div>
+        <div style={{ height: bottomSpacer }} aria-hidden="true" />
+        {hasMoreItems ? (
+          <div className="flex justify-center py-4">
+            <button
+              type="button"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
+              style={{
+                background: 'var(--pc-ghost)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t2)',
+              }}
+            >
+              {isLoadingMore ? <Loader2 className="animate-spin" size={16} /> : null}
+              {isLoadingMore ? labels.loadingMoreMemory : labels.loadMoreMemory}
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -937,6 +1307,7 @@ function MovieMemoryCard({
 function MemoryKindIcon({ kind }: { kind: UserMovieInteractionKind }) {
   if (kind === 'watched') return <Eye size={12} />;
   if (kind === 'liked') return <Heart size={12} />;
+  if (kind === 'not_seen') return <Film size={12} />;
   if (kind === 'wrong_mood') return <Frown size={12} />;
   return <Ban size={12} />;
 }

@@ -7,6 +7,7 @@ import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 const requestSchema = z.object({
+  locale: z.enum(['en', 'ru', 'fi']).optional(),
   movies: z.array(
     z.object({
       id: z.number(),
@@ -16,6 +17,15 @@ const requestSchema = z.object({
     }),
   ),
 });
+const POSTER_LOOKUP_BATCH_SIZE = 5;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
 
 // POST /api/movie-posters
 // Accepts a list of movies and returns poster URLs fetched server-side
@@ -36,22 +46,41 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
   }
 
-  const locale = parseLocaleFromRequest(req);
+  const locale = parsed.data.locale ?? parseLocaleFromRequest(req);
 
-  const results = await Promise.all(
-    parsed.data.movies.map(async ({ id, name, year, tmdbId }) => {
-      try {
-        const { posterURL } = await getMovieInfo(name, locale, year, tmdbId);
-        return { id, posterURL: posterURL ?? null };
-      } catch (err) {
-        logger.warn(
-          { err, movieId: id, movieName: name },
-          'movie-posters: Failed to fetch poster URL',
-        );
-        return { id, posterURL: null };
-      }
-    }),
-  );
+  const results: Array<{
+    id: number;
+    posterURL: string | null;
+    localizedName: string | null;
+    localizedOverview: string | null;
+  }> = [];
+  for (const batch of chunk(parsed.data.movies, POSTER_LOOKUP_BATCH_SIZE)) {
+    const batchResults = await Promise.all(
+      batch.map(async ({ id, name, year, tmdbId }) => {
+        try {
+          const { posterURL, localizedName, localizedOverview } = await getMovieInfo(
+            name,
+            locale,
+            year,
+            tmdbId,
+          );
+          return {
+            id,
+            posterURL: posterURL ?? null,
+            localizedName: localizedName ?? null,
+            localizedOverview: localizedOverview ?? null,
+          };
+        } catch (err) {
+          logger.warn(
+            { err, movieId: id, movieName: name },
+            'movie-posters: Failed to fetch poster URL',
+          );
+          return { id, posterURL: null, localizedName: null, localizedOverview: null };
+        }
+      }),
+    );
+    results.push(...batchResults);
+  }
 
   return NextResponse.json({ results });
 }

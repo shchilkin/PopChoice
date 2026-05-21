@@ -5,12 +5,12 @@ const {
   mockGetSessionFromRequest,
   mockGetDbClient,
   mockGetUserRecommendationSummaries,
-  mockGetUserMovieMemorySummaries,
+  mockGetUserMovieMemoryPage,
 } = vi.hoisted(() => ({
   mockGetSessionFromRequest: vi.fn(),
   mockGetDbClient: vi.fn(),
   mockGetUserRecommendationSummaries: vi.fn(),
-  mockGetUserMovieMemorySummaries: vi.fn(),
+  mockGetUserMovieMemoryPage: vi.fn(),
 }));
 
 vi.mock('@/lib/auth/session', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/clients/dbClient', () => ({
 
 vi.mock('@/lib/db/recommendations', () => ({
   getUserRecommendationSummaries: mockGetUserRecommendationSummaries,
-  getUserMovieMemorySummaries: mockGetUserMovieMemorySummaries,
+  getUserMovieMemoryPage: mockGetUserMovieMemoryPage,
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -37,7 +37,7 @@ describe('GET /api/account', () => {
     mockGetSessionFromRequest.mockReset();
     mockGetDbClient.mockReset();
     mockGetUserRecommendationSummaries.mockReset();
-    mockGetUserMovieMemorySummaries.mockReset();
+    mockGetUserMovieMemoryPage.mockReset();
   });
 
   it('returns 401 without a session', async () => {
@@ -70,9 +70,11 @@ describe('GET /api/account', () => {
     mockGetUserRecommendationSummaries.mockResolvedValueOnce([
       { slug: 'saved-rec', feedbackKind: 'already_watched' },
     ]);
-    mockGetUserMovieMemorySummaries.mockResolvedValueOnce([
-      { movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' },
-    ]);
+    mockGetUserMovieMemoryPage.mockResolvedValueOnce({
+      items: [{ movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' }],
+      total: 75,
+      nextOffset: 50,
+    });
 
     const response = await GET(new NextRequest('http://localhost/api/account'));
 
@@ -83,8 +85,10 @@ describe('GET /api/account', () => {
       user: { email: 'alex@example.com' },
       recommendations: [{ slug: 'saved-rec', feedbackKind: 'already_watched' }],
       movieMemory: [{ movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' }],
+      movieMemoryTotal: 75,
+      movieMemoryNextOffset: 50,
     });
     expect(mockGetUserRecommendationSummaries).toHaveBeenCalledWith('42');
-    expect(mockGetUserMovieMemorySummaries).toHaveBeenCalledWith('42');
+    expect(mockGetUserMovieMemoryPage).toHaveBeenCalledWith('42');
   });
 });

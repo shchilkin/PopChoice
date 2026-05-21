@@ -13,7 +13,7 @@ This document describes the background services that populate and maintain the m
 | `movie-backfill`        | One-shot              | Manual                                            | TMDB API      |
 | BullMQ `recommendation` | Per-request           | HTTP POST to /api/recommendations                 | TMDB + OpenAI |
 | BullMQ `more-picks`     | On demand             | HTTP POST to /api/recommendations/[id]/more-picks | TMDB + OpenAI |
-| BullMQ `movie-seed`     | Triggered by pipeline | Internal (more-picks pipeline)                    | TMDB          |
+| BullMQ `movie-seed`     | Triggered by pipeline | Internal recommendation/more-picks JIT seeding    | TMDB          |
 
 ---
 
@@ -53,7 +53,7 @@ Browser → POST /api/recommendations/[id]/more-picks
 
 ### Graceful degradation
 
-When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. The BullMQ queues are not created and workers are disabled.
+When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. Queue-backed recommendation creation requires Redis; the worker process and BullMQ queues are disabled without it.
 
 ### Starting workers
 
@@ -188,19 +188,20 @@ npm test                 # run vitest tests
 
 ## `services/movie-backfill`
 
-**Purpose:** Backfills missing `duration` and `age_rating` data for movies already in the database that were seeded without runtime information, then re-generates their embeddings.
+**Purpose:** Backfills missing TMDB identity, `duration`, and `age_rating` data for movies already in the database, records ambiguous matches for manual review, then re-generates embeddings for safely matched rows.
 
 **Location:** `services/movie-backfill/`
 
 ### How it works
 
-1. Queries the database for all movies where `duration = 0` (missing runtime).
-2. Searches TMDB by title + year to find the TMDB movie ID.
-3. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
-4. Re-generates the embedding (since the embedding text includes duration and age_rating).
-5. Updates the database row with the new `duration`, `age_rating`, and `embedding`.
+1. Queries the database for movies where `tmdb_id IS NULL` or `duration = 0`.
+2. Searches TMDB by title + year to find a conservative TMDB identity match.
+3. Records ambiguous matches and runtime mismatches in `tmdb_match_reviews`.
+4. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
+5. Re-generates the embedding because the embedding text includes runtime and age rating.
+6. Updates the database row with `tmdb_id`, `duration`, `age_rating`, match confidence, and `embedding`.
 
-Movies for which TMDB returns no runtime are skipped so the script never replaces a `0` with another `0`.
+Movies for which TMDB returns no runtime are skipped so the script never replaces a `0` with another `0`. Ambiguous matches are not auto-applied; they stay in `tmdb_match_reviews` for a future admin/back-office review flow.
 
 ### Environment Variables
 
@@ -220,8 +221,8 @@ Movies for which TMDB returns no runtime are skipped so the script never replace
 ```bash
 cd services/movie-backfill
 npm install
-npx tsx src/index.ts              # run backfill
-DRY_RUN=true npx tsx src/index.ts # dry run
+npm run dev              # run backfill
+DRY_RUN=true npm run dev # dry run
 ```
 
 ---
@@ -236,9 +237,11 @@ The recommendation feature combines local vector search with a TMDB fallback. Th
 - `pipeline.ts` owns the synchronous recommendation flow used by `/api/movie-recommendation`.
 - `jobs.ts` owns async recommendation creation / queue startup for `/api/recommendations`.
 - `persistence.ts` owns recommendation reads, writes, and status transitions.
+- `candidateFilters.ts` owns exclusion/down-ranking from quiz-mentioned titles and signed-in feedback memory.
 - `morePicksPersistence.ts` owns more-picks claim, exclusion lookup, and result persistence.
 - `morePicksJobs.ts` owns shared more-picks enqueue / inline fallback / worker processing orchestration.
 - `morePicksPipeline.ts` owns TMDB discover, embeddings, ranking, and description generation for extra picks.
+- `config.ts`, `limits.ts`, and `stages.ts` own recommendation thresholds, request limits, and user-facing progress stages.
 
 ### How it works
 
@@ -246,7 +249,30 @@ The recommendation feature combines local vector search with a TMDB fallback. Th
 2. **Local search** — `match_movies()` returns up to 6 DB rows ordered by cosine similarity (threshold ≥ 0.1).
 3. **Quality gate** — results are split by `SIMILARITY_THRESHOLD` (0.40) into _high-quality_ and _weak_ matches.
 4. **TMDB fallback** — if fewer than `MIN_HIGH_QUALITY_LOCAL` (3) high-quality results exist, `GET /discover/movie` is called with quiz-derived params and its results fill the remaining slots.
-5. **JIT seeding** — TMDB movies returned to the user are embedded and inserted into the DB in the background so future queries find them locally.
+5. **Memory filtering** — signed-in feedback excludes watched/not-interested/recently recommended movies and down-ranks wrong-mood movies.
+6. **JIT seeding** — TMDB movies returned to the user are embedded and inserted into the DB in the background so future queries find them locally.
+
+---
+
+## Account Movie Memory
+
+Signed-in users can train their movie memory at `/account/movie-memory`.
+
+### HTTP API
+
+| Route                       | Method   | Purpose                                                                      |
+| --------------------------- | -------- | ---------------------------------------------------------------------------- |
+| `/api/account/movie-memory` | `GET`    | Search catalog by `query`/`q`, or load candidate deck with `mode=candidates` |
+| `/api/account/movie-memory` | `POST`   | Save a catalog movie as `watched` or `not_seen`                              |
+| `/api/account/movie-memory` | `DELETE` | Delete a stored movie-memory item by `movieKey`                              |
+
+The route requires an authenticated session. Mutating requests require a same-origin CSRF cookie/header pair.
+
+### Data model
+
+Movie memory is stored in `user_movie_interactions` with a stable `movie_key`.
+Kinds currently include `watched`, `liked`, `not_interested`, `wrong_mood`, and `not_seen`.
+Feedback from recommendation result pages can create or update the same durable memory rows.
 
 ### Similarity threshold calibration
 
@@ -335,10 +361,13 @@ To add or edit calibration queries, modify the `QUERIES` array in `scripts/calib
 
 ## Shared Database Schema
 
-Both services share the same PostgreSQL schema managed by `ensureSchema()` in `database.ts`:
+The app and root services share the same PostgreSQL schema through `db/init/*.sql` and service-level `ensureSchema()` helpers:
 
 - **Extension:** `pgvector` (vector similarity search)
-- **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, and a 3072-dimension embedding vector
+- **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, TMDB identity/metadata, poster/localized fields, and a 3072-dimension embedding vector
+- **Table:** `tmdb_match_reviews` — stores ambiguous TMDB/local match cases for later manual review
+- **Table:** `users` and `password_reset_tokens` — support email/password auth and reset flow
+- **Tables:** `recommendations`, `recommendation_movies`, `recommendation_feedback`, and `user_movie_interactions` — support persisted async recommendations, feedback, sharing, account history, and movie memory
 - **Function:** `match_movies(query_embedding, match_threshold, match_count)` — returns movies ordered by cosine similarity
 
-The schema setup uses `CREATE IF NOT EXISTS` for the extension and table (additive/idempotent), and updates the `match_movies` function definition with `CREATE OR REPLACE FUNCTION` on startup to keep it current without dropping it first.
+Schema setup is additive/idempotent. Docker init applies `db/init/*.sql` on first database creation, and `npm run migrate:db` applies the same files to existing local, preview, and production databases. Keep service-level `ensureSchema()` helpers in sync with those SQL files when shared services need new columns.

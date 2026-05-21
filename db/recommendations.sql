@@ -81,6 +81,12 @@ ALTER TABLE recommendation_movies
   ADD COLUMN IF NOT EXISTS from_tmdb boolean NOT NULL DEFAULT false;
 
 ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS poster_url text;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS localized_name text;
+
+ALTER TABLE recommendation_movies
   ADD COLUMN IF NOT EXISTS tmdb_name text;
 
 ALTER TABLE recommendation_movies
@@ -135,9 +141,17 @@ CREATE TABLE IF NOT EXISTS user_movie_interactions (
   created_at               timestamptz NOT NULL DEFAULT now(),
   updated_at               timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT user_movie_interactions_kind_check CHECK (
-    kind IN ('watched', 'liked', 'not_interested', 'wrong_mood')
+    kind IN ('watched', 'liked', 'not_interested', 'wrong_mood', 'not_seen')
   )
 );
+
+ALTER TABLE user_movie_interactions
+  DROP CONSTRAINT IF EXISTS user_movie_interactions_kind_check;
+
+ALTER TABLE user_movie_interactions
+  ADD CONSTRAINT user_movie_interactions_kind_check CHECK (
+    kind IN ('watched', 'liked', 'not_interested', 'wrong_mood', 'not_seen')
+  );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_movie_interactions_user_key
   ON user_movie_interactions (user_id, movie_key);
