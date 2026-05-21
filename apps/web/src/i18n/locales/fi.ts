@@ -941,6 +941,10 @@ export const fi: Translations = {
     loadMoreMovies: 'Lataa lisää kortteja',
     memoryDeckCompleteTitle: 'Muisti päivitetty',
     memoryDeckCompleteBody: 'Hyvä. Nämä signaalit vaikuttavat seuraaviin suosituksiin.',
+    memoryDeckEmptyTitle: 'Ei elokuvakortteja juuri nyt',
+    memoryDeckEmptyBody:
+      'PopChoice ei vielä löytänyt lisää elokuvia kysyttäväksi. Yritä myöhemmin tai lisää tietty nimi alta.',
+    memoryDeckEmptyAction: 'Tarkista uudelleen',
     candidateRetry: 'Yritä uudelleen',
     manualSearchTitle: 'Etsi tietty elokuva',
     manualSearchBody: 'Jos haluat lisätä tarkan nimen, hae suoraan katalogista.',

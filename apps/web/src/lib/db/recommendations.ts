@@ -133,6 +133,14 @@ export interface MovieMemoryCandidateStats {
   availableCatalogCount: number;
 }
 
+export interface ExternalMovieMemoryInput {
+  tmdbId: number | null;
+  movieName: string;
+  movieYear: number | null;
+  posterURL: string | null;
+  localizedName: string | null;
+}
+
 export interface MovieRowToInsert {
   id: number;
   tmdbId?: number | null;
@@ -635,10 +643,29 @@ export async function addUserMovieMemoryFromCatalog(
   const movie = movieResult.rows[0];
   if (!movie) return null;
 
+  return addUserMovieMemoryFromExternalMovie(
+    userId,
+    {
+      tmdbId: movie.tmdb_id,
+      movieName: movie.name,
+      movieYear: movie.year,
+      posterURL: movie.poster_url,
+      localizedName: movie.localized_name,
+    },
+    kind,
+  );
+}
+
+export async function addUserMovieMemoryFromExternalMovie(
+  userId: string,
+  movie: ExternalMovieMemoryInput,
+  kind: UserMovieInteractionKind = 'watched',
+): Promise<UserMovieMemorySummary | null> {
+  const pool = getPool();
   const movieKey = getMovieIdentityKey({
-    tmdbId: movie.tmdb_id,
-    title: movie.name,
-    year: movie.year,
+    tmdbId: movie.tmdbId,
+    title: movie.movieName,
+    year: movie.movieYear,
   });
   if (!movieKey) return null;
 
@@ -669,11 +696,11 @@ export async function addUserMovieMemoryFromCatalog(
     [
       userId,
       movieKey,
-      movie.tmdb_id,
-      movie.name,
-      movie.year,
-      movie.poster_url,
-      movie.localized_name,
+      movie.tmdbId,
+      movie.movieName,
+      movie.movieYear,
+      movie.posterURL,
+      movie.localizedName,
       kind,
     ],
   );

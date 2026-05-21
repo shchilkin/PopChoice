@@ -37,6 +37,7 @@ vi.mock('@/lib/logger', () => ({
 // Import after mocks are established
 import {
   addUserMovieMemoryBatchFromCatalog,
+  addUserMovieMemoryFromExternalMovie,
   addUserMovieMemoryFromCatalog,
   claimMorePicksSlot,
   createRecommendation,
@@ -582,6 +583,69 @@ describe('addUserMovieMemoryFromCatalog', () => {
 
     await expect(addUserMovieMemoryFromCatalog('42', 999, 'watched')).resolves.toBeNull();
     expect(mockQuery).toHaveBeenCalledOnce();
+  });
+});
+
+describe('addUserMovieMemoryFromExternalMovie', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('upserts a TMDB movie memory item without requiring a local catalog row', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:550',
+          tmdb_id: 550,
+          movie_name: 'Fight Club',
+          movie_year: 1999,
+          poster_url: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+          localized_name: null,
+          updated_at: new Date('2026-05-20T12:00:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await addUserMovieMemoryFromExternalMovie(
+      '42',
+      {
+        tmdbId: 550,
+        movieName: 'Fight Club',
+        movieYear: 1999,
+        posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+        localizedName: null,
+      },
+      'watched',
+    );
+
+    expect(result).toEqual({
+      kind: 'watched',
+      movieKey: 'tmdb:550',
+      tmdbId: 550,
+      movieName: 'Fight Club',
+      movieYear: 1999,
+      posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+      localizedName: null,
+      updatedAt: '2026-05-20T12:00:00.000Z',
+    });
+    const [upsertSql, upsertParams] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(upsertSql).toContain('INSERT INTO user_movie_interactions');
+    expect(upsertParams).toEqual([
+      '42',
+      'tmdb:550',
+      550,
+      'Fight Club',
+      1999,
+      'https://image.tmdb.org/t/p/w500/fight.jpg',
+      null,
+      'watched',
+    ]);
   });
 });
 

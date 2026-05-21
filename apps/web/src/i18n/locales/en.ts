@@ -933,6 +933,10 @@ export const en = {
     loadMoreMovies: 'Load more cards',
     memoryDeckCompleteTitle: 'Memory updated',
     memoryDeckCompleteBody: 'Nice. These signals will shape your next recommendations.',
+    memoryDeckEmptyTitle: 'No movie cards right now',
+    memoryDeckEmptyBody:
+      'PopChoice could not find more movies to ask about yet. Try again later, or add a specific title below.',
+    memoryDeckEmptyAction: 'Check again',
     candidateRetry: 'Try again',
     manualSearchTitle: 'Find a specific movie',
     manualSearchBody: 'Need to add one exact title? Search the catalog directly.',

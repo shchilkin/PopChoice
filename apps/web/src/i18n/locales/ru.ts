@@ -944,6 +944,10 @@ export const ru: Translations = {
     loadMoreMovies: 'Загрузить ещё карточки',
     memoryDeckCompleteTitle: 'Память обновлена',
     memoryDeckCompleteBody: 'Отлично. Эти сигналы повлияют на следующие рекомендации.',
+    memoryDeckEmptyTitle: 'Сейчас нет карточек',
+    memoryDeckEmptyBody:
+      'PopChoice пока не нашёл новые фильмы для проверки. Попробуйте позже или добавьте точное название ниже.',
+    memoryDeckEmptyAction: 'Проверить снова',
     candidateRetry: 'Попробовать снова',
     manualSearchTitle: 'Найти конкретный фильм',
     manualSearchBody: 'Если нужно добавить точное название, используйте поиск по каталогу.',

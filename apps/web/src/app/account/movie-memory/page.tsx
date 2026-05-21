@@ -96,7 +96,7 @@ export default function MovieMemoryPage() {
     const timeoutId = window.setTimeout(() => controller.abort(), MOVIE_MEMORY_FETCH_TIMEOUT_MS);
 
     try {
-      const response = await fetch('/api/account/movie-memory?mode=candidates', {
+      const response = await fetch(`/api/account/movie-memory?mode=candidates&locale=${locale}`, {
         method: 'GET',
         cache: 'no-store',
         credentials: 'same-origin',
@@ -116,7 +116,7 @@ export default function MovieMemoryPage() {
     } finally {
       window.clearTimeout(timeoutId);
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (auth.status === 'authenticated' && candidates.status === 'idle') {
@@ -145,7 +145,7 @@ export default function MovieMemoryPage() {
             'Content-Type': 'application/json',
             'X-CSRF-Token': getCsrfToken(),
           },
-          body: JSON.stringify({ items }),
+          body: JSON.stringify({ items, locale }),
         });
 
         if (!response.ok) {
@@ -162,7 +162,7 @@ export default function MovieMemoryPage() {
         }
       }
     },
-    [],
+    [locale],
   );
 
   useEffect(() => {
@@ -392,7 +392,7 @@ export default function MovieMemoryPage() {
           'Content-Type': 'application/json',
           'X-CSRF-Token': getCsrfToken(),
         },
-        body: JSON.stringify({ movieId, kind }),
+        body: JSON.stringify({ movieId, kind, locale }),
       });
 
       if (!response.ok) {
@@ -565,7 +565,13 @@ export default function MovieMemoryPage() {
               onSkip={skipDeckMovie}
             />
           ) : (
-            <CompletionPanel labels={a} onLoadMore={loadCandidates} />
+            <CompletionPanel
+              labels={a}
+              onLoadMore={loadCandidates}
+              variant={
+                candidates.status === 'loaded' && candidates.total === 0 ? 'empty' : 'complete'
+              }
+            />
           )}
 
           {action.status === 'error' ? (
@@ -667,10 +673,15 @@ function ErrorPanel({
 function CompletionPanel({
   labels,
   onLoadMore,
+  variant,
 }: {
   labels: ReturnType<typeof useLanguage>['t']['account'];
   onLoadMore: () => void;
+  variant: 'complete' | 'empty';
 }) {
+  const isEmpty = variant === 'empty';
+  const Icon = isEmpty ? Film : Check;
+
   return (
     <div
       className="flex flex-col items-center gap-4 rounded-3xl p-8 text-center"
@@ -682,15 +693,19 @@ function CompletionPanel({
     >
       <div
         className="flex h-16 w-16 items-center justify-center rounded-2xl"
-        style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
+        style={{
+          background: isEmpty ? 'var(--pc-surface-hover)' : 'var(--pc-gold-subtle)',
+          border: isEmpty ? '1px solid var(--pc-bd2)' : '1px solid var(--pc-gold-bd)',
+          color: isEmpty ? 'var(--pc-t2)' : 'var(--pc-gold-text)',
+        }}
       >
-        <Check size={30} />
+        <Icon size={30} />
       </div>
       <div>
         <h2 className="mb-2 text-xl font-semibold" style={{ color: 'var(--pc-t1)' }}>
-          {labels.memoryDeckCompleteTitle}
+          {isEmpty ? labels.memoryDeckEmptyTitle : labels.memoryDeckCompleteTitle}
         </h2>
-        <p>{labels.memoryDeckCompleteBody}</p>
+        <p>{isEmpty ? labels.memoryDeckEmptyBody : labels.memoryDeckCompleteBody}</p>
       </div>
       <button
         type="button"
@@ -698,7 +713,7 @@ function CompletionPanel({
         className="rounded-xl px-5 py-3 text-sm font-semibold"
         style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
       >
-        {labels.loadMoreMovies}
+        {isEmpty ? labels.memoryDeckEmptyAction : labels.loadMoreMovies}
       </button>
     </div>
   );

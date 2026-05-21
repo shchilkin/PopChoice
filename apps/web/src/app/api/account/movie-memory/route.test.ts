@@ -4,19 +4,33 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   mockGetSessionFromRequest,
   mockAddUserMovieMemoryBatchFromCatalog,
+  mockAddUserMovieMemoryFromExternalMovie,
   mockAddUserMovieMemoryFromCatalog,
   mockDeleteUserMovieMemory,
   mockGetMovieMemoryCandidateStatsForUser,
   mockGetMovieMemoryCandidatesForUser,
+  mockGetLocalizedMovieInfo,
+  mockGetMovieById,
+  mockGetPosterURL,
+  mockGetUserMovieMemorySummaries,
+  mockLoggerWarn,
   mockSearchMovieCatalogForMemory,
   mockApplyRateLimit,
 } = vi.hoisted(() => ({
   mockGetSessionFromRequest: vi.fn(),
   mockAddUserMovieMemoryBatchFromCatalog: vi.fn(),
+  mockAddUserMovieMemoryFromExternalMovie: vi.fn(),
   mockAddUserMovieMemoryFromCatalog: vi.fn(),
   mockDeleteUserMovieMemory: vi.fn(),
   mockGetMovieMemoryCandidateStatsForUser: vi.fn(),
   mockGetMovieMemoryCandidatesForUser: vi.fn(),
+  mockGetLocalizedMovieInfo: vi.fn(),
+  mockGetMovieById: vi.fn(),
+  mockGetPosterURL: vi.fn((path: string | null) =>
+    path ? `https://image.tmdb.org/t/p/w500${path}` : undefined,
+  ),
+  mockGetUserMovieMemorySummaries: vi.fn(),
+  mockLoggerWarn: vi.fn(),
   mockSearchMovieCatalogForMemory: vi.fn(),
   mockApplyRateLimit: vi.fn(),
 }));
@@ -27,11 +41,24 @@ vi.mock('@/lib/auth/session', () => ({
 
 vi.mock('@/lib/db/recommendations', () => ({
   addUserMovieMemoryBatchFromCatalog: mockAddUserMovieMemoryBatchFromCatalog,
+  addUserMovieMemoryFromExternalMovie: mockAddUserMovieMemoryFromExternalMovie,
   addUserMovieMemoryFromCatalog: mockAddUserMovieMemoryFromCatalog,
   deleteUserMovieMemory: mockDeleteUserMovieMemory,
   getMovieMemoryCandidateStatsForUser: mockGetMovieMemoryCandidateStatsForUser,
   getMovieMemoryCandidatesForUser: mockGetMovieMemoryCandidatesForUser,
+  getUserMovieMemorySummaries: mockGetUserMovieMemorySummaries,
   searchMovieCatalogForMemory: mockSearchMovieCatalogForMemory,
+}));
+
+vi.mock('@/integrations/tmdb', () => ({
+  IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
+  MovieService: vi.fn(function () {
+    return {
+      getLocalizedMovieInfo: mockGetLocalizedMovieInfo,
+      getMovieById: mockGetMovieById,
+      getPosterURL: mockGetPosterURL,
+    };
+  }),
 }));
 
 vi.mock('@/lib/rateLimit', () => ({
@@ -39,7 +66,7 @@ vi.mock('@/lib/rateLimit', () => ({
 }));
 
 vi.mock('@/lib/logger', () => ({
-  default: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+  default: { error: vi.fn(), warn: mockLoggerWarn, info: vi.fn(), debug: vi.fn() },
 }));
 
 import { DELETE, GET, POST } from './route';
@@ -90,9 +117,13 @@ describe('GET /api/account/movie-memory', () => {
     mockGetSessionFromRequest.mockReset();
     mockGetMovieMemoryCandidateStatsForUser.mockReset();
     mockGetMovieMemoryCandidatesForUser.mockReset();
+    mockGetUserMovieMemorySummaries.mockReset();
+    mockLoggerWarn.mockReset();
     mockSearchMovieCatalogForMemory.mockReset();
     mockApplyRateLimit.mockReset();
     mockApplyRateLimit.mockResolvedValue(null);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it('returns 401 without a session', async () => {
@@ -121,6 +152,7 @@ describe('GET /api/account/movie-memory', () => {
     const response = await GET(makeCandidatesRequest());
 
     expect(response.status).toBe(200);
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({
       movies: [
         {
@@ -152,6 +184,56 @@ describe('GET /api/account/movie-memory', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ movies: [] });
     expect(mockGetMovieMemoryCandidateStatsForUser).toHaveBeenCalledWith('42');
+  });
+
+  it('falls back to TMDB candidates when the catalog has no available movies', async () => {
+    vi.stubEnv('TMDB_API_KEY', 'tmdb-key');
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockGetMovieMemoryCandidatesForUser.mockResolvedValueOnce([]);
+    mockGetMovieMemoryCandidateStatsForUser.mockResolvedValueOnce({
+      catalogCount: 0,
+      memoryCount: 0,
+      availableCatalogCount: 0,
+    });
+    mockGetUserMovieMemorySummaries.mockResolvedValueOnce([]);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({
+            results: [
+              {
+                id: 550,
+                title: 'Fight Club',
+                release_date: '1999-10-15',
+                poster_path: '/fight.jpg',
+                vote_average: 8.4,
+              },
+            ],
+          }),
+        )
+        .mockImplementation(() => Promise.resolve(Response.json({ results: [] }))),
+    );
+
+    const response = await GET(makeCandidatesRequest());
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalled();
+    expect(mockGetUserMovieMemorySummaries).toHaveBeenCalledWith('42', 100);
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual({
+      movies: [
+        {
+          id: -550,
+          tmdbId: 550,
+          movieName: 'Fight Club',
+          movieYear: 1999,
+          posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+          localizedName: null,
+        },
+      ],
+    });
   });
 
   it('returns 422 for a too-short query', async () => {
@@ -199,9 +281,16 @@ describe('POST /api/account/movie-memory', () => {
   beforeEach(() => {
     mockGetSessionFromRequest.mockReset();
     mockAddUserMovieMemoryBatchFromCatalog.mockReset();
+    mockAddUserMovieMemoryFromExternalMovie.mockReset();
     mockAddUserMovieMemoryFromCatalog.mockReset();
+    mockGetLocalizedMovieInfo.mockReset();
+    mockGetMovieById.mockReset();
+    mockGetPosterURL.mockClear();
+    mockLoggerWarn.mockReset();
     mockApplyRateLimit.mockReset();
     mockApplyRateLimit.mockResolvedValue(null);
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it('returns 401 without a session', async () => {
@@ -363,6 +452,65 @@ describe('POST /api/account/movie-memory', () => {
       { movieId: 680, kind: 'not_seen' },
     ]);
     expect(mockAddUserMovieMemoryFromCatalog).not.toHaveBeenCalled();
+  });
+
+  it('saves TMDB fallback choices from a batched deck', async () => {
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockAddUserMovieMemoryBatchFromCatalog.mockResolvedValueOnce([]);
+    mockGetMovieById.mockResolvedValueOnce({
+      id: 550,
+      title: 'Fight Club',
+      release_date: '1999-10-15',
+      poster_path: '/fight.jpg',
+    });
+    mockAddUserMovieMemoryFromExternalMovie.mockResolvedValueOnce({
+      movieKey: 'tmdb:550',
+      tmdbId: 550,
+      movieName: 'Fight Club',
+      movieYear: 1999,
+      posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+      localizedName: null,
+      kind: 'watched',
+      updatedAt: '2026-05-20T12:00:00.000Z',
+    });
+
+    const response = await POST(
+      makePostRequest({
+        locale: 'en',
+        items: [{ movieId: -550, kind: 'watched' }],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: 'saved',
+      requested: 1,
+      items: [
+        {
+          movieKey: 'tmdb:550',
+          tmdbId: 550,
+          movieName: 'Fight Club',
+          movieYear: 1999,
+          posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+          localizedName: null,
+          kind: 'watched',
+          updatedAt: '2026-05-20T12:00:00.000Z',
+        },
+      ],
+    });
+    expect(mockAddUserMovieMemoryBatchFromCatalog).toHaveBeenCalledWith('42', []);
+    expect(mockGetMovieById).toHaveBeenCalledWith(550);
+    expect(mockAddUserMovieMemoryFromExternalMovie).toHaveBeenCalledWith(
+      '42',
+      {
+        tmdbId: 550,
+        movieName: 'Fight Club',
+        movieYear: 1999,
+        posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+        localizedName: null,
+      },
+      'watched',
+    );
   });
 
   it('returns 404 when the catalog movie is absent', async () => {
