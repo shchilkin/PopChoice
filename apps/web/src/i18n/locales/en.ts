@@ -936,7 +936,11 @@ export const en = {
     posterUnavailable: 'No poster available',
     loadMoreMovies: 'Load more cards',
     memoryDeckCompleteTitle: 'Memory updated',
-    memoryDeckCompleteBody: 'Nice. These signals will shape your next recommendations.',
+    memoryDeckCompleteBody: 'We will use these signals in future recommendations.',
+    memorySummary: 'Memory tuning summary',
+    memoryDeckBackToMemory: 'Back to movie memory',
+    memoryDeckFindRecommendation: 'Find a recommendation',
+    memoryDeckAddManual: 'Add a movie manually',
     memoryDeckEmptyTitle: 'No movie cards right now',
     memoryDeckEmptyBody:
       'PopChoice could not find more movies to ask about yet. Try again later, or add a specific title below.',

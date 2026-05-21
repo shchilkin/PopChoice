@@ -947,7 +947,11 @@ export const ru: Translations = {
     posterUnavailable: 'Постер недоступен',
     loadMoreMovies: 'Загрузить ещё карточки',
     memoryDeckCompleteTitle: 'Память обновлена',
-    memoryDeckCompleteBody: 'Отлично. Эти сигналы повлияют на следующие рекомендации.',
+    memoryDeckCompleteBody: 'Мы учтём эти сигналы в будущих рекомендациях.',
+    memorySummary: 'Итоги настройки памяти',
+    memoryDeckBackToMemory: 'Вернуться к памяти фильмов',
+    memoryDeckFindRecommendation: 'Найти рекомендацию',
+    memoryDeckAddManual: 'Добавить фильм вручную',
     memoryDeckEmptyTitle: 'Сейчас нет карточек',
     memoryDeckEmptyBody:
       'PopChoice пока не нашёл новые фильмы для проверки. Попробуйте позже или добавьте точное название ниже.',

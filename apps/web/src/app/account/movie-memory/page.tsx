@@ -3,6 +3,7 @@
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
   Check,
   ChevronDown,
   Eye,
@@ -68,6 +69,12 @@ type PendingMovieMemoryItem = {
 
 type DeckExitAction = UserMovieInteractionKind | 'unsure';
 
+type DeckSessionStats = {
+  watched: number;
+  notSeen: number;
+  unsure: number;
+};
+
 type PosterLookupResult = {
   id: number;
   posterURL: string | null;
@@ -76,7 +83,8 @@ type PosterLookupResult = {
 };
 
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
-const ANSWER_EXIT_MS = 230;
+const ANSWER_EXIT_MS = 280;
+const EMPTY_DECK_STATS: DeckSessionStats = { watched: 0, notSeen: 0, unsure: 0 };
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -96,6 +104,7 @@ export default function MovieMemoryPage() {
   const [deckExit, setDeckExit] = useState<{ movieId: number; action: DeckExitAction } | null>(
     null,
   );
+  const [deckSessionStats, setDeckSessionStats] = useState<DeckSessionStats>(EMPTY_DECK_STATS);
   const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
   const handledDeckMovieIds = useRef<Set<number>>(new Set());
   const requestedMoviePosters = useRef<Set<number>>(new Set());
@@ -108,6 +117,7 @@ export default function MovieMemoryPage() {
     setDeckExit(null);
     answerLocked.current = false;
     setIsSubmittingAnswer(false);
+    setDeckSessionStats(EMPTY_DECK_STATS);
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), MOVIE_MEMORY_FETCH_TIMEOUT_MS);
@@ -419,6 +429,12 @@ export default function MovieMemoryPage() {
       }
 
       answerUnlockTimer.current = window.setTimeout(() => {
+        setDeckSessionStats((current) => ({
+          watched: current.watched + (exitAction === 'watched' ? 1 : 0),
+          notSeen: current.notSeen + (exitAction === 'not_seen' ? 1 : 0),
+          unsure: current.unsure + (exitAction === 'unsure' ? 1 : 0),
+        }));
+
         if (exitAction === 'unsure') {
           skipDeckMovie(movieId);
         } else {
@@ -598,8 +614,7 @@ export default function MovieMemoryPage() {
 
   const activeMovie = candidates.status === 'loaded' ? candidates.movies[0] : null;
   const shouldShowManualSearch =
-    isManualSearchOpen ||
-    (candidates.status === 'loaded' && (candidates.total === 0 || candidates.movies.length === 0));
+    isManualSearchOpen || (candidates.status === 'loaded' && candidates.total === 0);
 
   return (
     <MovieMemoryShell>
@@ -658,30 +673,26 @@ export default function MovieMemoryPage() {
               onRetry={loadCandidates}
             />
           ) : activeMovie ? (
-            <div className="space-y-4">
-              <MovieTrainingCard
-                movie={activeMovie}
-                locale={locale}
-                labels={a}
-                exitAction={deckExit?.movieId === activeMovie.id ? deckExit.action : null}
-                counter={a.memoryDeckCounter
-                  .replace('{current}', String(candidates.reviewed + 1))
-                  .replace('{total}', String(candidates.total))}
-                progressPercent={((candidates.reviewed + 1) / Math.max(candidates.total, 1)) * 100}
-              />
-              <MovieTrainingControls
-                movie={activeMovie}
-                labels={a}
-                action={action}
-                isSubmitting={isSubmittingAnswer}
-                onSave={answerDeckMovie}
-                onSkip={skipActiveDeckMovie}
-              />
-            </div>
+            <MovieTrainingCard
+              movie={activeMovie}
+              locale={locale}
+              labels={a}
+              exitAction={deckExit?.movieId === activeMovie.id ? deckExit.action : null}
+              counter={a.memoryDeckCounter
+                .replace('{current}', String(candidates.reviewed + 1))
+                .replace('{total}', String(candidates.total))}
+              progressPercent={((candidates.reviewed + 1) / Math.max(candidates.total, 1)) * 100}
+              action={action}
+              isSubmitting={isSubmittingAnswer}
+              onSave={answerDeckMovie}
+              onSkip={skipActiveDeckMovie}
+            />
           ) : (
             <CompletionPanel
               labels={a}
               onLoadMore={loadCandidates}
+              onOpenManualSearch={() => setIsManualSearchOpen(true)}
+              stats={deckSessionStats}
               variant={
                 candidates.status === 'loaded' && candidates.total === 0 ? 'empty' : 'complete'
               }
@@ -789,10 +800,14 @@ function ErrorPanel({
 function CompletionPanel({
   labels,
   onLoadMore,
+  onOpenManualSearch,
+  stats,
   variant,
 }: {
   labels: ReturnType<typeof useLanguage>['t']['account'];
   onLoadMore: () => void;
+  onOpenManualSearch: () => void;
+  stats: DeckSessionStats;
   variant: 'complete' | 'empty';
 }) {
   const isEmpty = variant === 'empty';
@@ -800,10 +815,12 @@ function CompletionPanel({
 
   return (
     <div
-      className="flex flex-col items-center gap-4 rounded-3xl p-8 text-center"
+      className="flex flex-col items-center gap-5 rounded-3xl p-8 text-center md:p-10"
       style={{
-        background: 'var(--pc-surface)',
+        background:
+          'linear-gradient(145deg, color-mix(in srgb, var(--pc-surface) 92%, var(--pc-gold) 8%), var(--pc-surface))',
         border: '1px solid var(--pc-bd2)',
+        boxShadow: 'var(--pc-card-shadow)',
         color: 'var(--pc-t2)',
       }}
     >
@@ -817,20 +834,105 @@ function CompletionPanel({
       >
         <Icon size={30} />
       </div>
-      <div>
-        <h2 className="mb-2 text-xl font-semibold" style={{ color: 'var(--pc-t1)' }}>
+      <div className="max-w-xl">
+        <h2 className="mb-2 text-2xl font-semibold" style={{ color: 'var(--pc-t1)' }}>
           {isEmpty ? labels.memoryDeckEmptyTitle : labels.memoryDeckCompleteTitle}
         </h2>
         <p>{isEmpty ? labels.memoryDeckEmptyBody : labels.memoryDeckCompleteBody}</p>
       </div>
-      <button
-        type="button"
-        onClick={onLoadMore}
-        className="rounded-xl px-5 py-3 text-sm font-semibold"
-        style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
-      >
-        {isEmpty ? labels.memoryDeckEmptyAction : labels.loadMoreMovies}
-      </button>
+
+      {!isEmpty ? (
+        <div className="grid w-full max-w-lg grid-cols-3 gap-2" aria-label={labels.memorySummary}>
+          <CompletionStat label={labels.seenMovie} value={stats.watched} tone="seen" />
+          <CompletionStat label={labels.notSeenMovie} value={stats.notSeen} tone="notSeen" />
+          <CompletionStat label={labels.skipMovie} value={stats.unsure} tone="unsure" />
+        </div>
+      ) : null}
+
+      <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row sm:justify-center">
+        {isEmpty ? (
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="rounded-xl px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+            style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+          >
+            {labels.memoryDeckEmptyAction}
+          </button>
+        ) : (
+          <>
+            <Link
+              href="/account"
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+            >
+              {labels.memoryDeckBackToMemory}
+              <ArrowRight size={16} />
+            </Link>
+            <Link
+              href="/quiz"
+              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+              style={{
+                background: 'var(--pc-ghost)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t2)',
+              }}
+            >
+              {labels.memoryDeckFindRecommendation}
+            </Link>
+          </>
+        )}
+      </div>
+
+      {!isEmpty ? (
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold transition hover:bg-[var(--pc-ghost)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {labels.loadMoreMovies}
+          </button>
+          <button
+            type="button"
+            onClick={onOpenManualSearch}
+            className="rounded-full px-3 py-1.5 text-xs font-semibold transition hover:bg-[var(--pc-ghost)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {labels.memoryDeckAddManual}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CompletionStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'seen' | 'notSeen' | 'unsure';
+}) {
+  const color = tone === 'seen' ? palette.green : tone === 'notSeen' ? palette.red : 'var(--pc-t2)';
+
+  return (
+    <div
+      className="rounded-2xl px-3 py-4"
+      style={{
+        background: 'var(--pc-bg)',
+        border: '1px solid var(--pc-bd2)',
+      }}
+    >
+      <div className="text-2xl font-bold" style={{ color }}>
+        {value}
+      </div>
+      <div className="mt-1 text-xs font-semibold" style={{ color: 'var(--pc-t3)' }}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -842,6 +944,10 @@ function MovieTrainingCard({
   exitAction,
   counter,
   progressPercent,
+  action,
+  isSubmitting,
+  onSave,
+  onSkip,
 }: {
   movie: MovieMemoryCandidate;
   labels: ReturnType<typeof useLanguage>['t']['account'];
@@ -849,6 +955,10 @@ function MovieTrainingCard({
   exitAction: DeckExitAction | null;
   counter: string;
   progressPercent: number;
+  action: ActionState;
+  isSubmitting: boolean;
+  onSave: (movieId: number, kind: UserMovieInteractionKind) => void;
+  onSkip: (movieId: number) => void;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const title = getMovieTitle(movie, locale);
@@ -864,7 +974,7 @@ function MovieTrainingCard({
       key={movie.id}
       initial={{ opacity: 0, y: 18, scale: 0.98 }}
       animate={getDeckCardAnimate(exitAction, Boolean(shouldReduceMotion))}
-      transition={{ duration: exitAction ? 0.22 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: exitAction ? 0.28 : 0.18, ease: [0.22, 1, 0.36, 1] }}
       className="relative overflow-hidden rounded-[1.75rem]"
       style={{
         background:
@@ -942,6 +1052,19 @@ function MovieTrainingCard({
           </div>
         </div>
       </div>
+      <div
+        className="px-4 pb-4 sm:px-5 sm:pb-5 md:px-6 md:pb-6"
+        style={{ borderTop: '1px solid var(--pc-bd1)' }}
+      >
+        <MovieTrainingControls
+          movie={movie}
+          labels={labels}
+          action={action}
+          isSubmitting={isSubmitting}
+          onSave={onSave}
+          onSkip={onSkip}
+        />
+      </div>
       <DeckActionOverlay action={exitAction} labels={labels} />
     </motion.article>
   );
@@ -950,9 +1073,9 @@ function MovieTrainingCard({
 function getDeckCardAnimate(action: DeckExitAction | null, reducedMotion: boolean) {
   if (!action) return { opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 };
   if (reducedMotion) return { opacity: 0, x: 0, y: 0, rotate: 0, scale: 0.98 };
-  if (action === 'watched') return { opacity: 0, x: 360, y: 8, rotate: 5, scale: 0.98 };
-  if (action === 'not_seen') return { opacity: 0, x: -360, y: 8, rotate: -5, scale: 0.98 };
-  return { opacity: 0, x: 0, y: 110, rotate: 0, scale: 0.96 };
+  if (action === 'watched') return { opacity: 0, x: 520, y: 8, rotate: 8, scale: 0.98 };
+  if (action === 'not_seen') return { opacity: 0, x: -520, y: 8, rotate: -8, scale: 0.98 };
+  return { opacity: 0, x: 0, y: 150, rotate: 0, scale: 0.95 };
 }
 
 function DeckActionOverlay({
@@ -969,38 +1092,44 @@ function DeckActionOverlay({
       ? {
           label: labels.memoryOverlaySeen,
           Icon: Eye,
-          background: `${palette.green}24`,
+          background: `${palette.green}38`,
           border: `${palette.green}80`,
           color: palette.green,
+          rotate: 5,
         }
       : action === 'not_seen'
         ? {
             label: labels.memoryOverlayNotSeen,
             Icon: X,
-            background: `${palette.red}24`,
+            background: `${palette.red}38`,
             border: `${palette.red}80`,
             color: palette.red,
+            rotate: -5,
           }
         : {
             label: labels.memoryOverlayUnsure,
             Icon: ChevronDown,
-            background: 'color-mix(in srgb, var(--pc-surface-hover) 70%, transparent)',
+            background: 'color-mix(in srgb, var(--pc-surface-hover) 84%, transparent)',
             border: 'var(--pc-bd3)',
             color: 'var(--pc-t1)',
+            rotate: 0,
           };
   const { Icon } = config;
 
   return (
     <motion.div
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.08 }}
+      transition={{ duration: 0.1 }}
       style={{ background: config.background }}
     >
-      <div
-        className="inline-flex rotate-[-4deg] items-center gap-3 rounded-2xl px-5 py-3 text-lg font-black uppercase tracking-[0.14em] md:text-2xl"
+      <motion.div
+        className="inline-flex items-center gap-3 rounded-2xl px-6 py-4 text-xl font-black uppercase tracking-[0.14em] md:text-3xl"
+        initial={{ scale: 0.92, rotate: config.rotate }}
+        animate={{ scale: 1, rotate: config.rotate }}
+        transition={{ duration: 0.14, ease: [0.22, 1, 0.36, 1] }}
         style={{
           border: `2px solid ${config.border}`,
           color: config.color,
@@ -1010,7 +1139,7 @@ function DeckActionOverlay({
       >
         <Icon size={24} />
         {config.label}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -1041,11 +1170,7 @@ function MovieTrainingControls({
       key={`${movie.id}-controls`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl p-4"
-      style={{
-        background: 'var(--pc-bg)',
-        border: '1px solid var(--pc-bd1)',
-      }}
+      className="pt-4"
     >
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-sm font-semibold" style={{ color: 'var(--pc-t2)' }}>
@@ -1152,19 +1277,71 @@ function PosterFrame({
         </>
       ) : (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"
+          className="absolute inset-0 flex flex-col justify-between overflow-hidden p-5 text-center"
           style={{
-            background: 'linear-gradient(160deg, var(--pc-surface-hover), var(--pc-surface-deep))',
+            background:
+              'linear-gradient(160deg, color-mix(in srgb, var(--pc-surface-hover) 86%, var(--pc-gold) 14%), var(--pc-surface-deep) 58%, color-mix(in srgb, var(--pc-bg) 88%, var(--pc-gold) 12%))',
           }}
         >
-          <Film size={58} style={{ color: 'var(--pc-t3)' }} />
-          <div>
-            <p className="text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
-              {formatMovieName(title, movie.movieYear)}
-            </p>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 h-16"
+            style={{
+              background:
+                'repeating-linear-gradient(90deg, transparent 0 12px, color-mix(in srgb, var(--pc-gold) 24%, transparent) 12px 14px)',
+              opacity: 0.55,
+            }}
+          />
+          <div className="relative z-[1] flex items-center justify-between">
+            <span
+              className="rounded-full px-3 py-1 text-[0.65rem] font-black uppercase tracking-[0.16em]"
+              style={{
+                background: 'var(--pc-gold-subtle)',
+                border: '1px solid var(--pc-gold-bd)',
+                color: 'var(--pc-gold-text)',
+              }}
+            >
+              PopChoice
+            </span>
+            {movie.movieYear ? (
+              <span
+                className="rounded-full px-3 py-1 text-xs font-bold"
+                style={{
+                  background: 'var(--pc-bg)',
+                  border: '1px solid var(--pc-bd2)',
+                  color: 'var(--pc-t2)',
+                }}
+              >
+                {movie.movieYear}
+              </span>
+            ) : null}
+          </div>
+          <div className="relative z-[1] flex flex-1 flex-col items-center justify-center gap-5">
+            <div
+              className="flex h-20 w-20 items-center justify-center rounded-3xl"
+              style={{
+                background: 'var(--pc-bg)',
+                border: '1px solid var(--pc-bd2)',
+                boxShadow: '0 16px 34px rgba(9,9,15,0.22)',
+              }}
+            >
+              <Film size={42} style={{ color: 'var(--pc-gold-text)' }} />
+            </div>
             <p
-              className="mt-2 text-xs font-medium uppercase tracking-[0.12em]"
-              style={{ color: 'var(--pc-t3)' }}
+              className="max-w-[15rem] text-xl font-black leading-tight"
+              style={{ color: 'var(--pc-t1)' }}
+            >
+              {title}
+            </p>
+          </div>
+          <div className="relative z-[1]">
+            <p
+              className="rounded-full px-3 py-2 text-xs font-bold uppercase tracking-[0.14em]"
+              style={{
+                background: 'var(--pc-bg)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t3)',
+              }}
             >
               {labels.posterUnavailable}
             </p>

@@ -944,7 +944,11 @@ export const fi: Translations = {
     posterUnavailable: 'Julistetta ei ole saatavilla',
     loadMoreMovies: 'Lataa lisää kortteja',
     memoryDeckCompleteTitle: 'Muisti päivitetty',
-    memoryDeckCompleteBody: 'Hyvä. Nämä signaalit vaikuttavat seuraaviin suosituksiin.',
+    memoryDeckCompleteBody: 'Käytämme näitä signaaleja tulevissa suosituksissa.',
+    memorySummary: 'Muistin säätämisen yhteenveto',
+    memoryDeckBackToMemory: 'Takaisin elokuvamuistiin',
+    memoryDeckFindRecommendation: 'Etsi suositus',
+    memoryDeckAddManual: 'Lisää elokuva käsin',
     memoryDeckEmptyTitle: 'Ei elokuvakortteja juuri nyt',
     memoryDeckEmptyBody:
       'PopChoice ei vielä löytänyt lisää elokuvia kysyttäväksi. Yritä myöhemmin tai lisää tietty nimi alta.',
