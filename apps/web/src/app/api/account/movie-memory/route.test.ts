@@ -12,6 +12,7 @@ const {
   mockGetLocalizedMovieInfo,
   mockGetMovieById,
   mockGetPosterURL,
+  mockGetUserMovieMemoryPage,
   mockGetUserMovieMemorySummaries,
   mockLoggerWarn,
   mockSearchMovieCatalogForMemory,
@@ -29,6 +30,7 @@ const {
   mockGetPosterURL: vi.fn((path: string | null) =>
     path ? `https://image.tmdb.org/t/p/w500${path}` : undefined,
   ),
+  mockGetUserMovieMemoryPage: vi.fn(),
   mockGetUserMovieMemorySummaries: vi.fn(),
   mockLoggerWarn: vi.fn(),
   mockSearchMovieCatalogForMemory: vi.fn(),
@@ -46,6 +48,7 @@ vi.mock('@/lib/db/recommendations', () => ({
   deleteUserMovieMemory: mockDeleteUserMovieMemory,
   getMovieMemoryCandidateStatsForUser: mockGetMovieMemoryCandidateStatsForUser,
   getMovieMemoryCandidatesForUser: mockGetMovieMemoryCandidatesForUser,
+  getUserMovieMemoryPage: mockGetUserMovieMemoryPage,
   getUserMovieMemorySummaries: mockGetUserMovieMemorySummaries,
   searchMovieCatalogForMemory: mockSearchMovieCatalogForMemory,
 }));
@@ -116,11 +119,23 @@ function makeCandidatesRequest(locale?: string) {
   });
 }
 
+function makeListRequest(offset?: number, limit?: number) {
+  const url = new URL('http://localhost/api/account/movie-memory');
+  url.searchParams.set('mode', 'list');
+  if (offset !== undefined) url.searchParams.set('offset', String(offset));
+  if (limit !== undefined) url.searchParams.set('limit', String(limit));
+
+  return new NextRequest(url, {
+    method: 'GET',
+  });
+}
+
 describe('GET /api/account/movie-memory', () => {
   beforeEach(() => {
     mockGetSessionFromRequest.mockReset();
     mockGetMovieMemoryCandidateStatsForUser.mockReset();
     mockGetMovieMemoryCandidatesForUser.mockReset();
+    mockGetUserMovieMemoryPage.mockReset();
     mockGetUserMovieMemorySummaries.mockReset();
     mockLoggerWarn.mockReset();
     mockSearchMovieCatalogForMemory.mockReset();
@@ -138,6 +153,26 @@ describe('GET /api/account/movie-memory', () => {
     expect(response.status).toBe(401);
     expect(mockSearchMovieCatalogForMemory).not.toHaveBeenCalled();
     expect(mockGetMovieMemoryCandidatesForUser).not.toHaveBeenCalled();
+  });
+
+  it('returns paginated movie memory list for a signed-in user', async () => {
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockGetUserMovieMemoryPage.mockResolvedValueOnce({
+      items: [{ movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' }],
+      total: 75,
+      nextOffset: 100,
+    });
+
+    const response = await GET(makeListRequest(50, 50));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      movieMemory: [{ movieKey: 'tmdb:129', movieName: 'Spirited Away', kind: 'watched' }],
+      total: 75,
+      nextOffset: 100,
+    });
+    expect(mockGetUserMovieMemoryPage).toHaveBeenCalledWith('42', { offset: 50, limit: 50 });
+    expect(mockSearchMovieCatalogForMemory).not.toHaveBeenCalled();
   });
 
   it('returns movie memory candidates for a signed-in user', async () => {

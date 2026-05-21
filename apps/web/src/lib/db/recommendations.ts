@@ -136,6 +136,12 @@ export interface MovieMemoryCandidateStats {
   availableCatalogCount: number;
 }
 
+export interface UserMovieMemoryPage {
+  items: UserMovieMemorySummary[];
+  total: number;
+  nextOffset: number | null;
+}
+
 export interface ExternalMovieMemoryInput {
   tmdbId: number | null;
   movieName: string;
@@ -462,6 +468,87 @@ export async function getUserMovieMemorySummaries(
     localizedName: row.localized_name,
     updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
   }));
+}
+
+export async function getUserMovieMemoryPage(
+  userId: string,
+  { limit = 50, offset = 0 } = {},
+): Promise<UserMovieMemoryPage> {
+  const pool = getPool();
+  const boundedLimit = Math.min(Math.max(limit, 1), 100);
+  const boundedOffset = Math.max(offset, 0);
+  const result = await pool.query<{
+    kind: UserMovieInteractionKind;
+    movie_key: string;
+    tmdb_id: number | null;
+    movie_name: string;
+    movie_year: number | null;
+    poster_url: string | null;
+    localized_name: string | null;
+    updated_at: Date | string;
+    total_count: string | number;
+  }>(
+    `SELECT
+       ui.kind,
+       ui.movie_key,
+       COALESCE(ui.tmdb_id, catalog_movie.tmdb_id, source_movie.tmdb_id) AS tmdb_id,
+       ui.movie_name,
+       ui.movie_year,
+       COALESCE(ui.poster_url, catalog_movie.poster_url, source_movie.poster_url) AS poster_url,
+       COALESCE(ui.localized_name, catalog_movie.localized_name, source_movie.localized_name) AS localized_name,
+       ui.updated_at,
+       COUNT(*) OVER() AS total_count
+     FROM user_movie_interactions ui
+     LEFT JOIN LATERAL (
+       SELECT m.tmdb_id, m.poster_url, m.localized_name
+       FROM movies m
+       WHERE (ui.tmdb_id IS NOT NULL AND m.tmdb_id = ui.tmdb_id)
+          OR (lower(m.name) = lower(ui.movie_name) AND m.year IS NOT DISTINCT FROM ui.movie_year)
+       ORDER BY (m.poster_url IS NULL), m.id
+       LIMIT 1
+     ) catalog_movie ON true
+     LEFT JOIN LATERAL (
+       SELECT
+         rm.tmdb_id,
+         COALESCE(rm.poster_url, m.poster_url) AS poster_url,
+         COALESCE(rm.localized_name, m.localized_name) AS localized_name
+       FROM recommendation_movies rm
+       LEFT JOIN movies m ON m.id = rm.movie_id
+       WHERE rm.recommendation_id = ui.source_recommendation_id
+         AND (
+           (ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id)
+           OR (
+             lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year
+           )
+           OR rm.is_main_recommendation
+         )
+       ORDER BY
+         CASE
+           WHEN ui.tmdb_id IS NOT NULL AND rm.tmdb_id = ui.tmdb_id THEN 0
+           WHEN lower(COALESCE(rm.tmdb_name, m.name)) = lower(ui.movie_name)
+             AND COALESCE(rm.tmdb_year, m.year) IS NOT DISTINCT FROM ui.movie_year THEN 1
+           ELSE 2
+         END,
+         rm.is_main_recommendation DESC,
+         rm.position ASC
+       LIMIT 1
+     ) source_movie ON true
+     WHERE ui.user_id = $1
+     ORDER BY ui.updated_at DESC, ui.movie_key ASC
+     LIMIT $2 OFFSET $3`,
+    [userId, boundedLimit, boundedOffset],
+  );
+
+  const total = Number(result.rows[0]?.total_count ?? boundedOffset + result.rows.length);
+  const nextOffset =
+    boundedOffset + result.rows.length < total ? boundedOffset + result.rows.length : null;
+
+  return {
+    items: result.rows.map(mapUserMovieMemoryRow),
+    total,
+    nextOffset,
+  };
 }
 
 function mapUserMovieMemoryRow(row: {

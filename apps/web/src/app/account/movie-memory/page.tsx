@@ -12,7 +12,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -66,6 +66,8 @@ type PendingMovieMemoryItem = {
   kind: UserMovieInteractionKind;
 };
 
+type DeckExitAction = UserMovieInteractionKind | 'unsure';
+
 type PosterLookupResult = {
   id: number;
   posterURL: string | null;
@@ -74,7 +76,7 @@ type PosterLookupResult = {
 };
 
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
-const ANSWER_LOCK_MS = 180;
+const ANSWER_EXIT_MS = 230;
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -91,6 +93,9 @@ export default function MovieMemoryPage() {
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchState>({ status: 'idle' });
   const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const [deckExit, setDeckExit] = useState<{ movieId: number; action: DeckExitAction } | null>(
+    null,
+  );
   const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
   const handledDeckMovieIds = useRef<Set<number>>(new Set());
   const requestedMoviePosters = useRef<Set<number>>(new Set());
@@ -100,6 +105,9 @@ export default function MovieMemoryPage() {
   const loadCandidates = useCallback(async () => {
     setCandidates({ status: 'loading' });
     setAction({ status: 'idle' });
+    setDeckExit(null);
+    answerLocked.current = false;
+    setIsSubmittingAnswer(false);
 
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), MOVIE_MEMORY_FETCH_TIMEOUT_MS);
@@ -398,39 +406,46 @@ export default function MovieMemoryPage() {
     );
   }, []);
 
-  const lockAnswerBriefly = useCallback(() => {
-    if (answerLocked.current) return false;
+  const startDeckExit = useCallback(
+    (movieId: number, exitAction: DeckExitAction) => {
+      if (answerLocked.current || deckExit) return;
 
-    answerLocked.current = true;
-    setIsSubmittingAnswer(true);
+      answerLocked.current = true;
+      setIsSubmittingAnswer(true);
+      setDeckExit({ movieId, action: exitAction });
 
-    if (answerUnlockTimer.current) {
-      window.clearTimeout(answerUnlockTimer.current);
-    }
+      if (answerUnlockTimer.current) {
+        window.clearTimeout(answerUnlockTimer.current);
+      }
 
-    answerUnlockTimer.current = window.setTimeout(() => {
-      answerLocked.current = false;
-      setIsSubmittingAnswer(false);
-      answerUnlockTimer.current = null;
-    }, ANSWER_LOCK_MS);
+      answerUnlockTimer.current = window.setTimeout(() => {
+        if (exitAction === 'unsure') {
+          skipDeckMovie(movieId);
+        } else {
+          saveDeckMovieMemory(movieId, exitAction);
+        }
 
-    return true;
-  }, []);
+        answerLocked.current = false;
+        setIsSubmittingAnswer(false);
+        setDeckExit(null);
+        answerUnlockTimer.current = null;
+      }, ANSWER_EXIT_MS);
+    },
+    [deckExit, saveDeckMovieMemory, skipDeckMovie],
+  );
 
   const answerDeckMovie = useCallback(
     (movieId: number, kind: UserMovieInteractionKind) => {
-      if (!lockAnswerBriefly()) return;
-      saveDeckMovieMemory(movieId, kind);
+      startDeckExit(movieId, kind);
     },
-    [lockAnswerBriefly, saveDeckMovieMemory],
+    [startDeckExit],
   );
 
   const skipActiveDeckMovie = useCallback(
     (movieId: number) => {
-      if (!lockAnswerBriefly()) return;
-      skipDeckMovie(movieId);
+      startDeckExit(movieId, 'unsure');
     },
-    [lockAnswerBriefly, skipDeckMovie],
+    [startDeckExit],
   );
 
   useEffect(() => {
@@ -648,6 +663,7 @@ export default function MovieMemoryPage() {
                 movie={activeMovie}
                 locale={locale}
                 labels={a}
+                exitAction={deckExit?.movieId === activeMovie.id ? deckExit.action : null}
                 counter={a.memoryDeckCounter
                   .replace('{current}', String(candidates.reviewed + 1))
                   .replace('{total}', String(candidates.total))}
@@ -823,15 +839,18 @@ function MovieTrainingCard({
   movie,
   labels,
   locale,
+  exitAction,
   counter,
   progressPercent,
 }: {
   movie: MovieMemoryCandidate;
   labels: ReturnType<typeof useLanguage>['t']['account'];
   locale: string;
+  exitAction: DeckExitAction | null;
   counter: string;
   progressPercent: number;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   const title = getMovieTitle(movie, locale);
   const summary = getMovieSummary(movie, locale);
   const duration = formatDuration(movie.duration, locale);
@@ -844,9 +863,9 @@ function MovieTrainingCard({
     <motion.article
       key={movie.id}
       initial={{ opacity: 0, y: 18, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -12, scale: 0.98 }}
-      className="overflow-hidden rounded-[1.75rem]"
+      animate={getDeckCardAnimate(exitAction, Boolean(shouldReduceMotion))}
+      transition={{ duration: exitAction ? 0.22 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+      className="relative overflow-hidden rounded-[1.75rem]"
       style={{
         background:
           'linear-gradient(145deg, color-mix(in srgb, var(--pc-surface) 92%, var(--pc-gold) 8%), var(--pc-surface))',
@@ -923,7 +942,76 @@ function MovieTrainingCard({
           </div>
         </div>
       </div>
+      <DeckActionOverlay action={exitAction} labels={labels} />
     </motion.article>
+  );
+}
+
+function getDeckCardAnimate(action: DeckExitAction | null, reducedMotion: boolean) {
+  if (!action) return { opacity: 1, x: 0, y: 0, rotate: 0, scale: 1 };
+  if (reducedMotion) return { opacity: 0, x: 0, y: 0, rotate: 0, scale: 0.98 };
+  if (action === 'watched') return { opacity: 0, x: 360, y: 8, rotate: 5, scale: 0.98 };
+  if (action === 'not_seen') return { opacity: 0, x: -360, y: 8, rotate: -5, scale: 0.98 };
+  return { opacity: 0, x: 0, y: 110, rotate: 0, scale: 0.96 };
+}
+
+function DeckActionOverlay({
+  action,
+  labels,
+}: {
+  action: DeckExitAction | null;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+}) {
+  if (!action) return null;
+
+  const config =
+    action === 'watched'
+      ? {
+          label: labels.memoryOverlaySeen,
+          Icon: Eye,
+          background: `${palette.green}24`,
+          border: `${palette.green}80`,
+          color: palette.green,
+        }
+      : action === 'not_seen'
+        ? {
+            label: labels.memoryOverlayNotSeen,
+            Icon: X,
+            background: `${palette.red}24`,
+            border: `${palette.red}80`,
+            color: palette.red,
+          }
+        : {
+            label: labels.memoryOverlayUnsure,
+            Icon: ChevronDown,
+            background: 'color-mix(in srgb, var(--pc-surface-hover) 70%, transparent)',
+            border: 'var(--pc-bd3)',
+            color: 'var(--pc-t1)',
+          };
+  const { Icon } = config;
+
+  return (
+    <motion.div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.08 }}
+      style={{ background: config.background }}
+    >
+      <div
+        className="inline-flex rotate-[-4deg] items-center gap-3 rounded-2xl px-5 py-3 text-lg font-black uppercase tracking-[0.14em] md:text-2xl"
+        style={{
+          border: `2px solid ${config.border}`,
+          color: config.color,
+          background: 'var(--pc-bg)',
+          boxShadow: 'var(--pc-card-shadow)',
+        }}
+      >
+        <Icon size={24} />
+        {config.label}
+      </div>
+    </motion.div>
   );
 }
 
@@ -972,11 +1060,11 @@ function MovieTrainingControls({
           type="button"
           disabled={isSaving}
           onClick={() => onSave(movie.id, 'not_seen')}
-          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-[var(--pc-surface-hover)] active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           style={{
-            background: 'var(--pc-surface)',
-            border: '1px solid var(--pc-bd3)',
-            color: 'var(--pc-t1)',
+            background: `${palette.red}22`,
+            border: `1px solid ${palette.red}70`,
+            color: palette.red,
           }}
         >
           {savingUnseen ? <Loader2 className="animate-spin" size={18} /> : <X size={18} />}
@@ -986,11 +1074,11 @@ function MovieTrainingControls({
           type="button"
           disabled={isSaving}
           onClick={() => onSave(movie.id, 'watched')}
-          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           style={{
-            background: 'var(--pc-cta)',
-            border: '1px solid var(--pc-gold-bd)',
-            color: 'var(--pc-cta-text)',
+            background: `${palette.green}26`,
+            border: `1px solid ${palette.green}75`,
+            color: palette.green,
           }}
         >
           {savingSeen ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
@@ -1007,6 +1095,7 @@ function MovieTrainingControls({
           color: 'var(--pc-t2)',
         }}
       >
+        <ChevronDown size={18} />
         &darr; {labels.skipMovie}
       </button>
     </motion.div>

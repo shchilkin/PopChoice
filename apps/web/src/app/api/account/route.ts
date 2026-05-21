@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getDbClient } from '@/clients/dbClient';
 import { getSessionFromRequest } from '@/lib/auth/session';
-import {
-  getUserMovieMemorySummaries,
-  getUserRecommendationSummaries,
-} from '@/lib/db/recommendations';
+import { getUserMovieMemoryPage, getUserRecommendationSummaries } from '@/lib/db/recommendations';
 import logger from '@/lib/logger';
 
 type UserRow = {
@@ -44,15 +41,17 @@ export async function GET(req: NextRequest): Promise<Response> {
       return accountJson({ error: 'Account not found' }, 404);
     }
 
-    const [recommendations, movieMemory] = await Promise.all([
+    const [recommendations, movieMemoryPage] = await Promise.all([
       getUserRecommendationSummaries(session.sub),
-      getUserMovieMemorySummaries(session.sub),
+      getUserMovieMemoryPage(session.sub),
     ]);
     return accountJson(
       {
         user: { email: user.email },
         recommendations,
-        movieMemory,
+        movieMemory: movieMemoryPage.items,
+        movieMemoryTotal: movieMemoryPage.total,
+        movieMemoryNextOffset: movieMemoryPage.nextOffset,
       },
       200,
     );

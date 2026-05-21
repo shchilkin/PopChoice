@@ -10,6 +10,7 @@ import {
   deleteUserMovieMemory,
   getMovieMemoryCandidateStatsForUser,
   getMovieMemoryCandidatesForUser,
+  getUserMovieMemoryPage,
   getUserMovieMemorySummaries,
   searchMovieCatalogForMemory,
   type UserMovieMemorySummary,
@@ -38,6 +39,12 @@ const deleteMovieMemorySchema = z
 const searchMovieMemorySchema = z
   .object({
     query: z.string().trim().min(2).max(80),
+  })
+  .strict();
+const listMovieMemorySchema = z
+  .object({
+    offset: z.coerce.number().int().min(0).optional().default(0),
+    limit: z.coerce.number().int().min(1).max(100).optional().default(50),
   })
   .strict();
 const movieMemoryIdSchema = z.coerce
@@ -288,8 +295,9 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const startedAt = Date.now();
   const isCandidatesRequest = req.nextUrl.searchParams.get('mode') === 'candidates';
+  const isListRequest = req.nextUrl.searchParams.get('mode') === 'list';
   const query = req.nextUrl.searchParams.get('query') ?? req.nextUrl.searchParams.get('q') ?? '';
-  const requestKind = isCandidatesRequest ? 'candidates' : 'search';
+  const requestKind = isCandidatesRequest ? 'candidates' : isListRequest ? 'list' : 'search';
   logger.info(
     {
       userId: session.sub,
@@ -359,6 +367,51 @@ export async function GET(req: NextRequest): Promise<Response> {
         'Failed to load movie memory candidates',
       );
       return movieMemoryJson({ error: 'Failed to load movie memory candidates' }, 500);
+    }
+  }
+
+  if (isListRequest) {
+    const parsed = listMovieMemorySchema.safeParse({
+      offset: req.nextUrl.searchParams.get('offset') ?? undefined,
+      limit: req.nextUrl.searchParams.get('limit') ?? undefined,
+    });
+    if (!parsed.success) {
+      logger.warn(
+        { userId: session.sub, requestKind, durationMs: elapsedMs(startedAt) },
+        'Movie memory list rejected: invalid pagination',
+      );
+      return movieMemoryJson({ error: 'Invalid movie memory pagination' }, 422);
+    }
+
+    try {
+      const page = await getUserMovieMemoryPage(session.sub, parsed.data);
+      logger.info(
+        {
+          userId: session.sub,
+          requestKind,
+          requested: parsed.data.limit,
+          offset: parsed.data.offset,
+          returned: page.items.length,
+          total: page.total,
+          nextOffset: page.nextOffset,
+          durationMs: elapsedMs(startedAt),
+        },
+        'Movie memory list loaded',
+      );
+      return movieMemoryJson(
+        {
+          movieMemory: page.items,
+          total: page.total,
+          nextOffset: page.nextOffset,
+        },
+        200,
+      );
+    } catch (err) {
+      logger.error(
+        { err, userId: session.sub, requestKind, durationMs: elapsedMs(startedAt) },
+        'Failed to load movie memory list',
+      );
+      return movieMemoryJson({ error: 'Failed to load movie memory' }, 500);
     }
   }
 

@@ -46,6 +46,7 @@ import {
   getRecommendationWithMovies,
   getMovieMemoryCandidateStatsForUser,
   getUserMovieMemorySummaries,
+  getUserMovieMemoryPage,
   getUserRecommendationSummaries,
   insertMorePicksMovies,
   insertRecommendationMovies,
@@ -377,6 +378,58 @@ describe('getUserMovieMemorySummaries', () => {
     expect(sql).toContain('FROM recommendation_movies rm');
     expect(sql).toContain('ORDER BY ui.updated_at DESC');
     expect(params).toEqual(['42', 50]);
+  });
+});
+
+describe('getUserMovieMemoryPage', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns paginated movie memory with total and next offset', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:129',
+          tmdb_id: 129,
+          movie_name: 'Spirited Away',
+          movie_year: 2001,
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Унесённые призраками',
+          updated_at: new Date('2026-05-17T10:00:00.000Z'),
+          total_count: '75',
+        },
+      ],
+    });
+
+    const result = await getUserMovieMemoryPage('42', { limit: 25, offset: 50 });
+
+    expect(result).toEqual({
+      items: [
+        {
+          kind: 'watched',
+          movieKey: 'tmdb:129',
+          tmdbId: 129,
+          movieName: 'Spirited Away',
+          movieYear: 2001,
+          posterURL: 'https://example.com/poster.jpg',
+          localizedName: 'Унесённые призраками',
+          updatedAt: '2026-05-17T10:00:00.000Z',
+        },
+      ],
+      total: 75,
+      nextOffset: 51,
+    });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('COUNT(*) OVER() AS total_count');
+    expect(sql).toContain('LIMIT $2 OFFSET $3');
+    expect(params).toEqual(['42', 25, 50]);
   });
 });
 
