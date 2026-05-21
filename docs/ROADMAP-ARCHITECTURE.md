@@ -64,6 +64,7 @@ The main remaining risks are:
 ### Issues Still Present
 
 - The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
+- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
 - Account movie-memory behavior has grown enough that a feature-owned orchestration module would make future changes easier to review and test.
 - `liked` feedback is stored as durable memory, but ranking still primarily uses negative memory for exclusion/down-ranking rather than treating likes as a positive taste signal.
@@ -204,6 +205,15 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Add profile editing for display name, avatar, and basic preferences.
 - Add account achievements, taste progress, and gamified memory-building only after the underlying movie-memory signals are reliable.
 - Add feedback loops that explain how recommendation feedback changes future recommendations.
+
+### Recommendation Experience Track
+
+- Treat quiz answers, swipe reactions, account memory, and result feedback as inputs into a shared taste-signal model.
+- Rework the guided quiz around "what do you want tonight?" instead of relying on a favorite movie, broad genre labels, and optional actor input.
+- Add an alternate taste-swipe mode for users who have watched many films and prefer to react to concrete movie cards instead of answering abstract questions.
+- Move toward TMDB-first candidate generation: use TMDB for broad discovery and keep the local database as a cache/enrichment/reranking layer rather than the whole movie universe.
+- Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.
+- See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md) for the staged plan.
 
 ## Priority Items for the Next 30 Days
 

@@ -15,11 +15,7 @@ export const personFormDataSchema = z.object({
       .max(PARTICIPANT_NAME_MAX_LENGTH, 'Name must be 80 characters or fewer')
       .optional(),
   ),
-  favoriteMovie: z
-    .string()
-    .trim()
-    .min(1, 'Favorite movie is required')
-    .max(200, 'Favorite movie must be 200 characters or fewer'),
+  favoriteMovie: z.string().trim().max(200, 'Favorite movie must be 200 characters or fewer'),
   favoriteMovieWhy: z.preprocess(
     (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
     z.string().trim().max(300, 'Favorite movie reason must be 300 characters or fewer').optional(),

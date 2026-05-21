@@ -254,12 +254,10 @@ const validPerson = {
 
 describe('POST /api/movie-recommendation – input validation', () => {
   describe('favoriteMovie field', () => {
-    it('rejects an empty favoriteMovie', async () => {
+    it('accepts an empty favoriteMovie for no-reference recommendations', async () => {
       const req = makeRequest({ ...validPerson, favoriteMovie: '' });
       const res = await POST(req);
-      expect(res.status).toBe(400);
-      const data = await res.json();
-      expect(data).toHaveProperty('error');
+      expect(res.status).not.toBe(400);
     });
 
     it('rejects favoriteMovie exceeding 200 characters', async () => {
@@ -323,10 +321,10 @@ describe('POST /api/movie-recommendation – input validation', () => {
   });
 
   describe('sanitization', () => {
-    it('rejects favoriteMovie that is only whitespace after trimming', async () => {
+    it('accepts favoriteMovie that is only whitespace after trimming', async () => {
       const req = makeRequest({ ...validPerson, favoriteMovie: '   ' });
       const res = await POST(req);
-      expect(res.status).toBe(400);
+      expect(res.status).not.toBe(400);
     });
 
     it('rejects tonePreference that is only whitespace after trimming', async () => {

@@ -132,7 +132,7 @@ function QuizSession({ restartToken }: { restartToken: string | null }) {
     if (!currentPerson) return false;
     switch (questionsStep) {
       case 'favoriteMovie':
-        return currentPerson.favoriteMovie.trim().length >= 1;
+        return currentPerson.hasNoReferenceMovie || currentPerson.favoriteMovie.trim().length >= 1;
       case 'era':
         return currentPerson.era !== '';
       case 'mood':

@@ -8,6 +8,8 @@ import { GENRES } from '../../constants';
 
 import type { PersonAnswers } from '../../types';
 
+const MAX_MOOD_SELECTIONS = 3;
+
 interface MoodStepProps {
   person: PersonAnswers;
   onUpdate: (updates: Partial<PersonAnswers>) => void;
@@ -57,20 +59,27 @@ export function MoodStep({ person, onUpdate }: MoodStepProps) {
       <div className="grid grid-cols-2 gap-3">
         {GENRES.map((g) => {
           const selected = person.moods.includes(g.id);
+          const selectionLimitReached = !selected && person.moods.length >= MAX_MOOD_SELECTIONS;
           const label = t.genres[g.id as keyof typeof t.genres] ?? g.label;
           return (
             <button
               key={g.id}
               onClick={() => {
+                if (selectionLimitReached) {
+                  return;
+                }
                 const newMoods = selected
                   ? person.moods.filter((m) => m !== g.id)
                   : [...person.moods, g.id];
                 onUpdate({ moods: newMoods });
               }}
+              disabled={selectionLimitReached}
               className="flex items-center gap-3 p-3.5 rounded-xl text-left transition-all duration-200 active:scale-[0.97]"
               style={{
                 background: selected ? `${g.color}18` : 'var(--pc-surface)',
                 border: selected ? `1.5px solid ${g.color}50` : '1px solid var(--pc-bd1)',
+                cursor: selectionLimitReached ? 'not-allowed' : 'pointer',
+                opacity: selectionLimitReached ? 0.45 : 1,
               }}
             >
               <div

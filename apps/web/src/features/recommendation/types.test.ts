@@ -26,4 +26,15 @@ describe('personFormDataSchema', () => {
 
     expect(result.favoriteActor).toBeUndefined();
   });
+
+  it('allows an empty favorite movie when the user has no reference pick', () => {
+    const result = personFormDataSchema.parse({
+      favoriteMovie: '   ',
+      newVsClassic: 'Both new and classic',
+      moodPreference: ['Drama'],
+      tonePreference: 'Serious',
+    });
+
+    expect(result.favoriteMovie).toBe('');
+  });
 });

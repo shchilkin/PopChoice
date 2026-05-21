@@ -75,17 +75,18 @@ export const TONES: {
 ];
 
 export const QUESTION_LABELS = [
-  'Favorite film',
-  'Old or new?',
-  'Your mood',
-  'Pick a tone',
-  'Favorite actor',
+  'Reference point',
+  'Search lane',
+  "Tonight's vibe",
+  'Energy level',
+  'Optional actor',
 ];
 
 export function emptyPerson(name = ''): PersonAnswers {
   return {
     name,
     favoriteMovie: '',
+    hasNoReferenceMovie: false,
     favoriteMovieWhy: '',
     era: '',
     moods: [],
@@ -107,9 +108,10 @@ export function toApiFormat(person: PersonAnswers) {
     dark: 'Dark and intense',
   };
   const trimmedName = person.name.trim().slice(0, PARTICIPANT_NAME_MAX_LENGTH);
+  const favoriteMovie = person.hasNoReferenceMovie ? '' : person.favoriteMovie.trim();
   return {
     ...(trimmedName && { name: trimmedName }),
-    favoriteMovie: person.favoriteMovie,
+    favoriteMovie,
     ...(person.favoriteMovieWhy.trim() && { favoriteMovieWhy: person.favoriteMovieWhy.trim() }),
     newVsClassic: eraMap[person.era] || person.era,
     moodPreference: person.moods.map((m) => GENRES.find((g) => g.id === m)?.label || m),
