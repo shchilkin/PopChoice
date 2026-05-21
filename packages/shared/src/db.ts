@@ -11,6 +11,8 @@ export interface MovieRecord {
   description: string;
   duration: number;
   score_rating: number;
+  poster_url?: string | null;
+  localized_name?: string | null;
   tmdb_id?: number | null;
   tmdb_match_confidence?: number | null;
   tmdb_match_source?: 'tmdb_discovery' | 'backfill_auto' | 'manual' | null;
@@ -114,6 +116,8 @@ export async function ensureSchema(): Promise<void> {
       duration integer NOT NULL,
       score_rating float NOT NULL,
       year int NOT NULL,
+      poster_url text,
+      localized_name text,
       tmdb_id bigint,
       tmdb_match_confidence float,
       tmdb_match_source text,
@@ -124,6 +128,12 @@ export async function ensureSchema(): Promise<void> {
   `);
 
   await getPool().query(`
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS poster_url text;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS localized_name text;
+
     ALTER TABLE movies
       ADD COLUMN IF NOT EXISTS tmdb_id bigint;
 
@@ -146,6 +156,33 @@ export async function ensureSchema(): Promise<void> {
     CREATE UNIQUE INDEX IF NOT EXISTS movies_tmdb_id_unique
       ON movies (tmdb_id)
       WHERE tmdb_id IS NOT NULL;
+  `);
+
+  await getPool().query(`
+    CREATE TABLE IF NOT EXISTS tmdb_match_reviews (
+      id bigserial PRIMARY KEY,
+      movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+      movie_name text NOT NULL,
+      movie_year int NOT NULL,
+      reason text NOT NULL,
+      status text NOT NULL DEFAULT 'open',
+      candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+      notes text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT tmdb_match_reviews_reason_check CHECK (
+        reason IN ('ambiguous_match', 'runtime_mismatch')
+      ),
+      CONSTRAINT tmdb_match_reviews_status_check CHECK (
+        status IN ('open', 'resolved', 'ignored')
+      )
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tmdb_match_reviews_movie_reason
+      ON tmdb_match_reviews (movie_id, reason);
+
+    CREATE INDEX IF NOT EXISTS idx_tmdb_match_reviews_status_updated_at
+      ON tmdb_match_reviews (status, updated_at DESC);
   `);
 
   await getPool().query(`
@@ -220,13 +257,15 @@ export async function insertMovies(
       const result = await getPool().query<{ id: number }>(
         `INSERT INTO movies (
            name, year, age_rating, description, duration, score_rating,
-           tmdb_id, tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
+           poster_url, localized_name, tmdb_id, tmdb_match_confidence,
+           tmdb_match_source, tmdb_matched_at, embedding
          )
-         SELECT n, y, ar, d, du, sr, tid, conf, src, CASE WHEN tid IS NULL THEN NULL ELSE now() END, e::vector
+         SELECT n, y, ar, d, du, sr, poster, localized, tid, conf, src,
+                CASE WHEN tid IS NULL THEN NULL ELSE now() END, e::vector
          FROM unnest(
            $1::text[], $2::int[], $3::text[], $4::text[], $5::int[], $6::float8[],
-           $7::bigint[], $8::float8[], $9::text[], $10::text[]
-         ) AS t(n, y, ar, d, du, sr, tid, conf, src, e)
+           $7::text[], $8::text[], $9::bigint[], $10::float8[], $11::text[], $12::text[]
+         ) AS t(n, y, ar, d, du, sr, poster, localized, tid, conf, src, e)
          ON CONFLICT (name, year) DO NOTHING
          RETURNING id`,
         [
@@ -236,6 +275,8 @@ export async function insertMovies(
           batch.map((m) => m.description),
           batch.map((m) => m.duration),
           batch.map((m) => m.score_rating),
+          batch.map((m) => m.poster_url ?? null),
+          batch.map((m) => m.localized_name ?? null),
           batch.map((m) => m.tmdb_id ?? null),
           batch.map((m) => m.tmdb_match_confidence ?? null),
           batch.map((m) => m.tmdb_match_source ?? null),
@@ -258,9 +299,14 @@ export async function insertMovies(
           const result = await getPool().query<{ id: number }>(
             `INSERT INTO movies (
                name, year, age_rating, description, duration, score_rating,
-               tmdb_id, tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
+               poster_url, localized_name, tmdb_id, tmdb_match_confidence,
+               tmdb_match_source, tmdb_matched_at, embedding
              )
-             VALUES ($1, $2, $3, $4, $5, $6, $7::bigint, $8::float8, $9::text, CASE WHEN $7 IS NULL THEN NULL ELSE now() END, $10::vector)
+             VALUES (
+               $1, $2, $3, $4, $5, $6, $7::text, $8::text, $9::bigint,
+               $10::float8, $11::text, CASE WHEN $9 IS NULL THEN NULL ELSE now() END,
+               $12::vector
+             )
              ON CONFLICT (name, year) DO NOTHING
              RETURNING id`,
             [
@@ -270,6 +316,8 @@ export async function insertMovies(
               movie.description,
               movie.duration,
               movie.score_rating,
+              movie.poster_url ?? null,
+              movie.localized_name ?? null,
               movie.tmdb_id ?? null,
               movie.tmdb_match_confidence ?? null,
               movie.tmdb_match_source ?? null,

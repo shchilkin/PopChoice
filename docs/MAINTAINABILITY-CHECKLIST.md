@@ -12,13 +12,14 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 ### Architecture and boundaries
 
-- [ ] Module boundaries are clear across `src/app`, `src/integrations`, `src/clients`, `src/lib`, and `src/utils`.
-- [ ] API routes stay thin (validate input, call service, map response).
+- [ ] Module boundaries are clear across `src/app`, `src/features`, `src/integrations`, `src/clients`, `src/lib`, and `src/utils`.
+- [ ] API routes stay thin (validate input, call feature/repository code, map response).
 - [ ] Responsibilities between `src/integrations` and root `services/*` are documented and followed.
 
 ### Code organization
 
 - [ ] Directory and naming conventions are consistent and match current usage.
+- [ ] `src/features` owns cross-route product orchestration instead of route-local folders.
 - [ ] `src/utils` contains reusable helpers, not growing domain orchestration.
 - [ ] Shared exports remain intentional and do not hide ownership.
 
@@ -78,8 +79,8 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 ## PopChoice priority next steps (highest impact)
 
-- [ ] Document and enforce boundaries for `src/app`, `src/integrations`, `src/lib`, and `src/utils`, and clarify how they relate to root-level `services/*`.
-- [ ] Keep API route handlers thin and centralize recommendation orchestration.
-- [ ] Eliminate manual sync points for recommendation thresholds/config and docs.
-- [ ] Align docs with current structure (e.g. naming drift like `db` vs `database`).
-- [ ] Standardize conventions shared by root app and root-level `services/*` packages.
+- [ ] Refactor the quiz submit/results handoff so navigation state is explicit.
+- [ ] Keep API route handlers thin and move growing account/movie-memory logic into `src/features` when needed.
+- [ ] Use positive `liked` memory as a ranking signal, not only stored history.
+- [ ] Add catalog-health reporting for missing posters, localized metadata, duplicate identities, and stale TMDB data.
+- [ ] Standardize conventions shared by `apps/web`, `packages/shared`, and root `services/*` packages.

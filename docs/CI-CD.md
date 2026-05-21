@@ -2,14 +2,15 @@
 
 ## GitHub Actions Workflow
 
-This project uses two GitHub Actions workflow files for pull request validation:
+This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
-- `.github/workflows/pr.yml` – main application checks (lint, type-check, tests, build, dependency review)
+- `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, Storybook tests, build, service CI, dependency review)
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
+- `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
 
 ## Workflow Overview
 
-Both workflows run automatically on pull requests targeting the `development` branch. Jobs run **in parallel** to minimise feedback time, with each job focused on a single concern.
+The PR validation workflows run automatically on pull requests targeting the `development` branch. Jobs run **in parallel** to minimise feedback time, with each job focused on a single concern. CodeQL also runs on pushes to `development` and on a weekly schedule.
 
 ### Jobs
 
@@ -21,10 +22,11 @@ Both workflows run automatically on pull requests targeting the `development` br
 | `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload |
 | `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests           |
 | `pr.yml`                 | `build`              | Next.js production build verification                            |
-| `pr.yml`                 | `movie-seed-ci`      | TypeScript compilation for `services/movie-seed`                 |
+| `pr.yml`                 | `services-ci`        | Turbo test pass for `services/*`                                 |
 | `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                   |
 | `pr.yml`                 | `pr-validation`      | Stable required check that always runs on every PR               |
 | `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`  |
+| `codeql.yml`             | `analyze`            | CodeQL static analysis for Actions and JavaScript/TypeScript     |
 
 ## Workflow Features
 
@@ -48,9 +50,17 @@ Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (
 
 The `build` job sets `NEXT_FONT_GOOGLE_DISABLE=1` to prevent flaky failures caused by network access to Google Fonts in restricted CI environments.
 
+### Services CI
+
+The `services-ci` job in `pr.yml` runs `npm run test:services`, which delegates to Turbo for root `services/*` packages that define a `test` script. Services without a `test` script are skipped by that command; use `npm run build:services` locally when you specifically need a compile pass across service workspaces.
+
 ### Movie Discovery CI
 
 The `movie-discovery-ci` job lives in its own workflow (`movie-discovery-ci.yml`) and is triggered when files inside `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes. It installs dependencies, runs `tsc` (`npm run build`) to ensure the service always compiles correctly, and runs the service's Vitest test suite.
+
+### CodeQL
+
+The CodeQL workflow analyzes GitHub Actions and JavaScript/TypeScript on pushes and pull requests targeting `development`, plus a weekly scheduled run.
 
 ### Dependency Review
 
@@ -126,21 +136,21 @@ on:
 
 ## Workflow Trigger
 
-Both workflows are triggered on:
+The PR validation workflows are triggered on:
 
 - Pull request events targeting the `development` branch (`branches: ['development']`)
 - Both opening PRs and pushing new commits to existing PRs targeting development
 
 `pr.yml` always runs and classifies docs-only PRs inside the workflow so `PR Validation` is always reported.
-`movie-discovery-ci.yml` additionally **only runs** when at least one file under `services/movie-discovery/**` changes or when `.github/workflows/movie-discovery-ci.yml` itself changes.
+`movie-discovery-ci.yml` additionally **only runs** when at least one file under `services/movie-discovery/**` changes or when `.github/workflows/movie-discovery-ci.yml` itself changes. `codeql.yml` runs on pushes and pull requests targeting `development`, plus its weekly scheduled scan.
 
 ## Dependabot
 
 Dependabot is configured in `.github/dependabot.yml` to monitor:
 
-- **npm (root)** – main application dependencies, grouped into `production-dependencies` and `development-dependencies`
-- **npm (services/movie-seed)** – movie-seed service dependencies, grouped as `movie-seed-dependencies`
-- **npm (services/movie-discovery)** – movie-discovery service dependencies, grouped as `movie-discovery-dependencies`
+- **npm (root)** – workspace dependencies, grouped by framework, AI, database, UI utilities, testing, Storybook, build tools, linting/formatting, and miscellaneous production/development buckets
+- **npm (services/movie-seed)** – movie-seed service dependencies, grouped by production, development, and security updates
+- **npm (services/movie-discovery)** – movie-discovery service dependencies, grouped by production, development, and security updates
 - **GitHub Actions** – workflow action versions
 
 All groups cover `minor` and `patch` updates. Major updates still require manual review.
@@ -165,11 +175,11 @@ npm run test:storybook
 # Verify build
 NEXT_FONT_GOOGLE_DISABLE=1 npm run build
 
-# Movie seed type check
-cd services/movie-seed && npm run build
+# Service test pass
+npm run test:services
 
-# Movie discovery type check and tests
-cd services/movie-discovery && npm run build && npm test
+# Focused movie discovery CI reproduction
+npx turbo run build test --filter=./services/movie-discovery
 ```
 
 ## Troubleshooting
@@ -185,9 +195,9 @@ cd services/movie-discovery && npm run build && npm test
 3. **Build Failures**
    - Verify all required environment variables are present as repository secrets (`OPENAI_API_KEY`).
 
-4. **Movie Discovery Type Errors**
-   - Run `cd services/movie-discovery && npm run build` locally to reproduce and fix TypeScript errors.
-5. **Movie Seed Type Errors**
-   - Run `cd services/movie-seed && npm run build` locally to reproduce and fix TypeScript errors.
+4. **Service Type or Test Errors**
+   - Run `npm run test:services` locally, then narrow with `npx turbo run build test --filter=./services/<service-name>`.
+5. **Movie Discovery Path-Filtered Workflow Errors**
+   - Run `npx turbo run build test --filter=./services/movie-discovery` locally to reproduce the dedicated workflow.
 
 The workflow helps maintain code quality and functionality across all pull requests.

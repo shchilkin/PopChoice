@@ -14,6 +14,11 @@ import type { MovieRecord } from './database.js';
 
 /** Maximum concurrent TMDB detail requests per batch to avoid rate limiting. */
 const DETAIL_BATCH_SIZE = 5;
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
+
+function getPosterUrl(posterPath: string | null | undefined): string | null {
+  return posterPath ? `${TMDB_IMAGE_BASE_URL}/w500${posterPath}` : null;
+}
 
 export async function runSync(config: Config): Promise<void> {
   const startTime = Date.now();
@@ -164,6 +169,8 @@ export async function runSync(config: Config): Promise<void> {
       description: basic.overview || 'No description available.',
       duration: runtime,
       score_rating: basic.vote_average,
+      poster_url: getPosterUrl(basic.poster_path),
+      localized_name: details?.title && details.title !== basic.title ? details.title : null,
       tmdb_id: basic.id,
       tmdb_match_confidence: 1,
       tmdb_match_source: 'tmdb_discovery',
