@@ -48,19 +48,34 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const locale = parsed.data.locale ?? parseLocaleFromRequest(req);
 
-  const results: Array<{ id: number; posterURL: string | null; localizedName: string | null }> = [];
+  const results: Array<{
+    id: number;
+    posterURL: string | null;
+    localizedName: string | null;
+    localizedOverview: string | null;
+  }> = [];
   for (const batch of chunk(parsed.data.movies, POSTER_LOOKUP_BATCH_SIZE)) {
     const batchResults = await Promise.all(
       batch.map(async ({ id, name, year, tmdbId }) => {
         try {
-          const { posterURL, localizedName } = await getMovieInfo(name, locale, year, tmdbId);
-          return { id, posterURL: posterURL ?? null, localizedName: localizedName ?? null };
+          const { posterURL, localizedName, localizedOverview } = await getMovieInfo(
+            name,
+            locale,
+            year,
+            tmdbId,
+          );
+          return {
+            id,
+            posterURL: posterURL ?? null,
+            localizedName: localizedName ?? null,
+            localizedOverview: localizedOverview ?? null,
+          };
         } catch (err) {
           logger.warn(
             { err, movieId: id, movieName: name },
             'movie-posters: Failed to fetch poster URL',
           );
-          return { id, posterURL: null, localizedName: null };
+          return { id, posterURL: null, localizedName: null, localizedOverview: null };
         }
       }),
     );

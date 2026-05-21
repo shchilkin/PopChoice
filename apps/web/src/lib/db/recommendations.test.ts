@@ -400,6 +400,8 @@ describe('searchMovieCatalogForMemory', () => {
           year: 2001,
           poster_url: 'https://example.com/poster.jpg',
           localized_name: 'Унесённые призраками',
+          duration: 125,
+          description: 'A girl enters a world of spirits.',
         },
       ],
     });
@@ -414,6 +416,9 @@ describe('searchMovieCatalogForMemory', () => {
         movieYear: 2001,
         posterURL: 'https://example.com/poster.jpg',
         localizedName: 'Унесённые призраками',
+        duration: 125,
+        description: 'A girl enters a world of spirits.',
+        localizedOverview: null,
       },
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
@@ -449,6 +454,8 @@ describe('getMovieMemoryCandidatesForUser', () => {
           year: 1994,
           poster_url: 'https://example.com/pulp.jpg',
           localized_name: null,
+          duration: 154,
+          description: 'Interlocking stories in Los Angeles.',
           score_rating: 8.9,
         },
         {
@@ -458,6 +465,8 @@ describe('getMovieMemoryCandidatesForUser', () => {
           year: 2020,
           poster_url: null,
           localized_name: 'Локальный фильм',
+          duration: 102,
+          description: 'A local catalog entry.',
           score_rating: 7.1,
         },
       ],
@@ -473,6 +482,9 @@ describe('getMovieMemoryCandidatesForUser', () => {
         movieYear: 1994,
         posterURL: 'https://example.com/pulp.jpg',
         localizedName: null,
+        duration: 154,
+        description: 'Interlocking stories in Los Angeles.',
+        localizedOverview: null,
       },
       {
         id: 1,
@@ -481,6 +493,9 @@ describe('getMovieMemoryCandidatesForUser', () => {
         movieYear: 2020,
         posterURL: null,
         localizedName: 'Локальный фильм',
+        duration: 102,
+        description: 'A local catalog entry.',
+        localizedOverview: null,
       },
     ]);
     expect(mockQuery).toHaveBeenCalledOnce();

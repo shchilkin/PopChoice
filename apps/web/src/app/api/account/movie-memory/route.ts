@@ -79,6 +79,7 @@ const tmdbCandidateSchema = z.object({
   original_title: z.string().optional().nullable(),
   release_date: z.string().optional().nullable(),
   poster_path: z.string().nullable(),
+  overview: z.string().optional().nullable(),
   vote_average: z.number().optional(),
 });
 
@@ -199,6 +200,9 @@ async function getTMDBMovieMemoryCandidatesForUser(
         movieYear,
         posterURL: getPosterURL(movie.poster_path),
         localizedName: localizedTitle,
+        duration: null,
+        description: locale === 'en' ? movie.overview || null : null,
+        localizedOverview: locale === 'en' ? null : movie.overview || null,
       });
 
       if (candidates.length >= limit) break;

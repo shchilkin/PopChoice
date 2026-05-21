@@ -41,6 +41,7 @@ describe('POST /api/movie-posters', () => {
     mockGetMovieInfo.mockResolvedValueOnce({
       posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
       localizedName: 'Бойцовский клуб',
+      localizedOverview: 'Офисный работник встречает торговца мылом.',
     });
 
     const response = await POST(
@@ -57,6 +58,7 @@ describe('POST /api/movie-posters', () => {
           id: 550,
           posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
           localizedName: 'Бойцовский клуб',
+          localizedOverview: 'Офисный работник встречает торговца мылом.',
         },
       ],
     });

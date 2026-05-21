@@ -39,6 +39,9 @@ type MovieMemoryCandidate = {
   movieYear: number | null;
   posterURL: string | null;
   localizedName: string | null;
+  duration: number | null;
+  description: string | null;
+  localizedOverview: string | null;
 };
 
 type CandidateState =
@@ -67,9 +70,11 @@ type PosterLookupResult = {
   id: number;
   posterURL: string | null;
   localizedName?: string | null;
+  localizedOverview?: string | null;
 };
 
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
+const ANSWER_LOCK_MS = 180;
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -85,9 +90,12 @@ export default function MovieMemoryPage() {
   const [catalogQuery, setCatalogQuery] = useState('');
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchState>({ status: 'idle' });
   const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
+  const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
   const handledDeckMovieIds = useRef<Set<number>>(new Set());
   const requestedMoviePosters = useRef<Set<number>>(new Set());
+  const answerLocked = useRef(false);
+  const answerUnlockTimer = useRef<number | null>(null);
 
   const loadCandidates = useCallback(async () => {
     setCandidates({ status: 'loading' });
@@ -190,6 +198,15 @@ export default function MovieMemoryPage() {
     requestedMoviePosters.current.clear();
   }, [locale]);
 
+  useEffect(
+    () => () => {
+      if (answerUnlockTimer.current) {
+        window.clearTimeout(answerUnlockTimer.current);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     const missingPosters = new Map<number, MovieMemoryCandidate>();
     if (candidates.status === 'loaded') {
@@ -263,12 +280,17 @@ export default function MovieMemoryPage() {
 
             const posterURL = movie.posterURL ?? result.posterURL;
             const localizedName = movie.localizedName ?? result.localizedName ?? null;
-            if (posterURL === movie.posterURL && localizedName === movie.localizedName) {
+            const localizedOverview = movie.localizedOverview ?? result.localizedOverview ?? null;
+            if (
+              posterURL === movie.posterURL &&
+              localizedName === movie.localizedName &&
+              localizedOverview === movie.localizedOverview
+            ) {
               return movie;
             }
 
             changed = true;
-            return { ...movie, posterURL, localizedName };
+            return { ...movie, posterURL, localizedName, localizedOverview };
           });
 
           return changed ? { ...current, movies } : current;
@@ -284,12 +306,17 @@ export default function MovieMemoryPage() {
 
             const posterURL = movie.posterURL ?? result.posterURL;
             const localizedName = movie.localizedName ?? result.localizedName ?? null;
-            if (posterURL === movie.posterURL && localizedName === movie.localizedName) {
+            const localizedOverview = movie.localizedOverview ?? result.localizedOverview ?? null;
+            if (
+              posterURL === movie.posterURL &&
+              localizedName === movie.localizedName &&
+              localizedOverview === movie.localizedOverview
+            ) {
               return movie;
             }
 
             changed = true;
-            return { ...movie, posterURL, localizedName };
+            return { ...movie, posterURL, localizedName, localizedOverview };
           });
 
           return changed ? { ...current, movies } : current;
@@ -371,6 +398,41 @@ export default function MovieMemoryPage() {
     );
   }, []);
 
+  const lockAnswerBriefly = useCallback(() => {
+    if (answerLocked.current) return false;
+
+    answerLocked.current = true;
+    setIsSubmittingAnswer(true);
+
+    if (answerUnlockTimer.current) {
+      window.clearTimeout(answerUnlockTimer.current);
+    }
+
+    answerUnlockTimer.current = window.setTimeout(() => {
+      answerLocked.current = false;
+      setIsSubmittingAnswer(false);
+      answerUnlockTimer.current = null;
+    }, ANSWER_LOCK_MS);
+
+    return true;
+  }, []);
+
+  const answerDeckMovie = useCallback(
+    (movieId: number, kind: UserMovieInteractionKind) => {
+      if (!lockAnswerBriefly()) return;
+      saveDeckMovieMemory(movieId, kind);
+    },
+    [lockAnswerBriefly, saveDeckMovieMemory],
+  );
+
+  const skipActiveDeckMovie = useCallback(
+    (movieId: number) => {
+      if (!lockAnswerBriefly()) return;
+      skipDeckMovie(movieId);
+    },
+    [lockAnswerBriefly, skipDeckMovie],
+  );
+
   useEffect(() => {
     if (auth.status !== 'authenticated' || candidates.status !== 'loaded') return;
     const activeDeckMovie = candidates.movies[0];
@@ -390,19 +452,19 @@ export default function MovieMemoryPage() {
 
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
-        saveDeckMovieMemory(activeDeckMovie.id, 'not_seen');
+        answerDeckMovie(activeDeckMovie.id, 'not_seen');
       } else if (event.key === 'ArrowRight') {
         event.preventDefault();
-        saveDeckMovieMemory(activeDeckMovie.id, 'watched');
+        answerDeckMovie(activeDeckMovie.id, 'watched');
       } else if (event.key === 'ArrowDown') {
         event.preventDefault();
-        skipDeckMovie(activeDeckMovie.id);
+        skipActiveDeckMovie(activeDeckMovie.id);
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [auth.status, candidates, saveDeckMovieMemory, skipDeckMovie]);
+  }, [answerDeckMovie, auth.status, candidates, skipActiveDeckMovie]);
 
   async function saveMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
     setAction({ status: 'saving', movieId, kind });
@@ -522,8 +584,7 @@ export default function MovieMemoryPage() {
   const activeMovie = candidates.status === 'loaded' ? candidates.movies[0] : null;
   const shouldShowManualSearch =
     isManualSearchOpen ||
-    (candidates.status === 'loaded' &&
-      (candidates.total === 0 || candidates.movies.length === 0 || candidates.reviewed >= 3));
+    (candidates.status === 'loaded' && (candidates.total === 0 || candidates.movies.length === 0));
 
   return (
     <MovieMemoryShell>
@@ -534,38 +595,40 @@ export default function MovieMemoryPage() {
       >
         <Link
           href="/account"
-          className="mb-8 inline-flex items-center gap-2 text-sm font-semibold"
+          className="mb-5 inline-flex items-center gap-2 text-sm font-semibold"
           style={{ color: 'var(--pc-t2)' }}
         >
           <ArrowLeft size={16} />
           {a.backToAccount}
         </Link>
 
-        <div className="mb-9 text-center">
-          <div
-            className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em]"
-            style={{
-              background: 'var(--pc-gold-subtle)',
-              border: '1px solid var(--pc-gold-bd)',
-              color: 'var(--pc-gold-text)',
-            }}
-          >
-            <Sparkles size={14} />
-            {a.memoryTrainerBadge}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div
+              className="mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]"
+              style={{
+                background: 'var(--pc-gold-subtle)',
+                border: '1px solid var(--pc-gold-bd)',
+                color: 'var(--pc-gold-text)',
+              }}
+            >
+              <Sparkles size={14} />
+              {a.memoryTrainerBadge}
+            </div>
+            <h1
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+                fontSize: 'clamp(1.9rem, 4vw, 3rem)',
+                fontWeight: 600,
+                lineHeight: 1,
+                color: 'var(--pc-t1)',
+              }}
+            >
+              {a.memoryTrainerTitle}
+            </h1>
           </div>
-          <h1
-            className="mx-auto max-w-3xl uppercase"
-            style={{
-              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-              fontSize: 'clamp(2.4rem, 8vw, 5rem)',
-              fontWeight: 600,
-              lineHeight: 0.95,
-              color: 'var(--pc-t1)',
-            }}
-          >
-            {a.memoryTrainerTitle}
-          </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-lg" style={{ color: 'var(--pc-t2)' }}>
+          <p className="max-w-xl text-sm sm:text-right" style={{ color: 'var(--pc-t2)' }}>
             {a.memoryTrainerBody}
           </p>
         </div>
@@ -594,8 +657,9 @@ export default function MovieMemoryPage() {
                 movie={activeMovie}
                 labels={a}
                 action={action}
-                onSave={saveDeckMovieMemory}
-                onSkip={skipDeckMovie}
+                isSubmitting={isSubmittingAnswer}
+                onSave={answerDeckMovie}
+                onSkip={skipActiveDeckMovie}
               />
             </div>
           ) : (
@@ -643,7 +707,7 @@ export default function MovieMemoryPage() {
 }
 
 function MovieMemoryShell({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-7xl px-5 py-10 md:px-8 md:py-16">{children}</div>;
+  return <div className="mx-auto w-full max-w-7xl px-5 py-7 md:px-8 md:py-10">{children}</div>;
 }
 
 function LoadingState({ label, compact = false }: { label: string; compact?: boolean }) {
@@ -769,6 +833,12 @@ function MovieTrainingCard({
   progressPercent: number;
 }) {
   const title = getMovieTitle(movie, locale);
+  const summary = getMovieSummary(movie, locale);
+  const duration = formatDuration(movie.duration, locale);
+  const originalTitle =
+    locale !== 'en' && movie.localizedName && movie.localizedName !== movie.movieName
+      ? movie.movieName
+      : null;
 
   return (
     <motion.article
@@ -785,45 +855,21 @@ function MovieTrainingCard({
       }}
     >
       <div className="grid gap-6 p-4 sm:p-5 md:grid-cols-[minmax(220px,320px)_1fr] md:items-stretch md:p-6">
-        <div
-          className="relative mx-auto aspect-[2/3] w-full max-w-[320px] overflow-hidden rounded-[1.25rem] md:max-w-none"
-          style={{
-            background: 'var(--pc-surface-deep)',
-            border: '1px solid var(--pc-bd2)',
-            boxShadow: '0 18px 42px rgba(9,9,15,0.16)',
-          }}
-        >
-          {movie.posterURL ? (
-            <Image
-              src={movie.posterURL}
-              alt={title}
-              fill
-              priority
-              sizes="(min-width: 768px) 320px, min(320px, 100vw)"
-              className="object-contain"
-            />
-          ) : (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{
-                background:
-                  'linear-gradient(160deg, var(--pc-surface-hover), var(--pc-surface-deep))',
-              }}
-            >
-              <Film size={88} style={{ color: 'var(--pc-t3)' }} />
-            </div>
-          )}
-        </div>
+        <PosterFrame
+          key={`${movie.id}:${movie.posterURL ?? 'missing'}`}
+          movie={movie}
+          title={title}
+          labels={labels}
+        />
 
         <div className="flex min-w-0 flex-col justify-between gap-6 py-1 md:py-2">
           <div
-            className="rounded-2xl p-4"
+            className="p-1"
             style={{
-              background: 'color-mix(in srgb, var(--pc-bg) 72%, transparent)',
-              border: '1px solid var(--pc-bd1)',
+              color: 'var(--pc-t2)',
             }}
           >
-            <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="mb-2 flex items-center gap-3">
               <span
                 className="rounded-full px-3 py-1 text-xs font-semibold"
                 style={{
@@ -833,9 +879,6 @@ function MovieTrainingCard({
                 }}
               >
                 {counter}
-              </span>
-              <span className="text-xs font-medium" style={{ color: 'var(--pc-t3)' }}>
-                {labels.memoryCardQuestion}
               </span>
             </div>
             <div
@@ -852,14 +895,31 @@ function MovieTrainingCard({
 
           <div>
             <h2
-              className="text-3xl font-semibold leading-tight md:text-4xl"
+              className="text-3xl font-semibold leading-tight md:text-5xl"
               style={{ color: 'var(--pc-t1)' }}
             >
               {formatMovieName(title, movie.movieYear)}
             </h2>
-            <p className="mt-3 text-sm" style={{ color: 'var(--pc-t2)' }}>
-              {labels.memoryKeyboardHint}
-            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-medium">
+              {duration ? (
+                <span
+                  className="rounded-full px-3 py-1"
+                  style={{ background: 'var(--pc-ghost)', color: 'var(--pc-t2)' }}
+                >
+                  {duration}
+                </span>
+              ) : null}
+              {originalTitle ? (
+                <span className="min-w-0 truncate" style={{ color: 'var(--pc-t3)' }}>
+                  {originalTitle}
+                </span>
+              ) : null}
+            </div>
+            {summary ? (
+              <p className="mt-5 max-w-[62ch] text-sm leading-6" style={{ color: 'var(--pc-t2)' }}>
+                {summary}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
@@ -871,12 +931,14 @@ function MovieTrainingControls({
   movie,
   labels,
   action,
+  isSubmitting,
   onSave,
   onSkip,
 }: {
   movie: MovieMemoryCandidate;
   labels: ReturnType<typeof useLanguage>['t']['account'];
   action: ActionState;
+  isSubmitting: boolean;
   onSave: (movieId: number, kind: UserMovieInteractionKind) => void;
   onSkip: (movieId: number) => void;
 }) {
@@ -884,7 +946,7 @@ function MovieTrainingControls({
     action.status === 'saving' && action.movieId === movie.id && action.kind === 'watched';
   const savingUnseen =
     action.status === 'saving' && action.movieId === movie.id && action.kind === 'not_seen';
-  const isSaving = action.status === 'saving';
+  const isSaving = action.status === 'saving' || isSubmitting;
 
   return (
     <motion.div
@@ -910,7 +972,7 @@ function MovieTrainingControls({
           type="button"
           disabled={isSaving}
           onClick={() => onSave(movie.id, 'not_seen')}
-          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-[var(--pc-surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60 disabled:hover:translate-y-0"
+          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-[var(--pc-surface-hover)] active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           style={{
             background: 'var(--pc-surface)',
             border: '1px solid var(--pc-bd3)',
@@ -918,13 +980,13 @@ function MovieTrainingControls({
           }}
         >
           {savingUnseen ? <Loader2 className="animate-spin" size={18} /> : <X size={18} />}
-          {labels.notSeenMovie}
+          &larr; {labels.notSeenMovie}
         </button>
         <button
           type="button"
           disabled={isSaving}
           onClick={() => onSave(movie.id, 'watched')}
-          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60 disabled:hover:translate-y-0"
+          className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           style={{
             background: 'var(--pc-cta)',
             border: '1px solid var(--pc-gold-bd)',
@@ -932,22 +994,95 @@ function MovieTrainingControls({
           }}
         >
           {savingSeen ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
-          {labels.seenMovie}
+          {labels.seenMovie} &rarr;
         </button>
       </div>
       <button
         type="button"
         disabled={isSaving}
         onClick={() => onSkip(movie.id)}
-        className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-transparent px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-[var(--pc-surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60 disabled:hover:translate-y-0"
+        className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-transparent px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)] active:translate-y-0 active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         style={{
           border: '1px solid var(--pc-bd2)',
           color: 'var(--pc-t2)',
         }}
       >
-        {labels.skipMovie}
+        &darr; {labels.skipMovie}
       </button>
     </motion.div>
+  );
+}
+
+function PosterFrame({
+  movie,
+  title,
+  labels,
+}: {
+  movie: MovieMemoryCandidate;
+  title: string;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+}) {
+  const [imageState, setImageState] = useState<'loading' | 'loaded' | 'failed'>(() =>
+    movie.posterURL ? 'loading' : 'failed',
+  );
+  const shouldShowPoster = movie.posterURL && imageState !== 'failed';
+
+  return (
+    <div
+      className="relative mx-auto aspect-[2/3] w-full max-w-[320px] overflow-hidden rounded-[1.25rem] md:max-w-none"
+      style={{
+        background: 'var(--pc-surface-deep)',
+        border: '1px solid var(--pc-bd2)',
+        boxShadow: '0 18px 42px rgba(9,9,15,0.16)',
+      }}
+    >
+      {shouldShowPoster ? (
+        <>
+          {imageState === 'loading' ? (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 animate-pulse"
+              style={{
+                background:
+                  'linear-gradient(110deg, var(--pc-surface-deep), var(--pc-surface-hover), var(--pc-surface-deep))',
+              }}
+            />
+          ) : null}
+          <Image
+            src={movie.posterURL as string}
+            alt={title}
+            fill
+            priority
+            sizes="(min-width: 768px) 320px, min(320px, 100vw)"
+            className={`object-contain transition-opacity duration-200 ${
+              imageState === 'loaded' ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageState('loaded')}
+            onError={() => setImageState('failed')}
+          />
+        </>
+      ) : (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center"
+          style={{
+            background: 'linear-gradient(160deg, var(--pc-surface-hover), var(--pc-surface-deep))',
+          }}
+        >
+          <Film size={58} style={{ color: 'var(--pc-t3)' }} />
+          <div>
+            <p className="text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
+              {formatMovieName(title, movie.movieYear)}
+            </p>
+            <p
+              className="mt-2 text-xs font-medium uppercase tracking-[0.12em]"
+              style={{ color: 'var(--pc-t3)' }}
+            >
+              {labels.posterUnavailable}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1144,6 +1279,31 @@ function getMovieTitle(movie: MovieMemoryCandidate, locale: string): string {
   return movie.movieName;
 }
 
+function getMovieSummary(movie: MovieMemoryCandidate, locale: string): string | null {
+  const summary =
+    locale !== 'en' ? movie.localizedOverview || movie.description : movie.description;
+  const trimmed = summary?.trim();
+  if (!trimmed) return null;
+  return trimmed.length > 260 ? `${trimmed.slice(0, 257).trimEnd()}...` : trimmed;
+}
+
 function formatMovieName(name: string, year: number | null): string {
   return year ? `${name} (${year})` : name;
+}
+
+function formatDuration(duration: number | null, locale: string): string | null {
+  if (!duration || duration <= 0) return null;
+  const hours = Math.floor(duration / 60);
+  const minutes = duration % 60;
+  if (hours === 0) return locale === 'ru' ? `${minutes} мин` : `${minutes} min`;
+
+  if (locale === 'ru') {
+    return minutes ? `${hours} ч ${minutes} мин` : `${hours} ч`;
+  }
+
+  if (locale === 'fi') {
+    return minutes ? `${hours} t ${minutes} min` : `${hours} t`;
+  }
+
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
 }

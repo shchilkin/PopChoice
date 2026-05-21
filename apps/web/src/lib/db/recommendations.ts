@@ -125,6 +125,9 @@ export interface MovieMemoryCatalogSearchResult {
   movieYear: number | null;
   posterURL: string | null;
   localizedName: string | null;
+  duration: number | null;
+  description: string | null;
+  localizedOverview: string | null;
 }
 
 export interface MovieMemoryCandidateStats {
@@ -502,8 +505,10 @@ export async function searchMovieCatalogForMemory(
     year: number | null;
     poster_url: string | null;
     localized_name: string | null;
+    duration: number | null;
+    description: string | null;
   }>(
-    `SELECT id, tmdb_id, name, year, poster_url, localized_name
+    `SELECT id, tmdb_id, name, year, poster_url, localized_name, duration, description
        FROM movies
       WHERE name ILIKE $1 ESCAPE '\\'
       ORDER BY (poster_url IS NULL), year DESC, name ASC
@@ -518,6 +523,9 @@ export async function searchMovieCatalogForMemory(
     movieYear: row.year,
     posterURL: row.poster_url,
     localizedName: row.localized_name,
+    duration: row.duration,
+    description: row.description,
+    localizedOverview: null,
   }));
 }
 
@@ -534,9 +542,11 @@ export async function getMovieMemoryCandidatesForUser(
     year: number | null;
     poster_url: string | null;
     localized_name: string | null;
+    duration: number | null;
+    description: string | null;
     score_rating: number | null;
   }>(
-    `SELECT id, tmdb_id, name, year, poster_url, localized_name, score_rating
+    `SELECT id, tmdb_id, name, year, poster_url, localized_name, duration, description, score_rating
        FROM movies m
       WHERE NOT EXISTS (
         SELECT 1
@@ -568,6 +578,9 @@ export async function getMovieMemoryCandidatesForUser(
     movieYear: row.year,
     posterURL: row.poster_url,
     localizedName: row.localized_name,
+    duration: row.duration,
+    description: row.description,
+    localizedOverview: null,
   }));
 }
 
