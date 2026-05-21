@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { NO_REFERENCE_MOVIE, emptyPerson, toApiFormat } from './constants';
+import { emptyPerson, toApiFormat } from './constants';
 
 describe('toApiFormat', () => {
-  it('strips the no-reference UI token before submitting quiz answers', () => {
+  it('submits an empty favorite movie when the user has no reference pick', () => {
     const person = {
       ...emptyPerson(),
-      favoriteMovie: NO_REFERENCE_MOVIE,
+      favoriteMovie: '',
+      hasNoReferenceMovie: true,
       era: 'both' as const,
       moods: ['drama'],
       tone: 'serious' as const,

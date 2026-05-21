@@ -4,6 +4,7 @@ export type Tone = 'light' | 'balanced' | 'serious' | 'dark';
 export interface PersonAnswers {
   name: string;
   favoriteMovie: string;
+  hasNoReferenceMovie: boolean;
   favoriteMovieWhy: string;
   era: Era | '';
   moods: string[];

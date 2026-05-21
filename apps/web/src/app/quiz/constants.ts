@@ -82,12 +82,11 @@ export const QUESTION_LABELS = [
   'Optional actor',
 ];
 
-export const NO_REFERENCE_MOVIE = '__NO_REFERENCE_MOVIE__';
-
 export function emptyPerson(name = ''): PersonAnswers {
   return {
     name,
     favoriteMovie: '',
+    hasNoReferenceMovie: false,
     favoriteMovieWhy: '',
     era: '',
     moods: [],
@@ -109,8 +108,7 @@ export function toApiFormat(person: PersonAnswers) {
     dark: 'Dark and intense',
   };
   const trimmedName = person.name.trim().slice(0, PARTICIPANT_NAME_MAX_LENGTH);
-  const favoriteMovie =
-    person.favoriteMovie === NO_REFERENCE_MOVIE ? '' : person.favoriteMovie.trim();
+  const favoriteMovie = person.hasNoReferenceMovie ? '' : person.favoriteMovie.trim();
   return {
     ...(trimmedName && { name: trimmedName }),
     favoriteMovie,

@@ -4,8 +4,6 @@ import { Clapperboard } from 'lucide-react';
 
 import { useLanguage } from '@/i18n';
 
-import { NO_REFERENCE_MOVIE } from '../../constants';
-
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteMovieStepProps {
@@ -22,7 +20,14 @@ export function FavoriteMovieStep({
   canProceed,
 }: FavoriteMovieStepProps) {
   const { t } = useLanguage();
-  const selectedNoReference = person.favoriteMovie === NO_REFERENCE_MOVIE;
+  const quickPicks = [
+    { label: 'The Dark Knight', value: 'The Dark Knight' },
+    { label: 'Inception', value: 'Inception' },
+    { label: 'Parasite', value: 'Parasite' },
+    { label: 'Pulp Fiction', value: 'Pulp Fiction' },
+    { label: 'The Matrix', value: 'The Matrix' },
+    { label: 'Coco', value: 'Coco' },
+  ];
 
   return (
     <div className="flex flex-col gap-6 pt-2">
@@ -63,8 +68,8 @@ export function FavoriteMovieStep({
       <div className="relative">
         <input
           autoFocus
-          value={selectedNoReference ? '' : person.favoriteMovie}
-          onChange={(e) => onUpdate({ favoriteMovie: e.target.value })}
+          value={person.favoriteMovie}
+          onChange={(e) => onUpdate({ favoriteMovie: e.target.value, hasNoReferenceMovie: false })}
           onKeyDown={(e) => e.key === 'Enter' && canProceed && onSubmit()}
           placeholder={t.quiz.favoriteMovie.placeholder}
           className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
@@ -97,18 +102,23 @@ export function FavoriteMovieStep({
           {t.quiz.favoriteMovie.popularPicks}
         </p>
         <div className="flex flex-wrap gap-2">
-          {[
-            { label: t.quiz.favoriteMovie.noReference, value: NO_REFERENCE_MOVIE },
-            { label: 'The Dark Knight', value: 'The Dark Knight' },
-            { label: 'Inception', value: 'Inception' },
-            { label: 'Parasite', value: 'Parasite' },
-            { label: 'Pulp Fiction', value: 'Pulp Fiction' },
-            { label: 'The Matrix', value: 'The Matrix' },
-            { label: 'Coco', value: 'Coco' },
-          ].map((film) => (
+          <button
+            onClick={() => onUpdate({ favoriteMovie: '', hasNoReferenceMovie: true })}
+            className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
+            style={{
+              background: person.hasNoReferenceMovie ? 'var(--pc-gold-tint)' : 'var(--pc-ghost)',
+              border: person.hasNoReferenceMovie
+                ? '1px solid var(--pc-gold-bd-strong)'
+                : '1px solid var(--pc-bd1)',
+              color: person.hasNoReferenceMovie ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+            }}
+          >
+            {t.quiz.favoriteMovie.noReference}
+          </button>
+          {quickPicks.map((film) => (
             <button
               key={film.value}
-              onClick={() => onUpdate({ favoriteMovie: film.value })}
+              onClick={() => onUpdate({ favoriteMovie: film.value, hasNoReferenceMovie: false })}
               className="px-3 py-1.5 rounded-xl text-sm transition-all duration-150"
               style={{
                 background:

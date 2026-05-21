@@ -21,7 +21,7 @@ import {
   QuizSubmittingState,
   ToneStep,
 } from './components';
-import { NO_REFERENCE_MOVIE, slideVariants, toApiFormat } from './constants';
+import { slideVariants, toApiFormat } from './constants';
 import { quizMachine } from './quiz.machine';
 
 import type { PersonAnswers } from './types';
@@ -137,10 +137,7 @@ function QuizPageContent() {
     if (!currentPerson) return false;
     switch (questionsStep) {
       case 'favoriteMovie':
-        return (
-          currentPerson.favoriteMovie === NO_REFERENCE_MOVIE ||
-          currentPerson.favoriteMovie.trim().length >= 1
-        );
+        return currentPerson.hasNoReferenceMovie || currentPerson.favoriteMovie.trim().length >= 1;
       case 'era':
         return currentPerson.era !== '';
       case 'mood':
