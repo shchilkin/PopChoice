@@ -339,23 +339,27 @@ export async function getUserRecommendationFeedbackMoviePreferences(
     movie_name: string | null;
     movie_year: number | null;
   }>(
-    `SELECT
+    `WITH recent_recommendations AS (
+       SELECT
+         id,
+         COALESCE(completed_at, created_at) AS recommended_at
+       FROM recommendations
+       WHERE user_id = $1
+         AND status = 'completed'
+       ORDER BY COALESCE(completed_at, created_at) DESC
+       LIMIT $2
+     )
+     SELECT
        rm.tmdb_id,
        COALESCE(rm.tmdb_name, m.name) AS movie_name,
        COALESCE(rm.tmdb_year, m.year) AS movie_year
-     FROM recommendations r
-     JOIN LATERAL (
-       SELECT *
-         FROM recommendation_movies
-        WHERE recommendation_id = r.id
-        ORDER BY is_main_recommendation DESC, position ASC
-        LIMIT 1
-     ) rm ON true
+     FROM recent_recommendations r
+     JOIN recommendation_movies rm ON rm.recommendation_id = r.id
      LEFT JOIN movies m ON m.id = rm.movie_id
-     WHERE r.user_id = $1
-       AND r.status = 'completed'
-     ORDER BY COALESCE(r.completed_at, r.created_at) DESC
-     LIMIT $2`,
+     WHERE COALESCE(rm.tmdb_name, m.name) IS NOT NULL
+     ORDER BY r.recommended_at DESC,
+              rm.is_main_recommendation DESC,
+              rm.position ASC`,
     [userId, limit],
   );
 
