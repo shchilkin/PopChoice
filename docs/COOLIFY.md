@@ -146,6 +146,12 @@ APP_VERSION=0.1.0-beta.0
 APP_CHANNEL=beta
 APP_COMMIT_SHA=<current git commit sha>
 APP_GIT_BRANCH=development
+APP_PR_NUMBER=<preview PR number, optional>
+APP_IMAGE_REPOSITORY=ghcr.io/shchilkin/popchoice/web
+APP_IMAGE_TAG=<image tag, optional>
+APP_IMAGE_DIGEST=sha256:<image digest, optional>
+SOURCE_COMMIT=<PR head commit, optional>
+SOURCE_BRANCH=<PR branch, optional>
 ```
 
 If your Coolify version can include the source commit in the build/deploy
@@ -158,6 +164,17 @@ For Docker Compose deployments, also enable Coolify's
 non-secret build arguments as fallback metadata, so `/api/build` can still
 report the commit when Coolify does not pass source metadata as runtime
 environment variables.
+
+When deploying a prebuilt GitHub Container Registry image, prefer runtime
+metadata from the image workflow artifact over Coolify source metadata:
+
+- Use `APP_COMMIT_SHA` for the GitHub Actions checkout commit that produced the
+  image.
+- Use `SOURCE_COMMIT` and `SOURCE_BRANCH` for the PR head commit and branch.
+- Use `APP_IMAGE_DIGEST` for the digest-pinned image reference being deployed.
+
+This lets `/api/build` connect the running preview back to the PR check and the
+exact image digest.
 
 ## First deploy
 
@@ -238,6 +255,53 @@ Before relying on previews, verify that opening a PR creates a preview
 deployment and GitHub comment, the preview URL loads over HTTPS, quiz submission
 completes without touching production data, and closing or merging the PR
 removes the preview deployment.
+
+### Prebuilt PR preview images
+
+GitHub Actions builds production images in
+`.github/workflows/container-images.yml` and publishes them to GHCR:
+
+```txt
+ghcr.io/shchilkin/popchoice/web
+ghcr.io/shchilkin/popchoice/workers
+ghcr.io/shchilkin/popchoice/bull-board
+```
+
+For same-repository PRs, the workflow tags each image as both
+`sha-<12-char-github-sha>` and `pr-<number>`, then uploads
+`container-image-web`, `container-image-workers`, and
+`container-image-bull-board` artifacts with digest-pinned references. Use the
+digest-pinned references for Coolify previews whenever possible:
+
+```txt
+ghcr.io/shchilkin/popchoice/web@sha256:<digest>
+ghcr.io/shchilkin/popchoice/workers@sha256:<digest>
+ghcr.io/shchilkin/popchoice/bull-board@sha256:<digest>
+```
+
+The preview stack should pull those images and run them with the same commands,
+environment variables, health checks, PostgreSQL, and Redis dependencies shown
+in `coolify.compose.yml`. Do not let the preview rebuild `apps/web/Dockerfile`
+or `apps/web/workers.Dockerfile` when a digest-pinned PR image exists; the
+reviewed artifact is already built and published by CI.
+
+Set the web container's non-secret provenance variables from the image artifact:
+
+```env
+APP_COMMIT_SHA=<artifact commitSha>
+APP_GIT_BRANCH=<github ref name>
+APP_PR_NUMBER=<artifact pullRequestNumber>
+APP_IMAGE_REPOSITORY=<artifact repository>
+APP_IMAGE_TAG=<artifact tag>
+APP_IMAGE_DIGEST=<artifact digest>
+SOURCE_COMMIT=<artifact sourceCommitSha>
+SOURCE_BRANCH=<artifact sourceRef>
+```
+
+After the preview starts, verify `/api/build` reports the expected PR number,
+commit, image repository, image tag, and image digest. If the digest does not
+match the image reference configured in Coolify, redeploy the preview from the
+current workflow artifact before testing or promotion.
 
 ### Preview domain and certificate notes
 

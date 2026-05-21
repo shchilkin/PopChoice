@@ -13,6 +13,14 @@ const buildMetadataEnvKeys = [
   'BUILD_GITHUB_SHA',
   'VERCEL_GIT_COMMIT_SHA',
   'BUILD_VERCEL_GIT_COMMIT_SHA',
+  'APP_PR_NUMBER',
+  'BUILD_APP_PR_NUMBER',
+  'APP_IMAGE_REPOSITORY',
+  'BUILD_APP_IMAGE_REPOSITORY',
+  'APP_IMAGE_TAG',
+  'BUILD_APP_IMAGE_TAG',
+  'APP_IMAGE_DIGEST',
+  'BUILD_APP_IMAGE_DIGEST',
   'APP_GIT_BRANCH',
   'BUILD_APP_GIT_BRANCH',
   'SOURCE_BRANCH',
@@ -51,6 +59,12 @@ describe('getBuildInfo', () => {
       commitSha: null,
       commitShortSha: null,
       branch: null,
+      sourceCommitSha: null,
+      sourceBranch: null,
+      pullRequestNumber: null,
+      imageRepository: null,
+      imageTag: null,
+      imageDigest: null,
       environment: 'production',
       timestamp: '2026-05-19T12:00:00.000Z',
     });
@@ -62,6 +76,15 @@ describe('getBuildInfo', () => {
     vi.stubEnv('APP_CHANNEL', 'beta');
     vi.stubEnv('APP_COMMIT_SHA', 'abcdef1234567890abcdef1234567890abcdef12');
     vi.stubEnv('APP_GIT_BRANCH', 'development');
+    vi.stubEnv('SOURCE_COMMIT', '1234567890abcdef1234567890abcdef12345678');
+    vi.stubEnv('SOURCE_BRANCH', 'feature/prebuilt-images');
+    vi.stubEnv('APP_PR_NUMBER', '42');
+    vi.stubEnv('APP_IMAGE_REPOSITORY', 'ghcr.io/shchilkin/popchoice/web');
+    vi.stubEnv('APP_IMAGE_TAG', 'sha-abcdef123456');
+    vi.stubEnv(
+      'APP_IMAGE_DIGEST',
+      'sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+    );
     vi.stubEnv('NEXT_PUBLIC_BASE_URL', 'https://pop-choice.shchilkin.dev');
 
     const info = getBuildInfo(new Date('2026-05-19T12:00:00.000Z'));
@@ -72,6 +95,12 @@ describe('getBuildInfo', () => {
       commitSha: 'abcdef1234567890abcdef1234567890abcdef12',
       commitShortSha: 'abcdef1',
       branch: 'development',
+      sourceCommitSha: '1234567890abcdef1234567890abcdef12345678',
+      sourceBranch: 'feature/prebuilt-images',
+      pullRequestNumber: '42',
+      imageRepository: 'ghcr.io/shchilkin/popchoice/web',
+      imageTag: 'sha-abcdef123456',
+      imageDigest: 'sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
       baseUrl: 'https://pop-choice.shchilkin.dev',
     });
   });
@@ -96,6 +125,9 @@ describe('getBuildInfo', () => {
     vi.stubEnv('BUILD_SOURCE_COMMIT', 'fedcba9876543210fedcba9876543210fedcba98');
     vi.stubEnv('BUILD_COOLIFY_BRANCH', 'development');
     vi.stubEnv('BUILD_COOLIFY_RESOURCE_UUID', 'ze0vvy05sc6qitaz0bjoikoj');
+    vi.stubEnv('BUILD_APP_PR_NUMBER', '7');
+    vi.stubEnv('BUILD_APP_IMAGE_REPOSITORY', 'ghcr.io/shchilkin/popchoice/web');
+    vi.stubEnv('BUILD_APP_IMAGE_TAG', 'pr-7');
 
     const info = getBuildInfo(new Date('2026-05-19T12:00:00.000Z'));
 
@@ -104,6 +136,21 @@ describe('getBuildInfo', () => {
       commitShortSha: 'fedcba9',
       branch: 'development',
       resourceUuid: 'ze0vvy05sc6qitaz0bjoikoj',
+      sourceCommitSha: 'fedcba9876543210fedcba9876543210fedcba98',
+      pullRequestNumber: '7',
+      imageRepository: 'ghcr.io/shchilkin/popchoice/web',
+      imageTag: 'pr-7',
     });
+  });
+
+  it('ignores malformed PR numbers and image digests', () => {
+    clearBuildMetadataEnv();
+    vi.stubEnv('APP_PR_NUMBER', '42; secret');
+    vi.stubEnv('APP_IMAGE_DIGEST', 'sha256:not-a-digest');
+
+    const info = getBuildInfo(new Date('2026-05-19T12:00:00.000Z'));
+
+    expect(info.pullRequestNumber).toBeNull();
+    expect(info.imageDigest).toBeNull();
   });
 });

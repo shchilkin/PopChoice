@@ -130,8 +130,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### CI/CD and Deployment Track
 
-- Build production container images in GitHub PR/CI once, publish them with commit/PR metadata, and make preview or downstream deploys run those already-built images instead of rebuilding the monorepo in each deployment environment.
-- Preserve provenance between a PR check, container digest, deployed preview, and `/api/build` metadata so the exact reviewed artifact is the one being tested or promoted.
+- [x] Build production container images in GitHub PR/CI once, publish them with commit/PR metadata, and document preview or downstream deploys running those already-built images instead of rebuilding the monorepo in each deployment environment.
+- [x] Preserve provenance between a PR check, container digest, deployed preview, and `/api/build` metadata through GHCR labels, digest artifacts, runtime image metadata, and Docker-baked fallbacks.
 - Keep deployment-time work focused on migrations, health checks, and runtime configuration validation rather than application compilation.
 
 ### Operational Observability Track

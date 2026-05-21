@@ -5,6 +5,7 @@
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
 - `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, Storybook tests, build, service CI, dependency review)
+- `.github/workflows/container-images.yml` – production container image builds for `web`, `workers`, and `bull-board`, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 - `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
 
@@ -25,6 +26,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | `pr.yml`                 | `services-ci`        | Turbo test pass for `services/*`                                 |
 | `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                   |
 | `pr.yml`                 | `pr-validation`      | Stable required check that always runs on every PR               |
+| `container-images.yml`   | `build-images`       | Builds and publishes GHCR production images with provenance      |
 | `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`  |
 | `codeql.yml`             | `analyze`            | CodeQL static analysis for Actions and JavaScript/TypeScript     |
 
@@ -66,6 +68,48 @@ The CodeQL workflow analyzes GitHub Actions and JavaScript/TypeScript on pushes 
 
 The `dependency-review` job uses `actions/dependency-review-action` to block any PR that introduces a dependency with a known vulnerability. It does this by failing the GitHub Actions check, which can then prevent merging when that check is required. The workflow only grants `contents: read` for this job; it does not require `pull-requests: write`.
 
+### Prebuilt Container Images
+
+`container-images.yml` builds production Docker images for:
+
+- `ghcr.io/<owner>/<repo>/web`
+- `ghcr.io/<owner>/<repo>/workers`
+- `ghcr.io/<owner>/<repo>/bull-board`
+
+On pull requests from the same repository, the workflow publishes:
+
+- `sha-<12-char-github-sha>` – exact checked commit used by the workflow
+- `pr-<number>` – moving PR tag for the latest image built for that PR
+
+On pushes to `development`, it also publishes `development`.
+
+Each image receives OCI labels for the repository, workflow run, checked
+commit, source PR branch, source PR head commit, and image role. Published runs
+also upload a `container-image-<role>` artifact containing the digest-pinned
+reference (`ghcr.io/.../<role>@sha256:...`). Downstream previews and deploys
+should consume the digest-pinned reference from that artifact or from GHCR
+rather than rebuilding from the monorepo.
+
+Forked pull requests still build the images for validation, but publishing is
+disabled because the GitHub token does not have package write permission.
+
+For provenance in `/api/build`, pass these non-secret runtime variables to the
+deployed web container when using a prebuilt image:
+
+```env
+APP_COMMIT_SHA=<github workflow commit sha>
+APP_GIT_BRANCH=<github ref name>
+APP_PR_NUMBER=<pull request number, if any>
+APP_IMAGE_REPOSITORY=ghcr.io/<owner>/<repo>/web
+APP_IMAGE_TAG=sha-<12-char-github-sha>
+APP_IMAGE_DIGEST=sha256:<image digest>
+SOURCE_COMMIT=<pull request head sha, if any>
+SOURCE_BRANCH=<pull request head ref, if any>
+```
+
+`APP_IMAGE_DIGEST` is only known after the image is pushed, so it is normally a
+deploy-time environment variable rather than a Docker build argument.
+
 ## Workflow Triggers and Path Filtering
 
 ### How Path Filtering Works
@@ -106,6 +150,12 @@ on:
 
 If the PR is docs-only (`docs/**` and root-level `*.md`), heavy CI jobs are skipped and the lightweight `PR Validation` job still reports success. For non-doc PRs, the full CI suite runs and `PR Validation` verifies all required CI jobs succeeded.
 
+**`container-images.yml`** triggers on pull requests to `development`, pushes
+to `development`, and manual dispatches. It intentionally does not use
+docs-only path filtering: image-build changes often span workflow files,
+Dockerfiles, package manifests, and deployment docs, and the workflow itself is
+the source of truth for the deployable artifact.
+
 **`movie-discovery-ci.yml`** uses `paths` so that the service CI only runs when the service source actually changes:
 
 ```yaml
@@ -142,7 +192,12 @@ The PR validation workflows are triggered on:
 - Both opening PRs and pushing new commits to existing PRs targeting development
 
 `pr.yml` always runs and classifies docs-only PRs inside the workflow so `PR Validation` is always reported.
-`movie-discovery-ci.yml` additionally **only runs** when at least one file under `services/movie-discovery/**` changes or when `.github/workflows/movie-discovery-ci.yml` itself changes. `codeql.yml` runs on pushes and pull requests targeting `development`, plus its weekly scheduled scan.
+`container-images.yml` builds production images on pull requests and on pushes
+to `development`. `movie-discovery-ci.yml` additionally **only runs** when at
+least one file under `services/movie-discovery/**` changes or when
+`.github/workflows/movie-discovery-ci.yml` itself changes. `codeql.yml` runs on
+pushes and pull requests targeting `development`, plus its weekly scheduled
+scan.
 
 ## Dependabot
 
