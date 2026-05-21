@@ -8,6 +8,13 @@ import type { PersonFormData } from './types';
 // String helpers
 // ---------------------------------------------------------------------------
 
+function hasSerializablePreferenceValue(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
 /**
  * Serialise one or more people's quiz answers into a single string for embedding.
  * Keys listed in `excludeKeys` are omitted (used to strip raw "Why?" text
@@ -26,7 +33,8 @@ export const combineAllPeopleDataToString = (
     return Object.entries(data)
       .filter(
         ([key, value]) =>
-          !effectiveExcludeKeys.includes(key as keyof PersonFormData) && value != null,
+          !effectiveExcludeKeys.includes(key as keyof PersonFormData) &&
+          hasSerializablePreferenceValue(value),
       )
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
@@ -41,7 +49,8 @@ export const combineAllPeopleDataToString = (
     combinedString += Object.entries(personData)
       .filter(
         ([key, value]) =>
-          !effectiveExcludeKeys.includes(key as keyof PersonFormData) && value != null,
+          !effectiveExcludeKeys.includes(key as keyof PersonFormData) &&
+          hasSerializablePreferenceValue(value),
       )
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');

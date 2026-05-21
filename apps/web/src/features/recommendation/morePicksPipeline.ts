@@ -37,7 +37,7 @@ const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 5_000;
 // ---------------------------------------------------------------------------
 
 const personFormDataSchema = z.object({
-  favoriteMovie: z.string().min(1),
+  favoriteMovie: z.string(),
   newVsClassic: z.string().min(1),
   moodPreference: z.array(z.string()).min(1),
   tonePreference: z.string().min(1),
@@ -137,6 +137,7 @@ function combineAllPeopleDataToString(allPeopleData: MorePicksPersonFormData[]):
   if (allPeopleData.length === 1) {
     const data = allPeopleData[0];
     return Object.entries(data)
+      .filter(([, value]) => !(typeof value === 'string' && value.trim().length === 0))
       .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
   }
@@ -144,6 +145,7 @@ function combineAllPeopleDataToString(allPeopleData: MorePicksPersonFormData[]):
   allPeopleData.forEach((personData, index) => {
     combined += `Person ${index + 1}:\n`;
     combined += Object.entries(personData)
+      .filter(([, value]) => !(typeof value === 'string' && value.trim().length === 0))
       .map(([key, value]) => `  ${key}: ${Array.isArray(value) ? value.join(', ') : value}`)
       .join('\n');
     combined += '\n\n';

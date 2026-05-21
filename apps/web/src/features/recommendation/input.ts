@@ -66,7 +66,9 @@ export async function getRecommendationInputBlock(
 
   const labeledInputs = allPeopleData.flatMap((person) => [
     ...(person.name ? [{ field: 'name', value: person.name }] : []),
-    { field: 'favoriteMovie', value: person.favoriteMovie },
+    ...(person.favoriteMovie.trim()
+      ? [{ field: 'favoriteMovie', value: person.favoriteMovie }]
+      : []),
     { field: 'newVsClassic', value: person.newVsClassic },
     { field: 'tonePreference', value: person.tonePreference },
     ...person.moodPreference.map((mood) => ({ field: 'moodPreference', value: mood })),

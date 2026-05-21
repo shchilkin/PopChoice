@@ -36,17 +36,24 @@ vi.mock('@/lib/logger', () => ({
 
 // Import after mocks are established
 import {
+  addUserMovieMemoryBatchFromCatalog,
+  addUserMovieMemoryFromExternalMovie,
+  addUserMovieMemoryFromCatalog,
   claimMorePicksSlot,
   createRecommendation,
   deleteUserMovieMemory,
   getRecommendationTMDBExcludeIds,
   getRecommendationWithMovies,
+  getMovieMemoryCandidateStatsForUser,
   getUserMovieMemorySummaries,
+  getUserMovieMemoryPage,
   getUserRecommendationSummaries,
   insertMorePicksMovies,
   insertRecommendationMovies,
   createRecommendationFeedback,
+  getMovieMemoryCandidatesForUser,
   getUserRecommendationFeedbackMoviePreferences,
+  searchMovieCatalogForMemory,
   updateMorePicksStatus,
   updateRecommendationStatus,
   updateRecommendationStage,
@@ -362,9 +369,416 @@ describe('getUserMovieMemorySummaries', () => {
       },
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain('FROM user_movie_interactions');
-    expect(sql).toContain('ORDER BY updated_at DESC');
+    expect(sql).toContain('FROM user_movie_interactions ui');
+    expect(sql).toContain(
+      'COALESCE(ui.poster_url, catalog_movie.poster_url, source_movie.poster_url)',
+    );
+    expect(sql).toContain('LEFT JOIN LATERAL');
+    expect(sql).toContain('FROM movies m');
+    expect(sql).toContain('FROM recommendation_movies rm');
+    expect(sql).toContain('ORDER BY ui.updated_at DESC');
     expect(params).toEqual(['42', 50]);
+  });
+});
+
+describe('getUserMovieMemoryPage', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns paginated movie memory with total and next offset', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:129',
+          tmdb_id: 129,
+          movie_name: 'Spirited Away',
+          movie_year: 2001,
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Унесённые призраками',
+          updated_at: new Date('2026-05-17T10:00:00.000Z'),
+          total_count: '75',
+        },
+      ],
+    });
+
+    const result = await getUserMovieMemoryPage('42', { limit: 25, offset: 50 });
+
+    expect(result).toEqual({
+      items: [
+        {
+          kind: 'watched',
+          movieKey: 'tmdb:129',
+          tmdbId: 129,
+          movieName: 'Spirited Away',
+          movieYear: 2001,
+          posterURL: 'https://example.com/poster.jpg',
+          localizedName: 'Унесённые призраками',
+          updatedAt: '2026-05-17T10:00:00.000Z',
+        },
+      ],
+      total: 75,
+      nextOffset: 51,
+    });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('COUNT(*) OVER() AS total_count');
+    expect(sql).toContain('LIMIT $2 OFFSET $3');
+    expect(params).toEqual(['42', 25, 50]);
+  });
+});
+
+describe('searchMovieCatalogForMemory', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns local catalog matches for manual movie memory', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 129,
+          tmdb_id: 129,
+          name: 'Spirited Away',
+          year: 2001,
+          poster_url: 'https://example.com/poster.jpg',
+          localized_name: 'Унесённые призраками',
+          duration: 125,
+          description: 'A girl enters a world of spirits.',
+        },
+      ],
+    });
+
+    const result = await searchMovieCatalogForMemory('spirited');
+
+    expect(result).toEqual([
+      {
+        id: 129,
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        duration: 125,
+        description: 'A girl enters a world of spirits.',
+        localizedOverview: null,
+      },
+    ]);
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('FROM movies');
+    expect(sql).toContain('poster_url');
+    expect(sql).toContain('ILIKE');
+    expect(params).toEqual(['%spirited%', 8]);
+  });
+
+  it('does not search for very short queries', async () => {
+    await expect(searchMovieCatalogForMemory('s')).resolves.toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe('getMovieMemoryCandidatesForUser', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('returns poster-first candidate movies excluding existing memory', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 680,
+          tmdb_id: 680,
+          name: 'Pulp Fiction',
+          year: 1994,
+          poster_url: 'https://example.com/pulp.jpg',
+          localized_name: null,
+          duration: 154,
+          description: 'Interlocking stories in Los Angeles.',
+          score_rating: 8.9,
+        },
+        {
+          id: 1,
+          tmdb_id: null,
+          name: 'Local Movie',
+          year: 2020,
+          poster_url: null,
+          localized_name: 'Локальный фильм',
+          duration: 102,
+          description: 'A local catalog entry.',
+          score_rating: 7.1,
+        },
+      ],
+    });
+
+    const result = await getMovieMemoryCandidatesForUser('42', 2);
+
+    expect(result).toEqual([
+      {
+        id: 680,
+        tmdbId: 680,
+        movieName: 'Pulp Fiction',
+        movieYear: 1994,
+        posterURL: 'https://example.com/pulp.jpg',
+        localizedName: null,
+        duration: 154,
+        description: 'Interlocking stories in Los Angeles.',
+        localizedOverview: null,
+      },
+      {
+        id: 1,
+        tmdbId: null,
+        movieName: 'Local Movie',
+        movieYear: 2020,
+        posterURL: null,
+        localizedName: 'Локальный фильм',
+        duration: 102,
+        description: 'A local catalog entry.',
+        localizedOverview: null,
+      },
+    ]);
+    expect(mockQuery).toHaveBeenCalledOnce();
+    const [catalogSql, catalogParams] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(catalogSql).toContain('FROM movies');
+    expect(catalogSql).toContain('NOT EXISTS');
+    expect(catalogSql).toContain('user_movie_interactions');
+    expect(catalogSql).toContain('score_rating');
+    expect(catalogParams).toEqual(['42', 2]);
+  });
+
+  it('returns candidate diagnostics for empty decks', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ catalog_count: '48', memory_count: '48', available_catalog_count: '0' }],
+    });
+
+    const result = await getMovieMemoryCandidateStatsForUser('42');
+
+    expect(result).toEqual({
+      catalogCount: 48,
+      memoryCount: 48,
+      availableCatalogCount: 0,
+    });
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('available_catalog_count');
+    expect(sql).toContain('NOT EXISTS');
+    expect(params).toEqual(['42']);
+  });
+});
+
+describe('addUserMovieMemoryFromCatalog', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('upserts a watched movie memory item from the local catalog', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 129,
+            name: 'Spirited Away',
+            year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            kind: 'watched',
+            movie_key: 'tmdb:129',
+            tmdb_id: 129,
+            movie_name: 'Spirited Away',
+            movie_year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+            updated_at: new Date('2026-05-20T12:00:00.000Z'),
+          },
+        ],
+      });
+
+    const result = await addUserMovieMemoryFromCatalog('42', 129, 'watched');
+
+    expect(result).toEqual({
+      kind: 'watched',
+      movieKey: 'tmdb:129',
+      tmdbId: 129,
+      movieName: 'Spirited Away',
+      movieYear: 2001,
+      posterURL: 'https://example.com/poster.jpg',
+      localizedName: 'Унесённые призраками',
+      updatedAt: '2026-05-20T12:00:00.000Z',
+    });
+    const [lookupSql, lookupParams] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(lookupSql).toContain('FROM movies');
+    expect(lookupParams).toEqual([129]);
+    const [upsertSql, upsertParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    expect(upsertSql).toContain('INSERT INTO user_movie_interactions');
+    expect(upsertParams).toEqual([
+      '42',
+      'tmdb:129',
+      129,
+      'Spirited Away',
+      2001,
+      'https://example.com/poster.jpg',
+      'Унесённые призраками',
+      'watched',
+    ]);
+  });
+
+  it('returns null when the catalog movie is missing', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [] });
+
+    await expect(addUserMovieMemoryFromCatalog('42', 999, 'watched')).resolves.toBeNull();
+    expect(mockQuery).toHaveBeenCalledOnce();
+  });
+});
+
+describe('addUserMovieMemoryFromExternalMovie', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('upserts a TMDB movie memory item without requiring a local catalog row', async () => {
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          kind: 'watched',
+          movie_key: 'tmdb:550',
+          tmdb_id: 550,
+          movie_name: 'Fight Club',
+          movie_year: 1999,
+          poster_url: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+          localized_name: null,
+          updated_at: new Date('2026-05-20T12:00:00.000Z'),
+        },
+      ],
+    });
+
+    const result = await addUserMovieMemoryFromExternalMovie(
+      '42',
+      {
+        tmdbId: 550,
+        movieName: 'Fight Club',
+        movieYear: 1999,
+        posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+        localizedName: null,
+      },
+      'watched',
+    );
+
+    expect(result).toEqual({
+      kind: 'watched',
+      movieKey: 'tmdb:550',
+      tmdbId: 550,
+      movieName: 'Fight Club',
+      movieYear: 1999,
+      posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+      localizedName: null,
+      updatedAt: '2026-05-20T12:00:00.000Z',
+    });
+    const [upsertSql, upsertParams] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(upsertSql).toContain('INSERT INTO user_movie_interactions');
+    expect(upsertParams).toEqual([
+      '42',
+      'tmdb:550',
+      550,
+      'Fight Club',
+      1999,
+      'https://image.tmdb.org/t/p/w500/fight.jpg',
+      null,
+      'watched',
+    ]);
+  });
+});
+
+describe('addUserMovieMemoryBatchFromCatalog', () => {
+  beforeEach(() => {
+    vi.stubEnv('DATABASE_URL', 'postgres://localhost/test');
+    mockQuery.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('deduplicates movie ids and upserts the latest choice for each movie', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 129,
+            name: 'Spirited Away',
+            year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            kind: 'not_seen',
+            movie_key: 'tmdb:129',
+            tmdb_id: 129,
+            movie_name: 'Spirited Away',
+            movie_year: 2001,
+            poster_url: 'https://example.com/poster.jpg',
+            localized_name: 'Унесённые призраками',
+            updated_at: new Date('2026-05-20T12:00:00.000Z'),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await addUserMovieMemoryBatchFromCatalog('42', [
+      { movieId: 129, kind: 'watched' },
+      { movieId: 129, kind: 'not_seen' },
+      { movieId: 999, kind: 'watched' },
+    ]);
+
+    expect(result).toEqual([
+      {
+        kind: 'not_seen',
+        movieKey: 'tmdb:129',
+        tmdbId: 129,
+        movieName: 'Spirited Away',
+        movieYear: 2001,
+        posterURL: 'https://example.com/poster.jpg',
+        localizedName: 'Унесённые призраками',
+        updatedAt: '2026-05-20T12:00:00.000Z',
+      },
+    ]);
+    expect(mockQuery).toHaveBeenCalledTimes(3);
+    expect(mockQuery.mock.calls[0]?.[1]).toEqual([129]);
+    const [, upsertParams] = mockQuery.mock.calls[1] as [string, unknown[]];
+    expect(upsertParams[7]).toBe('not_seen');
+    expect(mockQuery.mock.calls[2]?.[1]).toEqual([999]);
   });
 });
 

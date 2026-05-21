@@ -98,7 +98,7 @@ export async function GET() {
           type: 'object | array',
           description: 'Single person data or array of people data',
           schema: {
-            favoriteMovie: 'string (required)',
+            favoriteMovie: 'string (required, may be empty when the user has no reference movie)',
             favoriteMovieWhy:
               'string (optional, max 300 chars) — why you love that movie; empty/whitespace is treated as absent',
             newVsClassic: 'string (required)',

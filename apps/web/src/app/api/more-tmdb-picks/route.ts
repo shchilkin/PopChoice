@@ -7,7 +7,7 @@ import { applyRateLimit } from '@/lib/rateLimit';
 import { withAuth } from '@/lib/withAuth';
 
 const personFormDataSchema = z.object({
-  favoriteMovie: z.string().min(1),
+  favoriteMovie: z.string(),
   newVsClassic: z.string().min(1),
   moodPreference: z.array(z.string()).min(1),
   tonePreference: z.string().min(1),

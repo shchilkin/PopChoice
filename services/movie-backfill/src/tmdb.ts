@@ -2,6 +2,7 @@ import { logger } from './logger.js';
 import z from 'zod';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 const TMDB_SEARCH_FETCH_TIMEOUT_MS = 8_000;
 const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 8_000;
 
@@ -12,6 +13,7 @@ export interface TMDBMovieDetails {
   release_date: string;
   vote_average: number;
   runtime: number | null;
+  poster_path: string | null;
   release_dates: {
     results: Array<{
       iso_3166_1: string;
@@ -21,6 +23,10 @@ export interface TMDBMovieDetails {
       }>;
     }>;
   };
+}
+
+export function getPosterUrl(posterPath: string | null | undefined): string | null {
+  return posterPath ? `${TMDB_IMAGE_BASE_URL}/w500${posterPath}` : null;
 }
 
 const tmdbSearchResultSchema = z.object({

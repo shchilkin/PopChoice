@@ -18,16 +18,20 @@ import { loadConfig } from './config.js';
 import {
   checkTableExists,
   closeDatabase,
+  ensureTMDBMatchReviewSchema,
   getIncompleteMovies,
   initDatabase,
+  recordTMDBMatchReview,
   updateMovie,
   type IncompleteMovie,
+  type RecordTMDBMatchReviewInput,
 } from './database.js';
 import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
 import {
   extractUSCertification,
   fetchMovieDetails,
+  getPosterUrl,
   movieToEmbeddingText,
   searchMovieMatch,
 } from './tmdb.js';
@@ -39,12 +43,32 @@ interface PendingUpdate {
   matchConfidence: number;
   runtime: number;
   ageRating: string;
+  posterUrl: string | null;
+  localizedName: string | null;
   embeddingText: string;
 }
 
 function isRuntimeCompatible(existingRuntime: number, tmdbRuntime: number): boolean {
   if (existingRuntime <= 0) return true;
   return Math.abs(existingRuntime - tmdbRuntime) <= 20;
+}
+
+async function maybeRecordTMDBMatchReview(
+  config: ReturnType<typeof loadConfig>,
+  input: RecordTMDBMatchReviewInput,
+): Promise<void> {
+  if (config.dryRun) {
+    logger.info('DRY RUN: would record TMDB match review', {
+      id: input.movie.id,
+      name: input.movie.name,
+      year: input.movie.year,
+      reason: input.reason,
+      candidateCount: input.candidates.length,
+    });
+    return;
+  }
+
+  await recordTMDBMatchReview(input);
 }
 
 async function main(): Promise<void> {
@@ -69,6 +93,8 @@ async function main(): Promise<void> {
       logger.info("Table 'movies' does not exist — skipping backfill");
       return;
     }
+
+    await ensureTMDBMatchReviewSchema();
 
     const movies = await getIncompleteMovies(config.maxMovies);
     logger.info('Fetched movies needing TMDB identity or metadata backfill', {
@@ -95,14 +121,29 @@ async function main(): Promise<void> {
         batch.map(async (movie) => {
           totalProcessed++;
           try {
-            // 1. Search TMDB by title + year to get a conservative TMDB identity match.
-            const match = await searchMovieMatch(config.tmdbApiKey, movie.name, movie.year);
+            // 1. Use an existing TMDB id when present; otherwise search by title + year.
+            const match: Awaited<ReturnType<typeof searchMovieMatch>> = movie.tmdb_id
+              ? {
+                  status: 'matched',
+                  tmdbId: movie.tmdb_id,
+                  confidence: 1,
+                  title: movie.name,
+                  releaseYear: movie.year,
+                  candidates: [],
+                }
+              : await searchMovieMatch(config.tmdbApiKey, movie.name, movie.year);
             if (match.status === 'ambiguous') {
               logger.warn('Ambiguous TMDB match — manual review needed', {
                 id: movie.id,
                 name: movie.name,
                 year: movie.year,
                 candidates: match.candidates,
+              });
+              await maybeRecordTMDBMatchReview(config, {
+                movie,
+                reason: 'ambiguous_match',
+                candidates: match.candidates,
+                notes: 'TMDB returned multiple high-confidence title/year candidates.',
               });
               totalSkipped++;
               return;
@@ -155,6 +196,12 @@ async function main(): Promise<void> {
                 matchConfidence: match.confidence,
                 candidates: match.candidates,
               });
+              await maybeRecordTMDBMatchReview(config, {
+                movie,
+                reason: 'runtime_mismatch',
+                candidates: match.candidates,
+                notes: `Existing runtime ${movie.duration} min did not match TMDB runtime ${runtime} min for candidate ${match.tmdbId}.`,
+              });
               totalSkipped++;
               return;
             }
@@ -195,6 +242,8 @@ async function main(): Promise<void> {
               matchConfidence: match.confidence,
               runtime,
               ageRating,
+              posterUrl: getPosterUrl(details.poster_path),
+              localizedName: details.title && details.title !== movie.name ? details.title : null,
               embeddingText,
             });
           } catch (err) {
@@ -248,6 +297,8 @@ async function main(): Promise<void> {
               update.ageRating,
               update.tmdbId,
               update.matchConfidence,
+              update.posterUrl,
+              update.localizedName,
               embedding,
             );
 
@@ -259,6 +310,8 @@ async function main(): Promise<void> {
               matchConfidence: update.matchConfidence,
               runtime: update.runtime,
               ageRating: update.ageRating,
+              hasPoster: Boolean(update.posterUrl),
+              hasLocalizedName: Boolean(update.localizedName),
             });
             totalUpdated++;
           } catch (err) {

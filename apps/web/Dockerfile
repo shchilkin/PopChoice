@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 # Build context: repo root
 # docker build -f apps/web/Dockerfile .
 
@@ -11,7 +12,7 @@ COPY apps/web/package.json ./apps/web/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
 COPY services/movie-seed/package.json ./services/movie-seed/
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --no-audit --fund=false
 
 COPY packages/shared/tsconfig.json ./packages/shared/
 COPY packages/shared/src/ ./packages/shared/src/
@@ -54,7 +55,7 @@ COPY apps/web/package.json ./apps/web/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
 COPY services/movie-seed/package.json ./services/movie-seed/
-RUN npm ci --omit=dev
+RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-audit --fund=false
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/web/.next ./apps/web/.next

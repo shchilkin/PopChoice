@@ -22,6 +22,7 @@ export function FavoriteMovieStep({
   canProceed,
 }: FavoriteMovieStepProps) {
   const { t } = useLanguage();
+  const selectedNoReference = person.favoriteMovie === NO_REFERENCE_MOVIE;
 
   return (
     <div className="flex flex-col gap-6 pt-2">
@@ -62,7 +63,7 @@ export function FavoriteMovieStep({
       <div className="relative">
         <input
           autoFocus
-          value={person.favoriteMovie}
+          value={selectedNoReference ? '' : person.favoriteMovie}
           onChange={(e) => onUpdate({ favoriteMovie: e.target.value })}
           onKeyDown={(e) => e.key === 'Enter' && canProceed && onSubmit()}
           placeholder={t.quiz.favoriteMovie.placeholder}
