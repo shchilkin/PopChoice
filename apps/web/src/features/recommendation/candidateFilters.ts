@@ -21,9 +21,12 @@ export type FeedbackCandidateSignals = {
   excludedTitleKeys: Set<string>;
   downrankMovieKeys: Set<string>;
   downrankTitleKeys: Set<string>;
+  boostMovieKeys: Set<string>;
+  boostTitleKeys: Set<string>;
 };
 
 const FEEDBACK_DOWNRANK_AMOUNT = 0.08;
+const LIKED_MEMORY_BOOST_AMOUNT = 0.04;
 
 export function getMentionedMovieTitleKeys(allPeopleData: PersonFormData[]): Set<string> {
   return new Set(
@@ -62,6 +65,8 @@ export function getFeedbackCandidateSignals(
   const excludedTitleKeys = new Set<string>();
   const downrankMovieKeys = new Set<string>();
   const downrankTitleKeys = new Set<string>();
+  const boostMovieKeys = new Set<string>();
+  const boostTitleKeys = new Set<string>();
 
   for (const preference of preferences) {
     const movieKey =
@@ -89,9 +94,21 @@ export function getFeedbackCandidateSignals(
       if (movieKey) downrankMovieKeys.add(movieKey);
       if (titleKey) downrankTitleKeys.add(titleKey);
     }
+
+    if (preference.kind === 'liked') {
+      if (movieKey) boostMovieKeys.add(movieKey);
+      if (titleKey) boostTitleKeys.add(titleKey);
+    }
   }
 
-  return { excludedMovieKeys, excludedTitleKeys, downrankMovieKeys, downrankTitleKeys };
+  return {
+    excludedMovieKeys,
+    excludedTitleKeys,
+    downrankMovieKeys,
+    downrankTitleKeys,
+    boostMovieKeys,
+    boostTitleKeys,
+  };
 }
 
 function getLocalMovieIdentityKey(movie: EnhancedMovieMatch): string | null {
@@ -130,6 +147,18 @@ function isFeedbackDownrankedLocalMovie(
   );
 }
 
+function isFeedbackBoostedLocalMovie(
+  movie: EnhancedMovieMatch,
+  signals: FeedbackCandidateSignals,
+): boolean {
+  const movieKey = getLocalMovieIdentityKey(movie);
+  const titleKey = getMovieTitleKey(movie.name);
+  return Boolean(
+    (movieKey && signals.boostMovieKeys.has(movieKey)) ||
+    (titleKey && signals.boostTitleKeys.has(titleKey)),
+  );
+}
+
 function isFeedbackExcludedTMDBMovie(
   movie: TMDBDiscoverMovie,
   signals: FeedbackCandidateSignals,
@@ -150,7 +179,9 @@ export function applyFeedbackToLocalMovies(
     signals.excludedMovieKeys.size === 0 &&
     signals.excludedTitleKeys.size === 0 &&
     signals.downrankMovieKeys.size === 0 &&
-    signals.downrankTitleKeys.size === 0
+    signals.downrankTitleKeys.size === 0 &&
+    signals.boostMovieKeys.size === 0 &&
+    signals.boostTitleKeys.size === 0
   ) {
     return movies;
   }
@@ -158,11 +189,22 @@ export function applyFeedbackToLocalMovies(
   return movies
     .filter((movie) => !isFeedbackExcludedLocalMovie(movie, signals))
     .map((movie) => {
-      if (!isFeedbackDownrankedLocalMovie(movie, signals)) return movie;
+      const isDownranked = isFeedbackDownrankedLocalMovie(movie, signals);
+      const isBoosted = !isDownranked && isFeedbackBoostedLocalMovie(movie, signals);
+
+      if (!isDownranked && !isBoosted) return movie;
 
       return {
         ...movie,
-        similarity: Math.max(0, movie.similarity - FEEDBACK_DOWNRANK_AMOUNT),
+        similarity: Math.min(
+          1,
+          Math.max(
+            0,
+            movie.similarity -
+              (isDownranked ? FEEDBACK_DOWNRANK_AMOUNT : 0) +
+              (isBoosted ? LIKED_MEMORY_BOOST_AMOUNT : 0),
+          ),
+        ),
       };
     })
     .sort((a, b) => b.similarity - a.similarity);
