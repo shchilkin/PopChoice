@@ -239,6 +239,37 @@ deployment and GitHub comment, the preview URL loads over HTTPS, quiz submission
 completes without touching production data, and closing or merging the PR
 removes the preview deployment.
 
+### Preview domain and certificate notes
+
+Coolify preview URLs need to match the wildcard certificate shape. If DNS and
+certificates are configured for:
+
+```txt
+*.preview.your-domain.example
+```
+
+then use preview hostnames with only one dynamic label before `preview`, for
+example:
+
+```txt
+https://450.preview.your-domain.example:3000
+https://450-random.preview.your-domain.example:3000
+```
+
+Avoid hostnames such as:
+
+```txt
+https://450.random.preview.your-domain.example:3000
+```
+
+because a single-label wildcard certificate for `*.preview.your-domain.example`
+does not cover the extra `450.random` nesting. Browsers may show an untrusted
+certificate warning even though production is healthy.
+
+For the public app URL used by the browser, prefer the generated web service URL
+without manually inventing extra subdomain levels. Do not expose `db`, `redis`,
+or `workers` with public domains.
+
 If a preview database fails with:
 
 ```txt
@@ -257,6 +288,23 @@ preview has picked up the latest compose file and that `DATABASE_URL` resolves
 through `SERVICE_NAME_DB`. Inside the preview container, `SERVICE_NAME_DB`
 should be set to a value like `db-pr-400`, and `SERVICE_NAME_REDIS` should be
 set to a value like `redis-pr-400`.
+
+If a preview API route fails with a PostgreSQL error such as:
+
+```txt
+column "poster_url" does not exist
+```
+
+the preview stack is running newer code against an older preview database
+volume. Force a redeploy after migrations are present, or delete/recreate the
+preview deployment if the volume was initialized before the schema change. This
+is common for long-lived PR previews because Coolify correctly preserves their
+PostgreSQL volumes across redeploys.
+
+For metadata-dependent features such as movie memory, a successful schema
+migration is only the first step. Posters and localized titles also require seed
+or backfill data. Missing posters should be treated as catalog-data drift, not
+as a frontend-only bug.
 
 ## Seeding movie data
 

@@ -15,6 +15,7 @@ What is already true:
 - background jobs and sync processes already live under root `services/*`
 - a shared package already exists in `packages/shared`
 - recommendation orchestration now lives in reusable feature-owned modules outside route ownership
+- account, password reset, recommendation feedback, and movie-memory flows exist for signed-in users
 
 The main remaining risks are:
 
@@ -33,6 +34,7 @@ The main remaining risks are:
 - [x] Some recommendation thresholds/constants are separated into dedicated helper modules instead of being embedded directly in route handlers.
 - [x] Ownership boundaries for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients` are documented in `BOUNDARIES.md`.
 - [x] README and development docs reflect the current workspace layout.
+- [x] `src/features` is documented as the home for cross-route product behavior.
 - [x] App-local external API wrappers now live under `src/integrations`, distinct from root `services/*` runtimes.
 - [x] Shared recommendation input screening and async job orchestration are extracted behind the feature layer.
 - [x] Recommendation thresholds and limits are centralized in a single feature config module.
@@ -51,10 +53,21 @@ The main remaining risks are:
 - [x] Feedback-derived recommendation memory now filters watched/not-interested movies and down-ranks wrong-mood movies for signed-in users.
 - [x] Account recommendation history is deduplicated by movie identity so repeated recommendation attempts do not appear as separate discoveries.
 - [x] Result pages expose a share action that creates/copies a stable recommendation URL.
+- [x] New users are signed in automatically after registration when the session secret is configured.
+- [x] Password reset request and confirmation routes exist, with Resend delivery in production and non-production reset URL exposure for local testing.
+- [x] A dedicated `/account/movie-memory` experience exists with candidate cards and catalog search backed by `/api/account/movie-memory`.
+- [x] Movie-memory candidate cards keep session state locally, submit completed choices in one batched request, and flush pending choices on page hide or unmount.
+- [x] The account movie-memory view supports large histories with paginated loading, virtualized rendering, total counts, and poster-aware fallbacks.
+- [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
+- [x] PR CI has a consolidated `services-ci` pass for service workspaces and CodeQL runs for Actions and JavaScript/TypeScript.
 
 ### Issues Still Present
 
 - The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
+- Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
+- Account movie-memory behavior has grown enough that a feature-owned orchestration module would make future changes easier to review and test.
+- `liked` feedback is stored as durable memory, but ranking still primarily uses negative memory for exclusion/down-ranking rather than treating likes as a positive taste signal.
+- Account settings/profile/provider identity remain intentionally thin.
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
 
@@ -100,6 +113,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Centralize configuration and constants to reduce manual synchronization.
 - Prefer extracting recommendation flows out of `src/app/api` into clearer domain-owned modules.
 - Refactor the quiz submission lifecycle so recommendation creation is modeled explicitly instead of coordinated through route-local `useEffect`, refs, and navigation timing.
+- Move growing account/movie-memory behavior behind a feature-owned module once the route logic expands beyond simple session, validation, and repository calls.
 
 ### Phase 3: Extract intentional packages from the existing layout
 
@@ -112,6 +126,12 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Consolidate shared TypeScript, lint, formatting, and test conventions.
 - Reuse config packages where duplication exists across app/services.
 - Align CI checks to the new boundaries and ownership model.
+
+### CI/CD and Deployment Track
+
+- Build production container images in GitHub PR/CI once, publish them with commit/PR metadata, and make preview or downstream deploys run those already-built images instead of rebuilding the monorepo in each deployment environment.
+- Preserve provenance between a PR check, container digest, deployed preview, and `/api/build` metadata so the exact reviewed artifact is the one being tested or promoted.
+- Keep deployment-time work focused on migrations, health checks, and runtime configuration validation rather than application compilation.
 
 ### Operational Observability Track
 
@@ -158,20 +178,41 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### Product Feedback Track
 
-- Add an explicit watched-movies library for signed-in users so movies marked as watched are excluded from default recommendations instead of only being inferred from recommendation feedback.
+- Expand the explicit movie-memory experience so watched/not-seen setup feels complete for users with large histories.
 - Use `liked` feedback as a positive taste signal in ranking. The interaction is stored today, but current ranking primarily uses negative memory for exclusion/down-ranking.
 - Consider a separate "worth rewatching" angle for watched movies so strong matches can still appear intentionally, with copy that frames them as rewatch candidates instead of new discoveries.
 - Make the reason for reused titles transparent when feedback history intentionally allows a repeat.
 - Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
+- Continue polishing the dedicated movie-memory experience around exact-title search, empty states, and large-history review now that deck state and batched submission are in place.
+- Keep manual movie search as a secondary escape hatch for exact titles, and reuse the same search primitives for the available-movies/search work.
+- Treat posters and localized metadata as first-class data quality requirements for movie memory. Candidate cards should degrade gracefully, but missing poster coverage should be visible in catalog-health reporting.
+- Add a stable way to avoid recommending movies the user just marked as watched, not-interested, or wrong-mood, while still allowing an intentional "rewatch" recommendation mode later.
+
+### TMDB and Catalog Expansion Track
+
+- Pivot recommendation retrieval toward TMDB-backed catalog coverage instead of relying primarily on the embedded/course-sized movie database.
+- Keep the local `movies` table as a cache/index of known titles, embeddings, localized names, poster URLs, and TMDB ids rather than the full source of truth.
+- Backfill TMDB ids for existing local movies using exact title/year matches first, then persist ambiguous or low-confidence matches for manual review.
+- Add a back-office review queue for ambiguous TMDB matches, missing posters, duplicate identities, and metadata conflicts before applying risky automatic merges.
+- Prefer TMDB ids for all cross-feature identity checks. Fall back to normalized title plus year only when TMDB identity is unavailable.
+- Design future discovery flows around dynamic TMDB candidate sets: "I have watched many films" deck mode, quiz-assisted mode, and later a preference/taste-training mode.
+
+### Account Experience Track
+
+- Add magic-link style login options, with rate limits and email delivery observability.
+- Add social login/provider linking after the provider identity model is stable.
+- Add profile editing for display name, avatar, and basic preferences.
+- Add account achievements, taste progress, and gamified memory-building only after the underlying movie-memory signals are reliable.
+- Add feedback loops that explain how recommendation feedback changes future recommendations.
 
 ## Priority Items for the Next 30 Days
 
-1. [x] Write a short boundary definition for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients`.
-2. [x] Identify and remove the highest-risk cross-layer imports in the recommendation flows.
-3. [x] Move one end-to-end recommendation flow behind a clearer domain-oriented module boundary outside `src/app/api`.
-4. [x] Centralize recommendation-related constants and calibration guidance to a single source of truth.
-5. [x] Separate app-local integrations from root-level `services/*` with explicit naming and documentation.
-6. [x] Update README and development docs so the documented structure matches the current workspace layout.
+1. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
+2. [ ] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
+3. [x] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
+4. [ ] Use `liked` memory as a positive recommendation signal, not only stored account history.
+5. [ ] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
+6. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 
@@ -188,12 +229,15 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Recommendation pipeline ownership is no longer tied to `src/app/api/movie-recommendation`.
 - [x] Queueing, DB writes, and response mapping are separated cleanly from recommendation decision logic.
 - [x] Similarity thresholds and related calibration docs point to the same source of truth.
+- [ ] Positive user memory (`liked`) influences ranking.
+- [ ] Quiz submit handoff no longer depends on route-local reset timing.
 
 ### Documentation Alignment
 
 - [x] README reflects the current `apps/web/src` structure.
 - [x] Development docs reflect the current `apps/`, `packages/`, and `services/` layout.
 - [x] Service docs and architecture docs use the same terminology for boundaries and ownership.
+- [x] Agent guidance exists in root `AGENTS.md`.
 
 ## Non-Goals (For Now)
 

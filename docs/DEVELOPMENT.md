@@ -31,8 +31,9 @@ For ownership rules across the current workspace layout, use **[Architecture Bou
 
 - `npm run dev` - Start development server
 - `npm run build` - Build production application
-- `npm run start` - Start production server
+- `npm run start --workspace=apps/web` - Start production server
 - `npm run copy:env` - Copy the root `.env` into `apps/*`, `services/*`, and `packages/shared`
+- `npm run migrate:db` - Apply all idempotent SQL migrations from `db/init`
 - `npm run storybook` - Start Storybook development server
 - `npm run build-storybook` - Build Storybook for production
 
@@ -47,6 +48,7 @@ Workspace-local scripts used during app development:
 - `npm run populate-db` - Seed the database with movie embeddings via the `movie-seed` service
 - `npm run cleanup:local-db` - Stop containers and remove the database volume (full reset)
 - `npm run analyze-movies` - Analyze movie data chunks for embedding optimization
+- `npm run calibrate-similarity` - Recalibrate recommendation similarity thresholds against the live DB
 
 ## Database Setup Workflow
 
@@ -59,6 +61,22 @@ The project includes scripts to help you set up and manage your movie recommenda
 5. **Reset** - Run `npm run cleanup:local-db` to wipe everything, then repeat from step 1
 
 The `movie-seed` service reads its movie list from `services/movie-seed/movies.txt`.
+
+## Schema and Metadata Notes
+
+Features that depend on movie metadata need both schema and data to be present.
+For example, movie-memory cards use poster URLs, localized names, TMDB ids, and
+movie identity keys. When adding fields like these:
+
+- add the column to the schema initialization path
+- add an idempotent migration or `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+  path for existing local, preview, and production databases
+- update seed/backfill code so existing rows eventually receive the new data
+- make the UI degrade gracefully while the backfill is incomplete
+- document whether an existing Coolify preview volume needs to be recreated
+
+If a preview deployment has a long-lived PostgreSQL volume, new code may run
+against an older schema until migrations run or the preview is recreated.
 
 ## Local Runbook
 
@@ -117,11 +135,12 @@ apps/
 │       ├── app/           # Next.js route and page boundaries
 │       ├── clients/       # Low-level infrastructure clients
 │       ├── components/    # Reusable React components
+│       ├── features/      # Feature-owned orchestration and domain-facing modules
 │       ├── hooks/         # React hooks
 │       ├── i18n/          # Locale support
+│       ├── integrations/  # App-local third-party API wrappers
 │       ├── lib/           # App-local infra helpers and adapters
 │       ├── mocks/         # Mock handlers and test support
-│       ├── services/      # App-local service wrappers
 │       ├── styles/        # Styling and theme assets
 │       └── utils/         # Reusable utility helpers
 ├── bull-board/            # Queue monitoring app
@@ -137,10 +156,11 @@ db/                        # SQL scripts and DB initialization assets
 ## Boundary Notes
 
 - `apps/web/src/app` should stay focused on route/page boundaries.
+- `apps/web/src/features` should own cross-route product behavior such as recommendation, auth, and catalog workflows.
 - `apps/web/src/clients` should own low-level client setup.
+- `apps/web/src/integrations` should own app-local wrappers around third-party APIs.
 - `apps/web/src/lib` should hold app-local infrastructure helpers, not become a catch-all business layer.
 - `apps/web/src/utils` should stay narrow and reusable, not absorb end-to-end orchestration.
-- `apps/web/src/integrations` are app-local wrappers around external services.
 - Root `services/*` are standalone background or offline runtimes.
 
 See [BOUNDARIES.md](./BOUNDARIES.md) for the full ownership definitions.

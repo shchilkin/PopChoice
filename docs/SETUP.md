@@ -39,6 +39,10 @@ VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
 # Public base URL of the app (required behind a reverse proxy such as Coolify)
 # Used for same-origin CSRF validation; without this, browser API calls will return 401
 NEXT_PUBLIC_BASE_URL=https://your-domain.example
+
+# Password reset email delivery (required in production for forgot-password flow)
+RESEND_API_KEY=your-resend-api-key
+EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
 ```
 
 The root `.env` is the source of truth for local development. After you update it, run `npm run copy:env` from the repo root to sync the workspace-level `.env` files used by `apps/web` and the local services.
@@ -58,11 +62,11 @@ This application uses the OpenAI API to generate embeddings and chat completions
 
 3. **Verify setup**
    - Your application will automatically load the API key from `.env`
-   - See [`src/clients/openaiClient.ts`](../src/clients/openaiClient.ts) for usage example
+   - See [`apps/web/src/clients/openaiClient.ts`](../apps/web/src/clients/openaiClient.ts) for app client setup
 
 ## PostgreSQL Database Setup
 
-This application uses a generic database client abstraction (`src/clients/dbClient.ts`) backed by PostgreSQL via `pgClient.ts` for storing movie embeddings.
+This application uses a generic database client abstraction (`apps/web/src/clients/dbClient.ts`) backed by PostgreSQL via `pgClient.ts` for storing movie embeddings.
 
 ### PostgreSQL Setup Steps
 
@@ -89,7 +93,8 @@ This application uses a generic database client abstraction (`src/clients/dbClie
    DATABASE_URL=postgresql://user:password@host:5432/dbname
    ```
 
-6. **Populate the database**
+6. **Apply migrations and populate the database**
+   - Run `npm run migrate:db` if you are using an existing database
    - Run `npm run populate-db`
 
 ## TMDB API Setup (Optional)
@@ -103,7 +108,7 @@ This application uses a generic database client abstraction (`src/clients/dbClie
 
 ## API Endpoint Protection
 
-The `/api/movie-recommendation`, `/api/more-tmdb-picks`, and `/api/movies` endpoints are protected by the `withAuth` wrapper and accept either:
+The `/api/movie-recommendation`, `/api/more-tmdb-picks`, `/api/movies`, `/api/recommendations`, and `/api/recommendations/[id]/feedback` endpoints are protected by the `withAuth` wrapper and accept either:
 
 - API key authentication (`Authorization: Bearer <key>` or `X-API-Key`)
 - Same-origin browser requests with a valid CSRF cookie/header pair
@@ -149,16 +154,18 @@ When `VALID_API_KEYS` is not set, API key authentication is **disabled in develo
 
 ### 2. CSRF tokens (browser fallback path)
 
-Next.js middleware (`src/middleware.ts`) issues a random `__csrf` cookie on page loads. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls.
+Next.js proxy (`apps/web/src/proxy.ts`, the App Router successor to middleware) issues a random `__csrf` cookie on page loads. Client-side code reads the cookie and echoes it in the `X-CSRF-Token` request header on API calls.
 
 The frontend reads the `__csrf` cookie and echoes it in `X-CSRF-Token` for API calls. CSRF fallback is accepted only for same-origin browser requests and only when both cookie and header are present and identical.
+
+Signed-in account APIs such as `/api/account` and `/api/account/movie-memory` use the session cookie directly and still require the CSRF header for mutating browser requests.
 
 ## Redis Setup (Optional – Rate Limiting & Background Workers)
 
 Redis is used for two features:
 
 - **Rate limiting** – `/api/movie-recommendation` is limited to 10 requests per minute per IP. When `REDIS_URL` is absent, rate limiting is skipped and the API fails open.
-- **BullMQ workers** – background TMDB seeding jobs are queued via BullMQ. When `REDIS_URL` is absent, background seeding is disabled.
+- **BullMQ workers** – recommendation, more-picks, and TMDB seeding jobs are queued via BullMQ. When `REDIS_URL` is absent, workers are disabled and supported routes use inline or disabled fallbacks.
 
 > **Security note:** `REDIS_URL` may contain credentials (e.g. `redis://user:password@host:6379`). Store it as a secret in your deployment environment (e.g. Railway/Vercel secret, GitHub Actions secret) and never commit it to source control.
 
@@ -203,7 +210,7 @@ npm run bull-board
 3. **Verify**
    - On the first request to `/api/movie-recommendation`, the app logs `Rate limiter initialized with Redis` when the connection succeeds
    - When `REDIS_URL` is not set, rate limiting logs `REDIS_URL not set. Rate limiting disabled.`
-   - When `REDIS_URL` is not set, the worker logs `REDIS_URL not set. Movie seeding worker is disabled.`
+   - When `REDIS_URL` is not set, the worker process logs that workers are disabled or unavailable.
 
 ## Local Docker PostgreSQL Setup
 
@@ -298,13 +305,13 @@ This project includes a development container configuration for consistent devel
 
 ## Swapping Database Backends
 
-PopChoice uses a generic `DbClient` interface (`src/clients/dbClient.ts`) that decouples all storage logic from any specific database provider. By default it uses the PostgreSQL backend via `pgClient.ts`.
+PopChoice uses a generic `DbClient` interface (`apps/web/src/clients/dbClient.ts`) that decouples storage-oriented app code from any specific database provider. By default it uses the PostgreSQL backend via `pgClient.ts`. Higher-level recommendation/account queries that need joins or upserts live in app-local repositories under `apps/web/src/lib/db`.
 
 ### Built-in backend
 
-| Backend    | Module                    | Env var        | Notes   |
-| ---------- | ------------------------- | -------------- | ------- |
-| PostgreSQL | `src/clients/pgClient.ts` | `DATABASE_URL` | Default |
+| Backend    | Module                             | Env var        | Notes   |
+| ---------- | ---------------------------------- | -------------- | ------- |
+| PostgreSQL | `apps/web/src/clients/pgClient.ts` | `DATABASE_URL` | Default |
 
 ### How it works
 
@@ -354,10 +361,11 @@ afterEach(() => resetDbClient());
 
 ### Key files
 
-| File                           | Purpose                                                                       |
-| ------------------------------ | ----------------------------------------------------------------------------- |
-| `src/clients/dbClient.ts`      | `DbClient` interface, `getDbClient` / `setDbClient` / `resetDbClient` helpers |
-| `src/clients/pgClient.ts`      | PostgreSQL (`pg`) implementation of `DbClient` with pgvector support          |
-| `src/clients/dbClient.test.ts` | Unit tests demonstrating mock injection                                       |
-| `src/clients/pgClient.test.ts` | Unit tests for the PostgreSQL backend                                         |
-| `src/utils/database/`          | All database operations (use `getDbClient()` internally)                      |
+| File                                    | Purpose                                                                       |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `apps/web/src/clients/dbClient.ts`      | `DbClient` interface, `getDbClient` / `setDbClient` / `resetDbClient` helpers |
+| `apps/web/src/clients/pgClient.ts`      | PostgreSQL (`pg`) implementation of `DbClient` with pgvector support          |
+| `apps/web/src/clients/dbClient.test.ts` | Unit tests demonstrating mock injection                                       |
+| `apps/web/src/clients/pgClient.test.ts` | Unit tests for the PostgreSQL backend                                         |
+| `apps/web/src/lib/db/`                  | App-local repositories for recommendation/account queries                     |
+| `apps/web/src/utils/database/`          | Legacy database utility helpers that use `getDbClient()` internally           |

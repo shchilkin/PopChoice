@@ -31,6 +31,7 @@ import { logger } from './logger.js';
 import {
   extractUSCertification,
   fetchMovieDetails,
+  getPosterUrl,
   movieToEmbeddingText,
   searchMovieMatch,
 } from './tmdb.js';
@@ -42,6 +43,8 @@ interface PendingUpdate {
   matchConfidence: number;
   runtime: number;
   ageRating: string;
+  posterUrl: string | null;
+  localizedName: string | null;
   embeddingText: string;
 }
 
@@ -118,8 +121,17 @@ async function main(): Promise<void> {
         batch.map(async (movie) => {
           totalProcessed++;
           try {
-            // 1. Search TMDB by title + year to get a conservative TMDB identity match.
-            const match = await searchMovieMatch(config.tmdbApiKey, movie.name, movie.year);
+            // 1. Use an existing TMDB id when present; otherwise search by title + year.
+            const match: Awaited<ReturnType<typeof searchMovieMatch>> = movie.tmdb_id
+              ? {
+                  status: 'matched',
+                  tmdbId: movie.tmdb_id,
+                  confidence: 1,
+                  title: movie.name,
+                  releaseYear: movie.year,
+                  candidates: [],
+                }
+              : await searchMovieMatch(config.tmdbApiKey, movie.name, movie.year);
             if (match.status === 'ambiguous') {
               logger.warn('Ambiguous TMDB match — manual review needed', {
                 id: movie.id,
@@ -230,6 +242,8 @@ async function main(): Promise<void> {
               matchConfidence: match.confidence,
               runtime,
               ageRating,
+              posterUrl: getPosterUrl(details.poster_path),
+              localizedName: details.title && details.title !== movie.name ? details.title : null,
               embeddingText,
             });
           } catch (err) {
@@ -283,6 +297,8 @@ async function main(): Promise<void> {
               update.ageRating,
               update.tmdbId,
               update.matchConfidence,
+              update.posterUrl,
+              update.localizedName,
               embedding,
             );
 
@@ -294,6 +310,8 @@ async function main(): Promise<void> {
               matchConfidence: update.matchConfidence,
               runtime: update.runtime,
               ageRating: update.ageRating,
+              hasPoster: Boolean(update.posterUrl),
+              hasLocalizedName: Boolean(update.localizedName),
             });
             totalUpdated++;
           } catch (err) {
