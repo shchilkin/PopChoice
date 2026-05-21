@@ -7,6 +7,7 @@ import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
 
 const requestSchema = z.object({
+  locale: z.enum(['en', 'ru', 'fi']).optional(),
   movies: z.array(
     z.object({
       id: z.number(),
@@ -45,21 +46,21 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
   }
 
-  const locale = parseLocaleFromRequest(req);
+  const locale = parsed.data.locale ?? parseLocaleFromRequest(req);
 
-  const results: Array<{ id: number; posterURL: string | null }> = [];
+  const results: Array<{ id: number; posterURL: string | null; localizedName: string | null }> = [];
   for (const batch of chunk(parsed.data.movies, POSTER_LOOKUP_BATCH_SIZE)) {
     const batchResults = await Promise.all(
       batch.map(async ({ id, name, year, tmdbId }) => {
         try {
-          const { posterURL } = await getMovieInfo(name, locale, year, tmdbId);
-          return { id, posterURL: posterURL ?? null };
+          const { posterURL, localizedName } = await getMovieInfo(name, locale, year, tmdbId);
+          return { id, posterURL: posterURL ?? null, localizedName: localizedName ?? null };
         } catch (err) {
           logger.warn(
             { err, movieId: id, movieName: name },
             'movie-posters: Failed to fetch poster URL',
           );
-          return { id, posterURL: null };
+          return { id, posterURL: null, localizedName: null };
         }
       }),
     );

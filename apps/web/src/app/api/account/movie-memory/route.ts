@@ -76,6 +76,7 @@ const movieService = new MovieService();
 const tmdbCandidateSchema = z.object({
   id: z.number(),
   title: z.string(),
+  original_title: z.string().optional().nullable(),
   release_date: z.string().optional().nullable(),
   poster_path: z.string().nullable(),
   vote_average: z.number().optional(),
@@ -178,9 +179,14 @@ async function getTMDBMovieMemoryCandidatesForUser(
 
     for (const movie of parsed.results ?? []) {
       const movieYear = getYearFromReleaseDate(movie.release_date);
+      const canonicalTitle = movie.original_title?.trim() || movie.title;
+      const localizedTitle =
+        locale !== 'en' && movie.title.trim() && movie.title.trim() !== canonicalTitle
+          ? movie.title
+          : null;
       const movieKey = getMovieIdentityKey({
         tmdbId: movie.id,
-        title: movie.title,
+        title: canonicalTitle,
         year: movieYear,
       });
       if (!movieKey || excluded.has(movieKey) || seenCandidateKeys.has(movieKey)) continue;
@@ -189,10 +195,10 @@ async function getTMDBMovieMemoryCandidatesForUser(
       candidates.push({
         id: -movie.id,
         tmdbId: movie.id,
-        movieName: movie.title,
+        movieName: canonicalTitle,
         movieYear,
         posterURL: getPosterURL(movie.poster_path),
-        localizedName: null,
+        localizedName: localizedTitle,
       });
 
       if (candidates.length >= limit) break;

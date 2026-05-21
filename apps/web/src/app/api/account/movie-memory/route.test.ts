@@ -106,8 +106,12 @@ function makeGetRequest(query = 'spirited') {
   );
 }
 
-function makeCandidatesRequest() {
-  return new NextRequest('http://localhost/api/account/movie-memory?mode=candidates', {
+function makeCandidatesRequest(locale?: string) {
+  const url = new URL('http://localhost/api/account/movie-memory');
+  url.searchParams.set('mode', 'candidates');
+  if (locale) url.searchParams.set('locale', locale);
+
+  return new NextRequest(url, {
     method: 'GET',
   });
 }
@@ -206,6 +210,7 @@ describe('GET /api/account/movie-memory', () => {
               {
                 id: 550,
                 title: 'Fight Club',
+                original_title: 'Fight Club',
                 release_date: '1999-10-15',
                 poster_path: '/fight.jpg',
                 vote_average: 8.4,
@@ -231,6 +236,54 @@ describe('GET /api/account/movie-memory', () => {
           movieYear: 1999,
           posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
           localizedName: null,
+        },
+      ],
+    });
+  });
+
+  it('keeps TMDB fallback movie identity canonical while returning localized titles', async () => {
+    vi.stubEnv('TMDB_API_KEY', 'tmdb-key');
+    mockGetSessionFromRequest.mockReturnValue({ sub: '42', exp: 9999999999 });
+    mockGetMovieMemoryCandidatesForUser.mockResolvedValueOnce([]);
+    mockGetMovieMemoryCandidateStatsForUser.mockResolvedValueOnce({
+      catalogCount: 0,
+      memoryCount: 0,
+      availableCatalogCount: 0,
+    });
+    mockGetUserMovieMemorySummaries.mockResolvedValueOnce([]);
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          Response.json({
+            results: [
+              {
+                id: 550,
+                title: 'Бойцовский клуб',
+                original_title: 'Fight Club',
+                release_date: '1999-10-15',
+                poster_path: '/fight.jpg',
+                vote_average: 8.4,
+              },
+            ],
+          }),
+        )
+        .mockImplementation(() => Promise.resolve(Response.json({ results: [] }))),
+    );
+
+    const response = await GET(makeCandidatesRequest('ru'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      movies: [
+        {
+          id: -550,
+          tmdbId: 550,
+          movieName: 'Fight Club',
+          movieYear: 1999,
+          posterURL: 'https://image.tmdb.org/t/p/w500/fight.jpg',
+          localizedName: 'Бойцовский клуб',
         },
       ],
     });

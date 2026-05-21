@@ -68,6 +68,7 @@ type AccountResponse = {
 type PosterLookupResult = {
   id: number;
   posterURL: string | null;
+  localizedName?: string | null;
 };
 
 type LoadState =
@@ -176,11 +177,21 @@ export default function AccountPage() {
   }, [auth.status]);
 
   useEffect(() => {
+    requestedMemoryPosters.current.clear();
+  }, [locale]);
+
+  useEffect(() => {
     if (state.status !== 'loaded') return;
 
     const missingPosterItems = state.data.movieMemory
       .map((item, index) => ({ item, index }))
-      .filter(({ item }) => !item.posterURL && !requestedMemoryPosters.current.has(item.movieKey));
+      .filter(({ item }) => {
+        const needsLocalizedName = locale !== 'en' && !item.localizedName;
+        return (
+          (!item.posterURL || needsLocalizedName) &&
+          !requestedMemoryPosters.current.has(item.movieKey)
+        );
+      });
 
     if (missingPosterItems.length === 0) return;
 
@@ -200,6 +211,7 @@ export default function AccountPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
+            locale,
             movies: missingPosterItems.map(({ item, index }) => ({
               id: index,
               name: item.movieName,
@@ -212,24 +224,26 @@ export default function AccountPage() {
         if (!response.ok) return;
 
         const data = (await response.json()) as { results?: PosterLookupResult[] };
-        const postersByIndex = new Map(
-          (Array.isArray(data.results) ? data.results : [])
-            .filter((result) => result.posterURL)
-            .map((result) => [result.id, result.posterURL as string]),
+        const resultsByIndex = new Map(
+          (Array.isArray(data.results) ? data.results : []).map((result) => [result.id, result]),
         );
 
-        if (cancelled || postersByIndex.size === 0) return;
+        if (cancelled || resultsByIndex.size === 0) return;
 
         setState((current) => {
           if (current.status !== 'loaded') return current;
 
           let changed = false;
           const movieMemory = current.data.movieMemory.map((item, index) => {
-            const posterURL = postersByIndex.get(index);
-            if (item.posterURL || !posterURL) return item;
+            const result = resultsByIndex.get(index);
+            if (!result) return item;
+
+            const posterURL = item.posterURL ?? result.posterURL;
+            const localizedName = item.localizedName ?? result.localizedName ?? null;
+            if (posterURL === item.posterURL && localizedName === item.localizedName) return item;
 
             changed = true;
-            return { ...item, posterURL };
+            return { ...item, posterURL, localizedName };
           });
 
           return changed
@@ -252,7 +266,7 @@ export default function AccountPage() {
     return () => {
       cancelled = true;
     };
-  }, [state]);
+  }, [state, locale]);
 
   if (auth.status === 'unknown' || (auth.status === 'authenticated' && state.status === 'idle')) {
     return (
