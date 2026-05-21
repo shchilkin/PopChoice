@@ -934,6 +934,7 @@ export const fi: Translations = {
       'Merkitse elokuvat, jotka olet jo nähnyt. PopChoice jättää ne pois uusista suosituskierroksista.',
     memoryDeckCounter: '{current}/{total}',
     memoryCardQuestion: 'Oletko nähnyt tämän elokuvan?',
+    memoryKeyboardHint: 'Näppäimet: ← en ole nähnyt · → nähty · ↓ ohita',
     seenMovie: 'Nähty',
     notSeenMovie: 'En ole nähnyt',
     skipMovie: 'Ohita / en ole varma',

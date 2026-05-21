@@ -937,6 +937,7 @@ export const ru: Translations = {
       'Отмечайте фильмы, которые уже видели. PopChoice уберёт их из новых рекомендаций.',
     memoryDeckCounter: '{current} из {total}',
     memoryCardQuestion: 'Вы смотрели этот фильм?',
+    memoryKeyboardHint: 'Клавиши: ← не смотрел(а) · → смотрел(а) · ↓ пропустить',
     seenMovie: 'Смотрел(а)',
     notSeenMovie: 'Не смотрел(а)',
     skipMovie: 'Пропустить / не уверен(а)',

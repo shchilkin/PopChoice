@@ -926,6 +926,7 @@ export const en = {
       'Mark the movies you have already seen. PopChoice will keep them out of fresh recommendation rounds.',
     memoryDeckCounter: '{current} of {total}',
     memoryCardQuestion: 'Have you watched this movie?',
+    memoryKeyboardHint: 'Keys: ← not watched · → watched · ↓ skip',
     seenMovie: 'Seen it',
     notSeenMovie: 'Not watched',
     skipMovie: 'Skip / not sure',

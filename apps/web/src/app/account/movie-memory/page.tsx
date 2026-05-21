@@ -70,6 +70,11 @@ type PosterLookupResult = {
 
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
 
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+}
+
 export default function MovieMemoryPage() {
   const { auth } = useAuth();
   const { locale, t } = useLanguage();
@@ -80,6 +85,7 @@ export default function MovieMemoryPage() {
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchState>({ status: 'idle' });
   const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
   const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
+  const handledDeckMovieIds = useRef<Set<number>>(new Set());
   const requestedMoviePosters = useRef<Set<number>>(new Set());
 
   const loadCandidates = useCallback(async () => {
@@ -103,6 +109,7 @@ export default function MovieMemoryPage() {
 
       const data = (await response.json()) as { movies?: MovieMemoryCandidate[] };
       const movies = Array.isArray(data.movies) ? data.movies : [];
+      handledDeckMovieIds.current.clear();
       setCandidates({ status: 'loaded', movies, reviewed: 0, total: movies.length });
     } catch {
       setCandidates({ status: 'error' });
@@ -275,22 +282,61 @@ export default function MovieMemoryPage() {
     };
   }, [candidates, catalogSearch]);
 
-  function saveDeckMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
-    pendingDeckItems.current = [
-      ...pendingDeckItems.current.filter((item) => item.movieId !== movieId),
-      { movieId, kind },
-    ];
+  const saveDeckMovieMemory = useCallback(
+    (movieId: number, kind: UserMovieInteractionKind) => {
+      if (handledDeckMovieIds.current.has(movieId)) return;
+      handledDeckMovieIds.current.add(movieId);
+      pendingDeckItems.current = [
+        ...pendingDeckItems.current.filter((item) => item.movieId !== movieId),
+        { movieId, kind },
+      ];
+      setAction({ status: 'idle' });
+      setCandidates((current) => {
+        if (current.status !== 'loaded') return current;
+        const hasMovie = current.movies.some((movie) => movie.id === movieId);
+        if (!hasMovie) {
+          handledDeckMovieIds.current.delete(movieId);
+          pendingDeckItems.current = pendingDeckItems.current.filter(
+            (item) => item.movieId !== movieId,
+          );
+          return current;
+        }
+
+        const remainingMovies = current.movies.filter((movie) => movie.id !== movieId);
+        if (remainingMovies.length === 0) {
+          queueMicrotask(() => void flushPendingDeckItems());
+        }
+
+        return {
+          ...current,
+          movies: remainingMovies,
+          reviewed: current.reviewed + 1,
+        };
+      });
+      setCatalogSearch((current) =>
+        current.status === 'loaded'
+          ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
+          : current,
+      );
+    },
+    [flushPendingDeckItems],
+  );
+
+  const skipDeckMovie = useCallback((movieId: number) => {
+    if (handledDeckMovieIds.current.has(movieId)) return;
+    handledDeckMovieIds.current.add(movieId);
     setAction({ status: 'idle' });
     setCandidates((current) => {
       if (current.status !== 'loaded') return current;
-      const remainingMovies = current.movies.filter((movie) => movie.id !== movieId);
-      if (remainingMovies.length === 0) {
-        queueMicrotask(() => void flushPendingDeckItems());
+      const hasMovie = current.movies.some((movie) => movie.id === movieId);
+      if (!hasMovie) {
+        handledDeckMovieIds.current.delete(movieId);
+        return current;
       }
 
       return {
         ...current,
-        movies: remainingMovies,
+        movies: current.movies.filter((movie) => movie.id !== movieId),
         reviewed: current.reviewed + 1,
       };
     });
@@ -299,25 +345,40 @@ export default function MovieMemoryPage() {
         ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
         : current,
     );
-  }
+  }, []);
 
-  function skipDeckMovie(movieId: number) {
-    setAction({ status: 'idle' });
-    setCandidates((current) =>
-      current.status === 'loaded'
-        ? {
-            ...current,
-            movies: current.movies.filter((movie) => movie.id !== movieId),
-            reviewed: current.reviewed + 1,
-          }
-        : current,
-    );
-    setCatalogSearch((current) =>
-      current.status === 'loaded'
-        ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
-        : current,
-    );
-  }
+  useEffect(() => {
+    if (auth.status !== 'authenticated' || candidates.status !== 'loaded') return;
+    const activeDeckMovie = candidates.movies[0];
+    if (!activeDeckMovie) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.shiftKey ||
+        isEditableKeyboardTarget(event.target)
+      ) {
+        return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        saveDeckMovieMemory(activeDeckMovie.id, 'not_seen');
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        saveDeckMovieMemory(activeDeckMovie.id, 'watched');
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        skipDeckMovie(activeDeckMovie.id);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [auth.status, candidates, saveDeckMovieMemory, skipDeckMovie]);
 
   async function saveMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
     setAction({ status: 'saving', movieId, kind });
@@ -756,11 +817,8 @@ function MovieTrainingCard({
             >
               {formatMovieName(title, movie.movieYear)}
             </h2>
-            <p
-              className="mt-3 text-sm uppercase tracking-[0.14em]"
-              style={{ color: 'var(--pc-t2)' }}
-            >
-              {movie.tmdbId ? `TMDB #${movie.tmdbId}` : labels.memoryKind.watched}
+            <p className="mt-3 text-sm" style={{ color: 'var(--pc-t2)' }}>
+              {labels.memoryKeyboardHint}
             </p>
           </div>
 
@@ -773,7 +831,7 @@ function MovieTrainingCard({
                 type="button"
                 disabled={isSaving}
                 onClick={() => onSave(movie.id, 'not_seen')}
-                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
                   background: 'var(--pc-surface-hover)',
                   border: '1px solid var(--pc-bd3)',
@@ -787,7 +845,7 @@ function MovieTrainingCard({
                 type="button"
                 disabled={isSaving}
                 onClick={() => onSave(movie.id, 'watched')}
-                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60 disabled:hover:translate-y-0"
                 style={{
                   background: 'var(--pc-surface-hover)',
                   border: '1px solid var(--pc-bd3)',
@@ -802,9 +860,8 @@ function MovieTrainingCard({
               type="button"
               disabled={isSaving}
               onClick={() => onSkip(movie.id)}
-              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold transition disabled:opacity-60"
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-transparent px-5 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-[var(--pc-surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60 disabled:hover:translate-y-0"
               style={{
-                background: 'transparent',
                 border: '1px solid var(--pc-bd2)',
                 color: 'var(--pc-t2)',
               }}
@@ -848,11 +905,10 @@ function ManualSearchPanel({
       <button
         type="button"
         onClick={onToggle}
-        className="mx-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
+        className="mx-auto flex items-center gap-2 rounded-full bg-transparent px-3 py-2 text-xs font-semibold transition hover:bg-[var(--pc-ghost)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={{
-          background: 'var(--pc-gold-subtle)',
-          border: '1px solid var(--pc-gold-bd)',
-          color: 'var(--pc-gold-text)',
+          border: '1px solid var(--pc-bd1)',
+          color: 'var(--pc-t3)',
         }}
         aria-expanded={isOpen}
       >
@@ -892,7 +948,7 @@ function ManualSearchPanel({
             <button
               type="submit"
               disabled={query.trim().length < 2 || search.status === 'loading'}
-              className="inline-flex min-h-14 items-center justify-center rounded-2xl px-6 text-sm font-semibold disabled:opacity-60"
+              className="inline-flex min-h-14 items-center justify-center rounded-2xl px-6 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60"
               style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
             >
               {search.status === 'loading' ? (
