@@ -56,6 +56,8 @@ The main remaining risks are:
 - [x] New users are signed in automatically after registration when the session secret is configured.
 - [x] Password reset request and confirmation routes exist, with Resend delivery in production and non-production reset URL exposure for local testing.
 - [x] A dedicated `/account/movie-memory` experience exists with candidate cards and catalog search backed by `/api/account/movie-memory`.
+- [x] Movie-memory candidate cards keep session state locally, submit completed choices in one batched request, and flush pending choices on page hide or unmount.
+- [x] The account movie-memory view supports large histories with paginated loading, virtualized rendering, total counts, and poster-aware fallbacks.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
 - [x] PR CI has a consolidated `services-ci` pass for service workspaces and CodeQL runs for Actions and JavaScript/TypeScript.
 
@@ -63,7 +65,7 @@ The main remaining risks are:
 
 - The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
-- Movie-memory candidate cards currently save one movie at a time. A future batch-submit flow would reduce API chatter and make deck sessions easier to recover.
+- Account movie-memory behavior has grown enough that a feature-owned orchestration module would make future changes easier to review and test.
 - `liked` feedback is stored as durable memory, but ranking still primarily uses negative memory for exclusion/down-ranking rather than treating likes as a positive taste signal.
 - Account settings/profile/provider identity remain intentionally thin.
 
@@ -181,7 +183,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Consider a separate "worth rewatching" angle for watched movies so strong matches can still appear intentionally, with copy that frames them as rewatch candidates instead of new discoveries.
 - Make the reason for reused titles transparent when feedback history intentionally allows a repeat.
 - Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
-- Improve the dedicated movie-memory experience with local deck state and one batched update when a session is complete.
+- Continue polishing the dedicated movie-memory experience around exact-title search, empty states, and large-history review now that deck state and batched submission are in place.
 - Keep manual movie search as a secondary escape hatch for exact titles, and reuse the same search primitives for the available-movies/search work.
 - Treat posters and localized metadata as first-class data quality requirements for movie memory. Candidate cards should degrade gracefully, but missing poster coverage should be visible in catalog-health reporting.
 - Add a stable way to avoid recommending movies the user just marked as watched, not-interested, or wrong-mood, while still allowing an intentional "rewatch" recommendation mode later.
@@ -207,7 +209,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 1. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
 2. [ ] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
-3. [ ] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
+3. [x] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
 4. [ ] Use `liked` memory as a positive recommendation signal, not only stored account history.
 5. [ ] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
 6. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
