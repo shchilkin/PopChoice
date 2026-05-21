@@ -8,16 +8,16 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@bull-board/api": "^7.0.0",
-    "@bull-board/express": "^7.0.0",
-    "bullmq": "^5.76.5",
+    "@bull-board/api": "^7.1.5",
+    "@bull-board/express": "^7.1.5",
+    "bullmq": "^5.76.10",
     "express": "^5.2.1",
     "ioredis": "^5.10.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.0",
-    "tsx": "^4.0.0",
+    "tsx": "^4.22.2",
     "typescript": "^5.0.0"
   }
 }
