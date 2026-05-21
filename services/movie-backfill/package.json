@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "catalog:health": "tsx --env-file=../../.env src/catalog-health-report.ts",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run"
