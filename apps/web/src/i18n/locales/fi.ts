@@ -933,8 +933,10 @@ export const fi: Translations = {
     memoryTrainerBody:
       'Merkitse elokuvat, jotka olet jo nähnyt. PopChoice jättää ne pois uusista suosituskierroksista.',
     memoryDeckCounter: '{current}/{total}',
+    memoryCardQuestion: 'Oletko nähnyt tämän elokuvan?',
     seenMovie: 'Nähty',
     notSeenMovie: 'En ole nähnyt',
+    skipMovie: 'Ohita / en ole varma',
     loadMoreMovies: 'Lataa lisää kortteja',
     memoryDeckCompleteTitle: 'Muisti päivitetty',
     memoryDeckCompleteBody: 'Hyvä. Nämä signaalit vaikuttavat seuraaviin suosituksiin.',

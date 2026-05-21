@@ -936,8 +936,10 @@ export const ru: Translations = {
     memoryTrainerBody:
       'Отмечайте фильмы, которые уже видели. PopChoice уберёт их из новых рекомендаций.',
     memoryDeckCounter: '{current} из {total}',
+    memoryCardQuestion: 'Вы смотрели этот фильм?',
     seenMovie: 'Смотрел(а)',
     notSeenMovie: 'Не смотрел(а)',
+    skipMovie: 'Пропустить / не уверен(а)',
     loadMoreMovies: 'Загрузить ещё карточки',
     memoryDeckCompleteTitle: 'Память обновлена',
     memoryDeckCompleteBody: 'Отлично. Эти сигналы повлияют на следующие рекомендации.',

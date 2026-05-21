@@ -925,8 +925,10 @@ export const en = {
     memoryTrainerBody:
       'Mark the movies you have already seen. PopChoice will keep them out of fresh recommendation rounds.',
     memoryDeckCounter: '{current} of {total}',
+    memoryCardQuestion: 'Have you watched this movie?',
     seenMovie: 'Seen it',
     notSeenMovie: 'Not watched',
+    skipMovie: 'Skip / not sure',
     loadMoreMovies: 'Load more cards',
     memoryDeckCompleteTitle: 'Memory updated',
     memoryDeckCompleteBody: 'Nice. These signals will shape your next recommendations.',

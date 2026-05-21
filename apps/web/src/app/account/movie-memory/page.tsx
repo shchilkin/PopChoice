@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Check,
+  ChevronDown,
   Eye,
   Film,
   Loader2,
@@ -77,6 +78,7 @@ export default function MovieMemoryPage() {
   const [action, setAction] = useState<ActionState>({ status: 'idle' });
   const [catalogQuery, setCatalogQuery] = useState('');
   const [catalogSearch, setCatalogSearch] = useState<CatalogSearchState>({ status: 'idle' });
+  const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
   const pendingDeckItems = useRef<PendingMovieMemoryItem[]>([]);
   const requestedMoviePosters = useRef<Set<number>>(new Set());
 
@@ -299,6 +301,24 @@ export default function MovieMemoryPage() {
     );
   }
 
+  function skipDeckMovie(movieId: number) {
+    setAction({ status: 'idle' });
+    setCandidates((current) =>
+      current.status === 'loaded'
+        ? {
+            ...current,
+            movies: current.movies.filter((movie) => movie.id !== movieId),
+            reviewed: current.reviewed + 1,
+          }
+        : current,
+    );
+    setCatalogSearch((current) =>
+      current.status === 'loaded'
+        ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
+        : current,
+    );
+  }
+
   async function saveMovieMemory(movieId: number, kind: UserMovieInteractionKind) {
     setAction({ status: 'saving', movieId, kind });
 
@@ -461,7 +481,7 @@ export default function MovieMemoryPage() {
           </p>
         </div>
 
-        <section className="mx-auto max-w-3xl">
+        <section className="mx-auto max-w-4xl">
           {candidates.status === 'loading' ? (
             <LoadingState label={a.loading} compact />
           ) : candidates.status === 'error' ? (
@@ -479,7 +499,9 @@ export default function MovieMemoryPage() {
               counter={a.memoryDeckCounter
                 .replace('{current}', String(candidates.reviewed + 1))
                 .replace('{total}', String(candidates.total))}
+              progressPercent={((candidates.reviewed + 1) / Math.max(candidates.total, 1)) * 100}
               onSave={saveDeckMovieMemory}
+              onSkip={skipDeckMovie}
             />
           ) : (
             <CompletionPanel labels={a} onLoadMore={loadCandidates} />
@@ -506,6 +528,8 @@ export default function MovieMemoryPage() {
           labels={a}
           locale={locale}
           action={action}
+          isOpen={isManualSearchOpen}
+          onToggle={() => setIsManualSearchOpen((current) => !current)}
           onQueryChange={setCatalogQuery}
           onSearch={handleCatalogSearch}
           onSave={saveMovieMemory}
@@ -625,14 +649,18 @@ function MovieTrainingCard({
   locale,
   action,
   counter,
+  progressPercent,
   onSave,
+  onSkip,
 }: {
   movie: MovieMemoryCandidate;
   labels: ReturnType<typeof useLanguage>['t']['account'];
   locale: string;
   action: ActionState;
   counter: string;
+  progressPercent: number;
   onSave: (movieId: number, kind: UserMovieInteractionKind) => void;
+  onSkip: (movieId: number) => void;
 }) {
   const title = getMovieTitle(movie, locale);
   const savingSeen =
@@ -647,93 +675,141 @@ function MovieTrainingCard({
       initial={{ opacity: 0, y: 18, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -12, scale: 0.98 }}
-      className="overflow-hidden rounded-[2rem]"
+      className="overflow-hidden rounded-[1.75rem]"
       style={{
-        background: 'var(--pc-surface)',
+        background:
+          'linear-gradient(145deg, color-mix(in srgb, var(--pc-surface) 92%, var(--pc-gold) 8%), var(--pc-surface))',
         border: '1px solid var(--pc-bd2)',
-        boxShadow: '0 26px 80px rgba(0,0,0,0.32)',
+        boxShadow: 'var(--pc-card-shadow)',
       }}
     >
-      <div className="relative min-h-[520px] overflow-hidden">
-        {movie.posterURL ? (
-          <>
-            <Image
-              src={movie.posterURL}
-              alt=""
-              fill
-              sizes="(min-width: 768px) 768px, 100vw"
-              className="absolute inset-0 h-full w-full scale-110 object-cover opacity-45 blur-2xl"
-              aria-hidden="true"
-            />
-            <div
-              className="absolute inset-0"
-              style={{ background: 'rgba(6,6,10,0.58)' }}
-              aria-hidden="true"
-            />
+      <div className="grid gap-6 p-4 sm:p-5 md:grid-cols-[minmax(220px,320px)_1fr] md:items-stretch md:p-6">
+        <div
+          className="relative mx-auto aspect-[2/3] w-full max-w-[320px] overflow-hidden rounded-[1.25rem] md:max-w-none"
+          style={{
+            background: 'var(--pc-surface-deep)',
+            border: '1px solid var(--pc-bd2)',
+            boxShadow: '0 18px 42px rgba(9,9,15,0.16)',
+          }}
+        >
+          {movie.posterURL ? (
             <Image
               src={movie.posterURL}
               alt={title}
               fill
-              sizes="(min-width: 768px) 768px, 100vw"
-              className="absolute inset-0 h-full w-full object-contain p-5 pb-40 md:p-8 md:pb-44"
+              priority
+              sizes="(min-width: 768px) 320px, min(320px, 100vw)"
+              className="object-contain"
             />
-          </>
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: 'linear-gradient(160deg, var(--pc-surface), #090910)' }}
-          >
-            <Film size={96} style={{ color: 'var(--pc-t3)' }} />
-          </div>
-        )}
-
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(180deg, rgba(6,6,10,0.08), rgba(6,6,10,0.48) 42%, rgba(6,6,10,0.96))',
-          }}
-        />
-
-        <div
-          className="absolute left-5 top-5 rounded-full px-4 py-2 text-sm font-semibold backdrop-blur-md"
-          style={{ background: 'rgba(0,0,0,0.48)', color: 'var(--pc-t1)' }}
-        >
-          {counter}
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0 p-5 md:p-7">
-          <h2 className="mb-2 text-3xl font-semibold" style={{ color: 'var(--pc-t1)' }}>
-            {formatMovieName(title, movie.movieYear)}
-          </h2>
-          <p className="mb-6 text-sm uppercase tracking-[0.14em]" style={{ color: 'var(--pc-t2)' }}>
-            {movie.tmdbId ? `TMDB #${movie.tmdbId}` : labels.memoryKind.watched}
-          </p>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => onSave(movie.id, 'not_seen')}
-              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition disabled:opacity-60"
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
               style={{
-                background: 'rgba(20,20,28,0.86)',
-                border: '1px solid var(--pc-bd2)',
-                color: 'var(--pc-t1)',
+                background:
+                  'linear-gradient(160deg, var(--pc-surface-hover), var(--pc-surface-deep))',
               }}
             >
-              {savingUnseen ? <Loader2 className="animate-spin" size={18} /> : <X size={18} />}
-              {labels.notSeenMovie}
-            </button>
+              <Film size={88} style={{ color: 'var(--pc-t3)' }} />
+            </div>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col justify-between gap-6 py-1 md:py-2">
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: 'color-mix(in srgb, var(--pc-bg) 72%, transparent)',
+              border: '1px solid var(--pc-bd1)',
+            }}
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span
+                className="rounded-full px-3 py-1 text-xs font-semibold"
+                style={{
+                  background: 'var(--pc-gold-subtle)',
+                  border: '1px solid var(--pc-gold-bd)',
+                  color: 'var(--pc-gold-text)',
+                }}
+              >
+                {counter}
+              </span>
+              <span className="text-xs font-medium" style={{ color: 'var(--pc-t3)' }}>
+                {labels.memoryCardQuestion}
+              </span>
+            </div>
+            <div
+              className="h-2 overflow-hidden rounded-full"
+              style={{ background: 'var(--pc-ghost)' }}
+              aria-hidden="true"
+            >
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${progressPercent}%`, background: 'var(--pc-progress)' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2
+              className="text-3xl font-semibold leading-tight md:text-4xl"
+              style={{ color: 'var(--pc-t1)' }}
+            >
+              {formatMovieName(title, movie.movieYear)}
+            </h2>
+            <p
+              className="mt-3 text-sm uppercase tracking-[0.14em]"
+              style={{ color: 'var(--pc-t2)' }}
+            >
+              {movie.tmdbId ? `TMDB #${movie.tmdbId}` : labels.memoryKind.watched}
+            </p>
+          </div>
+
+          <div>
+            <p className="mb-3 text-sm font-semibold" style={{ color: 'var(--pc-t2)' }}>
+              {labels.memoryCardQuestion}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => onSave(movie.id, 'not_seen')}
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+                style={{
+                  background: 'var(--pc-surface-hover)',
+                  border: '1px solid var(--pc-bd3)',
+                  color: 'var(--pc-t1)',
+                }}
+              >
+                {savingUnseen ? <Loader2 className="animate-spin" size={18} /> : <X size={18} />}
+                {labels.notSeenMovie}
+              </button>
+              <button
+                type="button"
+                disabled={isSaving}
+                onClick={() => onSave(movie.id, 'watched')}
+                className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition hover:-translate-y-0.5 disabled:opacity-60 disabled:hover:translate-y-0"
+                style={{
+                  background: 'var(--pc-surface-hover)',
+                  border: '1px solid var(--pc-bd3)',
+                  color: 'var(--pc-t1)',
+                }}
+              >
+                {savingSeen ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
+                {labels.seenMovie}
+              </button>
+            </div>
             <button
               type="button"
               disabled={isSaving}
-              onClick={() => onSave(movie.id, 'watched')}
-              className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition disabled:opacity-60"
-              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+              onClick={() => onSkip(movie.id)}
+              className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold transition disabled:opacity-60"
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t2)',
+              }}
             >
-              {savingSeen ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
-              {labels.seenMovie}
+              {labels.skipMovie}
             </button>
           </div>
         </div>
@@ -748,6 +824,8 @@ function ManualSearchPanel({
   labels,
   locale,
   action,
+  isOpen,
+  onToggle,
   onQueryChange,
   onSearch,
   onSave,
@@ -757,6 +835,8 @@ function ManualSearchPanel({
   labels: ReturnType<typeof useLanguage>['t']['account'];
   locale: string;
   action: ActionState;
+  isOpen: boolean;
+  onToggle: () => void;
   onQueryChange: (value: string) => void;
   onSearch: (event: FormEvent<HTMLFormElement>) => void;
   onSave: (movieId: number, kind: UserMovieInteractionKind) => void;
@@ -765,84 +845,96 @@ function ManualSearchPanel({
 
   return (
     <section className="mx-auto mt-10 max-w-3xl">
-      <div className="mb-4 text-center">
-        <h2
-          className="uppercase"
-          style={{
-            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            letterSpacing: '0.12em',
-            color: 'var(--pc-gold-text)',
-          }}
-        >
-          {labels.manualSearchTitle}
-        </h2>
-        <p className="mt-2 text-sm" style={{ color: 'var(--pc-t2)' }}>
-          {labels.manualSearchBody}
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="mx-auto flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition"
+        style={{
+          background: 'var(--pc-gold-subtle)',
+          border: '1px solid var(--pc-gold-bd)',
+          color: 'var(--pc-gold-text)',
+        }}
+        aria-expanded={isOpen}
+      >
+        <Search size={16} />
+        {labels.manualSearchTitle}
+        <ChevronDown
+          size={16}
+          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        />
+      </button>
 
-      <form onSubmit={onSearch} className="flex flex-col gap-3 sm:flex-row">
-        <label htmlFor={searchInputId} className="sr-only">
-          {labels.searchMovieMemory}
-        </label>
-        <div
-          className="flex min-h-14 flex-1 items-center gap-3 rounded-2xl px-4"
-          style={{ background: 'var(--pc-bg)', border: '1px solid var(--pc-bd2)' }}
-        >
-          <Search size={20} style={{ color: 'var(--pc-t2)' }} />
-          <input
-            id={searchInputId}
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder={labels.catalogSearchPlaceholder}
-            className="min-w-0 flex-1 bg-transparent text-base outline-none"
-            style={{ color: 'var(--pc-t1)' }}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={query.trim().length < 2 || search.status === 'loading'}
-          className="inline-flex min-h-14 items-center justify-center rounded-2xl px-6 text-sm font-semibold disabled:opacity-60"
-          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
-        >
-          {search.status === 'loading' ? (
-            <Loader2 className="animate-spin" size={18} />
-          ) : (
-            labels.searchCatalog
-          )}
-        </button>
-      </form>
+      {isOpen ? (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mt-5">
+          <p className="mb-4 text-center text-sm" style={{ color: 'var(--pc-t2)' }}>
+            {labels.manualSearchBody}
+          </p>
 
-      <div className="mt-4 grid gap-3">
-        {search.status === 'error' ? (
-          <div
-            className="rounded-2xl p-4 text-sm"
-            style={{ background: `${palette.red}14`, color: 'var(--pc-t2)' }}
-          >
-            {labels.catalogSearchError}
-          </div>
-        ) : null}
-        {search.status === 'loaded' && search.movies.length === 0 ? (
-          <div
-            className="rounded-2xl p-4 text-sm"
-            style={{ background: 'var(--pc-surface)', color: 'var(--pc-t2)' }}
-          >
-            {labels.catalogSearchEmpty}
-          </div>
-        ) : null}
-        {search.status === 'loaded'
-          ? search.movies.map((movie) => (
-              <MovieSearchResultRow
-                key={movie.id}
-                movie={movie}
-                labels={labels}
-                locale={locale}
-                action={action}
-                onSave={onSave}
+          <form onSubmit={onSearch} className="flex flex-col gap-3 sm:flex-row">
+            <label htmlFor={searchInputId} className="sr-only">
+              {labels.searchMovieMemory}
+            </label>
+            <div
+              className="flex min-h-14 flex-1 items-center gap-3 rounded-2xl px-4"
+              style={{ background: 'var(--pc-bg)', border: '1px solid var(--pc-bd2)' }}
+            >
+              <Search size={20} style={{ color: 'var(--pc-t2)' }} />
+              <input
+                id={searchInputId}
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder={labels.catalogSearchPlaceholder}
+                className="min-w-0 flex-1 bg-transparent text-base outline-none"
+                style={{ color: 'var(--pc-t1)' }}
               />
-            ))
-          : null}
-      </div>
+            </div>
+            <button
+              type="submit"
+              disabled={query.trim().length < 2 || search.status === 'loading'}
+              className="inline-flex min-h-14 items-center justify-center rounded-2xl px-6 text-sm font-semibold disabled:opacity-60"
+              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+            >
+              {search.status === 'loading' ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                labels.searchCatalog
+              )}
+            </button>
+          </form>
+
+          <div className="mt-4 grid gap-3">
+            {search.status === 'error' ? (
+              <div
+                className="rounded-2xl p-4 text-sm"
+                style={{ background: `${palette.red}14`, color: 'var(--pc-t2)' }}
+              >
+                {labels.catalogSearchError}
+              </div>
+            ) : null}
+            {search.status === 'loaded' && search.movies.length === 0 ? (
+              <div
+                className="rounded-2xl p-4 text-sm"
+                style={{ background: 'var(--pc-surface)', color: 'var(--pc-t2)' }}
+              >
+                {labels.catalogSearchEmpty}
+              </div>
+            ) : null}
+            {search.status === 'loaded'
+              ? search.movies.map((movie) => (
+                  <MovieSearchResultRow
+                    key={movie.id}
+                    movie={movie}
+                    labels={labels}
+                    locale={locale}
+                    action={action}
+                    onSave={onSave}
+                  />
+                ))
+              : null}
+          </div>
+        </motion.div>
+      ) : null}
     </section>
   );
 }
