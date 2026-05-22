@@ -4,6 +4,7 @@ import { MovieService } from '@/integrations/tmdb';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
+import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
 import { LOCAL_VECTOR_MATCH_THRESHOLD, MAX_TOTAL_MOVIES } from './config';
 import { combineAllPeopleDataToString } from './embedding';
@@ -112,17 +113,20 @@ export async function getRecommendation(
     const moviesContext = similarMovies.map((movie) => movie.content).join('\n\n');
     const userPreferencesContext = combineAllPeopleDataToString(userPreferences);
 
-    const recommendation = await getOpenAIClient().chat.completions.create({
-      model: MODELS.RECOMMENDATION,
-      messages: [
-        { role: 'system', content: buildPrompt(locale) },
-        {
-          role: 'user',
-          content: `Available movie context:\n${moviesContext}\n\nViewer preferences:\n${userPreferencesContext}`,
-        },
-      ],
-      response_format: recommendationResponseFormat,
-    });
+    const recommendation = await getOpenAIClient().chat.completions.create(
+      {
+        model: MODELS.RECOMMENDATION,
+        messages: [
+          { role: 'system', content: buildPrompt(locale) },
+          {
+            role: 'user',
+            content: `Available movie context:\n${moviesContext}\n\nViewer preferences:\n${userPreferencesContext}`,
+          },
+        ],
+        response_format: recommendationResponseFormat,
+      },
+      openAIRequestOptions(OPENAI_TIMEOUTS_MS.recommendation),
+    );
     if (!recommendation.choices[0].message.content) {
       throw new Error('No output text from OpenAI.');
     }
@@ -193,14 +197,17 @@ Plot: ${movie.description}
 
 Remember: respond in ${language} only.`;
 
-          const descriptionResponse = await getOpenAIClient().chat.completions.create({
-            model: MODELS.MINI,
-            messages: [
-              { role: 'system', content: descriptionPrompt },
-              { role: 'user', content: movieContext },
-            ],
-            max_completion_tokens: 150,
-          });
+          const descriptionResponse = await getOpenAIClient().chat.completions.create(
+            {
+              model: MODELS.MINI,
+              messages: [
+                { role: 'system', content: descriptionPrompt },
+                { role: 'user', content: movieContext },
+              ],
+              max_completion_tokens: 150,
+            },
+            openAIRequestOptions(OPENAI_TIMEOUTS_MS.description),
+          );
 
           const aiDescription =
             descriptionResponse.choices[0]?.message?.content?.trim() || movie.description;

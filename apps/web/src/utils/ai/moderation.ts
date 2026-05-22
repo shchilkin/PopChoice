@@ -2,7 +2,9 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import z from 'zod';
 
 import { getOpenAIClient } from '@/clients/openaiClient';
+import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
+import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
 export type ModerationResult = { flagged: false } | { flagged: true; categories: string[] };
 
@@ -44,10 +46,13 @@ export function checkForPromptInjection(text: string): boolean {
  * @returns A ModerationResult with all flagged categories.
  */
 export async function moderateInput(input: string | string[]): Promise<ModerationResult> {
-  const response = await getOpenAIClient().moderations.create({
-    model: 'omni-moderation-latest',
-    input,
-  });
+  const response = await getOpenAIClient().moderations.create(
+    {
+      model: 'omni-moderation-latest',
+      input,
+    },
+    openAIRequestOptions(OPENAI_TIMEOUTS_MS.moderation),
+  );
 
   const flaggedCategories: string[] = [];
 
@@ -125,24 +130,27 @@ export async function judgeForMoviePlatform(
   const inputSummary = labeledInputs.map(({ field, value }) => `${field}: "${value}"`).join('\n');
 
   try {
-    const response = await getOpenAIClient().chat.completions.parse({
-      model: MODELS.MINI,
-      messages: [
-        { role: 'system', content: JUDGE_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: `Moderation flagged: ${flaggedCategories.join(', ')}\n\nUser inputs:\n${inputSummary}`,
-        },
-      ],
-      response_format: zodResponseFormat(judgeResponseSchema, 'judgeResult'),
-      max_completion_tokens: 50,
-    });
+    const response = await getOpenAIClient().chat.completions.parse(
+      {
+        model: MODELS.MINI,
+        messages: [
+          { role: 'system', content: JUDGE_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: `Moderation flagged: ${flaggedCategories.join(', ')}\n\nUser inputs:\n${inputSummary}`,
+          },
+        ],
+        response_format: zodResponseFormat(judgeResponseSchema, 'judgeResult'),
+        max_completion_tokens: 50,
+      },
+      openAIRequestOptions(OPENAI_TIMEOUTS_MS.judge),
+    );
 
     const parsed = response.choices[0].message.parsed;
     return { suitable: parsed?.suitable === true };
   } catch (err) {
     // Fail-safe: if the judge call fails for any reason (e.g. invalid model name), block the request.
-    console.error('[judgeForMoviePlatform] judge call failed, blocking as fail-safe:', err);
+    logger.error({ err }, 'judgeForMoviePlatform: judge call failed, blocking as fail-safe');
     return { suitable: false };
   }
 }

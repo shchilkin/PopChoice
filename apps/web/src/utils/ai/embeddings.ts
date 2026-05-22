@@ -1,4 +1,5 @@
 import { getOpenAIClient } from '@/clients/openaiClient';
+import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
 import type { ChunkWithEmbedding, EmbeddableChunk } from '../types';
 
@@ -17,10 +18,13 @@ export async function createEmbeddingsForChunks<T extends EmbeddableChunk>(
 ): Promise<ChunkWithEmbedding<T>[]> {
   return Promise.all(
     chunks.map(async (chunk) => {
-      const embeddingResponse = await getOpenAIClient().embeddings.create({
-        model,
-        input: chunk.pageContent,
-      });
+      const embeddingResponse = await getOpenAIClient().embeddings.create(
+        {
+          model,
+          input: chunk.pageContent,
+        },
+        openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+      );
 
       return {
         ...chunk,

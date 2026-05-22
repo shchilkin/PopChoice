@@ -3,7 +3,13 @@ import z from 'zod';
 
 import { runMorePicksPipeline } from '@/features/recommendation/morePicksPipeline';
 import { parseLocaleFromRequest } from '@/lib/locale';
+import { isOpenAITimeoutError } from '@/lib/openaiTimeout';
 import { applyRateLimit } from '@/lib/rateLimit';
+import {
+  RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES,
+  readJsonBodyWithLimit,
+  requestBodyErrorResponse,
+} from '@/lib/requestBody';
 import { withAuth } from '@/lib/withAuth';
 
 const personFormDataSchema = z.object({
@@ -28,7 +34,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
   const locale = parseLocaleFromRequest(req);
 
   try {
-    const body = await req.json();
+    const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
     const { quizData, page, excludeIds } = requestBodySchema.parse(body);
 
     if (!process.env.TMDB_API_KEY) {
@@ -38,6 +44,9 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const movies = await runMorePicksPipeline(quizData, excludeIds, page, locale);
     return NextResponse.json({ movies });
   } catch (error) {
+    const bodyErrorResponse = requestBodyErrorResponse(error);
+    if (bodyErrorResponse) return bodyErrorResponse;
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Invalid request', details: error.issues },
@@ -45,9 +54,10 @@ async function postHandler(req: NextRequest): Promise<Response> {
       );
     }
     const isTimeout =
-      error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
+      (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) ||
+      isOpenAITimeoutError(error);
     if (isTimeout) {
-      return NextResponse.json({ error: 'TMDB request timed out' }, { status: 504 });
+      return NextResponse.json({ error: 'Upstream request timed out' }, { status: 504 });
     }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

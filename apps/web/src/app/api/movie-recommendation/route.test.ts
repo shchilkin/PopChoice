@@ -80,6 +80,7 @@ vi.mock('@/integrations/tmdb', () => ({
 }));
 
 import { resetOpenAIClient, setOpenAIClient, type OpenAIClientLike } from '@/clients/openaiClient';
+import { RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES } from '@/lib/requestBody';
 
 import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } from './helpers';
 import { POST } from './route';
@@ -113,10 +114,10 @@ const validBody = {
   tonePreference: 'serious',
 };
 
-function makeRequest(body: unknown = validBody) {
+function makeRequest(body: unknown = validBody, headers: Record<string, string> = {}) {
   return new NextRequest('http://localhost/api/movie-recommendation', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en' },
+    headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -199,6 +200,35 @@ describe('POST /api/movie-recommendation — moderation', () => {
 
     expect(response.status).toBe(400);
     expect(data).toHaveProperty('error');
+  });
+
+  it('returns 413 before moderation or OpenAI work when the request body is too large', async () => {
+    const response = await POST(
+      makeRequest({
+        ...validBody,
+        extraPayload: 'x'.repeat(RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES),
+      }),
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(413);
+    expect(data).toHaveProperty('error', 'Request body too large');
+    expect(mockModerateInput).not.toHaveBeenCalled();
+    expect(mockEmbeddingsCreate).not.toHaveBeenCalled();
+    expect(mockChatCompletionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns 504 when an OpenAI timeout reaches the route', async () => {
+    const timeoutError = Object.assign(new Error('Request timed out.'), {
+      name: 'APIConnectionTimeoutError',
+    });
+    mockEmbeddingsCreate.mockRejectedValueOnce(timeoutError);
+
+    const response = await POST(makeRequest());
+    const data = await response.json();
+
+    expect(response.status).toBe(504);
+    expect(data).toHaveProperty('error', 'OpenAI request timed out');
   });
 });
 

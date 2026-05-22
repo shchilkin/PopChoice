@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { OPENAI_TIMEOUTS_MS } from '@/lib/openaiTimeout';
 
 const mockModerationsCreate = vi.fn();
 const mockChatCompletionsParse = vi.fn();
@@ -18,6 +20,10 @@ vi.mock('@/clients/openaiClient', () => ({
 
 const { moderateInput, checkForPromptInjection, judgeForMoviePlatform, ALWAYS_BLOCK_CATEGORIES } =
   await import('./moderation');
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 function makeModerationResponse(flagged: boolean, categories: Record<string, boolean> = {}) {
   return {
@@ -60,10 +66,16 @@ describe('moderateInput', () => {
     const result = await moderateInput('The Dark Knight');
 
     expect(result).toEqual({ flagged: false });
-    expect(mockModerationsCreate).toHaveBeenCalledWith({
-      model: 'omni-moderation-latest',
-      input: 'The Dark Knight',
-    });
+    expect(mockModerationsCreate).toHaveBeenCalledWith(
+      {
+        model: 'omni-moderation-latest',
+        input: 'The Dark Knight',
+      },
+      expect.objectContaining({
+        signal: expect.any(Object),
+        timeout: OPENAI_TIMEOUTS_MS.moderation,
+      }),
+    );
   });
 
   it('returns flagged: true with ALL categories including violence (no filtering)', async () => {
@@ -101,10 +113,16 @@ describe('moderateInput', () => {
     const result = await moderateInput(['action', 'comedy', 'light']);
 
     expect(result).toEqual({ flagged: false });
-    expect(mockModerationsCreate).toHaveBeenCalledWith({
-      model: 'omni-moderation-latest',
-      input: ['action', 'comedy', 'light'],
-    });
+    expect(mockModerationsCreate).toHaveBeenCalledWith(
+      {
+        model: 'omni-moderation-latest',
+        input: ['action', 'comedy', 'light'],
+      },
+      expect.objectContaining({
+        signal: expect.any(Object),
+        timeout: OPENAI_TIMEOUTS_MS.moderation,
+      }),
+    );
   });
 
   it('deduplicates flagged categories across multiple results', async () => {
@@ -262,7 +280,8 @@ describe('judgeForMoviePlatform', () => {
 
     await judgeForMoviePlatform(killBillInputs, ['violence']);
 
-    expect(mockChatCompletionsParse).toHaveBeenCalledWith(
+    const [payload, options] = mockChatCompletionsParse.mock.calls[0];
+    expect(payload).toEqual(
       expect.objectContaining({
         model: 'gpt-5.4-mini',
         max_completion_tokens: 50,
@@ -274,11 +293,18 @@ describe('judgeForMoviePlatform', () => {
             role: 'user',
             content: expect.stringContaining('Kill Bill'),
           }),
-          expect.objectContaining({
-            role: 'user',
-            content: expect.stringContaining('violence'),
-          }),
         ]),
+      }),
+    );
+    expect(payload.messages.find((message: { role: string }) => message.role === 'user')).toEqual(
+      expect.objectContaining({
+        content: expect.stringContaining('violence'),
+      }),
+    );
+    expect(options).toEqual(
+      expect.objectContaining({
+        signal: expect.any(Object),
+        timeout: OPENAI_TIMEOUTS_MS.judge,
       }),
     );
   });
