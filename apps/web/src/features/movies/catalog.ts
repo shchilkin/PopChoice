@@ -1,5 +1,7 @@
 import { getDbClient } from '@/clients/dbClient';
 
+import type { QueryFilter, QuerySelect } from '@/clients/dbClient';
+
 export interface Movie {
   id: number;
   name: string;
@@ -17,11 +19,61 @@ export interface MoviesResponse {
   totalPages: number;
 }
 
-export async function getMoviesPage(page: number, pageSize: number): Promise<MoviesResponse> {
+export interface MoviesPageFilters {
+  query?: string;
+  yearFrom?: number;
+  yearTo?: number;
+}
+
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+function normalizeQuery(query: string | undefined): string | undefined {
+  const trimmed = query?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function applyMovieFilters<T extends Movie>(
+  select: QuerySelect<T>,
+  filters: MoviesPageFilters,
+): QuerySelect<T> | QueryFilter<T> {
+  let query: QuerySelect<T> | QueryFilter<T> = select;
+  const titleQuery = normalizeQuery(filters.query);
+
+  if (titleQuery) {
+    query = query.ilike('name', `%${escapeLikePattern(titleQuery)}%`);
+  }
+  if (typeof filters.yearFrom === 'number') {
+    query = query.gte('year', filters.yearFrom);
+  }
+  if (typeof filters.yearTo === 'number') {
+    query = query.lte('year', filters.yearTo);
+  }
+
+  return query;
+}
+
+function filterMockMovies(movies: Movie[], filters: MoviesPageFilters): Movie[] {
+  const titleQuery = normalizeQuery(filters.query)?.toLocaleLowerCase();
+  return movies.filter((movie) => {
+    const matchesTitle = titleQuery ? movie.name.toLocaleLowerCase().includes(titleQuery) : true;
+    const matchesYearFrom =
+      typeof filters.yearFrom === 'number' ? movie.year >= filters.yearFrom : true;
+    const matchesYearTo = typeof filters.yearTo === 'number' ? movie.year <= filters.yearTo : true;
+    return matchesTitle && matchesYearFrom && matchesYearTo;
+  });
+}
+
+export async function getMoviesPage(
+  page: number,
+  pageSize: number,
+  filters: MoviesPageFilters = {},
+): Promise<MoviesResponse> {
   const db = getDbClient();
 
   if (!db.isConfigured()) {
-    return buildMoviesResponse(generateMockMovies(), page, pageSize);
+    return buildMoviesResponse(filterMockMovies(generateMockMovies(), filters), page, pageSize);
   }
 
   const offset = (page - 1) * pageSize;
@@ -29,9 +81,12 @@ export async function getMoviesPage(page: number, pageSize: number): Promise<Mov
     data: movies,
     error,
     count,
-  } = await db
-    .from<Movie>('movies')
-    .select('id, name, age_rating, duration, score_rating, year', { count: 'exact' })
+  } = await applyMovieFilters(
+    db
+      .from<Movie>('movies')
+      .select('id, name, age_rating, duration, score_rating, year', { count: 'exact' }),
+    filters,
+  )
     .range(offset, offset + pageSize - 1)
     .order('id', { ascending: true });
 

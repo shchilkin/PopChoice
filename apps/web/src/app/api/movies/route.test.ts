@@ -112,4 +112,37 @@ describe('Movies API Route', () => {
     expect(data.movies.length).toBeGreaterThan(0);
     expect(data.movies.length).toBeLessThanOrEqual(50);
   });
+
+  it('should filter mock movies by title and year when database is not configured', async () => {
+    vi.mocked(getDbClient).mockReturnValueOnce({
+      isConfigured: vi.fn(() => false),
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/movies?query=godfather&yearFrom=1970&yearTo=1975',
+    );
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.totalCount).toBeGreaterThan(0);
+    expect(
+      data.movies.every((movie: { name: string; year: number }) => {
+        return (
+          movie.name.toLowerCase().includes('godfather') && movie.year >= 1970 && movie.year <= 1975
+        );
+      }),
+    ).toBe(true);
+  });
+
+  it('should return error for invalid year filters', async () => {
+    const request = new NextRequest('http://localhost:3000/api/movies?yearFrom=2020&yearTo=1990');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data).toHaveProperty('error');
+  });
 });

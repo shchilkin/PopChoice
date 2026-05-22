@@ -60,6 +60,7 @@ The main remaining risks are:
 - [x] Account movie-memory API orchestration now lives behind a feature-owned service module instead of the route handler.
 - [x] Movie-memory candidate cards keep session state locally, submit completed choices in one batched request, and flush pending choices on page hide or unmount.
 - [x] The account movie-memory view supports large histories with paginated loading, virtualized rendering, total counts, and poster-aware fallbacks.
+- [x] The available-movies catalog now supports exact-title escape-hatch search with optional year-range filters across the API and page UI.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
 - [x] PR CI has a consolidated `services-ci` pass for service workspaces and CodeQL runs for Actions and JavaScript/TypeScript.
 
@@ -195,7 +196,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Make the reason for reused titles transparent when feedback history intentionally allows a repeat.
 - Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
 - Continue polishing the dedicated movie-memory experience around exact-title search, empty states, and large-history review now that deck state and batched submission are in place.
-- Keep manual movie search as a secondary escape hatch for exact titles, and reuse the same search primitives for the available-movies/search work.
+- Keep manual movie search as a secondary escape hatch for exact titles. Movie memory and available-movies now both expose catalog search; extract a shared catalog-search component if another surface needs the same controls.
 - Treat posters and localized metadata as first-class data quality requirements for movie memory. Candidate cards should degrade gracefully, but missing poster coverage should be visible in catalog-health reporting.
 - Add a stable way to avoid recommending movies the user just marked as watched, not-interested, or wrong-mood, while still allowing an intentional "rewatch" recommendation mode later.
 
