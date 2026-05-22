@@ -152,6 +152,9 @@ function buildSelectSQL(state: QueryState): {
       }
       const placeholder = `$${idx++}`;
       values.push(w.value);
+      if (w.op === 'ILIKE') {
+        return `"${w.column}" ILIKE ${placeholder} ESCAPE '\\'`;
+      }
       return `"${w.column}" ${w.op} ${placeholder}`;
     });
     sql += ` WHERE ${clauses.join(' AND ')}`;
@@ -188,6 +191,9 @@ function buildSelectSQL(state: QueryState): {
         }
         const placeholder = `$${cIdx++}`;
         cValues.push(w.value);
+        if (w.op === 'ILIKE') {
+          return `"${w.column}" ILIKE ${placeholder} ESCAPE '\\'`;
+        }
         return `"${w.column}" ${w.op} ${placeholder}`;
       });
       countSQL += ` WHERE ${clauses.join(' AND ')}`;
@@ -289,6 +295,21 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
       state.wheres.push({ column, op: '=', value });
       return createFilter<T>(pool, state);
     },
+    ilike: (column: string, value: string) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: 'ILIKE', value });
+      return createFilter<T>(pool, state);
+    },
+    gte: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: '>=', value });
+      return createFilter<T>(pool, state);
+    },
+    lte: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: '<=', value });
+      return createFilter<T>(pool, state);
+    },
     neq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '!=', value });
@@ -322,6 +343,21 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
     eq: (column: string, value: unknown) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: '=', value });
+      return createFilter<T>(pool, state);
+    },
+    ilike: (column: string, value: string) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: 'ILIKE', value });
+      return createFilter<T>(pool, state);
+    },
+    gte: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: '>=', value });
+      return createFilter<T>(pool, state);
+    },
+    lte: (column: string, value: unknown) => {
+      assertSafeIdentifier(column, 'column name');
+      state.wheres.push({ column, op: '<=', value });
       return createFilter<T>(pool, state);
     },
     neq: (column: string, value: unknown) => {

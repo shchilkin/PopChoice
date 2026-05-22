@@ -101,6 +101,25 @@ describe('pgClient', () => {
     );
   });
 
+  it('from().select() supports ILIKE and range filters', async () => {
+    mockQuery.mockResolvedValue({ rows: [] });
+
+    const client = createPgDbClient();
+    await client
+      .from('movies')
+      .select('id, name')
+      .ilike('name', '%godfather%')
+      .gte('year', 1970)
+      .lte('year', 1975)
+      .range(0, 49)
+      .order('id', { ascending: true });
+
+    expect(mockQuery).toHaveBeenCalledWith(
+      `SELECT "id", "name" FROM "movies" WHERE "name" ILIKE $1 ESCAPE '\\' AND "year" >= $2 AND "year" <= $3 ORDER BY "id" ASC LIMIT 50 OFFSET 0`,
+      ['%godfather%', 1970, 1975],
+    );
+  });
+
   it('from().select().in() adds a WHERE "col" = ANY($1) clause', async () => {
     mockQuery.mockResolvedValue({ rows: [{ name: 'Casablanca', year: 1942 }] });
 

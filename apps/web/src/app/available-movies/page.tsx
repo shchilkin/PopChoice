@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { MoviesTable, MoviesTableSkeleton } from '@/components';
@@ -8,6 +8,37 @@ import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 
 import type { Movie, MoviesResponse } from '@/features/movies/catalog';
+import type { FormEvent } from 'react';
+
+interface MovieFilters {
+  query: string;
+  yearFrom: string;
+  yearTo: string;
+}
+
+const emptyFilters: MovieFilters = { query: '', yearFrom: '', yearTo: '' };
+
+function buildCacheKey(page: number, filters: MovieFilters): string {
+  return JSON.stringify([
+    page,
+    filters.query.trim(),
+    filters.yearFrom.trim(),
+    filters.yearTo.trim(),
+  ]);
+}
+
+function buildMoviesUrl(page: number, pageSize: number, filters: MovieFilters): string {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  const query = filters.query.trim();
+  const yearFrom = filters.yearFrom.trim();
+  const yearTo = filters.yearTo.trim();
+
+  if (query) params.set('query', query);
+  if (yearFrom) params.set('yearFrom', yearFrom);
+  if (yearTo) params.set('yearTo', yearTo);
+
+  return `/api/movies?${params.toString()}`;
+}
 
 export default function AvailableMoviesPage() {
   const { t } = useLanguage();
@@ -17,18 +48,21 @@ export default function AvailableMoviesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [draftFilters, setDraftFilters] = useState<MovieFilters>(emptyFilters);
+  const [appliedFilters, setAppliedFilters] = useState<MovieFilters>(emptyFilters);
   const pageSize = 50;
 
-  // Client-side cache: page number → response data. Avoids redundant fetches
+  // Client-side cache: page/filter key → response data. Avoids redundant fetches
   // when navigating back to a previously loaded page.
-  const cache = useRef<Map<number, MoviesResponse>>(new Map());
+  const cache = useRef<Map<string, MoviesResponse>>(new Map());
   // AbortController for the in-flight fetch – cancelled when a newer page is requested.
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchMovies = useCallback(
-    async (page: number) => {
+    async (page: number, filters: MovieFilters) => {
+      const cacheKey = buildCacheKey(page, filters);
       // Serve from cache when available.
-      const cached = cache.current.get(page);
+      const cached = cache.current.get(cacheKey);
       if (cached) {
         // Cancel any in-flight request before applying cached state.
         abortRef.current?.abort();
@@ -51,7 +85,7 @@ export default function AvailableMoviesPage() {
       setError(null);
 
       try {
-        const response = await fetch(`/api/movies?page=${page}&pageSize=${pageSize}`, {
+        const response = await fetch(buildMoviesUrl(page, pageSize, filters), {
           signal: controller.signal,
           headers: { 'X-CSRF-Token': getCsrfToken() },
         });
@@ -62,7 +96,7 @@ export default function AvailableMoviesPage() {
 
         const data: MoviesResponse = await response.json();
         if (controller.signal.aborted) return;
-        cache.current.set(page, data);
+        cache.current.set(cacheKey, data);
         setMovies(data.movies);
         setTotalPages(data.totalPages);
         setTotalCount(data.totalCount);
@@ -82,14 +116,30 @@ export default function AvailableMoviesPage() {
   );
 
   useEffect(() => {
-    fetchMovies(currentPage);
+    fetchMovies(currentPage, appliedFilters);
     // Abort any in-flight request when the effect re-runs (new page) or the
     // component unmounts, so stale responses can't call setState.
     return () => {
       abortRef.current?.abort();
       abortRef.current = null;
     };
-  }, [fetchMovies, currentPage]);
+  }, [appliedFilters, fetchMovies, currentPage]);
+
+  const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAppliedFilters({
+      query: draftFilters.query.trim(),
+      yearFrom: draftFilters.yearFrom.trim(),
+      yearTo: draftFilters.yearTo.trim(),
+    });
+    setCurrentPage(1);
+  };
+
+  const handleClearFilters = () => {
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    setCurrentPage(1);
+  };
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -129,7 +179,7 @@ export default function AvailableMoviesPage() {
           {error}
         </p>
         <button
-          onClick={() => fetchMovies(currentPage)}
+          onClick={() => fetchMovies(currentPage, appliedFilters)}
           className="px-5 py-2.5 rounded-xl text-sm font-semibold"
           style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
         >
@@ -162,6 +212,105 @@ export default function AvailableMoviesPage() {
               : t.moviesPage.noMoviesFound)}
         </p>
       </div>
+
+      <form
+        onSubmit={handleFilterSubmit}
+        className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_7rem_7rem_auto_auto] md:items-end"
+      >
+        <label
+          className="flex flex-col gap-1.5 text-xs font-semibold"
+          style={{ color: 'var(--pc-t3)' }}
+        >
+          {t.moviesPage.searchLabel}
+          <span
+            className="flex items-center gap-2 rounded-lg px-3 py-2"
+            style={{
+              background: 'var(--pc-surface)',
+              border: '1px solid var(--pc-bd2)',
+              color: 'var(--pc-t2)',
+            }}
+          >
+            <Search size={16} aria-hidden="true" />
+            <input
+              value={draftFilters.query}
+              onChange={(event) =>
+                setDraftFilters((current) => ({ ...current, query: event.target.value }))
+              }
+              maxLength={80}
+              placeholder={t.moviesPage.searchPlaceholder}
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-70"
+              style={{ color: 'var(--pc-t1)' }}
+            />
+          </span>
+        </label>
+
+        <label
+          className="flex flex-col gap-1.5 text-xs font-semibold"
+          style={{ color: 'var(--pc-t3)' }}
+        >
+          {t.moviesPage.yearFrom}
+          <input
+            value={draftFilters.yearFrom}
+            onChange={(event) =>
+              setDraftFilters((current) => ({ ...current, yearFrom: event.target.value }))
+            }
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={4}
+            className="h-10 rounded-lg px-3 text-sm outline-none"
+            style={{
+              background: 'var(--pc-surface)',
+              border: '1px solid var(--pc-bd2)',
+              color: 'var(--pc-t1)',
+            }}
+          />
+        </label>
+
+        <label
+          className="flex flex-col gap-1.5 text-xs font-semibold"
+          style={{ color: 'var(--pc-t3)' }}
+        >
+          {t.moviesPage.yearTo}
+          <input
+            value={draftFilters.yearTo}
+            onChange={(event) =>
+              setDraftFilters((current) => ({ ...current, yearTo: event.target.value }))
+            }
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={4}
+            className="h-10 rounded-lg px-3 text-sm outline-none"
+            style={{
+              background: 'var(--pc-surface)',
+              border: '1px solid var(--pc-bd2)',
+              color: 'var(--pc-t1)',
+            }}
+          />
+        </label>
+
+        <button
+          type="submit"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold"
+          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+        >
+          <Search size={16} aria-hidden="true" />
+          {t.moviesPage.applyFilters}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleClearFilters}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold"
+          style={{
+            background: 'var(--pc-surface)',
+            border: '1px solid var(--pc-bd2)',
+            color: 'var(--pc-t2)',
+          }}
+        >
+          <X size={16} aria-hidden="true" />
+          {t.moviesPage.clearFilters}
+        </button>
+      </form>
 
       {/* Table / Cards */}
       {loading ? <MoviesTableSkeleton /> : <MoviesTable movies={movies} />}
