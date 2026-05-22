@@ -57,6 +57,7 @@ The main remaining risks are:
 - [x] New users are signed in automatically after registration when the session secret is configured.
 - [x] Password reset request and confirmation routes exist, with Resend delivery in production and non-production reset URL exposure for local testing.
 - [x] A dedicated `/account/movie-memory` experience exists with candidate cards and catalog search backed by `/api/account/movie-memory`.
+- [x] Account movie-memory API orchestration now lives behind a feature-owned service module instead of the route handler.
 - [x] Movie-memory candidate cards keep session state locally, submit completed choices in one batched request, and flush pending choices on page hide or unmount.
 - [x] The account movie-memory view supports large histories with paginated loading, virtualized rendering, total counts, and poster-aware fallbacks.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
@@ -67,7 +68,6 @@ The main remaining risks are:
 - The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
 - The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
-- Account movie-memory behavior has grown enough that a feature-owned orchestration module would make future changes easier to review and test.
 - Account settings/profile/provider identity remain intentionally thin.
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
@@ -114,7 +114,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Centralize configuration and constants to reduce manual synchronization.
 - Prefer extracting recommendation flows out of `src/app/api` into clearer domain-owned modules.
 - Refactor the quiz submission lifecycle so recommendation creation is modeled explicitly instead of coordinated through route-local `useEffect`, refs, and navigation timing.
-- Move growing account/movie-memory behavior behind a feature-owned module once the route logic expands beyond simple session, validation, and repository calls.
+- Keep account/movie-memory orchestration behind feature-owned modules as the API surface grows beyond the current service extraction.
 
 ### Phase 3: Extract intentional packages from the existing layout
 
@@ -228,7 +228,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 ## Priority Items for the Next 30 Days
 
 1. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-2. [ ] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
+2. [x] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
 3. [x] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
 4. [x] Use `liked` memory as a positive recommendation signal, not only stored account history.
 5. [x] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
