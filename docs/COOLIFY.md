@@ -245,17 +245,20 @@ For a simple continuous deployment path:
 1. Set `IMAGE_TAG=development` on the Coolify Compose resource.
 2. Add the repository secret `COOLIFY_DEPLOY_WEBHOOK` with the production
    Coolify deploy webhook URL.
-3. Merge to `development`.
+3. Add the repository secret `COOLIFY_TOKEN` with a Coolify API token that has
+   deploy permission.
+4. Merge to `development`.
 
 GitHub Actions builds and publishes every PopChoice runtime image first. Only
 after the full image matrix succeeds does the workflow call the deploy webhook.
-Coolify then pulls the already-built `development` images and restarts the
-stack.
+The webhook call is an authenticated `GET` request using
+`Authorization: Bearer ${COOLIFY_TOKEN}`. Coolify then pulls the already-built
+`development` images and restarts the stack.
 
 To smoke-test the same path without a new merge, manually run the
 `Container Images` workflow on the `development` branch. Manual runs rebuild and
-republish the same image set, then call the Coolify deploy webhook after the
-matrix succeeds.
+republish the same image set, update the `development` image tag, then call the
+Coolify deploy webhook after the matrix succeeds.
 
 For stricter release promotion, keep automatic deployment disabled, copy the
 `sha-<12-char-github-sha>` tag from the workflow run, set `IMAGE_TAG` to that

@@ -114,11 +114,17 @@ that exact release bundle. Every PopChoice service must use the same
 `IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, and service images from
 different commits is not a supported deployment shape.
 
-Set the repository secret `COOLIFY_DEPLOY_WEBHOOK` to enable redeploys after
-pushes to `development`. The same deploy step also runs for manual
-`workflow_dispatch` runs on `development`, which is useful for smoke-testing the
-image build and Coolify webhook path without merging another code change. When
-the secret is absent, images are still published, but deployment remains manual.
+Set the repository secrets `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` to
+enable redeploys after pushes to `development`. `COOLIFY_TOKEN` must be a
+Coolify API token with deploy permission because the deploy webhook is
+authenticated with `Authorization: Bearer <token>`. The same deploy step also
+runs for manual `workflow_dispatch` runs on `development`, which is useful for
+smoke-testing the image build and Coolify webhook path without merging another
+code change. Manual `development` runs publish the `development` image tag
+before the webhook is called, so Coolify pulls the images from that workflow
+run. When the webhook secret is absent, images are still published, but
+deployment remains manual. When the webhook is present but the token is missing,
+the deploy job fails to make the misconfiguration visible.
 
 For provenance in `/api/build`, pass these non-secret runtime variables to the
 deployed web container when using a prebuilt image:

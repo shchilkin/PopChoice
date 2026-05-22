@@ -73,7 +73,7 @@ jobs:
             if [[ -n "${PR_NUMBER}" ]]; then
               echo "${image_repository}:pr-${PR_NUMBER}"
             fi
-            if [[ "${GITHUB_REF_NAME}" == "development" && "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            if [[ "${GITHUB_REF_NAME}" == "development" && ( "${GITHUB_EVENT_NAME}" == "push" || "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ) ]]; then
               echo "${image_repository}:development"
             fi
             echo "EOF"
@@ -171,17 +171,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
     steps:
-      - name: Trigger Coolify deploy webhook
-        if: env.COOLIFY_DEPLOY_WEBHOOK != ''
-        env:
-          COMMIT_SHA: ${{ github.sha }}
-          REF_NAME: ${{ github.ref_name }}
+      - name: Validate Coolify deploy secrets
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN == ''
         run: |
-          short_sha="${COMMIT_SHA::12}"
-          curl -fsS -X POST "${COOLIFY_DEPLOY_WEBHOOK}" \
-            -H "Content-Type: application/json" \
-            --data "{\"ref\":\"${REF_NAME}\",\"sha\":\"${COMMIT_SHA}\",\"imageTag\":\"sha-${short_sha}\"}"
+          echo "COOLIFY_DEPLOY_WEBHOOK is configured but COOLIFY_TOKEN is missing."
+          echo "Create a Coolify API token with deploy permission and save it as the COOLIFY_TOKEN repository secret."
+          exit 1
+
+      - name: Trigger Coolify deploy webhook
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        run: |
+          curl -fsS --request GET "${COOLIFY_DEPLOY_WEBHOOK}" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}"
 
       - name: Skip deploy when webhook is not configured
         if: env.COOLIFY_DEPLOY_WEBHOOK == ''
