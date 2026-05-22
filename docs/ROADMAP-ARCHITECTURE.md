@@ -51,6 +51,7 @@ The main remaining risks are:
 - [x] Recommendation feedback is captured from the results page and stored separately from generated recommendation payloads.
 - [x] Signed-in feedback is persisted into `user_movie_interactions` with upsert semantics for `watched`, `liked`, `not_interested`, and `wrong_mood`.
 - [x] Feedback-derived recommendation memory now filters watched/not-interested movies and down-ranks wrong-mood movies for signed-in users.
+- [x] Liked movie memory now applies a conservative positive ranking boost for matching signed-in recommendation candidates.
 - [x] Account recommendation history is deduplicated by movie identity so repeated recommendation attempts do not appear as separate discoveries.
 - [x] Result pages expose a share action that creates/copies a stable recommendation URL.
 - [x] New users are signed in automatically after registration when the session secret is configured.
@@ -67,7 +68,6 @@ The main remaining risks are:
 - The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
 - Account movie-memory behavior has grown enough that a feature-owned orchestration module would make future changes easier to review and test.
-- `liked` feedback is stored as durable memory, but ranking still primarily uses negative memory for exclusion/down-ranking rather than treating likes as a positive taste signal.
 - Account settings/profile/provider identity remain intentionally thin.
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
@@ -190,7 +190,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 ### Product Feedback Track
 
 - Expand the explicit movie-memory experience so watched/not-seen setup feels complete for users with large histories.
-- Use `liked` feedback as a positive taste signal in ranking. The interaction is stored today, but current ranking primarily uses negative memory for exclusion/down-ranking.
+- Expand `liked` feedback beyond exact candidate boosts into a richer positive taste signal once the canonical signal model exists.
 - Consider a separate "worth rewatching" angle for watched movies so strong matches can still appear intentionally, with copy that frames them as rewatch candidates instead of new discoveries.
 - Make the reason for reused titles transparent when feedback history intentionally allows a repeat.
 - Manual watched-list management, rewatch mode, richer preference editing, and gamified taste history can follow after the core memory behavior is stable.
@@ -230,7 +230,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 1. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
 2. [ ] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
 3. [x] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
-4. [ ] Use `liked` memory as a positive recommendation signal, not only stored account history.
+4. [x] Use `liked` memory as a positive recommendation signal, not only stored account history.
 5. [x] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
 6. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
 7. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
@@ -250,7 +250,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Recommendation pipeline ownership is no longer tied to `src/app/api/movie-recommendation`.
 - [x] Queueing, DB writes, and response mapping are separated cleanly from recommendation decision logic.
 - [x] Similarity thresholds and related calibration docs point to the same source of truth.
-- [ ] Positive user memory (`liked`) influences ranking.
+- [x] Positive user memory (`liked`) influences ranking.
 - [ ] Quiz submit handoff no longer depends on route-local reset timing.
 
 ### Documentation Alignment

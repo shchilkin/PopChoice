@@ -153,6 +153,50 @@ describe('candidateFilters', () => {
     expect(result.find((candidate) => candidate.name === 'Arrival')?.similarity).toBeCloseTo(0.83);
   });
 
+  it('boosts liked memory enough to affect local recommendation ordering', () => {
+    const signals = getFeedbackCandidateSignals([
+      { kind: 'liked', movieName: 'Past Lives', movieYear: 2023 },
+    ]);
+    const steadyMatch = { ...movie('After Yang'), similarity: 0.8 };
+    const likedMatch = { ...movie('Past Lives'), similarity: 0.77 };
+
+    const result = applyFeedbackToLocalMovies([steadyMatch, likedMatch], signals);
+
+    expect(result.map((candidate) => candidate.name)).toEqual(['Past Lives', 'After Yang']);
+    expect(result[0]?.similarity).toBeCloseTo(0.81);
+  });
+
+  it('keeps watched exclusions ahead of liked boosts so watched movies do not repeat', () => {
+    const signals = getFeedbackCandidateSignals([
+      { kind: 'liked', movieName: 'Past Lives', movieYear: 2023 },
+      { kind: 'watched', movieName: 'Past Lives', movieYear: 2023 },
+    ]);
+
+    expect(
+      applyFeedbackToLocalMovies(
+        [
+          { ...movie('Past Lives'), similarity: 0.77 },
+          { ...movie('After Yang'), similarity: 0.76 },
+        ],
+        signals,
+      ).map((candidate) => candidate.name),
+    ).toEqual(['After Yang']);
+  });
+
+  it('keeps wrong-mood down-ranking intact when a title also has liked memory', () => {
+    const signals = getFeedbackCandidateSignals([
+      { kind: 'liked', movieName: 'Arrival', movieYear: 2016 },
+      { kind: 'wrong_mood', movieName: 'Arrival', movieYear: 2016 },
+    ]);
+    const arrival = { ...movie('Arrival'), similarity: 0.91 };
+    const afterYang = { ...movie('After Yang'), similarity: 0.84 };
+
+    const result = applyFeedbackToLocalMovies([arrival, afterYang], signals);
+
+    expect(result.map((candidate) => candidate.name)).toEqual(['After Yang', 'Arrival']);
+    expect(result.find((candidate) => candidate.name === 'Arrival')?.similarity).toBeCloseTo(0.83);
+  });
+
   it('filters TMDB candidates by durable movie identity when available', () => {
     const signals = getFeedbackCandidateSignals([
       {
