@@ -78,6 +78,22 @@ describe('Movies API Route', () => {
     expect(data).toHaveProperty('error');
   });
 
+  it('should return error for non-numeric pagination parameters', async () => {
+    const invalidPageRequest = new NextRequest('http://localhost:3000/api/movies?page=abc');
+    const invalidPageResponse = await GET(invalidPageRequest);
+    const invalidPageData = await invalidPageResponse.json();
+
+    expect(invalidPageResponse.status).toBe(400);
+    expect(invalidPageData).toHaveProperty('error');
+
+    const invalidPageSizeRequest = new NextRequest('http://localhost:3000/api/movies?pageSize=abc');
+    const invalidPageSizeResponse = await GET(invalidPageSizeRequest);
+    const invalidPageSizeData = await invalidPageSizeResponse.json();
+
+    expect(invalidPageSizeResponse.status).toBe(400);
+    expect(invalidPageSizeData).toHaveProperty('error');
+  });
+
   it('should handle custom page and pageSize parameters', async () => {
     const request = new NextRequest('http://localhost:3000/api/movies?page=2&pageSize=25');
     const response = await GET(request);

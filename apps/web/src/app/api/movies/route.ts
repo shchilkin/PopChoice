@@ -7,6 +7,13 @@ import { withAuth } from '@/lib/withAuth';
 const MIN_MOVIE_YEAR = 1878;
 const MAX_MOVIE_YEAR = 2100;
 
+function parseRequiredPositiveInteger(value: string | null, fallback: number): number {
+  if (value == null || value.trim() === '') return fallback;
+  if (!/^\d+$/.test(value.trim())) return Number.NaN;
+  const parsed = Number.parseInt(value.trim(), 10);
+  return Number.isSafeInteger(parsed) ? parsed : Number.NaN;
+}
+
 function parseOptionalYear(value: string | null): number | undefined {
   if (value == null || value.trim() === '') return undefined;
   if (!/^\d{1,4}$/.test(value.trim())) return Number.NaN;
@@ -17,14 +24,20 @@ function parseOptionalYear(value: string | null): number | undefined {
 async function getHandler(request: NextRequest): Promise<NextResponse> {
   try {
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '50', 10);
+    const page = parseRequiredPositiveInteger(searchParams.get('page'), 1);
+    const pageSize = parseRequiredPositiveInteger(searchParams.get('pageSize'), 50);
     const query = (searchParams.get('query') ?? searchParams.get('title') ?? '').trim();
     const yearFrom = parseOptionalYear(searchParams.get('yearFrom'));
     const yearTo = parseOptionalYear(searchParams.get('yearTo'));
 
     // Validate page and pageSize
-    if (page < 1 || pageSize < 1 || pageSize > 100) {
+    if (
+      !Number.isInteger(page) ||
+      !Number.isInteger(pageSize) ||
+      page < 1 ||
+      pageSize < 1 ||
+      pageSize > 100
+    ) {
       return NextResponse.json({ error: 'Invalid page or pageSize parameters' }, { status: 400 });
     }
 

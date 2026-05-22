@@ -1,14 +1,13 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 
 import type { Movie, MoviesResponse } from '@/features/movies/catalog';
-import type { FormEvent } from 'react';
 
 interface MovieFilters {
   query: string;
