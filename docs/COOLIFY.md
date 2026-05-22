@@ -252,6 +252,11 @@ after the full image matrix succeeds does the workflow call the deploy webhook.
 Coolify then pulls the already-built `development` images and restarts the
 stack.
 
+To smoke-test the same path without a new merge, manually run the
+`Container Images` workflow on the `development` branch. Manual runs rebuild and
+republish the same image set, then call the Coolify deploy webhook after the
+matrix succeeds.
+
 For stricter release promotion, keep automatic deployment disabled, copy the
 `sha-<12-char-github-sha>` tag from the workflow run, set `IMAGE_TAG` to that
 exact tag in Coolify, and redeploy manually. That gives better rollback and
