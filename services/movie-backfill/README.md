@@ -76,6 +76,9 @@ The workspace script loads `DATABASE_URL` from the repository root `.env`.
 
 The report counts missing `poster_url`, missing `localized_name`, missing `tmdb_id`, missing runtime, missing age rating, TMDB-backed rows without `tmdb_matched_at`, stale TMDB metadata, duplicate TMDB ids, and likely duplicate normalized title/year identities. It includes sample rows for each issue.
 
+Browser access should be added later through a dedicated backoffice app, not the
+user-facing web app.
+
 Options:
 
 | Variable                      | Default | Description                                          |

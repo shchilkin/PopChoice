@@ -241,6 +241,10 @@ Run it from the repo root:
 npm run catalog:health
 ```
 
+The current report is CLI-only. A future dedicated backoffice app should expose
+the same data in a browser without putting admin or operational UI inside the
+user-facing `apps/web` application.
+
 Useful options:
 
 | Variable                      | Default | Description                                             |
