@@ -61,6 +61,8 @@ The main remaining risks are:
 - [x] Movie-memory candidate cards keep session state locally, submit completed choices in one batched request, and flush pending choices on page hide or unmount.
 - [x] The account movie-memory view supports large histories with paginated loading, virtualized rendering, total counts, and poster-aware fallbacks.
 - [x] The available-movies catalog now supports exact-title escape-hatch search with optional year-range filters across the API and page UI.
+- [x] Expensive recommendation/poster POST routes now reject oversized JSON bodies before validation, moderation, queue creation, TMDB fetches, or OpenAI work.
+- [x] OpenAI calls now use per-call timeout options and `AbortSignal` cancellation, with legacy recommendation requests mapping upstream OpenAI timeouts to HTTP 504.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
 - [x] PR CI has a consolidated `services-ci` pass for service workspaces and CodeQL runs for Actions and JavaScript/TypeScript.
 
@@ -151,8 +153,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### Security and Reliability Track
 
-- Add per-call OpenAI timeout handling with cancellation where supported, and map upstream timeout failures to clear 504-style API responses.
-- Add request body size limits for externally facing routes before expensive parsing, moderation, embedding, or recommendation work begins.
+- [x] Add per-call OpenAI timeout handling with cancellation where supported, and map upstream timeout failures to clear 504-style API responses.
+- [x] Add request body size limits for externally facing routes before expensive parsing, moderation, embedding, or recommendation work begins.
 - Add retry/backoff and circuit-breaker behavior for expensive external dependencies where retrying is safe.
 - Sanitize client-facing error responses so internal exception details, upstream payloads, and infrastructure hints stay out of API responses.
 - Validate required environment variables on application startup for web, workers, and root services so misconfigured deployments fail early.

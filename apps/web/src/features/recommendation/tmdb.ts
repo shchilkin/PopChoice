@@ -5,6 +5,7 @@ import { getOpenAIClient } from '@/clients/openaiClient';
 import { IMAGE_BASE_URL } from '@/integrations/tmdb';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
+import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 import {
   GENRE_LABEL_TO_TMDB_ID,
   cosineSimilarity,
@@ -216,10 +217,13 @@ export async function scoreAndConvertTMDBMovies(
 
   let rawEmbeddings: number[][] = [];
   try {
-    const response = await getOpenAIClient().embeddings.create({
-      model: MODELS.EMBEDDING,
-      input: texts,
-    });
+    const response = await getOpenAIClient().embeddings.create(
+      {
+        model: MODELS.EMBEDDING,
+        input: texts,
+      },
+      openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+    );
     rawEmbeddings = response.data.map((d) => d.embedding);
   } catch (error) {
     logger.warn(
@@ -383,10 +387,13 @@ export async function seedMovies(
           `Description: ${movie.overview || ''}`,
         ].join('\n');
 
-        const embeddingResponse = await getOpenAIClient().embeddings.create({
-          model: MODELS.EMBEDDING,
-          input: embeddingText,
-        });
+        const embeddingResponse = await getOpenAIClient().embeddings.create(
+          {
+            model: MODELS.EMBEDDING,
+            input: embeddingText,
+          },
+          openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+        );
         embedding = embeddingResponse.data[0]?.embedding;
       }
       if (!embedding) continue;

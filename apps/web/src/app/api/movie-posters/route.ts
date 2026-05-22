@@ -5,6 +5,11 @@ import { getMovieInfo } from '@/features/recommendation/recommendation';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import {
+  POSTER_REQUEST_BODY_LIMIT_BYTES,
+  readJsonBodyWithLimit,
+  requestBodyErrorResponse,
+} from '@/lib/requestBody';
 
 const requestSchema = z.object({
   locale: z.enum(['en', 'ru', 'fi']).optional(),
@@ -36,9 +41,11 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    body = await readJsonBodyWithLimit(req, POSTER_REQUEST_BODY_LIMIT_BYTES);
+  } catch (error) {
+    const bodyErrorResponse = requestBodyErrorResponse(error);
+    if (bodyErrorResponse) return bodyErrorResponse;
+    throw error;
   }
 
   const parsed = requestSchema.safeParse(body);

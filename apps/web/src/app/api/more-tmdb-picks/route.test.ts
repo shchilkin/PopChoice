@@ -21,8 +21,8 @@ const mockChatCompletionsCreate = vi.fn(() =>
     choices: [{ message: { content: 'An exciting action film.' } }],
   }),
 );
-vi.mock('@/clients', () => ({
-  openAIClient: {
+vi.mock('@/clients/openaiClient', () => ({
+  getOpenAIClient: () => ({
     embeddings: {
       create: (...args: Parameters<typeof mockEmbeddingsCreate>) => mockEmbeddingsCreate(...args),
     },
@@ -32,13 +32,15 @@ vi.mock('@/clients', () => ({
           mockChatCompletionsCreate(...args),
       },
     },
-  },
+  }),
 }));
 
 // Mock IMAGE_BASE_URL from the TMDB integration
 vi.mock('@/integrations/tmdb', () => ({
   IMAGE_BASE_URL: 'https://image.tmdb.org/t/p',
 }));
+
+import { RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES } from '@/lib/requestBody';
 
 import { POST } from './route';
 
@@ -73,10 +75,10 @@ const mockDiscoverResponse = {
   ],
 };
 
-function makeRequest(body: unknown = validBody) {
+function makeRequest(body: unknown = validBody, headers: Record<string, string> = {}) {
   return new NextRequest('http://localhost/api/more-tmdb-picks', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en' },
+    headers: { 'Content-Type': 'application/json', 'Accept-Language': 'en', ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -108,6 +110,22 @@ describe('POST /api/more-tmdb-picks — timeout handling', () => {
 
     expect(res.status).toBe(504);
     expect(data).toHaveProperty('error');
+  });
+
+  it('returns 413 before TMDB or OpenAI work when the request body is too large', async () => {
+    const res = await POST(
+      makeRequest({
+        ...validBody,
+        extraPayload: 'x'.repeat(RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES),
+      }),
+    );
+    const data = await res.json();
+
+    expect(res.status).toBe(413);
+    expect(data).toHaveProperty('error', 'Request body too large');
+    expect(fetch).not.toHaveBeenCalled();
+    expect(mockEmbeddingsCreate).not.toHaveBeenCalled();
+    expect(mockChatCompletionsCreate).not.toHaveBeenCalled();
   });
 
   it('returns 504 when TMDB discover fetch times out via AbortError', async () => {

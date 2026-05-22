@@ -6,7 +6,13 @@ import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
 import { apiResponseSchema, requestBodySchema } from '@/features/recommendation/types';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
+import { isOpenAITimeoutError } from '@/lib/openaiTimeout';
 import { applyRateLimit } from '@/lib/rateLimit';
+import {
+  RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES,
+  readJsonBodyWithLimit,
+  requestBodyErrorResponse,
+} from '@/lib/requestBody';
 import { withAuth } from '@/lib/withAuth';
 
 // ---------------------------------------------------------------------------
@@ -19,7 +25,7 @@ async function postHandler(req: NextRequest): Promise<Response> {
     const rateLimitResponse = await applyRateLimit(req);
     if (rateLimitResponse) return rateLimitResponse;
 
-    const body = await req.json();
+    const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
 
     // Validate request body
     const validatedBody = requestBodySchema.parse(body);
@@ -48,6 +54,9 @@ async function postHandler(req: NextRequest): Promise<Response> {
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
+    const bodyErrorResponse = requestBodyErrorResponse(error);
+    if (bodyErrorResponse) return bodyErrorResponse;
+
     // Handle validation errors first — these are client errors (400), not server errors
     if (error instanceof z.ZodError) {
       logger.warn({ err: error, issues: error.issues }, 'Invalid request body');
@@ -61,6 +70,10 @@ async function postHandler(req: NextRequest): Promise<Response> {
     }
 
     logger.error({ err: error }, 'Error in movie recommendation API');
+
+    if (isOpenAITimeoutError(error)) {
+      return NextResponse.json({ error: 'OpenAI request timed out' }, { status: 504 });
+    }
 
     // Handle other known errors
     if (error instanceof Error) {

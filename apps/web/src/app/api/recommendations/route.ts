@@ -6,6 +6,11 @@ import { requestBodySchema } from '@/features/recommendation/types';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
+import {
+  RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES,
+  readJsonBodyWithLimit,
+  requestBodyErrorResponse,
+} from '@/lib/requestBody';
 import { withAuth } from '@/lib/withAuth';
 
 // ---------------------------------------------------------------------------
@@ -17,9 +22,11 @@ async function postHandler(req: NextRequest, clientId: string): Promise<Response
 
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
+  } catch (error) {
+    const bodyErrorResponse = requestBodyErrorResponse(error);
+    if (bodyErrorResponse) return bodyErrorResponse;
+    throw error;
   }
 
   // Validate request body
