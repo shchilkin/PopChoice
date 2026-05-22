@@ -166,7 +166,7 @@ jobs:
 
   deploy-coolify:
     name: Trigger Coolify deploy
-    if: github.event_name == 'push' && github.ref_name == 'development'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'development'
     needs: build-images
     runs-on: ubuntu-latest
     env:
