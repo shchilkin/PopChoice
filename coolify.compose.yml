@@ -60,9 +60,8 @@ services:
       retries: 10
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/web:${IMAGE_TAG:-development}
+    pull_policy: always
     restart: unless-stopped
     command:
       [
@@ -94,9 +93,8 @@ services:
       start_period: 30s
 
   workers:
-    build:
-      context: .
-      dockerfile: apps/web/workers.Dockerfile
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/workers:${IMAGE_TAG:-development}
+    pull_policy: always
     restart: unless-stopped
     command:
       [
@@ -124,9 +122,8 @@ services:
       start_period: 30s
 
   bull-board:
-    build:
-      context: .
-      dockerfile: apps/web/bull-board.Dockerfile
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/bull-board:${IMAGE_TAG:-development}
+    pull_policy: always
     restart: unless-stopped
     command:
       [
@@ -157,9 +154,8 @@ services:
 
   movie-seed:
     profiles: ['tools']
-    build:
-      context: .
-      dockerfile: services/movie-seed/Dockerfile
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/movie-seed:${IMAGE_TAG:-development}
+    pull_policy: always
     restart: 'no'
     command:
       [
@@ -176,9 +172,8 @@ services:
 
   movie-discovery:
     profiles: ['discovery']
-    build:
-      context: .
-      dockerfile: services/movie-discovery/Dockerfile
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/movie-discovery:${IMAGE_TAG:-development}
+    pull_policy: always
     restart: unless-stopped
     command:
       [
@@ -196,6 +191,20 @@ services:
       MAX_MOVIES_PER_RUN: ${MAX_MOVIES_PER_RUN:-50}
       TMDB_LANGUAGE: ${TMDB_LANGUAGE:-en-US}
       DRY_RUN: ${DRY_RUN:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  movie-backfill:
+    profiles: ['tools']
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/movie-backfill:${IMAGE_TAG:-development}
+    pull_policy: always
+    restart: 'no'
+    environment:
+      <<: *app-env
+      DRY_RUN: ${DRY_RUN:-false}
+      BATCH_SIZE: ${BATCH_SIZE:-5}
+      MAX_MOVIES: ${MAX_MOVIES:-0}
     depends_on:
       db:
         condition: service_healthy

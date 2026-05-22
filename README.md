@@ -261,7 +261,7 @@ For detailed development workflows and project structure, see the **[Development
 
 ## 🚀 Deploy on Coolify
 
-Production is designed to run on a VPS with [Coolify](https://coolify.io) using [`coolify.compose.yml`](./coolify.compose.yml). See the [Coolify deployment guide](./docs/COOLIFY.md) for the stack layout, required secrets, and first-deploy checklist.
+Production is designed to run on a VPS with [Coolify](https://coolify.io) using [`coolify.compose.yml`](./coolify.compose.yml). GitHub Actions builds PopChoice runtime images in GHCR, and Coolify pulls those prebuilt images with one shared `IMAGE_TAG` instead of compiling the monorepo on the VPS. See the [Coolify deployment guide](./docs/COOLIFY.md) for the stack layout, required secrets, image tags, auto-deploy webhook, and first-deploy checklist.
 
 ---
 

@@ -9,6 +9,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
+COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
 COPY services/movie-seed/package.json ./services/movie-seed/
@@ -31,6 +32,10 @@ WORKDIR /app
 
 ARG APP_COMMIT_SHA
 ARG APP_GIT_BRANCH
+ARG APP_PR_NUMBER
+ARG APP_IMAGE_REPOSITORY
+ARG APP_IMAGE_TAG
+ARG APP_IMAGE_DIGEST
 ARG SOURCE_COMMIT
 ARG SOURCE_BRANCH
 ARG COOLIFY_BRANCH
@@ -41,6 +46,10 @@ ARG VERCEL_GIT_COMMIT_REF
 
 ENV BUILD_APP_COMMIT_SHA=$APP_COMMIT_SHA
 ENV BUILD_APP_GIT_BRANCH=$APP_GIT_BRANCH
+ENV BUILD_APP_PR_NUMBER=$APP_PR_NUMBER
+ENV BUILD_APP_IMAGE_REPOSITORY=$APP_IMAGE_REPOSITORY
+ENV BUILD_APP_IMAGE_TAG=$APP_IMAGE_TAG
+ENV BUILD_APP_IMAGE_DIGEST=$APP_IMAGE_DIGEST
 ENV BUILD_SOURCE_COMMIT=$SOURCE_COMMIT
 ENV BUILD_SOURCE_BRANCH=$SOURCE_BRANCH
 ENV BUILD_COOLIFY_BRANCH=$COOLIFY_BRANCH
@@ -52,6 +61,7 @@ ENV BUILD_VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/web/package.json ./apps/web/
+COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
 COPY services/movie-seed/package.json ./services/movie-seed/
