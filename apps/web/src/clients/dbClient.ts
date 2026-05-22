@@ -52,6 +52,9 @@ export interface QueryRange<T = unknown> {
 /** Filterable step in the query chain. */
 export interface QueryFilter<T = unknown> extends PromiseLike<QueryResult<T>> {
   eq: (column: string, value: unknown) => QueryFilter<T>;
+  ilike: (column: string, value: string) => QueryFilter<T>;
+  gte: (column: string, value: unknown) => QueryFilter<T>;
+  lte: (column: string, value: unknown) => QueryFilter<T>;
   neq: (column: string, value: unknown) => PromiseLike<QueryResult<T>>;
   in: (column: string, values: unknown[]) => PromiseLike<QueryResult<T>>;
   limit: (count: number) => PromiseLike<QueryResult<T>>;
@@ -62,6 +65,9 @@ export interface QueryFilter<T = unknown> extends PromiseLike<QueryResult<T>> {
 /** Select step – resolves to a result (with optional count). Also supports chaining. */
 export interface QuerySelect<T = unknown> extends PromiseLike<QueryResult<T>> {
   eq: (column: string, value: unknown) => QueryFilter<T>;
+  ilike: (column: string, value: string) => QueryFilter<T>;
+  gte: (column: string, value: unknown) => QueryFilter<T>;
+  lte: (column: string, value: unknown) => QueryFilter<T>;
   neq: (column: string, value: unknown) => PromiseLike<QueryResult<T>>;
   in: (column: string, values: unknown[]) => PromiseLike<QueryResult<T>>;
   limit: (count: number) => PromiseLike<QueryResult<T>>;

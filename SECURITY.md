@@ -27,9 +27,9 @@ This document outlines the security measures and vulnerability management for th
   - [x] Implement session management (`pc_session` signed cookie, `/api/auth/session`, `/api/auth/logout`, and session-aware browser auth fallback)
 
 - [ ] **Request Size & Timeout Management**
-  - [ ] Set maximum request body size limits
+  - [x] Set maximum request body size limits for expensive POST routes (`readJsonBodyWithLimit()` rejects oversized JSON with 413 before validation, moderation, queue creation, TMDB fetches, or OpenAI calls)
   - [x] Configure API timeouts for TMDB (`AbortSignal.timeout()` with 504 response in `more-tmdb-picks/route.ts`)
-  - [ ] Improve OpenAI timeout handling (default client timeout is configured in `apps/web/src/clients/openaiClient.ts`, but per-call/route-specific timeouts, cancellation via `AbortSignal`, and mapping timeout failures to HTTP 504 responses are still missing)
+  - [x] Improve OpenAI timeout handling (per-call timeout options and `AbortSignal` cancellation via `apps/web/src/lib/openaiTimeout.ts`; legacy recommendation route maps upstream OpenAI timeouts to HTTP 504)
   - [ ] Implement retry logic with exponential backoff
 
 ### ⚠️ **Medium Priority Security Issues**
@@ -88,8 +88,8 @@ This document outlines the security measures and vulnerability management for th
 1. ~~Input validation on API routes~~ ✅ Done (Zod schemas + AI moderation pipeline)
 2. ~~Rate limiting implementation~~ ✅ Done
 3. ~~Remove sensitive console logs~~ ✅ Done (pino logger)
-4. Add request timeouts for OpenAI API calls
-5. Add request body size limits
+4. ~~Add request timeouts for OpenAI API calls~~ ✅ Done
+5. ~~Add request body size limits~~ ✅ Done
 
 ### Phase 2 (Short-term - Medium Issues)
 
@@ -112,16 +112,30 @@ This document outlines the security measures and vulnerability management for th
 - [x] Input validation (Zod schema + prompt injection detection + OpenAI Moderation API + LLM content judge)
 - [x] Rate limiting (Redis-backed, 10 req/min per IP; requires `REDIS_URL`)
 - [ ] Error sanitization
-- [ ] Request size limits
-- [ ] Timeout configuration (OpenAI API calls have no `AbortSignal`)
+- [x] Request size limits (16 KiB JSON body cap)
+- [x] Timeout configuration (per-call OpenAI timeout options with `AbortSignal`; OpenAI timeout failures return 504)
+
+### `/api/recommendations`
+
+- [x] Input validation (Zod schema + shared recommendation input screening)
+- [x] Rate limiting (Redis-backed, 10 req/min per IP)
+- [x] Request size limits (16 KiB JSON body cap)
+- [ ] Error sanitization
 
 ### `/api/more-tmdb-picks`
 
 - [x] Input validation (Zod schema)
 - [x] Rate limiting (Redis-backed, 10 req/min per IP)
-- [x] Timeout configuration (`AbortSignal.timeout()` with 504 response on TMDB fetch)
+- [x] Timeout configuration (`AbortSignal.timeout()` for TMDB fetches; OpenAI calls use per-call timeout options and `AbortSignal`)
 - [ ] Error sanitization
-- [ ] Request size limits
+- [x] Request size limits (16 KiB JSON body cap)
+
+### `/api/movie-posters`
+
+- [x] Input validation (Zod schema)
+- [x] Rate limiting (Redis-backed, 10 req/min per IP)
+- [x] Request size limits (32 KiB JSON body cap)
+- [ ] Error sanitization
 
 ### AI Moderation Pipeline (implemented security layer)
 

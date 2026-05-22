@@ -279,6 +279,13 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
             movie_name: 'Arrival',
             movie_year: 2016,
           },
+          {
+            kind: 'liked',
+            movie_key: 'tmdb:496243',
+            tmdb_id: 496243,
+            movie_name: 'Parasite',
+            movie_year: 2019,
+          },
         ],
       })
       .mockResolvedValueOnce({
@@ -314,6 +321,13 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
         movieYear: 2016,
       },
       {
+        kind: 'liked',
+        movieKey: 'tmdb:496243',
+        tmdbId: 496243,
+        movieName: 'Parasite',
+        movieYear: 2019,
+      },
+      {
         kind: 'recently_recommended',
         movieKey: 'tmdb:129',
         tmdbId: 129,
@@ -330,7 +344,7 @@ describe('getUserRecommendationFeedbackMoviePreferences', () => {
     ]);
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('user_movie_interactions');
-    expect(sql).toContain("kind IN ('watched', 'not_interested', 'wrong_mood')");
+    expect(sql).toContain("kind IN ('watched', 'liked', 'not_interested', 'wrong_mood')");
     const [recentSql, recentParams] = mockQuery.mock.calls[1] as [string, unknown[]];
     const recentWindowIndex = recentSql.indexOf('WITH recent_recommendations AS');
     const recentWindowLimitIndex = recentSql.indexOf('LIMIT $2');

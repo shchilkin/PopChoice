@@ -1,6 +1,7 @@
 import { getOpenAIClient } from '@/clients/openaiClient';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
+import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
 import type { PersonFormData } from './types';
 
@@ -96,15 +97,18 @@ export async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promi
   const rawText = whyTexts.join(' ');
 
   try {
-    const response = await getOpenAIClient().chat.completions.create({
-      model: MODELS.MINI,
-      messages: [
-        { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
-        { role: 'user', content: rawText },
-      ],
-      max_completion_tokens: 200,
-      temperature: 0,
-    });
+    const response = await getOpenAIClient().chat.completions.create(
+      {
+        model: MODELS.MINI,
+        messages: [
+          { role: 'system', content: QUERY_ENRICHMENT_SYSTEM_PROMPT },
+          { role: 'user', content: rawText },
+        ],
+        max_completion_tokens: 200,
+        temperature: 0,
+      },
+      openAIRequestOptions(OPENAI_TIMEOUTS_MS.queryEnrichment),
+    );
 
     const refinedTags = response.choices[0]?.message?.content?.trim();
 
@@ -149,10 +153,13 @@ export async function createEmbedding(
       ? buildEmbeddingInputWithRefinedTags(allPeopleData, refinedQueryTags)
       : combineAllPeopleDataToString(allPeopleData);
 
-    const embeddingResponse = await getOpenAIClient().embeddings.create({
-      model: MODELS.EMBEDDING,
-      input: embeddingInput,
-    });
+    const embeddingResponse = await getOpenAIClient().embeddings.create(
+      {
+        model: MODELS.EMBEDDING,
+        input: embeddingInput,
+      },
+      openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+    );
     if (!embeddingResponse?.data?.[0]?.embedding) {
       throw new Error('No embedding returned from OpenAI.');
     }

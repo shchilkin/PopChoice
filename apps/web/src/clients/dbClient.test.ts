@@ -25,6 +25,9 @@ function createMockDbClient(overrides?: Partial<DbClient>): DbClient {
   const defaultFrom = <T = unknown>(): TableRef<T> => {
     const makeQueryChain = (result = defaultResult) => ({
       eq: () => makeQueryChain(result),
+      ilike: () => makeQueryChain(result),
+      gte: () => makeQueryChain(result),
+      lte: () => makeQueryChain(result),
       neq: () => makeThenable(result),
       limit: () => makeThenable(result),
       range: () => ({

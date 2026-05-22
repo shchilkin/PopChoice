@@ -78,6 +78,22 @@ describe('Movies API Route', () => {
     expect(data).toHaveProperty('error');
   });
 
+  it('should return error for non-numeric pagination parameters', async () => {
+    const invalidPageRequest = new NextRequest('http://localhost:3000/api/movies?page=abc');
+    const invalidPageResponse = await GET(invalidPageRequest);
+    const invalidPageData = await invalidPageResponse.json();
+
+    expect(invalidPageResponse.status).toBe(400);
+    expect(invalidPageData).toHaveProperty('error');
+
+    const invalidPageSizeRequest = new NextRequest('http://localhost:3000/api/movies?pageSize=abc');
+    const invalidPageSizeResponse = await GET(invalidPageSizeRequest);
+    const invalidPageSizeData = await invalidPageSizeResponse.json();
+
+    expect(invalidPageSizeResponse.status).toBe(400);
+    expect(invalidPageSizeData).toHaveProperty('error');
+  });
+
   it('should handle custom page and pageSize parameters', async () => {
     const request = new NextRequest('http://localhost:3000/api/movies?page=2&pageSize=25');
     const response = await GET(request);
@@ -111,5 +127,38 @@ describe('Movies API Route', () => {
     expect(data.totalPages).toBeGreaterThan(0);
     expect(data.movies.length).toBeGreaterThan(0);
     expect(data.movies.length).toBeLessThanOrEqual(50);
+  });
+
+  it('should filter mock movies by title and year when database is not configured', async () => {
+    vi.mocked(getDbClient).mockReturnValueOnce({
+      isConfigured: vi.fn(() => false),
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/movies?query=godfather&yearFrom=1970&yearTo=1975',
+    );
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.totalCount).toBeGreaterThan(0);
+    expect(
+      data.movies.every((movie: { name: string; year: number }) => {
+        return (
+          movie.name.toLowerCase().includes('godfather') && movie.year >= 1970 && movie.year <= 1975
+        );
+      }),
+    ).toBe(true);
+  });
+
+  it('should return error for invalid year filters', async () => {
+    const request = new NextRequest('http://localhost:3000/api/movies?yearFrom=2020&yearTo=1990');
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(data).toHaveProperty('error');
   });
 });

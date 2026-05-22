@@ -12,6 +12,7 @@ import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
+import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 import {
   GENRE_LABEL_TO_TMDB_ID,
   cosineSimilarity,
@@ -270,8 +271,14 @@ export async function runMorePicksPipeline(
   const similarityMap = new Map<number, number>();
   try {
     const [queryEmbedRes, movieEmbedRes] = await Promise.all([
-      getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: queryText }),
-      getOpenAIClient().embeddings.create({ model: MODELS.EMBEDDING, input: candidateTexts }),
+      getOpenAIClient().embeddings.create(
+        { model: MODELS.EMBEDDING, input: queryText },
+        openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+      ),
+      getOpenAIClient().embeddings.create(
+        { model: MODELS.EMBEDDING, input: candidateTexts },
+        openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+      ),
     ]);
     const queryEmbedding = queryEmbedRes.data[0]?.embedding;
     if (queryEmbedding && queryEmbedding.length > 0) {
@@ -341,17 +348,20 @@ Respond in ${language} only.`;
         // AI-generated description in the target language
         let aiDescription = localizedOverview;
         try {
-          const descriptionResponse = await getOpenAIClient().chat.completions.create({
-            model: MODELS.MINI,
-            messages: [
-              { role: 'system', content: descriptionSystemPrompt },
-              {
-                role: 'user',
-                content: `Movie: ${localizedTitle} (${year})\nRating: ${score}/10\nPlot: ${localizedOverview}`,
-              },
-            ],
-            max_completion_tokens: 150,
-          });
+          const descriptionResponse = await getOpenAIClient().chat.completions.create(
+            {
+              model: MODELS.MINI,
+              messages: [
+                { role: 'system', content: descriptionSystemPrompt },
+                {
+                  role: 'user',
+                  content: `Movie: ${localizedTitle} (${year})\nRating: ${score}/10\nPlot: ${localizedOverview}`,
+                },
+              ],
+              max_completion_tokens: 150,
+            },
+            openAIRequestOptions(OPENAI_TIMEOUTS_MS.description),
+          );
           aiDescription = descriptionResponse.choices[0]?.message?.content?.trim() || aiDescription;
         } catch (err) {
           logger.warn(

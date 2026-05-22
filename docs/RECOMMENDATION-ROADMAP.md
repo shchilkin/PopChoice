@@ -31,7 +31,7 @@ This creates a usable first recommendation, but the data is coarse. It asks user
 - The favorite movie prompt is high friction and can over-anchor the result toward movies the user already watched.
 - Mood options are partly genre labels, which makes them too broad for accurate ranking.
 - The quiz does not capture enough negative intent, such as "not slow", "not horror", "not long", "not subtitles", or "not something obvious".
-- The app has started storing movie memory, but watched/liked/not-interested signals are still not a first-class input model for recommendations.
+- The app has started using signed-in movie memory for exclusions, down-ranking, and exact liked-candidate boosts, but watched/liked/not-interested signals are still not unified behind a first-class recommendation signal model.
 - Group mode currently collects individual preferences, but the recommendation model should eventually optimize for overlap and compromise explicitly.
 - The embedded/local movie catalog is too small to produce consistently satisfying real-world results.
 

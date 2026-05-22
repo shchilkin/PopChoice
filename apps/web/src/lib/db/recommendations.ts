@@ -328,7 +328,7 @@ export async function getUserRecommendationFeedbackMoviePreferences(
        movie_year
      FROM user_movie_interactions
      WHERE user_id = $1
-       AND kind IN ('watched', 'not_interested', 'wrong_mood')
+       AND kind IN ('watched', 'liked', 'not_interested', 'wrong_mood')
      ORDER BY updated_at DESC
      LIMIT $2`,
     [userId, limit],
