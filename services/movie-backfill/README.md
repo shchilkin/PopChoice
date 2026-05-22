@@ -1,10 +1,10 @@
 # movie-backfill
 
-A one-shot script that backfills missing `duration` and `age_rating` data for movies already in the database that were seeded without runtime information.
+A one-shot script that backfills missing `duration`, `age_rating`, TMDB identity, and poster metadata for movies already in the database. It also includes a read-only catalog health report for metadata coverage checks.
 
 ## What it does
 
-1. Queries the database for movies where `tmdb_id IS NULL` or `duration = 0`.
+1. Queries the database for movies where `tmdb_id IS NULL`, `duration = 0`, or `poster_url IS NULL`.
 2. For each movie, searches TMDB by title + year to find a conservative TMDB movie ID match.
 3. Writes ambiguous matches or runtime mismatches to `tmdb_match_reviews` for later manual review.
 4. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
@@ -62,4 +62,33 @@ Increase batch size for faster processing (may hit TMDB rate limits):
 
 ```bash
 BATCH_SIZE=10 npx tsx src/index.ts
+```
+
+## Catalog health report
+
+Run a read-only report for catalog/data-health issues:
+
+```bash
+npm run catalog:health
+```
+
+The workspace script loads `DATABASE_URL` from the repository root `.env`.
+
+The report counts missing `poster_url`, missing `localized_name`, missing `tmdb_id`, missing runtime, missing age rating, TMDB-backed rows without `tmdb_matched_at`, stale TMDB metadata, duplicate TMDB ids, and likely duplicate normalized title/year identities. It includes sample rows for each issue.
+
+Browser access should be added later through a dedicated backoffice app, not the
+user-facing web app.
+
+Options:
+
+| Variable                      | Default | Description                                          |
+| ----------------------------- | ------- | ---------------------------------------------------- |
+| `CATALOG_HEALTH_FORMAT`       | `text`  | Use `json` for machine-readable output               |
+| `CATALOG_HEALTH_SAMPLE_LIMIT` | `5`     | Sample rows or duplicate groups to include per issue |
+| `CATALOG_HEALTH_STALE_DAYS`   | `180`   | Stale threshold for `tmdb_matched_at`                |
+
+Example:
+
+```bash
+CATALOG_HEALTH_FORMAT=json CATALOG_HEALTH_SAMPLE_LIMIT=3 npm run catalog:health
 ```

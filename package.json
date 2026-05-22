@@ -11,6 +11,7 @@
   "scripts": {
     "build": "npm run build --workspace=apps/web",
     "build:services": "turbo run build --filter=./services/*",
+    "catalog:health": "npm run catalog:health --workspace=movie-backfill",
     "cleanup:local-db": "bash scripts/cleanup-local-db.sh",
     "copy:env": "bash scripts/copy-env.sh",
     "dev": "npm run dev --workspace=apps/web",

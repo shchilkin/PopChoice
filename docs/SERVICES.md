@@ -6,11 +6,12 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service                 | Type                  | Trigger                                           | Source        |
+| Service / Tool          | Type                  | Trigger                                           | Source        |
 | ----------------------- | --------------------- | ------------------------------------------------- | ------------- |
 | `movie-seed`            | One-shot              | Manual / CI                                       | `movies.txt`  |
 | `movie-discovery`       | Scheduled             | Cron / One-shot                                   | TMDB API      |
 | `movie-backfill`        | One-shot              | Manual                                            | TMDB API      |
+| `catalog:health`        | Read-only report      | Manual / CI                                       | PostgreSQL    |
 | BullMQ `recommendation` | Per-request           | HTTP POST to /api/recommendations                 | TMDB + OpenAI |
 | BullMQ `more-picks`     | On demand             | HTTP POST to /api/recommendations/[id]/more-picks | TMDB + OpenAI |
 | BullMQ `movie-seed`     | Triggered by pipeline | Internal recommendation/more-picks JIT seeding    | TMDB          |
@@ -194,7 +195,7 @@ npm test                 # run vitest tests
 
 ### How it works
 
-1. Queries the database for movies where `tmdb_id IS NULL` or `duration = 0`.
+1. Queries the database for movies where `tmdb_id IS NULL`, `duration = 0`, or `poster_url IS NULL`.
 2. Searches TMDB by title + year to find a conservative TMDB identity match.
 3. Records ambiguous matches and runtime mismatches in `tmdb_match_reviews`.
 4. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
@@ -223,6 +224,40 @@ cd services/movie-backfill
 npm install
 npm run dev              # run backfill
 DRY_RUN=true npm run dev # dry run
+```
+
+### Catalog health report
+
+`movie-backfill` also owns a read-only catalog health report for metadata visibility. It only runs `SELECT` queries and reports:
+
+- Missing `poster_url`, `localized_name`, `tmdb_id`, runtime, age rating, and TMDB match timestamps.
+- TMDB-backed rows whose `tmdb_matched_at` is older than the stale threshold.
+- Likely duplicate identities by repeated `tmdb_id` and normalized title/year groups.
+- Sample movie rows for each issue so local or CI logs point at concrete records.
+
+Run it from the repo root:
+
+```bash
+npm run catalog:health
+```
+
+The current report is CLI-only. A future dedicated backoffice app should expose
+the same data in a browser without putting admin or operational UI inside the
+user-facing `apps/web` application.
+
+Useful options:
+
+| Variable                      | Default | Description                                             |
+| ----------------------------- | ------- | ------------------------------------------------------- |
+| `DATABASE_URL`                | —       | PostgreSQL connection string; loaded from root `.env`   |
+| `CATALOG_HEALTH_FORMAT`       | `text`  | `text` for readable logs, `json` for machine parsing    |
+| `CATALOG_HEALTH_SAMPLE_LIMIT` | `5`     | Sample rows or duplicate groups to show per issue       |
+| `CATALOG_HEALTH_STALE_DAYS`   | `180`   | Age threshold for stale TMDB metadata, in calendar days |
+
+Example:
+
+```bash
+CATALOG_HEALTH_FORMAT=json CATALOG_HEALTH_SAMPLE_LIMIT=3 npm run catalog:health
 ```
 
 ---

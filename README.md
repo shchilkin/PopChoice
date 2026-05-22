@@ -243,6 +243,7 @@ npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
 npm run copy:env             # Sync root .env into apps/services workspaces
 npm run migrate:db           # Apply idempotent SQL migrations
 npm run populate-db          # Populate database with movie data
+npm run catalog:health       # Report catalog metadata coverage and likely duplicates
 npm run analyze-movies       # Analyze movie data for embeddings
 npm run calibrate-similarity # Calibrate vector similarity thresholds
 npm run test:services        # Run service test scripts via Turbo

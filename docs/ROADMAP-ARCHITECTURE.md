@@ -152,12 +152,18 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Sanitize client-facing error responses so internal exception details, upstream payloads, and infrastructure hints stay out of API responses.
 - Validate required environment variables on application startup for web, workers, and root services so misconfigured deployments fail early.
 - Clarify idempotency and retry behavior for recommendation creation, worker retries, more-picks jobs, and failed queue recovery.
+- Add a shared operator login model for operational apps. `apps/bull-board` is
+  currently unprotected, and a future backoffice app should use the same
+  protection instead of embedding admin access in the user-facing web app.
 - Add dependency/security scanning, static security checks, and periodic security review expectations to CI or maintenance workflows.
 
 ### Data Quality Track
 
 - Persist TMDB backfill review cases in `tmdb_match_reviews`, then add an admin/back-office UI to resolve ambiguous matches, missing metadata, or rejected runtime/year confidence cases.
-- Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, and stale TMDB metadata.
+- Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, and stale TMDB metadata. The initial `npm run catalog:health` report covers current `movies` schema signals; admin resolution and automated refresh remain future work.
+- Create a dedicated backoffice app for catalog-health reports, TMDB match
+  review queues, and later manual data repair. Do not add this UI to
+  `apps/web`; that app remains user-facing.
 - Periodically refresh TMDB-backed metadata for older records without destabilizing existing recommendation history.
 - Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.
 - Define migration/versioning expectations for schema changes, including production migration safety, rollback notes, and seed/backfill coordination.
@@ -221,8 +227,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 2. [ ] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
 3. [x] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
 4. [ ] Use `liked` memory as a positive recommendation signal, not only stored account history.
-5. [ ] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
-6. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+5. [x] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
+6. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
+7. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 
