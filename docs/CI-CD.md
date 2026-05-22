@@ -5,7 +5,7 @@
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
 - `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, Storybook tests, build, service CI, dependency review)
-- `.github/workflows/container-images.yml` – production container image builds for `web`, `workers`, and `bull-board`, published to GitHub Container Registry with commit and PR provenance metadata
+- `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 - `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
 
@@ -15,20 +15,21 @@ The PR validation workflows run automatically on pull requests targeting the `de
 
 ### Jobs
 
-| Workflow                 | Job                  | Purpose                                                          |
-| ------------------------ | -------------------- | ---------------------------------------------------------------- |
-| `pr.yml`                 | `changes`            | Classifies PR as docs-only vs code-changing                      |
-| `pr.yml`                 | `lint`               | ESLint code quality + Prettier formatting                        |
-| `pr.yml`                 | `type-check`         | TypeScript type safety (`tsc --noEmit`)                          |
-| `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload |
-| `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests           |
-| `pr.yml`                 | `build`              | Next.js production build verification                            |
-| `pr.yml`                 | `services-ci`        | Turbo test pass for `services/*`                                 |
-| `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                   |
-| `pr.yml`                 | `pr-validation`      | Stable required check that always runs on every PR               |
-| `container-images.yml`   | `build-images`       | Builds and publishes GHCR production images with provenance      |
-| `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`  |
-| `codeql.yml`             | `analyze`            | CodeQL static analysis for Actions and JavaScript/TypeScript     |
+| Workflow                 | Job                  | Purpose                                                                         |
+| ------------------------ | -------------------- | ------------------------------------------------------------------------------- |
+| `pr.yml`                 | `changes`            | Classifies PR as docs-only vs code-changing                                     |
+| `pr.yml`                 | `lint`               | ESLint code quality + Prettier formatting                                       |
+| `pr.yml`                 | `type-check`         | TypeScript type safety (`tsc --noEmit`)                                         |
+| `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload                |
+| `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests                          |
+| `pr.yml`                 | `build`              | Next.js production build verification                                           |
+| `pr.yml`                 | `services-ci`        | Turbo test pass for `services/*`                                                |
+| `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                                  |
+| `pr.yml`                 | `pr-validation`      | Stable required check that always runs on every PR                              |
+| `container-images.yml`   | `build-images`       | Builds and publishes GHCR production images with provenance                     |
+| `container-images.yml`   | `deploy-coolify`     | Optionally triggers the Coolify deploy webhook after development images publish |
+| `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`                 |
+| `codeql.yml`             | `analyze`            | CodeQL static analysis for Actions and JavaScript/TypeScript                    |
 
 ## Workflow Features
 
@@ -75,6 +76,10 @@ The `dependency-review` job uses `actions/dependency-review-action` to block any
 - `ghcr.io/<owner>/<repo>/web`
 - `ghcr.io/<owner>/<repo>/workers`
 - `ghcr.io/<owner>/<repo>/bull-board`
+- `ghcr.io/<owner>/<repo>/db-migrate`
+- `ghcr.io/<owner>/<repo>/movie-seed`
+- `ghcr.io/<owner>/<repo>/movie-discovery`
+- `ghcr.io/<owner>/<repo>/movie-backfill`
 
 On pull requests from the same repository, the workflow publishes:
 
@@ -93,6 +98,26 @@ rather than rebuilding from the monorepo.
 Forked pull requests still build the images for validation, but publishing is
 disabled because the GitHub token does not have package write permission.
 
+Coolify consumes the published images through `coolify.compose.yml`. The compose
+file does not build application images on the server; it pulls every PopChoice
+runtime from:
+
+```env
+APP_IMAGE_PREFIX=ghcr.io/<owner>/<repo>
+IMAGE_TAG=development
+```
+
+For simple continuous deployment, keep `IMAGE_TAG=development` in Coolify and
+let the optional deploy webhook run after the image matrix succeeds. For a
+stricter promotion flow, set `IMAGE_TAG=sha-<12-char-github-sha>` and redeploy
+that exact release bundle. Every PopChoice service must use the same
+`IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, and service images from
+different commits is not a supported deployment shape.
+
+Set the repository secret `COOLIFY_DEPLOY_WEBHOOK` to enable automatic redeploys
+after pushes to `development`. When the secret is absent, images are still
+published, but deployment remains manual.
+
 For provenance in `/api/build`, pass these non-secret runtime variables to the
 deployed web container when using a prebuilt image:
 
@@ -108,7 +133,24 @@ SOURCE_BRANCH=<pull request head ref, if any>
 ```
 
 `APP_IMAGE_DIGEST` is only known after the image is pushed, so it is normally a
-deploy-time environment variable rather than a Docker build argument.
+deploy-time environment variable rather than a Docker build argument. If the
+deployment uses the moving `development` tag, the image also contains baked
+fallback metadata from the build workflow so `/api/build` can still report the
+source commit.
+
+### Runtime Compatibility Rules
+
+Treat the published image set as one release unit:
+
+- use one `IMAGE_TAG` for all PopChoice services in `coolify.compose.yml`
+- run database migrations before or during the web startup, then start workers
+  against the same image tag
+- keep SQL migrations additive and idempotent; use an expand/backfill/switch
+  pattern before removing old columns or changing meanings
+- version BullMQ job payloads when changing worker contracts, and keep workers
+  tolerant of older queued jobs
+- keep API changes additive between `web`, `workers`, Bull Board, and future
+  backoffice apps unless a coordinated release and data migration is planned
 
 ## Workflow Triggers and Path Filtering
 

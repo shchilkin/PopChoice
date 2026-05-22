@@ -132,7 +132,11 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 - [x] Build production container images in GitHub PR/CI once, publish them with commit/PR metadata, and document preview or downstream deploys running those already-built images instead of rebuilding the monorepo in each deployment environment.
 - [x] Preserve provenance between a PR check, container digest, deployed preview, and `/api/build` metadata through GHCR labels, digest artifacts, runtime image metadata, and Docker-baked fallbacks.
-- Keep deployment-time work focused on migrations, health checks, and runtime configuration validation rather than application compilation.
+- [x] Run Coolify from GHCR images via a single `IMAGE_TAG` release bundle instead of compiling PopChoice services on the VPS.
+- [x] Add an optional Coolify deploy webhook path after successful `development` image publishing.
+- Keep deployment-time work focused on migrations, health checks, runtime configuration validation, and compatibility checks rather than application compilation.
+- Add a dedicated migration release gate so database migrations are visibly completed before rolling long-running web/worker services.
+- Add release compatibility checks that verify all running PopChoice services report the same commit/image tag.
 
 ### Operational Observability Track
 

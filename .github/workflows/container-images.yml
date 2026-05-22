@@ -28,6 +28,14 @@ jobs:
             dockerfile: apps/web/workers.Dockerfile
           - name: bull-board
             dockerfile: apps/web/bull-board.Dockerfile
+          - name: db-migrate
+            dockerfile: services/db-migrate/Dockerfile
+          - name: movie-seed
+            dockerfile: services/movie-seed/Dockerfile
+          - name: movie-discovery
+            dockerfile: services/movie-discovery/Dockerfile
+          - name: movie-backfill
+            dockerfile: services/movie-backfill/Dockerfile
     env:
       PUSH_IMAGE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       PR_NUMBER: ${{ github.event.pull_request.number || '' }}
@@ -147,3 +155,26 @@ jobs:
           name: container-image-${{ matrix.name }}
           path: artifacts/${{ matrix.name }}.json
           retention-days: 30
+
+  deploy-coolify:
+    name: Trigger Coolify deploy
+    if: github.event_name == 'push' && github.ref_name == 'development'
+    needs: build-images
+    runs-on: ubuntu-latest
+    env:
+      COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+    steps:
+      - name: Trigger Coolify deploy webhook
+        if: env.COOLIFY_DEPLOY_WEBHOOK != ''
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          short_sha="${COMMIT_SHA::12}"
+          curl -fsS -X POST "${COOLIFY_DEPLOY_WEBHOOK}" \
+            -H "Content-Type: application/json" \
+            --data "{\"ref\":\"${REF_NAME}\",\"sha\":\"${COMMIT_SHA}\",\"imageTag\":\"sha-${short_sha}\"}"
+
+      - name: Skip deploy when webhook is not configured
+        if: env.COOLIFY_DEPLOY_WEBHOOK == ''
+        run: echo "COOLIFY_DEPLOY_WEBHOOK is not configured; images were published but deployment was not triggered."

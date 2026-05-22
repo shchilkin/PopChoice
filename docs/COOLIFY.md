@@ -2,7 +2,9 @@
 
 This project is ready to run on a VPS with Coolify using `coolify.compose.yml`.
 The stack runs PostgreSQL with pgvector, Redis, the Next.js web app, BullMQ
-workers, and Bull Board.
+workers, Bull Board, and optional catalog/data tools. PopChoice application
+containers are pulled from GitHub Container Registry instead of being built on
+the VPS.
 
 ## Recommended VPS shape
 
@@ -30,6 +32,24 @@ Coolify treats Docker Compose as the source of truth for services, environment
 variables, and storage. The compose file declares named volumes for PostgreSQL
 and Redis so data survives redeploys.
 
+The compose file is intentionally runtime-only for PopChoice services. It pulls
+prebuilt images using:
+
+```env
+APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
+IMAGE_TAG=development
+```
+
+Use `IMAGE_TAG=development` for simple auto-deploys from the latest successful
+`development` build. Use `IMAGE_TAG=sha-<12-char-github-sha>` when you want to
+promote or roll back an exact immutable release. Keep the same `IMAGE_TAG` for
+`web`, `workers`, `bull-board`, `movie-seed`, `movie-discovery`, and
+`movie-backfill`; running mixed commits is intentionally not supported.
+
+If the GHCR packages are private, add registry credentials in Coolify so the VPS
+can pull `ghcr.io/shchilkin/popchoice/*`. Public packages do not need registry
+credentials.
+
 ## Required variables
 
 Set these in Coolify before the first deploy:
@@ -39,6 +59,7 @@ OPENAI_API_KEY=...
 POSTGRES_PASSWORD=...
 AUTH_SESSION_SECRET=...
 NEXT_PUBLIC_BASE_URL=https://your-domain.example
+IMAGE_TAG=development
 ```
 
 For Docker Compose resources, these must exist in the resource's
@@ -50,6 +71,7 @@ OPENAI_API_KEY={{ environment.OPENAI_API_KEY }}
 POSTGRES_PASSWORD={{ environment.POSTGRES_PASSWORD }}
 AUTH_SESSION_SECRET={{ environment.AUTH_SESSION_SECRET }}
 NEXT_PUBLIC_BASE_URL=https://your-domain.example
+IMAGE_TAG=development
 ```
 
 Use `{{ project.NAME }}` instead of `{{ environment.NAME }}` if the shared
@@ -62,6 +84,7 @@ initialization, so a missing value now fails before containers are created.
 Recommended optional variables:
 
 ```env
+APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 POSTGRES_USER=popchoice
 POSTGRES_DB=popchoice
 TMDB_API_KEY=...
@@ -160,9 +183,9 @@ environment, enable that option and map the exposed commit value to
 instead of guessing.
 
 For Docker Compose deployments, also enable Coolify's
-**Include Source Commit in Build** option. The web image persists those
-non-secret build arguments as fallback metadata, so `/api/build` can still
-report the commit when Coolify does not pass source metadata as runtime
+**Include Source Commit in Build** option if it is available. The web image
+persists non-secret build arguments as fallback metadata, so `/api/build` can
+still report the commit when Coolify does not pass source metadata as runtime
 environment variables.
 
 When deploying a prebuilt GitHub Container Registry image, prefer runtime
@@ -178,7 +201,8 @@ exact image digest.
 
 ## First deploy
 
-Deploy the stack from Coolify. The startup order is:
+Make sure the `container-images.yml` workflow has already published the selected
+`IMAGE_TAG`, then deploy the stack from Coolify. The startup order is:
 
 1. PostgreSQL and Redis start and pass health checks.
 2. `web` applies every SQL file in `db/init/` with `start:with-migrations`, then
@@ -213,6 +237,29 @@ Run this checklist after production deploys and after any infrastructure change:
 - A quiz submission creates and completes a recommendation.
 - Worker logs show Redis readiness and recommendation job completion.
 - The latest PostgreSQL backup exists in the configured backup destination.
+
+## Automatic redeploys
+
+For a simple continuous deployment path:
+
+1. Set `IMAGE_TAG=development` on the Coolify Compose resource.
+2. Add the repository secret `COOLIFY_DEPLOY_WEBHOOK` with the production
+   Coolify deploy webhook URL.
+3. Merge to `development`.
+
+GitHub Actions builds and publishes every PopChoice runtime image first. Only
+after the full image matrix succeeds does the workflow call the deploy webhook.
+Coolify then pulls the already-built `development` images and restarts the
+stack.
+
+For stricter release promotion, keep automatic deployment disabled, copy the
+`sha-<12-char-github-sha>` tag from the workflow run, set `IMAGE_TAG` to that
+exact tag in Coolify, and redeploy manually. That gives better rollback and
+auditability at the cost of one manual promotion step.
+
+Do not point Coolify at source builds for production while also using GHCR
+images. Choose one deployment source of truth; the recommended production path
+is GHCR images plus this compose file.
 
 ## Pull request previews
 
@@ -265,12 +312,15 @@ GitHub Actions builds production images in
 ghcr.io/shchilkin/popchoice/web
 ghcr.io/shchilkin/popchoice/workers
 ghcr.io/shchilkin/popchoice/bull-board
+ghcr.io/shchilkin/popchoice/db-migrate
+ghcr.io/shchilkin/popchoice/movie-seed
+ghcr.io/shchilkin/popchoice/movie-discovery
+ghcr.io/shchilkin/popchoice/movie-backfill
 ```
 
 For same-repository PRs, the workflow tags each image as both
 `sha-<12-char-github-sha>` and `pr-<number>`, then uploads
-`container-image-web`, `container-image-workers`, and
-`container-image-bull-board` artifacts with digest-pinned references. Use the
+`container-image-<role>` artifacts with digest-pinned references. Use the
 digest-pinned references for Coolify previews whenever possible:
 
 ```txt
@@ -281,9 +331,9 @@ ghcr.io/shchilkin/popchoice/bull-board@sha256:<digest>
 
 The preview stack should pull those images and run them with the same commands,
 environment variables, health checks, PostgreSQL, and Redis dependencies shown
-in `coolify.compose.yml`. Do not let the preview rebuild `apps/web/Dockerfile`
-or `apps/web/workers.Dockerfile` when a digest-pinned PR image exists; the
-reviewed artifact is already built and published by CI.
+in `coolify.compose.yml`. Do not let the preview rebuild Dockerfiles when a
+digest-pinned PR image exists; the reviewed artifact is already built and
+published by CI.
 
 Set the web container's non-secret provenance variables from the image artifact:
 
@@ -378,6 +428,13 @@ Coolify terminal or an SSH shell on the VPS:
 
 ```bash
 docker compose --profile tools -f coolify.compose.yml run --rm movie-seed
+```
+
+The same tools profile also exposes `movie-backfill` from the matching
+prebuilt image:
+
+```bash
+docker compose --profile tools -f coolify.compose.yml run --rm movie-backfill
 ```
 
 If you prefer doing this from your laptop against the production database, use
