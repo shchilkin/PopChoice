@@ -78,6 +78,14 @@ See `docs/BOUNDARIES.md` for the canonical boundary rules.
 - User movie memory is exposed through `/account/movie-memory` and `/api/account/movie-memory`.
 - Movie identity should prefer TMDB ids and fall back to normalized title plus year via `apps/web/src/lib/movieIdentity.ts`.
 
+## AI and Recommendation Evaluation
+
+- Product e2e tests do not call live AI providers. `E2E_DETERMINISTIC_RECOMMENDATIONS=1` verifies the real browser/API/DB/results/feedback flow with deterministic recommendation fixtures, not model quality.
+- `npm run eval:recommendations` is the default AI regression gate. It is deterministic, CI-blocking, and does not require OpenAI, TMDB, Redis, or PostgreSQL.
+- If changes touch recommendation prompts, OpenAI/TMDB integration, embeddings, candidate filtering/ranking, movie-memory feedback, recommendation result shape, or eval fixtures, run `npm run eval:recommendations` and report the result. If you cannot run it, explain why.
+- If changes affect real catalog retrieval, schema, seed/backfill data, or candidate availability, also consider whether a real-data eval is needed. Real-data evals should be scheduled/manual, may require a seeded DB, and should be documented as follow-up when not run.
+- Live provider evals (`npm run eval:recommendations -- --live`) are manual because they can spend API credits and be flaky. Do not make them a default CI gate or run them unless the user explicitly wants live-provider validation and the required env is configured.
+
 ## Database and Migrations
 
 - Keep `db/init/*.sql`, `db/createDB.sql`, and service/app schema helpers in sync when adding schema.
