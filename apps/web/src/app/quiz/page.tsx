@@ -39,12 +39,12 @@ export default function QuizPage() {
 
 function QuizPageContent() {
   const searchParams = useSearchParams();
-  const restartToken = searchParams.get('restart');
+  const quizSessionKey = searchParams.get('session') ?? searchParams.get('restart') ?? 'active';
 
-  return <QuizSession key={restartToken ?? 'active'} restartToken={restartToken} />;
+  return <QuizSession key={quizSessionKey} />;
 }
 
-function QuizSession({ restartToken }: { restartToken: string | null }) {
+function QuizSession() {
   const [state, send] = useMachine(quizMachine);
   const router = useRouter();
   const { t } = useLanguage();
@@ -67,11 +67,6 @@ function QuizSession({ restartToken }: { restartToken: string | null }) {
       : null;
   const currentStepIdx = questionsStep ? STEP_KEYS.indexOf(questionsStep) : -1;
   const isLastStep = questionsStep === 'favoriteActor';
-
-  useEffect(() => {
-    if (!restartToken) return;
-    router.replace('/quiz', { scroll: false });
-  }, [restartToken, router]);
 
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
