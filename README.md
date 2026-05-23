@@ -138,6 +138,20 @@ Open [http://localhost:3000](http://localhost:3000) to use the app.
 
 The workers terminal is required for the async recommendation flow when Redis is enabled locally.
 
+### E2E smoke tests
+
+The e2e suite uses its own Docker compose file, ports, and disposable database so it never writes to the local development database.
+
+```bash
+npm run test:e2e
+```
+
+This command resets `docker-compose.e2e.yml`, applies `db/init` migrations, seeds deterministic movie fixtures, starts the Next.js app on `http://127.0.0.1:3100`, and runs Playwright. Stop and remove the e2e services with:
+
+```bash
+npm run test:e2e:down
+```
+
 ### Optional — Bull Board queue dashboard
 
 ```bash

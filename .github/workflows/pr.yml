@@ -161,6 +161,61 @@ jobs:
       - name: Run Storybook tests
         run: npm run test:storybook --ignore-scripts
 
+  e2e-tests:
+    name: E2E Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright system dependencies
+        run: npx playwright install-deps chromium
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Stop e2e services
+        if: always()
+        run: npm run test:e2e:down
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-e2e-report
+          path: |
+            playwright-report/
+            apps/web/playwright-report/
+            test-results/
+            apps/web/test-results/
+          retention-days: 30
+
   build:
     name: Build
     needs: changes
@@ -234,6 +289,7 @@ jobs:
       - type-check
       - server-tests
       - storybook-tests
+      - e2e-tests
       - build
       - services-ci
       - dependency-review
@@ -246,6 +302,7 @@ jobs:
       TYPE_CHECK_RESULT: ${{ needs.type-check.result }}
       SERVER_TESTS_RESULT: ${{ needs.server-tests.result }}
       STORYBOOK_TESTS_RESULT: ${{ needs.storybook-tests.result }}
+      E2E_TESTS_RESULT: ${{ needs.e2e-tests.result }}
       BUILD_RESULT: ${{ needs.build.result }}
       SERVICES_CI_RESULT: ${{ needs.services-ci.result }}
       DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
@@ -263,6 +320,7 @@ jobs:
           [[ "$TYPE_CHECK_RESULT" == "success" ]] || failures+=("Type Check: $TYPE_CHECK_RESULT")
           [[ "$SERVER_TESTS_RESULT" == "success" ]] || failures+=("Server Tests: $SERVER_TESTS_RESULT")
           [[ "$STORYBOOK_TESTS_RESULT" == "success" ]] || failures+=("Storybook Tests: $STORYBOOK_TESTS_RESULT")
+          [[ "$E2E_TESTS_RESULT" == "success" ]] || failures+=("E2E Tests: $E2E_TESTS_RESULT")
           [[ "$BUILD_RESULT" == "success" ]] || failures+=("Build: $BUILD_RESULT")
           [[ "$SERVICES_CI_RESULT" == "success" ]] || failures+=("Services CI: $SERVICES_CI_RESULT")
           [[ "$DEPENDENCY_REVIEW_RESULT" == "success" ]] || failures+=("Dependency Review: $DEPENDENCY_REVIEW_RESULT")

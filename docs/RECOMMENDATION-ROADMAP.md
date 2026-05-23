@@ -188,7 +188,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 ### Stage 5.5: Deterministic e2e and eval foundations
 
-- [#474](https://github.com/shchilkin/PopChoice/issues/474): add a full Playwright e2e harness with an isolated migrated test database.
+- [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a full Playwright e2e harness with an isolated migrated test database.
 - [#475](https://github.com/shchilkin/PopChoice/issues/475): add product smoke flows for auth, catalog, quiz, recommendation, and feedback.
 - [#476](https://github.com/shchilkin/PopChoice/issues/476): add recommendation eval fixtures and scoring so AI behavior can be changed with more control.
 - Keep live-model evals optional. The default path should be deterministic, cheap, and safe for CI.
@@ -204,7 +204,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 Good next PRs, in order:
 
-1. Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so future recommendation changes can rely on real e2e coverage with an isolated DB.
+1. Add [#475](https://github.com/shchilkin/PopChoice/issues/475) product smoke flows for auth, catalog, quiz, recommendation, and feedback on top of the e2e foundation.
 2. Decide [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
 3. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
 4. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.

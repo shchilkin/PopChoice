@@ -21,6 +21,7 @@
     "start:workers": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" tsx src/lib/workers/startWorkers.ts",
     "storybook": "storybook dev -p 6006",
     "test": "vitest",
+    "test:e2e": "playwright test --config playwright.e2e.config.ts",
     "test:server": "vitest run --project=server",
     "pretest:storybook": "npx playwright install && npx playwright install-deps",
     "test:storybook": "vitest --project=storybook run",

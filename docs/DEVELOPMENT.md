@@ -126,6 +126,28 @@ To switch to real data, add `DATABASE_URL` to your `.env` file and seed the data
 - **Component tests** - Storybook with Vitest integration
 - **Browser tests** - Playwright for end-to-end scenarios
 
+### End-to-End Database Harness
+
+Run the deterministic e2e smoke suite from the repo root:
+
+```bash
+npm run test:e2e
+```
+
+The command prepares an isolated environment:
+
+- `docker-compose.e2e.yml` starts PostgreSQL with pgvector on `127.0.0.1:55432` and Redis on `127.0.0.1:56379`.
+- `scripts/e2e/setup-db.mjs` resets the e2e compose project, applies every `db/init/*.sql` migration through `apps/web/scripts/migrate-db.js`, and seeds deterministic movie fixtures.
+- `apps/web/playwright.e2e.config.ts` starts the app on `http://127.0.0.1:3100` with `DATABASE_URL` and `REDIS_URL` pointed at the isolated services.
+
+Stop and remove the e2e services with:
+
+```bash
+npm run test:e2e:down
+```
+
+The first smoke coverage intentionally focuses on `/api/health` and the Available Movies page. Auth, quiz, recommendation polling, and AI-response evals are planned as follow-up e2e/eval issues.
+
 ## Project Structure
 
 ```text

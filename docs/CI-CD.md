@@ -4,7 +4,7 @@
 
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
-- `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, Storybook tests, build, service CI, dependency review)
+- `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, Storybook tests, e2e smoke tests, build, service CI, dependency review)
 - `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 - `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
@@ -22,6 +22,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | `pr.yml`                 | `type-check`         | TypeScript type safety (`tsc --noEmit`)                                         |
 | `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload                |
 | `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests                          |
+| `pr.yml`                 | `e2e-tests`          | Playwright smoke tests against isolated PostgreSQL + Redis services             |
 | `pr.yml`                 | `build`              | Next.js production build verification                                           |
 | `pr.yml`                 | `services-ci`        | Turbo test pass for `services/*`                                                |
 | `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                                  |
@@ -44,6 +45,12 @@ The `storybook-tests` job runs `npx playwright install-deps` on every CI run and
 ### Playwright Browser Caching
 
 The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-playwright` using `actions/cache@v5`, keyed on the OS and `package-lock.json` hash. On a cache hit, the browser download step is skipped, but `npx playwright install-deps` still runs because Linux system packages are not part of the Playwright browser cache.
+
+### E2E Smoke Tests
+
+The `e2e-tests` job runs `npm run test:e2e`. That command starts the isolated `docker-compose.e2e.yml` services, applies the same `db/init` migrations used by production/local setup, seeds deterministic movie fixtures, starts Next.js on port `3100`, and runs Playwright. The job always runs `npm run test:e2e:down` afterwards so the disposable database volume is removed.
+
+The first e2e coverage proves the real app can read seeded catalog data from PostgreSQL and that `/api/health` can reach both PostgreSQL and Redis. Broader auth, quiz, recommendation, and AI-eval coverage is tracked separately from this foundation.
 
 ### Code Coverage
 
