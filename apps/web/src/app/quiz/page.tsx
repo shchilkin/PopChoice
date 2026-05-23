@@ -260,74 +260,75 @@ function QuizSession({ restartToken }: { restartToken: string | null }) {
   const isLastPerson = currentPersonIdx === people.length - 1;
 
   return (
-    <div className="flex-1 flex flex-col min-h-[80vh]">
-      {/* Top bar */}
-      <div className="px-5 pt-6 pb-4 flex flex-col gap-3 max-w-xl mx-auto w-full">
-        {totalPeople > 1 && (
-          <div className="flex items-center gap-2 mb-1">
-            {people.map((p, i) => (
-              <div
-                key={i}
-                className="text-xs px-3 py-1 rounded-full transition-all duration-200"
-                style={{
-                  background: i === currentPersonIdx ? 'var(--pc-gold-wash)' : 'var(--pc-ghost)',
-                  color:
-                    i === currentPersonIdx
-                      ? 'var(--pc-gold-text)'
-                      : i < currentPersonIdx
-                        ? 'var(--pc-gold-text)'
-                        : 'var(--pc-t4)',
-                  border:
-                    i === currentPersonIdx
-                      ? '1px solid var(--pc-gold-bd)'
-                      : '1px solid transparent',
-                }}
-              >
-                {p.name}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <ProgressDots current={currentStepIdx} total={5} />
-            <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
-              {t.quiz.nav.ofTotal
-                .replace('{current}', String(currentStepIdx + 1))
-                .replace('{total}', '5')}
-            </span>
-          </div>
-          {personLabel && (
-            <span style={{ color: 'var(--pc-t2)', fontSize: '0.8rem' }}>👤 {personLabel}</span>
-          )}
-        </div>
-
-        <div
-          style={{
-            color: 'var(--pc-t3)',
-            fontSize: '0.75rem',
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}
+    <div className="flex-1 overflow-hidden">
+      <AnimatePresence mode="wait" custom={dir}>
+        <motion.div
+          key={`${currentPersonIdx}-${questionsStep}`}
+          custom={dir}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className="flex min-h-[80vh] flex-1 flex-col"
         >
-          {t.quiz.labels[currentStepIdx]}
-        </div>
-      </div>
+          {/* Top bar */}
+          <div className="px-5 pt-6 pb-4 flex flex-col gap-3 max-w-xl mx-auto w-full">
+            {totalPeople > 1 && (
+              <div className="flex items-center gap-2 mb-1">
+                {people.map((p, i) => (
+                  <div
+                    key={i}
+                    className="text-xs px-3 py-1 rounded-full transition-all duration-200"
+                    style={{
+                      background:
+                        i === currentPersonIdx ? 'var(--pc-gold-wash)' : 'var(--pc-ghost)',
+                      color:
+                        i === currentPersonIdx
+                          ? 'var(--pc-gold-text)'
+                          : i < currentPersonIdx
+                            ? 'var(--pc-gold-text)'
+                            : 'var(--pc-t4)',
+                      border:
+                        i === currentPersonIdx
+                          ? '1px solid var(--pc-gold-bd)'
+                          : '1px solid transparent',
+                    }}
+                  >
+                    {p.name}
+                  </div>
+                ))}
+              </div>
+            )}
 
-      {/* Question area */}
-      <div className="flex-1 flex flex-col px-5 max-w-xl mx-auto w-full overflow-hidden">
-        <AnimatePresence mode="wait" custom={dir}>
-          <motion.div
-            key={`${currentPersonIdx}-${questionsStep}`}
-            custom={dir}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="flex-1"
-          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ProgressDots current={currentStepIdx} total={5} />
+                <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
+                  {t.quiz.nav.ofTotal
+                    .replace('{current}', String(currentStepIdx + 1))
+                    .replace('{total}', '5')}
+                </span>
+              </div>
+              {personLabel && (
+                <span style={{ color: 'var(--pc-t2)', fontSize: '0.8rem' }}>👤 {personLabel}</span>
+              )}
+            </div>
+
+            <div
+              style={{
+                color: 'var(--pc-t3)',
+                fontSize: '0.75rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {t.quiz.labels[currentStepIdx]}
+            </div>
+          </div>
+
+          {/* Question area */}
+          <div className="flex-1 flex flex-col px-5 max-w-xl mx-auto w-full">
             {questionsStep === 'favoriteMovie' && (
               <FavoriteMovieStep
                 person={currentPerson}
@@ -352,19 +353,19 @@ function QuizSession({ restartToken }: { restartToken: string | null }) {
                 onSubmit={() => send({ type: 'NEXT' })}
               />
             )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+          </div>
 
-      <QuizNavigation
-        onBack={() => send({ type: 'BACK' })}
-        onNext={() => send({ type: 'NEXT' })}
-        canProceed={canProceed()}
-        isSubmitting={isSubmitting}
-        isLastStep={isLastStep}
-        isLastPerson={isLastPerson}
-        nextPersonName={people[currentPersonIdx + 1]?.name}
-      />
+          <QuizNavigation
+            onBack={() => send({ type: 'BACK' })}
+            onNext={() => send({ type: 'NEXT' })}
+            canProceed={canProceed()}
+            isSubmitting={isSubmitting}
+            isLastStep={isLastStep}
+            isLastPerson={isLastPerson}
+            nextPersonName={people[currentPersonIdx + 1]?.name}
+          />
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
