@@ -195,7 +195,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### Testing and Evaluation Track
 
-- [#474](https://github.com/shchilkin/PopChoice/issues/474): add a Playwright e2e harness with an isolated migrated test database and deterministic seed fixtures.
+- [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a Playwright e2e harness with an isolated migrated test database and deterministic seed fixtures.
 - [#475](https://github.com/shchilkin/PopChoice/issues/475): cover auth, catalog, quiz, recommendation, and feedback smoke flows through product-level e2e tests.
 - [#476](https://github.com/shchilkin/PopChoice/issues/476): add an AI recommendation eval harness with deterministic fixtures by default and optional live model/provider runs.
 - Keep Storybook/component tests separate from full product e2e tests so UI component regressions and app-flow regressions fail with clear ownership.
@@ -253,10 +253,11 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 1. [x] Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on the existing catalog fields.
 2. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-3. [ ] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
-4. [ ] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
-5. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
-6. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+3. [x] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
+4. [ ] Add [#475](https://github.com/shchilkin/PopChoice/issues/475) auth, catalog, quiz, and recommendation smoke flows on top of the isolated e2e harness.
+5. [ ] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
+6. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
+7. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 
