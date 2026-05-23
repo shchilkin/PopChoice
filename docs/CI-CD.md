@@ -5,6 +5,7 @@
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
 - `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, recommendation evals, Storybook tests, e2e smoke tests, build, service CI, dependency review)
+- `.github/workflows/recommendation-real-data-evals.yml` – scheduled/manual recommendation evals against a seeded database and real catalog retrieval
 - `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 - `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
@@ -15,23 +16,24 @@ The PR validation workflows run automatically on pull requests targeting the `de
 
 ### Jobs
 
-| Workflow                 | Job                    | Purpose                                                                         |
-| ------------------------ | ---------------------- | ------------------------------------------------------------------------------- |
-| `pr.yml`                 | `changes`              | Classifies PR as docs-only vs code-changing                                     |
-| `pr.yml`                 | `lint`                 | ESLint code quality + Prettier formatting                                       |
-| `pr.yml`                 | `type-check`           | TypeScript type safety (`tsc --noEmit`)                                         |
-| `pr.yml`                 | `server-tests`         | Vitest server tests with coverage collection and artifact upload                |
-| `pr.yml`                 | `recommendation-evals` | Deterministic recommendation quality fixtures and scoring                       |
-| `pr.yml`                 | `storybook-tests`      | Playwright browser install + Storybook component tests                          |
-| `pr.yml`                 | `e2e-tests`            | Playwright smoke tests against isolated PostgreSQL + Redis services             |
-| `pr.yml`                 | `build`                | Next.js production build verification                                           |
-| `pr.yml`                 | `services-ci`          | Turbo test pass for `services/*`                                                |
-| `pr.yml`                 | `dependency-review`    | Blocks PRs introducing vulnerable dependencies                                  |
-| `pr.yml`                 | `pr-validation`        | Stable required check that always runs on every PR                              |
-| `container-images.yml`   | `build-images`         | Builds and publishes GHCR production images with provenance                     |
-| `container-images.yml`   | `deploy-coolify`       | Optionally triggers the Coolify deploy webhook after development images publish |
-| `movie-discovery-ci.yml` | `movie-discovery-ci`   | TypeScript compilation and tests for `services/movie-discovery`                 |
-| `codeql.yml`             | `analyze`              | CodeQL static analysis for Actions and JavaScript/TypeScript                    |
+| Workflow                             | Job                              | Purpose                                                                         |
+| ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------- |
+| `pr.yml`                             | `changes`                        | Classifies PR as docs-only vs code-changing                                     |
+| `pr.yml`                             | `lint`                           | ESLint code quality + Prettier formatting                                       |
+| `pr.yml`                             | `type-check`                     | TypeScript type safety (`tsc --noEmit`)                                         |
+| `pr.yml`                             | `server-tests`                   | Vitest server tests with coverage collection and artifact upload                |
+| `pr.yml`                             | `recommendation-evals`           | Deterministic recommendation quality fixtures and scoring                       |
+| `pr.yml`                             | `storybook-tests`                | Playwright browser install + Storybook component tests                          |
+| `pr.yml`                             | `e2e-tests`                      | Playwright smoke tests against isolated PostgreSQL + Redis services             |
+| `pr.yml`                             | `build`                          | Next.js production build verification                                           |
+| `pr.yml`                             | `services-ci`                    | Turbo test pass for `services/*`                                                |
+| `pr.yml`                             | `dependency-review`              | Blocks PRs introducing vulnerable dependencies                                  |
+| `pr.yml`                             | `pr-validation`                  | Stable required check that always runs on every PR                              |
+| `container-images.yml`               | `build-images`                   | Builds and publishes GHCR production images with provenance                     |
+| `container-images.yml`               | `deploy-coolify`                 | Optionally triggers the Coolify deploy webhook after development images publish |
+| `movie-discovery-ci.yml`             | `movie-discovery-ci`             | TypeScript compilation and tests for `services/movie-discovery`                 |
+| `codeql.yml`                         | `analyze`                        | CodeQL static analysis for Actions and JavaScript/TypeScript                    |
+| `recommendation-real-data-evals.yml` | `recommendation-real-data-evals` | Manual/scheduled seeded-database catalog retrieval evals                        |
 
 ## Workflow Features
 
@@ -57,12 +59,12 @@ The e2e coverage proves the real app can read seeded catalog data from PostgreSQ
 
 The `recommendation-evals` job runs `npm run eval:recommendations`. This is a CI-blocking deterministic suite: it uses fixture prompts, fixture memory constraints, and mocked model outputs, then writes `apps/web/test-results/recommendation-evals/report.json`. The report is uploaded as the `recommendation-eval-report` artifact.
 
-Default evals do not require `OPENAI_API_KEY`, `TMDB_API_KEY`, Redis, or PostgreSQL. Optional live-provider evals use `npm run eval:recommendations -- --live` and are intentionally manual because they can spend API credits, depend on provider availability, and may need seeded local data.
+Default evals do not require `OPENAI_API_KEY`, `TMDB_API_KEY`, Redis, or PostgreSQL. Real-data evals use `npm run eval:recommendations:real-data` after preparing the seeded e2e database; they validate catalog connectivity, candidate availability, and catalog search retrieval while keeping model output controlled. Optional live-provider evals use `npm run eval:recommendations --workspace=apps/web -- --live` and are intentionally manual because they can spend API credits, depend on provider availability, and may need seeded local data.
 
 Recommendation checks are intentionally layered:
 
 1. **Per-PR CI:** deterministic fixtures and mocked model outputs via `npm run eval:recommendations`.
-2. **Scheduled or manual real-data eval:** seeded database and real catalog retrieval, but still controlled model output by default. Use this for schema, seed/backfill, retrieval, and candidate-availability changes once the workflow exists.
+2. **Scheduled or manual real-data eval:** seeded database and real catalog retrieval, but still controlled model output by default. Use this for schema, seed/backfill, retrieval, and candidate-availability changes. The `Recommendation Real-Data Evals` workflow runs weekly and can be triggered manually.
 3. **Manual live eval:** real data plus live AI providers via `npm run eval:recommendations -- --live`. This is not a default hard gate because provider responses, rate limits, and API cost can make it noisy.
 
 Agents and reviewers should explicitly consider these layers when a PR changes recommendation prompts, embeddings, OpenAI/TMDB integration, candidate filtering/ranking, feedback signals, or catalog data feeding recommendations.

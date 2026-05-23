@@ -75,7 +75,7 @@ function buildDeterministicE2EResult(allPeopleData: PersonFormData[]): ApiRespon
     title: 'PopChoice E2E Space Opera',
     description: `A deterministic e2e recommendation${reference}.`,
     usedBroaderSearch: false,
-    dbMovieCount: 4,
+    dbMovieCount: 6,
     similarMovies: [
       {
         id: 1,

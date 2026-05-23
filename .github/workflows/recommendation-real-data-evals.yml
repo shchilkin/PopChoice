@@ -1,0 +1,50 @@
+name: Recommendation Real-Data Evals
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DATABASE_URL: postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e
+
+jobs:
+  recommendation-real-data-evals:
+    name: Recommendation Real-Data Evals
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare seeded eval database
+        run: npm run test:e2e:setup
+
+      - name: Run real-data recommendation evals
+        run: >
+          npm run eval:recommendations --workspace=apps/web --
+          --real-data
+          --output apps/web/test-results/recommendation-real-data-evals/report.json
+
+      - name: Stop eval database
+        if: always()
+        run: npm run test:e2e:down
+
+      - name: Upload real-data recommendation eval report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: recommendation-real-data-eval-report
+          path: apps/web/test-results/recommendation-real-data-evals/
+          retention-days: 30

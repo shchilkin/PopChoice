@@ -16,7 +16,7 @@ test('renders seeded catalog data and filters it through the real movies API', a
   await page.goto('/available-movies');
 
   await expect(page.getByRole('heading', { name: 'Available Movies' })).toBeVisible();
-  await expect(page.getByText(/Showing 1.4 of 4 movies/)).toBeVisible();
+  await expect(page.getByText(/Showing 1.6 of 6 movies/)).toBeVisible();
   await expect(page.getByText('PopChoice E2E Space Opera')).toBeVisible();
   await expect(page.getByText('PopChoice E2E Short Comedy')).toBeVisible();
 
@@ -50,7 +50,7 @@ test('shows a useful empty state when catalog filters match nothing', async ({ p
   await page.goto('/available-movies');
 
   await expect(page.getByRole('heading', { name: 'Available Movies' })).toBeVisible();
-  await expect(page.getByText(/Showing 1.4 of 4 movies/)).toBeVisible();
+  await expect(page.getByText(/Showing 1.6 of 6 movies/)).toBeVisible();
 
   await page.getByPlaceholder('Title, actor, director, or genre').fill('No Such PopChoice Fixture');
   await page.getByRole('button', { name: 'Apply' }).click();
@@ -61,6 +61,6 @@ test('shows a useful empty state when catalog filters match nothing', async ({ p
 
   await page.locator('form').getByRole('button', { name: 'Clear' }).click();
 
-  await expect(page.getByText(/Showing 1.4 of 4 movies/)).toBeVisible();
+  await expect(page.getByText(/Showing 1.6 of 6 movies/)).toBeVisible();
   await expect(page.getByText('PopChoice E2E Space Opera')).toBeVisible();
 });
