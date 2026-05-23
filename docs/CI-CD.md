@@ -50,7 +50,7 @@ The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-pla
 
 The `e2e-tests` job runs `npm run test:e2e`. That command starts the isolated `docker-compose.e2e.yml` services, applies the same `db/init` migrations used by production/local setup, seeds deterministic movie fixtures, starts Next.js on port `3100`, and runs Playwright. The job always runs `npm run test:e2e:down` afterwards so the disposable database volume is removed.
 
-The first e2e coverage proves the real app can read seeded catalog data from PostgreSQL and that `/api/health` can reach both PostgreSQL and Redis. Broader auth, quiz, recommendation, and AI-eval coverage is tracked separately from this foundation.
+The e2e coverage proves the real app can read seeded catalog data from PostgreSQL, that `/api/health` can reach both PostgreSQL and Redis, and that auth/session, catalog empty states, quiz submission, deterministic result rendering, feedback, and movie-memory persistence work through the browser. AI-eval coverage is tracked separately so model quality gates can use fixture scoring and optional live-provider runs.
 
 ### Code Coverage
 

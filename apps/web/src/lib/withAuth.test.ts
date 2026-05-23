@@ -73,6 +73,31 @@ describe('withAuth', () => {
     await expect(response.json()).resolves.toEqual({ clientId: 'user:42' });
   });
 
+  it('preserves browser session identity before using the dev auth bypass', async () => {
+    vi.stubEnv('VALID_API_KEYS', '');
+    const sessionToken = createSessionToken('42');
+    expect(sessionToken).toBeTruthy();
+
+    const handler = vi.fn(async (_req: NextRequest, clientId: string) =>
+      NextResponse.json({ clientId }),
+    );
+    const wrapped = withAuth(handler);
+
+    const response = await wrapped(
+      new NextRequest('http://localhost/api/recommendations/test/feedback', {
+        headers: {
+          Origin: 'http://localhost',
+          'X-CSRF-Token': 'csrf-token',
+          Cookie: `__csrf=csrf-token; ${SESSION_COOKIE}=${sessionToken}`,
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(handler).toHaveBeenCalledWith(expect.any(NextRequest), 'user:42');
+    await expect(response.json()).resolves.toEqual({ clientId: 'user:42' });
+  });
+
   it('rejects cross-origin CSRF fallback when API key is missing', async () => {
     const handler = vi.fn(async () => NextResponse.json({ ok: true }));
     const wrapped = withAuth(handler);

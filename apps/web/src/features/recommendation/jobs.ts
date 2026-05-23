@@ -10,7 +10,7 @@ import {
 } from './persistence';
 import { runRecommendationPipeline } from './pipeline';
 
-import type { PersonFormData, RecommendationRequestBody } from './types';
+import type { ApiResponse, PersonFormData, RecommendationRequestBody } from './types';
 import type { Locale } from '@/lib/locale';
 
 export async function createAndStartRecommendation(
@@ -24,6 +24,11 @@ export async function createAndStartRecommendation(
   const recommendationSlug = created.slug;
 
   logger.info({ recommendationId, recommendationSlug }, 'Recommendation row created');
+
+  if (usesDeterministicE2ERecommendations()) {
+    await completeDeterministicE2ERecommendation(recommendationId, allPeopleData);
+    return created;
+  }
 
   if (recommendationQueue) {
     try {
@@ -46,6 +51,74 @@ export async function createAndStartRecommendation(
   }
 
   return created;
+}
+
+export function usesDeterministicE2ERecommendations(): boolean {
+  return process.env.E2E_DETERMINISTIC_RECOMMENDATIONS === '1';
+}
+
+async function completeDeterministicE2ERecommendation(
+  recommendationId: string,
+  allPeopleData: PersonFormData[],
+): Promise<void> {
+  logger.info({ recommendationId }, 'Completing recommendation with deterministic e2e fixture');
+  await markRecommendationProcessing(recommendationId);
+  await markRecommendationStage(recommendationId, 'complete');
+  await completeRecommendationRecord(recommendationId, buildDeterministicE2EResult(allPeopleData));
+}
+
+function buildDeterministicE2EResult(allPeopleData: PersonFormData[]): ApiResponse {
+  const primary = allPeopleData[0];
+  const reference = primary?.favoriteMovie ? ` after your ${primary.favoriteMovie} cue` : '';
+
+  return {
+    title: 'PopChoice E2E Space Opera',
+    description: `A deterministic e2e recommendation${reference}.`,
+    usedBroaderSearch: false,
+    dbMovieCount: 4,
+    similarMovies: [
+      {
+        id: 1,
+        tmdbId: 900001,
+        name: 'PopChoice E2E Space Opera',
+        year: 2024,
+        similarity: 0.98,
+        age_rating: 'PG-13',
+        duration: 142,
+        score_rating: 8.7,
+        aiDescription:
+          'A deterministic top pick for proving quiz submission, result rendering, and feedback.',
+        localizedName: 'PopChoice E2E Space Opera',
+        isMainRecommendation: true,
+      },
+      {
+        id: 4,
+        tmdbId: 900004,
+        name: 'PopChoice E2E Family Adventure',
+        year: 2018,
+        similarity: 0.84,
+        age_rating: 'G',
+        duration: 101,
+        score_rating: 8.1,
+        aiDescription: 'A friendly alternate pick from the seeded e2e catalog.',
+        localizedName: 'PopChoice E2E Family Adventure',
+        isMainRecommendation: false,
+      },
+      {
+        id: 3,
+        tmdbId: 900003,
+        name: 'PopChoice E2E Classic Drama',
+        year: 1998,
+        similarity: 0.79,
+        age_rating: 'R',
+        duration: 126,
+        score_rating: 9.1,
+        aiDescription: 'A stronger dramatic alternate for the seeded e2e catalog.',
+        localizedName: 'PopChoice E2E Classic Drama',
+        isMainRecommendation: false,
+      },
+    ],
+  };
 }
 
 async function processInlineRecommendation(

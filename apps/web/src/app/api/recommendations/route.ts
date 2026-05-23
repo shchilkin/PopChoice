@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getRecommendationInputBlock, normalizePeopleData } from '@/features/recommendation/input';
-import { createAndStartRecommendation } from '@/features/recommendation/jobs';
+import {
+  createAndStartRecommendation,
+  usesDeterministicE2ERecommendations,
+} from '@/features/recommendation/jobs';
 import { requestBodySchema } from '@/features/recommendation/types';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
@@ -50,9 +53,11 @@ async function postHandler(req: NextRequest, clientId: string): Promise<Response
     'Creating recommendation via /api/recommendations',
   );
 
-  const inputBlock = await getRecommendationInputBlock(allPeopleData);
-  if (inputBlock) {
-    return NextResponse.json(inputBlock, { status: 422 });
+  if (!usesDeterministicE2ERecommendations()) {
+    const inputBlock = await getRecommendationInputBlock(allPeopleData);
+    if (inputBlock) {
+      return NextResponse.json(inputBlock, { status: 422 });
+    }
   }
 
   try {
