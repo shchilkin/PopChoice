@@ -152,6 +152,22 @@ This command resets `docker-compose.e2e.yml`, applies `db/init` migrations, seed
 npm run test:e2e:down
 ```
 
+### Recommendation evals
+
+Recommendation evals are separate from browser e2e smoke tests. The default command uses deterministic fixtures and mocked model outputs, so it does not spend OpenAI/TMDB credits:
+
+```bash
+npm run eval:recommendations
+```
+
+The command writes a JSON report to `apps/web/test-results/recommendation-evals/report.json` and checks output shape, candidate validity, safety constraints, repeat avoidance, and explanation quality. Optional live-provider runs are explicit:
+
+```bash
+npm run eval:recommendations -- --live
+```
+
+Live runs require configured provider/database environment variables and are intended for manual checks before larger recommendation changes.
+
 ### Optional — Bull Board queue dashboard
 
 ```bash

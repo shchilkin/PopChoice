@@ -190,7 +190,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 - [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a full Playwright e2e harness with an isolated migrated test database.
 - [x] [#475](https://github.com/shchilkin/PopChoice/issues/475): add product smoke flows for auth, catalog, quiz, recommendation, and feedback.
-- [#476](https://github.com/shchilkin/PopChoice/issues/476): add recommendation eval fixtures and scoring so AI behavior can be changed with more control.
+- [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add recommendation eval fixtures and scoring so AI behavior can be changed with more control.
 - Keep live-model evals optional. The default path should be deterministic, cheap, and safe for CI.
 
 ### Stage 6: Long-term personalization
@@ -204,14 +204,13 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 Good next PRs, in order:
 
-1. Add [#476](https://github.com/shchilkin/PopChoice/issues/476) recommendation eval fixtures and scoring on top of the deterministic test foundation.
-2. Decide [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
-3. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-4. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
-5. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
-6. Add TMDB-backed candidate-card sourcing for swipe mode.
-7. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
-8. Add manual-review logging for ambiguous TMDB/local identity matches.
+1. Decide [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
+2. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
+3. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
+4. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
+5. Add TMDB-backed candidate-card sourcing for swipe mode.
+6. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
+7. Add manual-review logging for ambiguous TMDB/local identity matches.
 
 ## Non-Goals For Now
 
