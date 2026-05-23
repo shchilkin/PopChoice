@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { extractUSCertification, movieToEmbeddingText } from './tmdb.js';
+import { extractCatalogMetadata, extractUSCertification, movieToEmbeddingText } from './tmdb.js';
 
 import type { TMDBMovieDetails } from './tmdb.js';
 
@@ -16,6 +16,7 @@ const makeDetails = (overrides: Partial<TMDBMovieDetails> = {}): TMDBMovieDetail
   vote_average: 7.5,
   vote_count: 1000,
   runtime: 120,
+  poster_path: '/poster.jpg',
   release_dates: {
     results: [
       {
@@ -104,6 +105,41 @@ describe('extractUSCertification', () => {
   it('returns NR when release_dates.results is empty', () => {
     const details = makeDetails({ release_dates: { results: [] } });
     expect(extractUSCertification(details)).toBe('NR');
+  });
+});
+
+describe('extractCatalogMetadata', () => {
+  it('extracts normalized catalog metadata from appended TMDB details', () => {
+    const details = makeDetails({
+      genres: [{ id: 35, name: 'Comedy' }],
+      credits: {
+        cast: [{ id: 10, name: 'Lead Actor', character: 'Lead', order: 0, credit_id: 'cast-10' }],
+        crew: [
+          {
+            id: 20,
+            name: 'Movie Director',
+            job: 'Director',
+            department: 'Directing',
+            credit_id: 'crew-20',
+          },
+        ],
+      },
+      keywords: { keywords: [{ id: 30, name: 'friendship' }] },
+    });
+
+    const metadata = extractCatalogMetadata(details);
+
+    expect(metadata.people.map((person) => person.role)).toEqual(['cast', 'director']);
+    expect(metadata.genres).toEqual([expect.objectContaining({ tmdbId: 35, name: 'Comedy' })]);
+    expect(metadata.keywords).toEqual([
+      expect.objectContaining({ tmdbId: 30, name: 'friendship' }),
+    ]);
+    expect(metadata.snapshot).toMatchObject({
+      id: 1,
+      title: 'Test Movie',
+      cast: [expect.objectContaining({ id: 10, name: 'Lead Actor' })],
+      directors: [expect.objectContaining({ id: 20, name: 'Movie Director' })],
+    });
   });
 });
 

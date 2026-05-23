@@ -53,6 +53,10 @@ interface SummaryRow {
   missing_age_rating: number;
   missing_tmdb_matched_at: number;
   stale_tmdb_metadata: number;
+  missing_cast_metadata: number;
+  missing_director_metadata: number;
+  missing_genre_metadata: number;
+  missing_keyword_metadata: number;
 }
 
 interface IssueDefinition {
@@ -96,6 +100,34 @@ const ISSUE_DEFINITIONS: IssueDefinition[] = [
     key: 'stale_tmdb_metadata',
     label: 'Stale TMDB metadata',
     where: "tmdb_id IS NOT NULL AND tmdb_matched_at < now() - ($1::int * interval '1 day')",
+  },
+  {
+    key: 'missing_cast_metadata',
+    label: 'Missing cast metadata',
+    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'cast'
+    )`,
+  },
+  {
+    key: 'missing_director_metadata',
+    label: 'Missing director metadata',
+    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'director'
+    )`,
+  },
+  {
+    key: 'missing_genre_metadata',
+    label: 'Missing genre metadata',
+    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_genres WHERE movie_genres.movie_id = movies.id
+    )`,
+  },
+  {
+    key: 'missing_keyword_metadata',
+    label: 'Missing keyword metadata',
+    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_keywords WHERE movie_keywords.movie_id = movies.id
+    )`,
   },
 ];
 
@@ -167,7 +199,31 @@ async function getSummary(staleAfterDays: number): Promise<SummaryRow> {
         COUNT(*) FILTER (
           WHERE tmdb_id IS NOT NULL
             AND tmdb_matched_at < now() - ($1::int * interval '1 day')
-        )::int AS stale_tmdb_metadata
+        )::int AS stale_tmdb_metadata,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'cast'
+            )
+        )::int AS missing_cast_metadata,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'director'
+            )
+        )::int AS missing_director_metadata,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_genres WHERE movie_genres.movie_id = movies.id
+            )
+        )::int AS missing_genre_metadata,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_keywords WHERE movie_keywords.movie_id = movies.id
+            )
+        )::int AS missing_keyword_metadata
        FROM movies`,
     [staleAfterDays],
   );
@@ -182,6 +238,10 @@ async function getSummary(staleAfterDays: number): Promise<SummaryRow> {
     missing_age_rating: toNumber(row?.missing_age_rating),
     missing_tmdb_matched_at: toNumber(row?.missing_tmdb_matched_at),
     stale_tmdb_metadata: toNumber(row?.stale_tmdb_metadata),
+    missing_cast_metadata: toNumber(row?.missing_cast_metadata),
+    missing_director_metadata: toNumber(row?.missing_director_metadata),
+    missing_genre_metadata: toNumber(row?.missing_genre_metadata),
+    missing_keyword_metadata: toNumber(row?.missing_keyword_metadata),
   };
 }
 

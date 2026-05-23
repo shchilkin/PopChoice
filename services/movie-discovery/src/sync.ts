@@ -1,12 +1,19 @@
-import { filterNewMovies, getMovieCount, insertMovies } from './database.js';
+import {
+  filterNewMovies,
+  getMovieCount,
+  insertMovies,
+  upsertMovieCatalogMetadata,
+} from './database.js';
 import { createEmbeddings } from './embeddings.js';
 import { applyQualityFilter } from './filter.js';
 import { logger } from './logger.js';
 import {
   extractUSCertification,
+  extractCatalogMetadata,
   fetchFromSources,
   fetchMovieDetails,
   movieToEmbeddingText,
+  type TMDBCatalogMetadata,
 } from './tmdb.js';
 
 import type { Config } from './config.js';
@@ -153,6 +160,7 @@ export async function runSync(config: Config): Promise<void> {
   // 8. Build records and embedding texts
   const finalPartialRecords: Omit<MovieRecord, 'embedding'>[] = [];
   const embeddingTexts: string[] = [];
+  const catalogMetadataByTmdbId = new Map<number, TMDBCatalogMetadata>();
 
   for (let i = 0; i < moviesToProcess.length; i++) {
     const basic = moviesToProcess[i];
@@ -161,6 +169,10 @@ export async function runSync(config: Config): Promise<void> {
     const ageRating = details ? extractUSCertification(details) : 'NR';
     const runtime = details?.runtime ?? 0;
     const year = basic.release_date ? parseInt(basic.release_date.substring(0, 4), 10) : 0;
+    const catalogMetadata = details ? extractCatalogMetadata(details) : null;
+    if (catalogMetadata) {
+      catalogMetadataByTmdbId.set(basic.id, catalogMetadata);
+    }
 
     const record: Omit<MovieRecord, 'embedding'> = {
       name: basic.title,
@@ -201,6 +213,22 @@ export async function runSync(config: Config): Promise<void> {
 
   // 11. Insert into database
   const result = await insertMovies(finalRecords);
+  let metadataUpdated = 0;
+  for (const insertedMovie of result.insertedMovies) {
+    if (!insertedMovie.tmdb_id) continue;
+    const catalogMetadata = catalogMetadataByTmdbId.get(insertedMovie.tmdb_id);
+    if (!catalogMetadata) continue;
+
+    await upsertMovieCatalogMetadata({
+      movieId: insertedMovie.id,
+      tmdbMetadata: catalogMetadata.snapshot,
+      people: catalogMetadata.people,
+      genres: catalogMetadata.genres,
+      keywords: catalogMetadata.keywords,
+      source: 'tmdb',
+    });
+    metadataUpdated++;
+  }
 
   const countAfter = await getMovieCount();
   const durationMs = Date.now() - startTime;
@@ -208,6 +236,7 @@ export async function runSync(config: Config): Promise<void> {
   logger.info('Discovery sync complete', {
     inserted: result.success,
     errors: result.errors,
+    metadataUpdated,
     movieCountBefore: countBefore,
     movieCountAfter: countAfter,
     durationMs,

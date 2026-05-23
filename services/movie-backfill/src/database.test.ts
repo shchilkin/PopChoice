@@ -9,12 +9,18 @@ import {
   initDatabase,
   recordTMDBMatchReview,
   updateMovie,
+  upsertMovieCatalogMetadata,
 } from './database.js';
 
 vi.mock('pg', () => {
+  const mClient = {
+    query: vi.fn(async () => ({ rows: [{ id: '99' }] })),
+    release: vi.fn(),
+  };
   const mPool = {
     query: vi.fn(),
     end: vi.fn(),
+    connect: vi.fn(async () => mClient),
   };
   return {
     default: {
@@ -119,7 +125,10 @@ describe('database', () => {
       const result = await getIncompleteMovies(10);
 
       const [sql, params] = poolMock.query.mock.calls[0];
-      expect(sql).toContain('tmdb_id IS NULL OR duration = 0 OR poster_url IS NULL');
+      expect(sql).toContain('tmdb_id IS NULL');
+      expect(sql).toContain('duration = 0');
+      expect(sql).toContain('poster_url IS NULL');
+      expect(sql).toContain('tmdb_metadata_refreshed_at IS NULL');
       expect(sql).toContain('LIMIT $1');
       expect(params).toEqual([10]);
       expect(result).toEqual([
@@ -133,6 +142,64 @@ describe('database', () => {
           tmdb_id: 593,
         },
       ]);
+    });
+  });
+
+  describe('upsertMovieCatalogMetadata', () => {
+    it('refreshes the movie snapshot and replaces TMDB-sourced catalog joins', async () => {
+      await upsertMovieCatalogMetadata({
+        movieId: '42',
+        tmdbMetadata: { id: 593, title: 'Solaris' },
+        people: [
+          {
+            tmdbId: 123,
+            name: 'Andrei Tarkovsky',
+            creditId: 'director-credit',
+            role: 'director',
+            job: 'Director',
+            department: 'Directing',
+          },
+        ],
+        genres: [{ tmdbId: 878, name: 'Science Fiction' }],
+        keywords: [{ tmdbId: 456, name: 'space station' }],
+      });
+
+      const client = await poolMock.connect.mock.results[0].value;
+      expect(client.query).toHaveBeenCalledWith('BEGIN');
+      expect(client.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE movies'), [
+        '42',
+        JSON.stringify({ id: 593, title: 'Solaris' }),
+      ]);
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM movie_people'),
+        ['42'],
+      );
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM movie_genres'),
+        ['42', 'tmdb'],
+      );
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM movie_keywords'),
+        ['42', 'tmdb'],
+      );
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO catalog_people'),
+        expect.arrayContaining([123, 'Andrei Tarkovsky']),
+      );
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO movie_people'),
+        expect.arrayContaining(['42', expect.anything(), 'director-credit', 'director']),
+      );
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO catalog_genres'),
+        expect.arrayContaining([878, 'Science Fiction']),
+      );
+      expect(client.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO catalog_keywords'),
+        expect.arrayContaining([456, 'space station']),
+      );
+      expect(client.query).toHaveBeenCalledWith('COMMIT');
+      expect(client.release).toHaveBeenCalledOnce();
     });
   });
 

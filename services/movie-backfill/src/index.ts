@@ -18,11 +18,13 @@ import { loadConfig } from './config.js';
 import {
   checkTableExists,
   closeDatabase,
+  ensureCatalogMetadataSchema,
   ensureTMDBMatchReviewSchema,
   getIncompleteMovies,
   initDatabase,
   recordTMDBMatchReview,
   updateMovie,
+  upsertMovieCatalogMetadata,
   type IncompleteMovie,
   type RecordTMDBMatchReviewInput,
 } from './database.js';
@@ -30,10 +32,12 @@ import { createEmbeddings } from './embeddings.js';
 import { logger } from './logger.js';
 import {
   extractUSCertification,
+  extractCatalogMetadata,
   fetchMovieDetails,
   getPosterUrl,
   movieToEmbeddingText,
   searchMovieMatch,
+  type TMDBCatalogMetadata,
 } from './tmdb.js';
 
 /** A movie that passed all TMDB validations and is ready for embedding + DB update. */
@@ -46,6 +50,7 @@ interface PendingUpdate {
   posterUrl: string | null;
   localizedName: string | null;
   embeddingText: string;
+  catalogMetadata: TMDBCatalogMetadata;
 }
 
 function isRuntimeCompatible(existingRuntime: number, tmdbRuntime: number): boolean {
@@ -95,6 +100,7 @@ async function main(): Promise<void> {
     }
 
     await ensureTMDBMatchReviewSchema();
+    await ensureCatalogMetadataSchema();
 
     const movies = await getIncompleteMovies(config.maxMovies);
     logger.info('Fetched movies needing TMDB identity or metadata backfill', {
@@ -208,6 +214,7 @@ async function main(): Promise<void> {
 
             // 4. Extract age rating
             const ageRating = extractUSCertification(details);
+            const catalogMetadata = extractCatalogMetadata(details);
 
             // 5. Build embedding text using the existing DB score_rating and description
             //    to keep the embedding consistent with the stored row fields.
@@ -245,6 +252,7 @@ async function main(): Promise<void> {
               posterUrl: getPosterUrl(details.poster_path),
               localizedName: details.title && details.title !== movie.name ? details.title : null,
               embeddingText,
+              catalogMetadata,
             });
           } catch (err) {
             logger.warn('Failed to backfill movie — skipping', {
@@ -301,6 +309,14 @@ async function main(): Promise<void> {
               update.localizedName,
               embedding,
             );
+            await upsertMovieCatalogMetadata({
+              movieId: update.movie.id,
+              tmdbMetadata: update.catalogMetadata.snapshot,
+              people: update.catalogMetadata.people,
+              genres: update.catalogMetadata.genres,
+              keywords: update.catalogMetadata.keywords,
+              source: 'tmdb',
+            });
 
             logger.info('Movie backfilled successfully', {
               id: update.movie.id,
@@ -312,6 +328,9 @@ async function main(): Promise<void> {
               ageRating: update.ageRating,
               hasPoster: Boolean(update.posterUrl),
               hasLocalizedName: Boolean(update.localizedName),
+              people: update.catalogMetadata.people.length,
+              genres: update.catalogMetadata.genres.length,
+              keywords: update.catalogMetadata.keywords.length,
             });
             totalUpdated++;
           } catch (err) {

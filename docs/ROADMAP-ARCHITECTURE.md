@@ -168,9 +168,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 ### Data Quality Track
 
 - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471): add a catalog metadata model for cast, directors, genres, and keywords before expanding search beyond title/year.
-- [#472](https://github.com/shchilkin/PopChoice/issues/472): extend TMDB backfill/discovery to populate people and genre metadata, with catalog-health visibility for missing coverage.
+- [x] [#472](https://github.com/shchilkin/PopChoice/issues/472): extend TMDB backfill/discovery to populate people, genre, and keyword metadata, with catalog-health visibility for missing coverage.
 - Persist TMDB backfill review cases in `tmdb_match_reviews`, then add an admin/back-office UI to resolve ambiguous matches, missing metadata, or rejected runtime/year confidence cases.
-- Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, and stale TMDB metadata. The initial `npm run catalog:health` report covers current `movies` schema signals; admin resolution and automated refresh remain future work.
+- Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, stale TMDB metadata, and missing cast/director/genre/keyword coverage. Admin resolution and automated refresh remain future work.
 - Create a dedicated backoffice app for catalog-health reports, TMDB match
   review queues, and later manual data repair. Do not add this UI to
   `apps/web`; that app remains user-facing.
@@ -257,8 +257,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 4. [x] Add [#475](https://github.com/shchilkin/PopChoice/issues/475) auth, catalog, quiz, and recommendation smoke flows on top of the isolated e2e harness.
 5. [x] Add [#476](https://github.com/shchilkin/PopChoice/issues/476) deterministic recommendation eval fixtures and scoring.
 6. [x] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
-7. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
-8. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+7. [x] Populate the catalog metadata model in [#472](https://github.com/shchilkin/PopChoice/issues/472) from TMDB backfill/discovery before expanding #82 into actor/director/genre search.
+8. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
+9. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 

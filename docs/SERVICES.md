@@ -146,9 +146,10 @@ DRY_RUN=true npm run dev    # dry run
 3. Applies quality filter (vote count, vote average, overview length).
 4. Checks which movies already exist in the database.
 5. Caps new movies at `MAX_MOVIES_PER_RUN`.
-6. Fetches full movie details (runtime, US certification) from TMDB for each new movie.
+6. Fetches full movie details (runtime, US certification), credits, genres, and keywords from TMDB for each new movie.
 7. Generates OpenAI embeddings.
 8. Inserts records into the `movies` table.
+9. Upserts normalized cast, director, genre, and keyword metadata for the inserted records.
 
 ### Quality Filter
 
@@ -195,12 +196,13 @@ npm test                 # run vitest tests
 
 ### How it works
 
-1. Queries the database for movies where `tmdb_id IS NULL`, `duration = 0`, or `poster_url IS NULL`.
+1. Queries the database for movies where `tmdb_id IS NULL`, `duration = 0`, `poster_url IS NULL`, or TMDB catalog metadata has not been refreshed.
 2. Searches TMDB by title + year to find a conservative TMDB identity match.
 3. Records ambiguous matches and runtime mismatches in `tmdb_match_reviews`.
-4. Fetches full movie details (runtime + US certification/age_rating) from TMDB.
+4. Fetches full movie details (runtime + US certification/age_rating), credits, genres, and keywords from TMDB.
 5. Re-generates the embedding because the embedding text includes runtime and age rating.
 6. Updates the database row with `tmdb_id`, `duration`, `age_rating`, match confidence, and `embedding`.
+7. Upserts normalized cast, director, genre, and keyword rows plus a lightweight `movies.tmdb_metadata` snapshot.
 
 Movies for which TMDB returns no runtime are skipped so the script never replaces a `0` with another `0`. Ambiguous matches are not auto-applied; they stay in `tmdb_match_reviews` for a future admin/back-office review flow.
 
@@ -232,6 +234,7 @@ DRY_RUN=true npm run dev # dry run
 
 - Missing `poster_url`, `localized_name`, `tmdb_id`, runtime, age rating, and TMDB match timestamps.
 - TMDB-backed rows whose `tmdb_matched_at` is older than the stale threshold.
+- Missing cast, director, genre, and keyword coverage for TMDB-backed rows.
 - Likely duplicate identities by repeated `tmdb_id` and normalized title/year groups.
 - Sample movie rows for each issue so local or CI logs point at concrete records.
 
@@ -402,7 +405,7 @@ The app and root services share the same PostgreSQL schema through `db/init/*.sq
 
 - **Extension:** `pgvector` (vector similarity search)
 - **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, TMDB identity, lightweight TMDB metadata snapshots, poster/localized fields, and a 3072-dimension embedding vector
-- **Tables:** `catalog_people`, `catalog_genres`, `catalog_keywords`, `movie_people`, `movie_genres`, and `movie_keywords` — store normalized cast, director, genre, and keyword metadata for future backfill and search. These tables are intentionally allowed to be empty while TMDB metadata backfill is incomplete.
+- **Tables:** `catalog_people`, `catalog_genres`, `catalog_keywords`, `movie_people`, `movie_genres`, and `movie_keywords` — store normalized cast, director, genre, and keyword metadata populated by TMDB discovery/backfill and used by future search. These tables can still be partially populated while older catalog rows wait for a backfill run.
 - **Table:** `tmdb_match_reviews` — stores ambiguous TMDB/local match cases for later manual review
 - **Table:** `users` and `password_reset_tokens` — support email/password auth and reset flow
 - **Tables:** `recommendations`, `recommendation_movies`, `recommendation_feedback`, and `user_movie_interactions` — support persisted async recommendations, feedback, sharing, account history, and movie memory

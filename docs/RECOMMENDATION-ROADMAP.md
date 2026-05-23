@@ -181,7 +181,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - Add JIT embedding/enrichment for strong TMDB candidates.
 - Add catalog metadata prerequisites for richer search:
   - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471) schema/model for cast, directors, genres, and keywords.
-  - [#472](https://github.com/shchilkin/PopChoice/issues/472) TMDB backfill and refresh for that metadata.
+  - [x] [#472](https://github.com/shchilkin/PopChoice/issues/472) TMDB backfill and refresh for that metadata.
   - [#473](https://github.com/shchilkin/PopChoice/issues/473) available-movies search over actors, directors, and genres.
 - Track TMDB API failures, timeout behavior, and fallback quality.
 - Keep an admin/back-office backlog for ambiguous title matches and catalog-health issues.
@@ -204,7 +204,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 Good next PRs, in order:
 
-1. Implement [#472](https://github.com/shchilkin/PopChoice/issues/472) so TMDB backfill/discovery populates the catalog metadata model from #471.
+1. Implement [#473](https://github.com/shchilkin/PopChoice/issues/473) so available-movies can search over actors, directors, and genres now populated by #472.
 2. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
 3. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
 4. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.

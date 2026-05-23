@@ -48,6 +48,10 @@ describe('catalog health report', () => {
             missing_age_rating: 0,
             missing_tmdb_matched_at: 1,
             stale_tmdb_metadata: 1,
+            missing_cast_metadata: 0,
+            missing_director_metadata: 0,
+            missing_genre_metadata: 0,
+            missing_keyword_metadata: 0,
           },
         ],
       })
@@ -145,6 +149,10 @@ describe('catalog health report', () => {
             missing_age_rating: 0,
             missing_tmdb_matched_at: 0,
             stale_tmdb_metadata: 0,
+            missing_cast_metadata: 0,
+            missing_director_metadata: 0,
+            missing_genre_metadata: 0,
+            missing_keyword_metadata: 0,
           },
         ],
       })
