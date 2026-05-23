@@ -16,7 +16,48 @@ export interface MovieRecord {
   tmdb_id?: number | null;
   tmdb_match_confidence?: number | null;
   tmdb_match_source?: 'tmdb_discovery' | 'backfill_auto' | 'manual' | null;
+  tmdb_metadata?: Record<string, unknown> | null;
+  tmdb_metadata_refreshed_at?: string | Date | null;
   embedding: number[];
+}
+
+export type CatalogMetadataSource = 'tmdb' | 'manual';
+export type MoviePersonRole = 'cast' | 'director';
+
+export interface CatalogPersonRecord {
+  id: string;
+  tmdb_id: number | null;
+  name: string;
+  profile_path: string | null;
+  popularity: number | null;
+  raw_metadata: Record<string, unknown>;
+}
+
+export interface CatalogGenreRecord {
+  id: string;
+  tmdb_id: number | null;
+  name: string;
+  raw_metadata: Record<string, unknown>;
+}
+
+export interface CatalogKeywordRecord {
+  id: string;
+  tmdb_id: number | null;
+  name: string;
+  raw_metadata: Record<string, unknown>;
+}
+
+export interface MoviePersonCreditRecord {
+  id: string;
+  movie_id: string;
+  person_id: string;
+  tmdb_credit_id: string | null;
+  role: MoviePersonRole;
+  character_name: string | null;
+  job: string | null;
+  department: string | null;
+  billing_order: number | null;
+  raw_metadata: Record<string, unknown>;
 }
 
 let pool: InstanceType<typeof Pool> | null = null;
@@ -147,6 +188,12 @@ export async function ensureSchema(): Promise<void> {
       ADD COLUMN IF NOT EXISTS tmdb_matched_at timestamptz;
 
     ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS tmdb_metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS tmdb_metadata_refreshed_at timestamptz;
+
+    ALTER TABLE movies
       DROP CONSTRAINT IF EXISTS movies_tmdb_match_source_check;
 
     ALTER TABLE movies
@@ -157,6 +204,8 @@ export async function ensureSchema(): Promise<void> {
       ON movies (tmdb_id)
       WHERE tmdb_id IS NOT NULL;
   `);
+
+  await ensureCatalogMetadataSchema();
 
   await getPool().query(`
     CREATE TABLE IF NOT EXISTS tmdb_match_reviews (
@@ -235,6 +284,108 @@ export async function ensureSchema(): Promise<void> {
   `);
 
   logger.info('Schema ensured');
+}
+
+export async function ensureCatalogMetadataSchema(): Promise<void> {
+  await getPool().query(`
+    CREATE TABLE IF NOT EXISTS catalog_people (
+      id bigserial PRIMARY KEY,
+      tmdb_id bigint,
+      name text NOT NULL,
+      profile_path text,
+      popularity float,
+      raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS catalog_people_tmdb_id_unique
+      ON catalog_people (tmdb_id)
+      WHERE tmdb_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_people_name_lower
+      ON catalog_people (lower(name));
+
+    CREATE TABLE IF NOT EXISTS catalog_genres (
+      id bigserial PRIMARY KEY,
+      tmdb_id int,
+      name text NOT NULL,
+      raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS catalog_genres_tmdb_id_unique
+      ON catalog_genres (tmdb_id)
+      WHERE tmdb_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_genres_name_lower
+      ON catalog_genres (lower(name));
+
+    CREATE TABLE IF NOT EXISTS catalog_keywords (
+      id bigserial PRIMARY KEY,
+      tmdb_id bigint,
+      name text NOT NULL,
+      raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS catalog_keywords_tmdb_id_unique
+      ON catalog_keywords (tmdb_id)
+      WHERE tmdb_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_keywords_name_lower
+      ON catalog_keywords (lower(name));
+
+    CREATE TABLE IF NOT EXISTS movie_people (
+      id bigserial PRIMARY KEY,
+      movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+      person_id bigint NOT NULL REFERENCES catalog_people(id) ON DELETE CASCADE,
+      tmdb_credit_id text,
+      role text NOT NULL,
+      character_name text,
+      job text,
+      department text,
+      billing_order int,
+      raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT movie_people_role_check CHECK (role IN ('cast', 'director'))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS movie_people_tmdb_credit_unique
+      ON movie_people (movie_id, tmdb_credit_id)
+      WHERE tmdb_credit_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_movie_people_movie_role_order
+      ON movie_people (movie_id, role, billing_order NULLS LAST);
+
+    CREATE INDEX IF NOT EXISTS idx_movie_people_person_role
+      ON movie_people (person_id, role);
+
+    CREATE TABLE IF NOT EXISTS movie_genres (
+      movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+      genre_id bigint NOT NULL REFERENCES catalog_genres(id) ON DELETE CASCADE,
+      source text NOT NULL DEFAULT 'tmdb',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (movie_id, genre_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_movie_genres_genre_id
+      ON movie_genres (genre_id);
+
+    CREATE TABLE IF NOT EXISTS movie_keywords (
+      movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+      keyword_id bigint NOT NULL REFERENCES catalog_keywords(id) ON DELETE CASCADE,
+      source text NOT NULL DEFAULT 'tmdb',
+      created_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (movie_id, keyword_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_movie_keywords_keyword_id
+      ON movie_keywords (keyword_id);
+  `);
 }
 
 export async function getMovieCount(): Promise<number> {

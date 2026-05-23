@@ -3,6 +3,7 @@ import pg from 'pg';
 import {
   checkTableExists,
   closeDatabase,
+  ensureCatalogMetadataSchema,
   ensureTMDBMatchReviewSchema,
   getIncompleteMovies,
   initDatabase,
@@ -74,6 +75,25 @@ describe('database', () => {
       expect(sql).toContain('CREATE TABLE IF NOT EXISTS tmdb_match_reviews');
       expect(sql).toContain('idx_tmdb_match_reviews_movie_reason');
       expect(sql).toContain('idx_tmdb_match_reviews_status_updated_at');
+    });
+  });
+
+  describe('ensureCatalogMetadataSchema', () => {
+    it('creates the normalized catalog metadata tables and indexes', async () => {
+      poolMock.query.mockResolvedValueOnce({ rows: [] });
+
+      await ensureCatalogMetadataSchema();
+
+      expect(poolMock.query).toHaveBeenCalledTimes(1);
+      const [sql] = poolMock.query.mock.calls[0];
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS catalog_people');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS catalog_genres');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS catalog_keywords');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS movie_people');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS movie_genres');
+      expect(sql).toContain('CREATE TABLE IF NOT EXISTS movie_keywords');
+      expect(sql).toContain('catalog_people_tmdb_id_unique');
+      expect(sql).toContain('idx_movie_people_movie_role_order');
     });
   });
 

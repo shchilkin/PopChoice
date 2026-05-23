@@ -401,7 +401,8 @@ To add or edit calibration queries, modify the `QUERIES` array in `scripts/calib
 The app and root services share the same PostgreSQL schema through `db/init/*.sql` and service-level `ensureSchema()` helpers:
 
 - **Extension:** `pgvector` (vector similarity search)
-- **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, TMDB identity/metadata, poster/localized fields, and a 3072-dimension embedding vector
+- **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, TMDB identity, lightweight TMDB metadata snapshots, poster/localized fields, and a 3072-dimension embedding vector
+- **Tables:** `catalog_people`, `catalog_genres`, `catalog_keywords`, `movie_people`, `movie_genres`, and `movie_keywords` — store normalized cast, director, genre, and keyword metadata for future backfill and search. These tables are intentionally allowed to be empty while TMDB metadata backfill is incomplete.
 - **Table:** `tmdb_match_reviews` — stores ambiguous TMDB/local match cases for later manual review
 - **Table:** `users` and `password_reset_tokens` — support email/password auth and reset flow
 - **Tables:** `recommendations`, `recommendation_movies`, `recommendation_feedback`, and `user_movie_interactions` — support persisted async recommendations, feedback, sharing, account history, and movie memory
