@@ -173,6 +173,12 @@ npm run eval:recommendations -- --live
 
 Live evals require configured provider and database environment variables such as `OPENAI_API_KEY`, `DATABASE_URL`, and usually `TMDB_API_KEY`. CI blocks on the deterministic eval job; live evals are manual so normal PR checks stay cheap and predictable.
 
+Use three eval levels when changing AI-related code:
+
+1. `npm run eval:recommendations` for every PR that changes recommendation prompts, embeddings, candidate filters, ranking, feedback signals, response shape, or eval fixtures.
+2. A real-data eval for changes that affect catalog retrieval, schema, seeding/backfill, or candidate availability. This should be scheduled or manually triggered against a seeded database; it should not be a default per-PR hard gate until it is proven cheap and stable.
+3. `npm run eval:recommendations -- --live` only when intentionally checking live model/provider behavior before larger recommendation changes. Live runs can spend API credits and depend on provider availability, so agents should call out whether they ran it or why they did not.
+
 ## Project Structure
 
 ```text

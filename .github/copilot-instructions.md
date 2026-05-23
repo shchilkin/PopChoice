@@ -56,8 +56,15 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
 
 ## CI/CD
 
-- PR workflow runs lint, format, type-check, server tests, Storybook tests (conditional on Playwright), and build on pull requests targeting the `development` branch. See `.github/workflows/pr.yml`.
+- PR workflow runs lint, format, type-check, server tests, deterministic recommendation evals, Storybook tests, e2e smoke tests, and build on pull requests targeting the `development` branch. See `.github/workflows/pr.yml`.
 - Build may fail in CI due to network issues with external fonts but works locally and in production.
+
+## AI Evaluation Expectations
+
+- Browser e2e uses deterministic recommendation fixtures and does not validate live model quality.
+- Run `npm run eval:recommendations` for changes to recommendation prompts, embeddings, OpenAI/TMDB integration, candidate filtering/ranking, feedback signals, response shape, or eval fixtures.
+- Consider whether a manual/scheduled real-data eval is needed for schema, seed/backfill, catalog retrieval, or candidate-availability changes.
+- Do not run or require live-provider evals by default. `npm run eval:recommendations -- --live` is manual because it can spend API credits and depend on provider availability.
 
 ## Example: Adding a New Movie API Integration
 

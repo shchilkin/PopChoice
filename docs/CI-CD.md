@@ -59,6 +59,14 @@ The `recommendation-evals` job runs `npm run eval:recommendations`. This is a CI
 
 Default evals do not require `OPENAI_API_KEY`, `TMDB_API_KEY`, Redis, or PostgreSQL. Optional live-provider evals use `npm run eval:recommendations -- --live` and are intentionally manual because they can spend API credits, depend on provider availability, and may need seeded local data.
 
+Recommendation checks are intentionally layered:
+
+1. **Per-PR CI:** deterministic fixtures and mocked model outputs via `npm run eval:recommendations`.
+2. **Scheduled or manual real-data eval:** seeded database and real catalog retrieval, but still controlled model output by default. Use this for schema, seed/backfill, retrieval, and candidate-availability changes once the workflow exists.
+3. **Manual live eval:** real data plus live AI providers via `npm run eval:recommendations -- --live`. This is not a default hard gate because provider responses, rate limits, and API cost can make it noisy.
+
+Agents and reviewers should explicitly consider these layers when a PR changes recommendation prompts, embeddings, OpenAI/TMDB integration, candidate filtering/ranking, feedback signals, or catalog data feeding recommendations.
+
 ### Code Coverage
 
 Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (HTML, JSON, LCOV) are uploaded as a GitHub Actions artifact named `coverage-report` and retained for 30 days. Coverage is configured in `vitest.config.ts`.
