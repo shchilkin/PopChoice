@@ -1,8 +1,15 @@
-import { checkTableExists, closeDatabase, getPool, initDatabase, logger } from '@pop-choice/shared';
+import {
+  checkTableExists,
+  closeDatabase,
+  ensureCatalogMetadataSchema,
+  getPool,
+  initDatabase,
+  logger,
+} from '@pop-choice/shared';
 
 import type { TMDBSearchCandidate } from './tmdb.js';
 
-export { initDatabase, closeDatabase, checkTableExists };
+export { initDatabase, closeDatabase, checkTableExists, ensureCatalogMetadataSchema };
 
 export interface IncompleteMovie {
   id: string;
