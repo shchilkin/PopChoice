@@ -251,7 +251,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ## Priority Items for the Next 30 Days
 
-1. [ ] Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on the existing catalog fields.
+1. [x] Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on the existing catalog fields.
 2. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
 3. [ ] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
 4. [ ] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.

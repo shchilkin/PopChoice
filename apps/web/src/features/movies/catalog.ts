@@ -19,10 +19,15 @@ export interface MoviesResponse {
   totalPages: number;
 }
 
+export type MovieDurationFilter = 'under-90' | '90-120' | 'over-120';
+
 export interface MoviesPageFilters {
   query?: string;
   yearFrom?: number;
   yearTo?: number;
+  duration?: MovieDurationFilter;
+  minScore?: number;
+  ageRatings?: string[];
 }
 
 function escapeLikePattern(value: string): string {
@@ -50,6 +55,19 @@ function applyMovieFilters<T extends Movie>(
   if (typeof filters.yearTo === 'number') {
     query = query.lte('year', filters.yearTo);
   }
+  if (filters.duration === 'under-90') {
+    query = query.lte('duration', 89);
+  } else if (filters.duration === '90-120') {
+    query = query.gte('duration', 90).lte('duration', 120);
+  } else if (filters.duration === 'over-120') {
+    query = query.gte('duration', 121);
+  }
+  if (typeof filters.minScore === 'number') {
+    query = query.gte('score_rating', filters.minScore);
+  }
+  if (filters.ageRatings && filters.ageRatings.length > 0) {
+    query = query.in('age_rating', filters.ageRatings);
+  }
 
   return query;
 }
@@ -61,7 +79,28 @@ function filterMockMovies(movies: Movie[], filters: MoviesPageFilters): Movie[] 
     const matchesYearFrom =
       typeof filters.yearFrom === 'number' ? movie.year >= filters.yearFrom : true;
     const matchesYearTo = typeof filters.yearTo === 'number' ? movie.year <= filters.yearTo : true;
-    return matchesTitle && matchesYearFrom && matchesYearTo;
+    const matchesDuration =
+      filters.duration === 'under-90'
+        ? movie.duration < 90
+        : filters.duration === '90-120'
+          ? movie.duration >= 90 && movie.duration <= 120
+          : filters.duration === 'over-120'
+            ? movie.duration > 120
+            : true;
+    const matchesScore =
+      typeof filters.minScore === 'number' ? movie.score_rating >= filters.minScore : true;
+    const matchesAgeRating =
+      filters.ageRatings && filters.ageRatings.length > 0
+        ? filters.ageRatings.includes(movie.age_rating)
+        : true;
+    return (
+      matchesTitle &&
+      matchesYearFrom &&
+      matchesYearTo &&
+      matchesDuration &&
+      matchesScore &&
+      matchesAgeRating
+    );
   });
 }
 

@@ -7,15 +7,27 @@ import { MoviesTable, MoviesTableSkeleton } from '@/components';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 
-import type { Movie, MoviesResponse } from '@/features/movies/catalog';
+import type { Movie, MovieDurationFilter, MoviesResponse } from '@/features/movies/catalog';
 
 interface MovieFilters {
   query: string;
   yearFrom: string;
   yearTo: string;
+  duration: '' | MovieDurationFilter;
+  minScore: string;
+  ageRatings: string[];
 }
 
-const emptyFilters: MovieFilters = { query: '', yearFrom: '', yearTo: '' };
+const AGE_RATING_FILTERS = ['G', 'PG', 'PG-13', 'R', 'NR', '12+', '15', '16+', '18+'];
+
+const emptyFilters: MovieFilters = {
+  query: '',
+  yearFrom: '',
+  yearTo: '',
+  duration: '',
+  minScore: '',
+  ageRatings: [],
+};
 
 function buildCacheKey(page: number, filters: MovieFilters): string {
   return JSON.stringify([
@@ -23,6 +35,9 @@ function buildCacheKey(page: number, filters: MovieFilters): string {
     filters.query.trim(),
     filters.yearFrom.trim(),
     filters.yearTo.trim(),
+    filters.duration,
+    filters.minScore.trim(),
+    filters.ageRatings,
   ]);
 }
 
@@ -31,16 +46,38 @@ function buildMoviesUrl(page: number, pageSize: number, filters: MovieFilters): 
   const query = filters.query.trim();
   const yearFrom = filters.yearFrom.trim();
   const yearTo = filters.yearTo.trim();
+  const minScore = filters.minScore.trim();
 
   if (query) params.set('query', query);
   if (yearFrom) params.set('yearFrom', yearFrom);
   if (yearTo) params.set('yearTo', yearTo);
+  if (filters.duration) params.set('duration', filters.duration);
+  if (minScore) params.set('minScore', minScore);
+  if (filters.ageRatings.length > 0) params.set('ageRatings', filters.ageRatings.join(','));
 
   return `/api/movies?${params.toString()}`;
 }
 
 function hasActiveMovieFilters(filters: MovieFilters): boolean {
-  return Boolean(filters.query.trim() || filters.yearFrom.trim() || filters.yearTo.trim());
+  return Boolean(
+    filters.query.trim() ||
+    filters.yearFrom.trim() ||
+    filters.yearTo.trim() ||
+    filters.duration ||
+    filters.minScore.trim() ||
+    filters.ageRatings.length > 0,
+  );
+}
+
+function normalizeMovieFilters(filters: MovieFilters): MovieFilters {
+  return {
+    query: filters.query.trim(),
+    yearFrom: filters.yearFrom.trim(),
+    yearTo: filters.yearTo.trim(),
+    duration: filters.duration,
+    minScore: filters.minScore.trim(),
+    ageRatings: filters.ageRatings,
+  };
 }
 
 export default function AvailableMoviesPage() {
@@ -128,20 +165,29 @@ export default function AvailableMoviesPage() {
     };
   }, [appliedFilters, fetchMovies, currentPage]);
 
-  const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setAppliedFilters({
-      query: draftFilters.query.trim(),
-      yearFrom: draftFilters.yearFrom.trim(),
-      yearTo: draftFilters.yearTo.trim(),
-    });
+  const applyFilters = (filters: MovieFilters) => {
+    setAppliedFilters(normalizeMovieFilters(filters));
     setCurrentPage(1);
   };
 
+  const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    applyFilters(draftFilters);
+  };
+
   const handleClearFilters = () => {
-    setDraftFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
+    setDraftFilters({ ...emptyFilters });
+    setAppliedFilters({ ...emptyFilters });
     setCurrentPage(1);
+  };
+
+  const handleAgeRatingToggle = (rating: string) => {
+    const ageRatings = draftFilters.ageRatings.includes(rating)
+      ? draftFilters.ageRatings.filter((value) => value !== rating)
+      : [...draftFilters.ageRatings, rating];
+    const nextFilters = { ...draftFilters, ageRatings };
+    setDraftFilters(nextFilters);
+    applyFilters(nextFilters);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -216,103 +262,195 @@ export default function AvailableMoviesPage() {
         </p>
       </div>
 
-      <form
-        onSubmit={handleFilterSubmit}
-        className="mb-6 grid gap-3 md:grid-cols-[minmax(0,1fr)_7rem_7rem_auto_auto] md:items-end"
-      >
-        <label
-          className="flex flex-col gap-1.5 text-xs font-semibold"
-          style={{ color: 'var(--pc-t3)' }}
-        >
-          {t.moviesPage.searchLabel}
-          <span
-            className="flex items-center gap-2 rounded-lg px-3 py-2"
+      <form onSubmit={handleFilterSubmit} className="mb-6 flex flex-col gap-4">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_9rem_8rem_auto_auto] lg:items-end">
+          <label
+            className="flex flex-col gap-1.5 text-xs font-semibold"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {t.moviesPage.searchLabel}
+            <span
+              className="flex items-center gap-2 rounded-lg px-3 py-2"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t2)',
+              }}
+            >
+              <Search size={16} aria-hidden="true" />
+              <input
+                value={draftFilters.query}
+                onChange={(event) =>
+                  setDraftFilters((current) => ({ ...current, query: event.target.value }))
+                }
+                maxLength={80}
+                placeholder={t.moviesPage.searchPlaceholder}
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-70"
+                style={{ color: 'var(--pc-t1)' }}
+              />
+            </span>
+          </label>
+
+          <label
+            className="flex flex-col gap-1.5 text-xs font-semibold"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {t.moviesPage.yearFrom}
+            <input
+              value={draftFilters.yearFrom}
+              onChange={(event) =>
+                setDraftFilters((current) => ({ ...current, yearFrom: event.target.value }))
+              }
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              className="h-10 rounded-lg px-3 text-sm outline-none"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t1)',
+              }}
+            />
+          </label>
+
+          <label
+            className="flex flex-col gap-1.5 text-xs font-semibold"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {t.moviesPage.yearTo}
+            <input
+              value={draftFilters.yearTo}
+              onChange={(event) =>
+                setDraftFilters((current) => ({ ...current, yearTo: event.target.value }))
+              }
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              className="h-10 rounded-lg px-3 text-sm outline-none"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t1)',
+              }}
+            />
+          </label>
+
+          <label
+            className="flex flex-col gap-1.5 text-xs font-semibold"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {t.moviesPage.durationFilter}
+            <select
+              value={draftFilters.duration}
+              onChange={(event) => {
+                const nextFilters = {
+                  ...draftFilters,
+                  duration: event.target.value as MovieFilters['duration'],
+                };
+                setDraftFilters(nextFilters);
+                applyFilters(nextFilters);
+              }}
+              className="h-10 rounded-lg px-3 text-sm outline-none"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t1)',
+              }}
+            >
+              <option value="">{t.moviesPage.anyFilter}</option>
+              <option value="under-90">{t.moviesPage.durationOptions.under90}</option>
+              <option value="90-120">{t.moviesPage.durationOptions.between90And120}</option>
+              <option value="over-120">{t.moviesPage.durationOptions.over120}</option>
+            </select>
+          </label>
+
+          <label
+            className="flex flex-col gap-1.5 text-xs font-semibold"
+            style={{ color: 'var(--pc-t3)' }}
+          >
+            {t.moviesPage.scoreFilter}
+            <select
+              value={draftFilters.minScore}
+              onChange={(event) => {
+                const nextFilters = { ...draftFilters, minScore: event.target.value };
+                setDraftFilters(nextFilters);
+                applyFilters(nextFilters);
+              }}
+              className="h-10 rounded-lg px-3 text-sm outline-none"
+              style={{
+                background: 'var(--pc-surface)',
+                border: '1px solid var(--pc-bd2)',
+                color: 'var(--pc-t1)',
+              }}
+            >
+              <option value="">{t.moviesPage.anyFilter}</option>
+              <option value="7">7.0+</option>
+              <option value="8">8.0+</option>
+              <option value="9">9.0+</option>
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold"
+            style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+          >
+            <Search size={16} aria-hidden="true" />
+            {t.moviesPage.applyFilters}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleClearFilters}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold"
             style={{
               background: 'var(--pc-surface)',
               border: '1px solid var(--pc-bd2)',
               color: 'var(--pc-t2)',
             }}
           >
-            <Search size={16} aria-hidden="true" />
-            <input
-              value={draftFilters.query}
-              onChange={(event) =>
-                setDraftFilters((current) => ({ ...current, query: event.target.value }))
-              }
-              maxLength={80}
-              placeholder={t.moviesPage.searchPlaceholder}
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-70"
-              style={{ color: 'var(--pc-t1)' }}
-            />
-          </span>
-        </label>
+            <X size={16} aria-hidden="true" />
+            {t.moviesPage.clearFilters}
+          </button>
+        </div>
 
-        <label
-          className="flex flex-col gap-1.5 text-xs font-semibold"
-          style={{ color: 'var(--pc-t3)' }}
-        >
-          {t.moviesPage.yearFrom}
-          <input
-            value={draftFilters.yearFrom}
-            onChange={(event) =>
-              setDraftFilters((current) => ({ ...current, yearFrom: event.target.value }))
-            }
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={4}
-            className="h-10 rounded-lg px-3 text-sm outline-none"
-            style={{
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-              color: 'var(--pc-t1)',
-            }}
-          />
-        </label>
-
-        <label
-          className="flex flex-col gap-1.5 text-xs font-semibold"
-          style={{ color: 'var(--pc-t3)' }}
-        >
-          {t.moviesPage.yearTo}
-          <input
-            value={draftFilters.yearTo}
-            onChange={(event) =>
-              setDraftFilters((current) => ({ ...current, yearTo: event.target.value }))
-            }
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={4}
-            className="h-10 rounded-lg px-3 text-sm outline-none"
-            style={{
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-              color: 'var(--pc-t1)',
-            }}
-          />
-        </label>
-
-        <button
-          type="submit"
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold"
-          style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
-        >
-          <Search size={16} aria-hidden="true" />
-          {t.moviesPage.applyFilters}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleClearFilters}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold"
-          style={{
-            background: 'var(--pc-surface)',
-            border: '1px solid var(--pc-bd2)',
-            color: 'var(--pc-t2)',
-          }}
-        >
-          <X size={16} aria-hidden="true" />
-          {t.moviesPage.clearFilters}
-        </button>
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-xs font-semibold" style={{ color: 'var(--pc-t3)' }}>
+            {t.moviesPage.ageRatingFilter}
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {AGE_RATING_FILTERS.map((rating) => {
+              const selected = draftFilters.ageRatings.includes(rating);
+              return (
+                <label
+                  key={rating}
+                  className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors duration-150"
+                  style={
+                    selected
+                      ? {
+                          background: 'var(--pc-gold-subtle)',
+                          border: '1px solid var(--pc-gold)',
+                          color: 'var(--pc-gold-text)',
+                        }
+                      : {
+                          background: 'var(--pc-surface)',
+                          border: '1px solid var(--pc-bd2)',
+                          color: 'var(--pc-t2)',
+                        }
+                  }
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => handleAgeRatingToggle(rating)}
+                    className="h-3.5 w-3.5 accent-[var(--pc-gold)]"
+                  />
+                  {rating}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
       </form>
 
       {/* Table / Cards */}
