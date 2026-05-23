@@ -167,6 +167,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### Data Quality Track
 
+- [#471](https://github.com/shchilkin/PopChoice/issues/471): add a catalog metadata model for cast, directors, genres, and keywords before expanding search beyond title/year.
+- [#472](https://github.com/shchilkin/PopChoice/issues/472): extend TMDB backfill/discovery to populate people and genre metadata, with catalog-health visibility for missing coverage.
 - Persist TMDB backfill review cases in `tmdb_match_reviews`, then add an admin/back-office UI to resolve ambiguous matches, missing metadata, or rejected runtime/year confidence cases.
 - Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, and stale TMDB metadata. The initial `npm run catalog:health` report covers current `movies` schema signals; admin resolution and automated refresh remain future work.
 - Create a dedicated backoffice app for catalog-health reports, TMDB match
@@ -191,6 +193,14 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Add focused tests or visual checks for the quiz, loading/results handoff, account pages, and feedback controls.
 - Keep design-system examples aligned with production components so UI regressions are easier to spot before release.
 
+### Testing and Evaluation Track
+
+- [#474](https://github.com/shchilkin/PopChoice/issues/474): add a Playwright e2e harness with an isolated migrated test database and deterministic seed fixtures.
+- [#475](https://github.com/shchilkin/PopChoice/issues/475): cover auth, catalog, quiz, recommendation, and feedback smoke flows through product-level e2e tests.
+- [#476](https://github.com/shchilkin/PopChoice/issues/476): add an AI recommendation eval harness with deterministic fixtures by default and optional live model/provider runs.
+- Keep Storybook/component tests separate from full product e2e tests so UI component regressions and app-flow regressions fail with clear ownership.
+- Keep AI evals separate from normal e2e smoke tests because recommendation quality gates need fixture scoring, model controls, and optional API cost.
+
 ### Product Feedback Track
 
 - Expand the explicit movie-memory experience so watched/not-seen setup feels complete for users with large histories.
@@ -208,6 +218,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Pivot recommendation retrieval toward TMDB-backed catalog coverage instead of relying primarily on the embedded/course-sized movie database.
 - Keep the local `movies` table as a cache/index of known titles, embeddings, localized names, poster URLs, and TMDB ids rather than the full source of truth.
 - Backfill TMDB ids for existing local movies using exact title/year matches first, then persist ambiguous or low-confidence matches for manual review.
+- Add cast, director, genre, and keyword metadata as first-class catalog data before implementing actor/director/genre search.
 - Add a back-office review queue for ambiguous TMDB matches, missing posters, duplicate identities, and metadata conflicts before applying risky automatic merges.
 - Prefer TMDB ids for all cross-feature identity checks. Fall back to normalized title plus year only when TMDB identity is unavailable.
 - Design future discovery flows around dynamic TMDB candidate sets: "I have watched many films" deck mode, quiz-assisted mode, and later a preference/taste-training mode.
@@ -229,15 +240,23 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.
 - See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md) for the staged plan.
 
+### Group Recommendation Rooms Track
+
+- Keep [#359](https://github.com/shchilkin/PopChoice/issues/359) as the umbrella for the group-room milestone instead of treating it as a single implementation PR.
+- [#467](https://github.com/shchilkin/PopChoice/issues/467): build room persistence, TTL, cleanup, and participant storage first.
+- [#468](https://github.com/shchilkin/PopChoice/issues/468): add share links, participant join flow, and readiness state.
+- [#469](https://github.com/shchilkin/PopChoice/issues/469): run the recommendation pipeline from completed room answers and persist a stable shared result.
+- [#470](https://github.com/shchilkin/PopChoice/issues/470): add QR invite and projector mode only after the core room flow works.
+- Preserve the current same-device group mode until room-backed group mode is complete enough to replace it intentionally.
+
 ## Priority Items for the Next 30 Days
 
-1. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-2. [x] Move account/movie-memory orchestration behind a feature-owned module if the API route keeps growing.
-3. [x] Add batched movie-memory deck submission so users can review a session locally before writing interactions.
-4. [x] Use `liked` memory as a positive recommendation signal, not only stored account history.
-5. [x] Add catalog-health reporting for missing posters, missing localized names, duplicate identities, and stale TMDB metadata.
-6. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
-7. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+1. [ ] Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on the existing catalog fields.
+2. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
+3. [ ] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
+4. [ ] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
+5. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
+6. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 
