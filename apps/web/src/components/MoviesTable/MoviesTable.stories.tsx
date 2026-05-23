@@ -1,3 +1,5 @@
+import { fn } from 'storybook/test';
+
 import { MoviesTable } from './MoviesTable';
 
 import type { Movie } from '@/features/movies/catalog';
@@ -106,6 +108,14 @@ export const Default: Story = {
 export const EmptyTable: Story = {
   args: {
     movies: [],
+  },
+};
+
+export const EmptyFilteredTable: Story = {
+  args: {
+    movies: [],
+    hasActiveFilters: true,
+    onClearFilters: fn(),
   },
 };
 

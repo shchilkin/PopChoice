@@ -61,6 +61,7 @@ The main remaining risks are:
 - [x] Movie-memory candidate cards keep session state locally, submit completed choices in one batched request, and flush pending choices on page hide or unmount.
 - [x] The account movie-memory view supports large histories with paginated loading, virtualized rendering, total counts, and poster-aware fallbacks.
 - [x] The available-movies catalog now supports exact-title escape-hatch search with optional year-range filters across the API and page UI.
+- [x] The available-movies table now has actionable empty states for empty catalogs and filter searches with no matches.
 - [x] Expensive recommendation/poster POST routes now reject oversized JSON bodies before validation, moderation, queue creation, TMDB fetches, or OpenAI work.
 - [x] OpenAI calls now use per-call timeout options and `AbortSignal` cancellation, with legacy recommendation requests mapping upstream OpenAI timeouts to HTTP 504.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.

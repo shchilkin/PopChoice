@@ -598,6 +598,11 @@ export const ru: Translations = {
     tryAgain: 'Попробовать снова',
     showing: 'Показано {start}–{end} из {total} фильмов',
     noMoviesFound: 'Фильмы не найдены',
+    emptyFilteredTitle: 'Ничего не найдено',
+    emptyFilteredBody: 'Попробуйте другое название или расширьте диапазон лет.',
+    emptyCatalogTitle: 'Каталог пока пуст',
+    emptyCatalogBody:
+      'После наполнения каталога здесь появятся фильмы, рейтинги, длительность и оценки.',
     searchLabel: 'Поиск',
     searchPlaceholder: 'Название фильма',
     yearFrom: 'Год с',

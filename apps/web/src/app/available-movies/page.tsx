@@ -39,6 +39,10 @@ function buildMoviesUrl(page: number, pageSize: number, filters: MovieFilters): 
   return `/api/movies?${params.toString()}`;
 }
 
+function hasActiveMovieFilters(filters: MovieFilters): boolean {
+  return Boolean(filters.query.trim() || filters.yearFrom.trim() || filters.yearTo.trim());
+}
+
 export default function AvailableMoviesPage() {
   const { t } = useLanguage();
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -312,7 +316,15 @@ export default function AvailableMoviesPage() {
       </form>
 
       {/* Table / Cards */}
-      {loading ? <MoviesTableSkeleton /> : <MoviesTable movies={movies} />}
+      {loading ? (
+        <MoviesTableSkeleton />
+      ) : (
+        <MoviesTable
+          movies={movies}
+          hasActiveFilters={hasActiveMovieFilters(appliedFilters)}
+          onClearFilters={handleClearFilters}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

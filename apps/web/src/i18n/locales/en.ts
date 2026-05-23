@@ -598,6 +598,11 @@ export const en = {
     tryAgain: 'Try Again',
     showing: 'Showing {start}–{end} of {total} movies',
     noMoviesFound: 'No movies found',
+    emptyFilteredTitle: 'No matches for this search',
+    emptyFilteredBody: 'Try a different title or widen the year range to bring more films back.',
+    emptyCatalogTitle: 'No movies in the catalog yet',
+    emptyCatalogBody:
+      'Seed the catalog and this table will fill with ratings, runtimes, and scores.',
     searchLabel: 'Search',
     searchPlaceholder: 'Movie title',
     yearFrom: 'Year from',

@@ -1,5 +1,6 @@
 'use client';
 
+import { SearchX, X } from 'lucide-react';
 import { z } from 'zod';
 
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -80,9 +81,72 @@ function formatDuration(minutes: number): string {
 
 export interface MoviesTableProps {
   movies: Movie[];
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
 }
 
-export function MoviesTable({ movies }: MoviesTableProps) {
+interface MoviesTableEmptyStateProps {
+  compact?: boolean;
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
+}
+
+function MoviesTableEmptyState({
+  compact = false,
+  hasActiveFilters = false,
+  onClearFilters,
+}: MoviesTableEmptyStateProps) {
+  const { t } = useLanguage();
+  const title = hasActiveFilters ? t.moviesPage.emptyFilteredTitle : t.moviesPage.emptyCatalogTitle;
+  const body = hasActiveFilters ? t.moviesPage.emptyFilteredBody : t.moviesPage.emptyCatalogBody;
+  const canClearFilters = hasActiveFilters && onClearFilters;
+
+  return (
+    <div
+      className={`mx-auto flex max-w-lg flex-col items-center text-center ${
+        compact ? 'px-5 py-10' : 'px-6 py-14'
+      }`}
+    >
+      <div
+        className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
+        style={{
+          background: 'var(--pc-gold-subtle)',
+          color: 'var(--pc-gold-text)',
+        }}
+        aria-hidden="true"
+      >
+        <SearchX size={22} strokeWidth={1.8} />
+      </div>
+      <h2 className="text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
+        {title}
+      </h2>
+      <p className="mt-2 max-w-sm text-sm leading-6" style={{ color: 'var(--pc-t3)' }}>
+        {body}
+      </p>
+      {canClearFilters ? (
+        <button
+          type="button"
+          onClick={onClearFilters}
+          className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-200"
+          style={{
+            background: 'var(--pc-surface-hover)',
+            border: '1px solid var(--pc-bd2)',
+            color: 'var(--pc-t2)',
+          }}
+        >
+          <X size={16} aria-hidden="true" />
+          {t.moviesPage.clearFilters}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export function MoviesTable({
+  movies,
+  hasActiveFilters = false,
+  onClearFilters,
+}: MoviesTableProps) {
   const { t } = useLanguage();
   const isMobile = useIsMobile();
 
@@ -95,9 +159,19 @@ export function MoviesTable({ movies }: MoviesTableProps) {
     return (
       <div className="flex flex-col gap-3">
         {movies.length === 0 ? (
-          <p className="py-8 text-center text-sm" style={{ color: 'var(--pc-t4)' }}>
-            {t.moviesPage.noMoviesFound}
-          </p>
+          <div
+            className="rounded-2xl"
+            style={{
+              background: 'var(--pc-surface)',
+              border: '1px solid var(--pc-bd2)',
+            }}
+          >
+            <MoviesTableEmptyState
+              compact
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={onClearFilters}
+            />
+          </div>
         ) : (
           movies.map((movie) => (
             <div
@@ -175,12 +249,11 @@ export function MoviesTable({ movies }: MoviesTableProps) {
         <tbody>
           {movies.length === 0 ? (
             <tr>
-              <td
-                colSpan={4}
-                className="px-5 py-8 text-center text-sm"
-                style={{ color: 'var(--pc-t4)' }}
-              >
-                {t.moviesPage.noMoviesFound}
+              <td colSpan={4} className="px-0 py-0">
+                <MoviesTableEmptyState
+                  hasActiveFilters={hasActiveFilters}
+                  onClearFilters={onClearFilters}
+                />
               </td>
             </tr>
           ) : (
