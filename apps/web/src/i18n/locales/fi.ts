@@ -605,7 +605,7 @@ export const fi: Translations = {
     emptyCatalogTitle: 'Katalogissa ei ole vielä elokuvia',
     emptyCatalogBody: 'Kun katalogi on täytetty, tässä näkyvät ikärajat, kestot ja pisteet.',
     searchLabel: 'Haku',
-    searchPlaceholder: 'Elokuvan nimi',
+    searchPlaceholder: 'Nimi, näyttelijä, ohjaaja tai genre',
     yearFrom: 'Vuodesta',
     yearTo: 'Vuoteen',
     durationFilter: 'Kesto',

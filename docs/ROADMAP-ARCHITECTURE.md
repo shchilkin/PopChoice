@@ -258,8 +258,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 5. [x] Add [#476](https://github.com/shchilkin/PopChoice/issues/476) deterministic recommendation eval fixtures and scoring.
 6. [x] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
 7. [x] Populate the catalog metadata model in [#472](https://github.com/shchilkin/PopChoice/issues/472) from TMDB backfill/discovery before expanding #82 into actor/director/genre search.
-8. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
-9. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+8. [x] Expand available-movies search in [#473](https://github.com/shchilkin/PopChoice/issues/473) across title, actor/director, and genre metadata populated by #472.
+9. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
+10. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 

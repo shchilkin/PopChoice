@@ -528,6 +528,14 @@ export function createPgDbClient(): DbClient {
   return {
     isConfigured: () => Boolean(process.env.DATABASE_URL),
 
+    query: async <T = unknown>(
+      text: string,
+      values: readonly unknown[] = [],
+    ): Promise<{ rows: T[]; rowCount: number | null }> => {
+      const result = await getPool().query(text, [...values]);
+      return { rows: result.rows as T[], rowCount: result.rowCount };
+    },
+
     from: <T = unknown>(table: string): TableRef<T> => {
       assertSafeIdentifier(table, 'table name');
 

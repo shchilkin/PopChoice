@@ -38,6 +38,12 @@ export interface QueryResult<T = unknown> {
   count?: number | null;
 }
 
+/** Minimal raw SQL result shape used by pg-backed feature queries. */
+export interface RawQueryResult<T = unknown> {
+  rows: T[];
+  rowCount?: number | null;
+}
+
 /** Terminal query step – awaitable for a result. */
 export interface QueryTerminal<T = unknown> extends PromiseLike<QueryResult<T>> {
   order: (column: string, options?: { ascending?: boolean }) => PromiseLike<QueryResult<T>>;
@@ -114,6 +120,15 @@ export interface DbClient {
 
   /** Return a chainable query builder for the given table. */
   from: <T = unknown>(table: string) => TableRef<T>;
+
+  /**
+   * Run a parameterized SQL query when a feature needs joins or EXISTS clauses
+   * beyond the chainable query-builder surface.
+   */
+  query?: <T = unknown>(
+    text: string,
+    values?: readonly unknown[],
+  ) => PromiseLike<RawQueryResult<T>>;
 
   /** Call a stored procedure / RPC function. */
   rpc: (

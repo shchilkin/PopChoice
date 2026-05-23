@@ -43,6 +43,12 @@ async function seedDatabase(databaseUrl) {
         recommendation_movies,
         recommendations,
         tmdb_match_reviews,
+        movie_keywords,
+        movie_genres,
+        movie_people,
+        catalog_keywords,
+        catalog_genres,
+        catalog_people,
         movies,
         users
       RESTART IDENTITY CASCADE
@@ -97,6 +103,56 @@ async function seedDatabase(databaseUrl) {
         'PopChoice E2E Family Adventure',
       ],
     );
+
+    await client.query(
+      `
+        INSERT INTO catalog_people (tmdb_id, name)
+        VALUES
+          ($1, $2),
+          ($3, $4)
+      `,
+      [910001, 'Astra Fixture', 910002, 'Moonlit Director'],
+    );
+
+    await client.query(
+      `
+        INSERT INTO catalog_genres (tmdb_id, name)
+        VALUES
+          ($1, $2),
+          ($3, $4)
+      `,
+      [920001, 'Nebula Noir', 920002, 'Fixture Comedy'],
+    );
+
+    await client.query(`
+      INSERT INTO movie_people
+        (movie_id, person_id, role, character_name, billing_order)
+      SELECT 1, id, 'cast', 'Captain Test', 0
+      FROM catalog_people
+      WHERE name = 'Astra Fixture'
+    `);
+
+    await client.query(`
+      INSERT INTO movie_people
+        (movie_id, person_id, role, job, department)
+      SELECT 1, id, 'director', 'Director', 'Directing'
+      FROM catalog_people
+      WHERE name = 'Moonlit Director'
+    `);
+
+    await client.query(`
+      INSERT INTO movie_genres (movie_id, genre_id, source)
+      SELECT 1, id, 'manual'
+      FROM catalog_genres
+      WHERE name = 'Nebula Noir'
+    `);
+
+    await client.query(`
+      INSERT INTO movie_genres (movie_id, genre_id, source)
+      SELECT 2, id, 'manual'
+      FROM catalog_genres
+      WHERE name = 'Fixture Comedy'
+    `);
 
     await client.query('COMMIT');
     console.log('[e2e:db] Seeded deterministic movie fixtures.');

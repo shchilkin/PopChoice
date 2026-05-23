@@ -182,7 +182,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - Add catalog metadata prerequisites for richer search:
   - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471) schema/model for cast, directors, genres, and keywords.
   - [x] [#472](https://github.com/shchilkin/PopChoice/issues/472) TMDB backfill and refresh for that metadata.
-  - [#473](https://github.com/shchilkin/PopChoice/issues/473) available-movies search over actors, directors, and genres.
+  - [x] [#473](https://github.com/shchilkin/PopChoice/issues/473) available-movies partial `ILIKE` search over titles, actors, directors, and genres, combined with exact/ranged catalog filters.
 - Track TMDB API failures, timeout behavior, and fallback quality.
 - Keep an admin/back-office backlog for ambiguous title matches and catalog-health issues.
 
@@ -204,13 +204,12 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 Good next PRs, in order:
 
-1. Implement [#473](https://github.com/shchilkin/PopChoice/issues/473) so available-movies can search over actors, directors, and genres now populated by #472.
-2. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-3. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
-4. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
-5. Add TMDB-backed candidate-card sourcing for swipe mode.
-6. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
-7. Add manual-review logging for ambiguous TMDB/local identity matches.
+1. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
+2. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
+3. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
+4. Add TMDB-backed candidate-card sourcing for swipe mode.
+5. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
+6. Add manual-review logging for ambiguous TMDB/local identity matches.
 
 ## Non-Goals For Now
 

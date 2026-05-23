@@ -604,7 +604,7 @@ export const ru: Translations = {
     emptyCatalogBody:
       'После наполнения каталога здесь появятся фильмы, рейтинги, длительность и оценки.',
     searchLabel: 'Поиск',
-    searchPlaceholder: 'Название фильма',
+    searchPlaceholder: 'Название, актер, режиссер или жанр',
     yearFrom: 'Год с',
     yearTo: 'Год до',
     durationFilter: 'Длительность',

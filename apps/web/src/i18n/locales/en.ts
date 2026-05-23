@@ -604,7 +604,7 @@ export const en = {
     emptyCatalogBody:
       'Seed the catalog and this table will fill with ratings, runtimes, and scores.',
     searchLabel: 'Search',
-    searchPlaceholder: 'Movie title',
+    searchPlaceholder: 'Title, actor, director, or genre',
     yearFrom: 'Year from',
     yearTo: 'Year to',
     durationFilter: 'Runtime',
