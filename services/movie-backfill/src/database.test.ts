@@ -92,8 +92,11 @@ describe('database', () => {
       expect(sql).toContain('CREATE TABLE IF NOT EXISTS movie_people');
       expect(sql).toContain('CREATE TABLE IF NOT EXISTS movie_genres');
       expect(sql).toContain('CREATE TABLE IF NOT EXISTS movie_keywords');
+      expect(sql).toContain('ALTER COLUMN tmdb_id TYPE int');
       expect(sql).toContain('catalog_people_tmdb_id_unique');
       expect(sql).toContain('idx_movie_people_movie_role_order');
+      expect(sql).toContain('movie_genres_source_check');
+      expect(sql).toContain('movie_keywords_source_check');
     });
   });
 
