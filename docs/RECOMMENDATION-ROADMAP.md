@@ -71,6 +71,7 @@ Target behavior:
 - Prefer stable TMDB ids for movie identity whenever available.
 - Keep fallback identity matching by normalized title and release year for older seed records.
 - Log ambiguous TMDB/local matches for future manual review and admin tooling.
+- Add cast, directors, genres, and keywords to the catalog core before promising actor/director/genre search in the available-movies UI.
 
 This avoids pretending that a few hundred embedded titles can power a real app, while still preserving the value of local ranking, memory, and generated explanations.
 
@@ -128,6 +129,19 @@ Group mode should eventually become more concrete:
 
 The model should optimize for overlap and acceptable compromise, not only average preferences.
 
+### 5. Group Rooms
+
+Room-backed group mode should become the larger milestone behind [#359](https://github.com/shchilkin/PopChoice/issues/359), separate from the current same-device group flow.
+
+Implementation should be sequenced as:
+
+1. [#467](https://github.com/shchilkin/PopChoice/issues/467): room persistence, TTL, cleanup, and participant storage.
+2. [#468](https://github.com/shchilkin/PopChoice/issues/468): share links, participant join flow, and readiness state.
+3. [#469](https://github.com/shchilkin/PopChoice/issues/469): recommendation orchestration from completed room answers.
+4. [#470](https://github.com/shchilkin/PopChoice/issues/470): QR invite and projector mode.
+
+This keeps the high-risk data and orchestration work ahead of visual polish. The existing same-device group mode should remain available until room mode is reliable.
+
 ## Staged Implementation Plan
 
 ### Stage 1: Document and stabilize current behavior
@@ -165,8 +179,19 @@ The model should optimize for overlap and acceptable compromise, not only averag
 - Move candidate sourcing toward TMDB discover/search as the broad first pass.
 - Use local embeddings as enrichment and reranking, not as the complete universe of possible movies.
 - Add JIT embedding/enrichment for strong TMDB candidates.
+- Add catalog metadata prerequisites for richer search:
+  - [#471](https://github.com/shchilkin/PopChoice/issues/471) schema/model for cast, directors, genres, and keywords.
+  - [#472](https://github.com/shchilkin/PopChoice/issues/472) TMDB backfill and refresh for that metadata.
+  - [#473](https://github.com/shchilkin/PopChoice/issues/473) available-movies search over actors, directors, and genres.
 - Track TMDB API failures, timeout behavior, and fallback quality.
 - Keep an admin/back-office backlog for ambiguous title matches and catalog-health issues.
+
+### Stage 5.5: Deterministic e2e and eval foundations
+
+- [#474](https://github.com/shchilkin/PopChoice/issues/474): add a full Playwright e2e harness with an isolated migrated test database.
+- [#475](https://github.com/shchilkin/PopChoice/issues/475): add product smoke flows for auth, catalog, quiz, recommendation, and feedback.
+- [#476](https://github.com/shchilkin/PopChoice/issues/476): add recommendation eval fixtures and scoring so AI behavior can be changed with more control.
+- Keep live-model evals optional. The default path should be deterministic, cheap, and safe for CI.
 
 ### Stage 6: Long-term personalization
 
@@ -179,11 +204,14 @@ The model should optimize for overlap and acceptable compromise, not only averag
 
 Good next PRs, in order:
 
-1. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
-2. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
-3. Add TMDB-backed candidate-card sourcing for swipe mode.
-4. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
-5. Add manual-review logging for ambiguous TMDB/local identity matches.
+1. Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on current catalog fields.
+2. Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so future recommendation changes can rely on real e2e coverage with an isolated DB.
+3. Decide [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
+4. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
+5. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
+6. Add TMDB-backed candidate-card sourcing for swipe mode.
+7. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
+8. Add manual-review logging for ambiguous TMDB/local identity matches.
 
 ## Non-Goals For Now
 
