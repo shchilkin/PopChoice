@@ -31,13 +31,28 @@ test('renders seeded catalog data and filters it through the real movies API', a
   await expect(page.getByText('8.7')).toBeVisible();
 });
 
+test('searches seeded actor, director, and genre metadata through the real movies API', async ({
+  request,
+}) => {
+  for (const query of ['Astra Fixture', 'Moonlit Director', 'Nebula Noir']) {
+    const response = await request.get(`/api/movies?query=${encodeURIComponent(query)}`);
+    expect(response.ok()).toBe(true);
+
+    const body = await response.json();
+    expect(body.totalCount).toBe(1);
+    expect(body.movies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: 'PopChoice E2E Space Opera' })]),
+    );
+  }
+});
+
 test('shows a useful empty state when catalog filters match nothing', async ({ page }) => {
   await page.goto('/available-movies');
 
   await expect(page.getByRole('heading', { name: 'Available Movies' })).toBeVisible();
   await expect(page.getByText(/Showing 1.4 of 4 movies/)).toBeVisible();
 
-  await page.getByPlaceholder('Movie title').fill('No Such PopChoice Fixture');
+  await page.getByPlaceholder('Title, actor, director, or genre').fill('No Such PopChoice Fixture');
   await page.getByRole('button', { name: 'Apply' }).click();
 
   await expect(page.getByText('No movies found')).toBeVisible();
