@@ -5,11 +5,20 @@ import {
   getPool,
   initDatabase,
   logger,
+  upsertMovieCatalogMetadata,
 } from '@pop-choice/shared';
 
 import type { TMDBSearchCandidate } from './tmdb.js';
+import type { MovieCatalogMetadataInput } from '@pop-choice/shared';
 
-export { initDatabase, closeDatabase, checkTableExists, ensureCatalogMetadataSchema };
+export {
+  initDatabase,
+  closeDatabase,
+  checkTableExists,
+  ensureCatalogMetadataSchema,
+  upsertMovieCatalogMetadata,
+};
+export type { MovieCatalogMetadataInput };
 
 export interface IncompleteMovie {
   id: string;
@@ -62,8 +71,21 @@ export async function ensureTMDBMatchReviewSchema(): Promise<void> {
 export async function getIncompleteMovies(limit: number): Promise<IncompleteMovie[]> {
   const query =
     limit > 0
-      ? 'SELECT id, name, year, duration, score_rating, description, tmdb_id FROM movies WHERE tmdb_id IS NULL OR duration = 0 OR poster_url IS NULL ORDER BY id LIMIT $1'
-      : 'SELECT id, name, year, duration, score_rating, description, tmdb_id FROM movies WHERE tmdb_id IS NULL OR duration = 0 OR poster_url IS NULL ORDER BY id';
+      ? `SELECT id, name, year, duration, score_rating, description, tmdb_id
+           FROM movies
+          WHERE tmdb_id IS NULL
+             OR duration = 0
+             OR poster_url IS NULL
+             OR (tmdb_id IS NOT NULL AND tmdb_metadata_refreshed_at IS NULL)
+          ORDER BY id
+          LIMIT $1`
+      : `SELECT id, name, year, duration, score_rating, description, tmdb_id
+           FROM movies
+          WHERE tmdb_id IS NULL
+             OR duration = 0
+             OR poster_url IS NULL
+             OR (tmdb_id IS NOT NULL AND tmdb_metadata_refreshed_at IS NULL)
+          ORDER BY id`;
 
   const result = await getPool().query<{
     id: string;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  extractCatalogMetadata,
   extractUSCertification,
   fetchMovieDetails,
   movieToEmbeddingText,
@@ -21,6 +22,7 @@ const makeDetails = (overrides: Partial<TMDBMovieDetails> = {}): TMDBMovieDetail
   release_date: '2023-06-15',
   vote_average: 7.5,
   runtime: 120,
+  poster_path: '/poster.jpg',
   release_dates: {
     results: [
       {
@@ -109,6 +111,66 @@ describe('extractUSCertification', () => {
   it('returns NR when release_dates.results is empty', () => {
     const details = makeDetails({ release_dates: { results: [] } });
     expect(extractUSCertification(details)).toBe('NR');
+  });
+});
+
+describe('extractCatalogMetadata', () => {
+  it('extracts cast, directors, genres, keywords, and a lightweight snapshot', () => {
+    const details = makeDetails({
+      genres: [{ id: 878, name: 'Science Fiction' }],
+      credits: {
+        cast: [
+          {
+            id: 1,
+            name: 'Natalya Bondarchuk',
+            character: 'Hari',
+            order: 0,
+            credit_id: 'cast-credit',
+            profile_path: '/hari.jpg',
+            popularity: 7,
+          },
+        ],
+        crew: [
+          {
+            id: 2,
+            name: 'Andrei Tarkovsky',
+            job: 'Director',
+            department: 'Directing',
+            credit_id: 'director-credit',
+          },
+        ],
+      },
+      keywords: { keywords: [{ id: 456, name: 'space station' }] },
+    });
+
+    const metadata = extractCatalogMetadata(details);
+
+    expect(metadata.people).toEqual([
+      expect.objectContaining({
+        tmdbId: 1,
+        role: 'cast',
+        characterName: 'Hari',
+        creditId: 'cast-credit',
+      }),
+      expect.objectContaining({
+        tmdbId: 2,
+        role: 'director',
+        job: 'Director',
+        creditId: 'director-credit',
+      }),
+    ]);
+    expect(metadata.genres).toEqual([
+      expect.objectContaining({ tmdbId: 878, name: 'Science Fiction' }),
+    ]);
+    expect(metadata.keywords).toEqual([
+      expect.objectContaining({ tmdbId: 456, name: 'space station' }),
+    ]);
+    expect(metadata.snapshot).toMatchObject({
+      id: 1,
+      title: 'Test Movie',
+      genres: [{ id: 878, name: 'Science Fiction' }],
+      keywords: [{ id: 456, name: 'space station' }],
+    });
   });
 });
 
@@ -290,6 +352,8 @@ describe('fetchMovieDetails', () => {
     const result = await fetchMovieDetails(API_KEY, 42);
 
     expect(result?.id).toBe(42);
+    const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string;
+    expect(calledUrl).toContain('append_to_response=release_dates%2Ccredits%2Ckeywords');
     const options = vi.mocked(fetch).mock.calls[0][1];
     expect(options).toMatchObject({
       signal: expect.any(AbortSignal),
