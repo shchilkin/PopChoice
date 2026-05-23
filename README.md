@@ -137,6 +137,14 @@ npm run start:workers
 Open [http://localhost:3000](http://localhost:3000) to use the app.
 
 The workers terminal is required for the async recommendation flow when Redis is enabled locally.
+It also runs the `catalog-maintenance` queue, which paces TMDB discovery, per-movie catalog seeding, and metadata backfill jobs.
+
+To enqueue catalog maintenance work for the workers:
+
+```bash
+npm run catalog:discovery:enqueue
+npm run catalog:backfill:enqueue
+```
 
 ### E2E smoke tests
 

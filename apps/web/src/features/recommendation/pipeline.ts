@@ -6,8 +6,8 @@
  */
 
 import { getDbClient } from '@/clients/dbClient';
+import { enqueueCatalogSeedTMDBMovies } from '@/features/catalogMaintenance/jobs';
 import { getUserRecommendationFeedbackMoviePreferences } from '@/lib/db/recommendations';
-import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 
 import {
@@ -37,7 +37,6 @@ import {
   parseTMDBReleaseYear,
   scoreAndConvertTMDBMovies,
   seedMoviesInBackground,
-  serializeTMDBEmbeddings,
 } from './tmdb';
 
 import type { ApiResponse, PersonFormData } from './types';
@@ -213,42 +212,40 @@ export async function runRecommendationPipeline(
           'Merged local and TMDB results',
         );
 
-        // Queue JIT seeding
-        if (seedQueue) {
-          try {
-            await withTimeout(
-              seedQueue.add(
-                'seed-movies',
-                {
-                  tmdbMovies,
-                  localKeys: Array.from(localKeys),
-                  tmdbEmbeddings: serializeTMDBEmbeddings(tmdbEmbeddings),
-                },
-                MOVIE_SEED_JOB_OPTIONS,
-              ),
-              MOVIE_SEED_ENQUEUE_TIMEOUT_MS,
-              'Movie seed enqueue timed out',
-            );
-            logger.info({ queuedMovies: tmdbMovies.length }, 'Queued TMDB seeding job');
-          } catch (error) {
-            if (error instanceof EnqueueTimeoutError) {
-              logger.warn(
-                { err: error, queuedMovies: tmdbMovies.length },
-                'Timed out while enqueueing TMDB seeding job; skipping fallback since enqueue status is uncertain',
-              );
-            } else {
-              logger.warn(
-                { err: error },
-                'Failed to enqueue TMDB seeding job — falling back to fire-and-forget seeding',
-              );
-              seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
-            }
-          }
-        } else {
-          logger.warn(
-            'Movie seed queue unavailable — falling back to fire-and-forget TMDB seeding',
+        // Queue per-movie catalog maintenance jobs with deterministic ids so repeated
+        // recommendation requests do not fan out duplicate TMDB/cache work.
+        try {
+          const queuedMovies = await withTimeout(
+            enqueueCatalogSeedTMDBMovies({
+              movies: tmdbMovies,
+              source: 'recommendation_jit',
+              localKeys: Array.from(localKeys),
+              embeddings: tmdbEmbeddings,
+            }),
+            MOVIE_SEED_ENQUEUE_TIMEOUT_MS,
+            'Catalog seed enqueue timed out',
           );
-          seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+          if (queuedMovies > 0) {
+            logger.info({ queuedMovies }, 'Queued catalog maintenance seed jobs');
+          } else {
+            logger.warn(
+              'Catalog maintenance queue unavailable — falling back to fire-and-forget TMDB seeding',
+            );
+            seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+          }
+        } catch (error) {
+          if (error instanceof EnqueueTimeoutError) {
+            logger.warn(
+              { err: error, queuedMovies: tmdbMovies.length },
+              'Timed out while enqueueing catalog seed jobs; skipping fallback since enqueue status is uncertain',
+            );
+          } else {
+            logger.warn(
+              { err: error },
+              'Failed to enqueue catalog seed jobs — falling back to fire-and-forget seeding',
+            );
+            seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
+          }
         }
       }
     } else {

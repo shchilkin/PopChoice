@@ -9,8 +9,10 @@
     "services/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=apps/web",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
     "build:services": "turbo run build --filter=./services/*",
+    "catalog:backfill:enqueue": "npm run enqueue:catalog-maintenance --workspace=apps/web -- backfill",
+    "catalog:discovery:enqueue": "npm run enqueue:catalog-maintenance --workspace=apps/web -- discovery",
     "catalog:health": "npm run catalog:health --workspace=movie-backfill",
     "cleanup:local-db": "bash scripts/cleanup-local-db.sh",
     "copy:env": "bash scripts/copy-env.sh",
@@ -37,7 +39,7 @@
     "test:server": "npm run test:server --workspace=apps/web",
     "test:services": "turbo run test --filter=./services/*",
     "test:storybook": "npm run test:storybook --workspace=apps/web",
-    "type-check": "npm run type-check --workspace=apps/web"
+    "type-check": "npm run build --workspace=packages/shared && npm run type-check --workspace=apps/web"
   },
   "devDependencies": {
     "husky": "^9.1.7",

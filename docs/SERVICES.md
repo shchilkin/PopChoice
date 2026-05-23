@@ -6,15 +6,16 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service / Tool          | Type                  | Trigger                                           | Source        |
-| ----------------------- | --------------------- | ------------------------------------------------- | ------------- |
-| `movie-seed`            | One-shot              | Manual / CI                                       | `movies.txt`  |
-| `movie-discovery`       | Scheduled             | Cron / One-shot                                   | TMDB API      |
-| `movie-backfill`        | One-shot              | Manual                                            | TMDB API      |
-| `catalog:health`        | Read-only report      | Manual / CI                                       | PostgreSQL    |
-| BullMQ `recommendation` | Per-request           | HTTP POST to /api/recommendations                 | TMDB + OpenAI |
-| BullMQ `more-picks`     | On demand             | HTTP POST to /api/recommendations/[id]/more-picks | TMDB + OpenAI |
-| BullMQ `movie-seed`     | Triggered by pipeline | Internal recommendation/more-picks JIT seeding    | TMDB          |
+| Service / Tool               | Type                  | Trigger                                                 | Source        |
+| ---------------------------- | --------------------- | ------------------------------------------------------- | ------------- |
+| `movie-seed`                 | One-shot              | Manual / CI                                             | `movies.txt`  |
+| `movie-discovery`            | Scheduled             | Cron / One-shot                                         | TMDB API      |
+| `movie-backfill`             | One-shot              | Manual                                                  | TMDB API      |
+| `catalog:health`             | Read-only report      | Manual / CI                                             | PostgreSQL    |
+| BullMQ `recommendation`      | Per-request           | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
+| BullMQ `more-picks`          | On demand             | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
+| BullMQ `movie-seed`          | Triggered by pipeline | Internal recommendation/more-picks JIT seeding          | TMDB          |
+| BullMQ `catalog-maintenance` | Maintenance jobs      | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
 
 ---
 
@@ -46,11 +47,12 @@ Browser → POST /api/recommendations/[id]/more-picks
 
 ### Queue names
 
-| Queue            | Worker file                                        | Job data                                 |
-| ---------------- | -------------------------------------------------- | ---------------------------------------- |
-| `recommendation` | `apps/web/src/lib/workers/recommendationWorker.ts` | `recommendationId`, `quizData`, `locale` |
-| `more-picks`     | `apps/web/src/lib/workers/morePicksWorker.ts`      | `recommendationId`, `slug`, `locale`     |
-| `movie-seed`     | `apps/web/src/lib/workers/movieSeedWorker.ts`      | `tmdbMovies`, `localKeys`                |
+| Queue                 | Worker file                                            | Job data                                                         |
+| --------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `recommendation`      | `apps/web/src/lib/workers/recommendationWorker.ts`     | `recommendationId`, `quizData`, `locale`                         |
+| `more-picks`          | `apps/web/src/lib/workers/morePicksWorker.ts`          | `recommendationId`, `slug`, `locale`                             |
+| `movie-seed`          | `apps/web/src/lib/workers/movieSeedWorker.ts`          | `tmdbMovies`, `localKeys`                                        |
+| `catalog-maintenance` | `apps/web/src/lib/workers/catalogMaintenanceWorker.ts` | `discover-tmdb-source-page`, `seed-tmdb-movie`, `backfill-movie` |
 
 ### Graceful degradation
 
@@ -67,12 +69,35 @@ Or via Docker Compose (workers.Dockerfile).
 
 ### Environment variables
 
-| Variable         | Required       | Description                                             |
-| ---------------- | -------------- | ------------------------------------------------------- |
-| `REDIS_URL`      | ✅ (for async) | Redis connection string (e.g. `redis://localhost:6379`) |
-| `DATABASE_URL`   | ✅             | PostgreSQL connection string                            |
-| `TMDB_API_KEY`   | ✅             | TMDB v4 read access token                               |
-| `OPENAI_API_KEY` | ✅             | OpenAI API key (embeddings + chat)                      |
+| Variable                            | Required       | Description                                                                        |
+| ----------------------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `REDIS_URL`                         | ✅ (for async) | Redis connection string (e.g. `redis://localhost:6379`)                            |
+| `DATABASE_URL`                      | ✅             | PostgreSQL connection string                                                       |
+| `TMDB_API_KEY`                      | ✅             | TMDB v4 read access token                                                          |
+| `OPENAI_API_KEY`                    | ✅             | OpenAI API key (embeddings + chat)                                                 |
+| `CATALOG_MAINTENANCE_CONCURRENCY`   | ❌             | Catalog worker concurrency. Defaults to `1`.                                       |
+| `CATALOG_TMDB_REQUESTS_PER_WINDOW`  | ❌             | Shared catalog-maintenance job budget. Defaults to `10`.                           |
+| `CATALOG_TMDB_RATE_LIMIT_WINDOW_MS` | ❌             | Shared catalog-maintenance budget window. Defaults to `10000`.                     |
+| `CATALOG_TMDB_429_BACKOFF_MS`       | ❌             | Fallback pause when TMDB returns `429` without `Retry-After`. Defaults to `30000`. |
+
+### Catalog maintenance queue
+
+`catalog-maintenance` is the shared BullMQ pacing layer for TMDB catalog work. It owns:
+
+- `discover-tmdb-source-page` jobs that fetch one TMDB source page and enqueue per-movie seed jobs.
+- `seed-tmdb-movie` jobs that fetch details, generate or reuse embeddings, insert new cached catalog rows, and upsert normalized cast/director/genre/keyword metadata.
+- `backfill-movie` jobs that refresh an existing movie row by TMDB id or conservative title/year match.
+
+Jobs use deterministic ids such as `tmdb-discover:popular:1:en-US`, `tmdb-seed:550:en-US`, and `backfill:123`, so repeated triggers dedupe at the queue layer. The worker also applies one BullMQ limiter to the queue and pauses when TMDB returns `429`.
+
+Maintenance entrypoints enqueue work and let workers own pacing/retries:
+
+```bash
+npm run catalog:discovery:enqueue
+npm run catalog:backfill:enqueue
+```
+
+`discovery` reads `TMDB_SOURCES`, `MAX_PAGES_PER_SOURCE`, `MIN_VOTE_COUNT`, `MIN_VOTE_AVERAGE`, `MAX_MOVIES_PER_PAGE`, and `TMDB_LANGUAGE`. `backfill` reads `MAX_MOVIES` and `TMDB_LANGUAGE`.
 
 ### Bull Board (monitoring dashboard)
 
