@@ -219,6 +219,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Keep the local `movies` table as a cache/index of known titles, embeddings, localized names, poster URLs, and TMDB ids rather than the full source of truth.
 - Backfill TMDB ids for existing local movies using exact title/year matches first, then persist ambiguous or low-confidence matches for manual review.
 - Add cast, director, genre, and keyword metadata as first-class catalog data before implementing actor/director/genre search.
+- Move TMDB discovery, backfill, and metadata refresh into shared rate-limited BullMQ catalog workers before growing catalog volume. The worker should enforce one configurable TMDB request budget across all catalog-maintenance jobs, honor `429` with backoff, dedupe jobs by stable `tmdbId`/`movieId` keys, and expose queue depth/failures in Bull Board.
 - Add a back-office review queue for ambiguous TMDB matches, missing posters, duplicate identities, and metadata conflicts before applying risky automatic merges.
 - Prefer TMDB ids for all cross-feature identity checks. Fall back to normalized title plus year only when TMDB identity is unavailable.
 - Design future discovery flows around dynamic TMDB candidate sets: "I have watched many films" deck mode, quiz-assisted mode, and later a preference/taste-training mode.
@@ -259,8 +260,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 6. [x] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
 7. [x] Populate the catalog metadata model in [#472](https://github.com/shchilkin/PopChoice/issues/472) from TMDB backfill/discovery before expanding #82 into actor/director/genre search.
 8. [x] Expand available-movies search in [#473](https://github.com/shchilkin/PopChoice/issues/473) across title, actor/director, and genre metadata populated by #472.
-9. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
-10. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+9. [ ] Move TMDB discovery/backfill/metadata refresh into shared rate-limited BullMQ catalog workers before increasing catalog expansion volume.
+10. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
+11. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 

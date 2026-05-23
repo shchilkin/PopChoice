@@ -179,6 +179,11 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - Move candidate sourcing toward TMDB discover/search as the broad first pass.
 - Use local embeddings as enrichment and reranking, not as the complete universe of possible movies.
 - Add JIT embedding/enrichment for strong TMDB candidates.
+- Move TMDB discovery and backfill into rate-limited BullMQ catalog workers before increasing catalog expansion volume:
+  - Add a dedicated catalog-maintenance queue for discovery pages, movie detail enrichment, metadata refresh, and per-movie backfill jobs.
+  - Enforce one shared TMDB request budget across discovery, backfill, and worker-driven enrichment, with configurable concurrency and `429` backoff.
+  - Use deterministic `jobId` values such as `tmdb-details:{tmdbId}:{language}` and `backfill:{movieId}` so retries and duplicate triggers do not fan out duplicate TMDB calls.
+  - Keep the existing one-shot services as enqueue/maintenance entrypoints while workers own API pacing, retries, observability, and Bull Board visibility.
 - Add catalog metadata prerequisites for richer search:
   - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471) schema/model for cast, directors, genres, and keywords.
   - [x] [#472](https://github.com/shchilkin/PopChoice/issues/472) TMDB backfill and refresh for that metadata.
@@ -205,11 +210,12 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 Good next PRs, in order:
 
 1. Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-2. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
-3. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
-4. Add TMDB-backed candidate-card sourcing for swipe mode.
-5. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
-6. Add manual-review logging for ambiguous TMDB/local identity matches.
+2. Move TMDB discovery/backfill/enrichment into a shared rate-limited BullMQ catalog worker before scaling catalog volume.
+3. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
+4. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
+5. Add TMDB-backed candidate-card sourcing for swipe mode.
+6. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
+7. Add manual-review logging for ambiguous TMDB/local identity matches.
 
 ## Non-Goals For Now
 
