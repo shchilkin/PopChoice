@@ -62,7 +62,9 @@ async function seedDatabase(databaseUrl) {
           ($1, $2, $3, $4, $5, $6, $7, $8, $9),
           ($10, $11, $12, $13, $14, $15, $16, $17, $18),
           ($19, $20, $21, $22, $23, $24, $25, $26, $27),
-          ($28, $29, $30, $31, $32, $33, $34, $35, $36)
+          ($28, $29, $30, $31, $32, $33, $34, $35, $36),
+          ($37, $38, $39, $40, $41, $42, $43, $44, $45),
+          ($46, $47, $48, $49, $50, $51, $52, $53, $54)
       `,
       [
         'PopChoice E2E Space Opera',
@@ -101,6 +103,24 @@ async function seedDatabase(databaseUrl) {
         900004,
         null,
         'PopChoice E2E Family Adventure',
+        'PopChoice E2E Cozy Mystery',
+        'PG',
+        'A cozy mystery fixture for recommendation eval candidate availability.',
+        108,
+        7.8,
+        2021,
+        900005,
+        null,
+        'PopChoice E2E Cozy Mystery',
+        'PopChoice E2E Ensemble Comedy',
+        'PG-13',
+        'A playful ensemble fixture for mixed group recommendation evals.',
+        115,
+        8.3,
+        2020,
+        900006,
+        null,
+        'PopChoice E2E Ensemble Comedy',
       ],
     );
 

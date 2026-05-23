@@ -56,7 +56,7 @@ export type RecommendationEvalResult = {
   score: number;
 };
 
-export type RecommendationEvalRunMode = 'mock' | 'live';
+export type RecommendationEvalRunMode = 'mock' | 'real-data' | 'live';
 
 export type RecommendationEvalReport = {
   generatedAt: string;

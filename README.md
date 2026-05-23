@@ -162,6 +162,14 @@ npm run eval:recommendations
 
 The command writes a JSON report to `apps/web/test-results/recommendation-evals/report.json` and checks output shape, candidate validity, safety constraints, repeat avoidance, and explanation quality. Optional live-provider runs are explicit:
 
+Real-data evals use the isolated e2e database and real catalog retrieval while keeping model output controlled:
+
+```bash
+npm run test:e2e:setup
+DATABASE_URL=postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e npm run eval:recommendations:real-data
+npm run test:e2e:down
+```
+
 ```bash
 npm run eval:recommendations -- --live
 ```

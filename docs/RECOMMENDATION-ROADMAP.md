@@ -202,7 +202,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a full Playwright e2e harness with an isolated migrated test database.
 - [x] [#475](https://github.com/shchilkin/PopChoice/issues/475): add product smoke flows for auth, catalog, quiz, recommendation, and feedback.
 - [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add recommendation eval fixtures and scoring so AI behavior can be changed with more control.
-- [ ] [#490](https://github.com/shchilkin/PopChoice/issues/490): add scheduled or manually triggered real-data recommendation evals for seeded DB and catalog-retrieval changes.
+- [x] [#490](https://github.com/shchilkin/PopChoice/issues/490): add scheduled or manually triggered real-data recommendation evals for seeded DB and catalog-retrieval changes.
 - Keep live-model evals optional. The default path should be deterministic, cheap, and safe for CI.
 
 ### Stage 6: Long-term personalization

@@ -204,7 +204,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a Playwright e2e harness with an isolated migrated test database and deterministic seed fixtures.
 - [x] [#475](https://github.com/shchilkin/PopChoice/issues/475): cover auth, catalog, quiz, recommendation, and feedback smoke flows through product-level e2e tests.
 - [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add an AI recommendation eval harness with deterministic fixtures by default and optional live model/provider runs.
-- [ ] [#490](https://github.com/shchilkin/PopChoice/issues/490): add a scheduled or manually triggered real-data recommendation eval workflow with seeded database data and real catalog retrieval.
+- [x] [#490](https://github.com/shchilkin/PopChoice/issues/490): add a scheduled or manually triggered real-data recommendation eval workflow with seeded database data and real catalog retrieval.
 - Keep Storybook/component tests separate from full product e2e tests so UI component regressions and app-flow regressions fail with clear ownership.
 - Keep AI evals separate from normal e2e smoke tests because recommendation quality gates need fixture scoring, model controls, and optional API cost.
 
@@ -264,7 +264,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 3. [x] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
 4. [x] Add [#475](https://github.com/shchilkin/PopChoice/issues/475) auth, catalog, quiz, and recommendation smoke flows on top of the isolated e2e harness.
 5. [x] Add [#476](https://github.com/shchilkin/PopChoice/issues/476) deterministic recommendation eval fixtures and scoring.
-6. [ ] Add [#490](https://github.com/shchilkin/PopChoice/issues/490) scheduled/manual real-data recommendation evals for seeded DB and catalog-retrieval changes.
+6. [x] Add [#490](https://github.com/shchilkin/PopChoice/issues/490) scheduled/manual real-data recommendation evals for seeded DB and catalog-retrieval changes.
 7. [x] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
 8. [x] Populate the catalog metadata model in [#472](https://github.com/shchilkin/PopChoice/issues/472) from TMDB backfill/discovery before expanding #82 into actor/director/genre search.
 9. [x] Expand available-movies search in [#473](https://github.com/shchilkin/PopChoice/issues/473) across title, actor/director, and genre metadata populated by #472.
