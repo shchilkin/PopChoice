@@ -7,6 +7,7 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 - Review this checklist during larger feature PRs, refactors, or monthly maintenance.
 - Prefer small, scoped fixes instead of broad cleanup PRs.
 - Link related docs (`README.md`, `docs/DEVELOPMENT.md`, `docs/CI-CD.md`, `docs/SERVICES.md`) when checking items.
+- Create GitHub issues for new actionable roadmap tickets. If an item is too large for one PR, make it an epic/umbrella and split focused child issues before implementation.
 
 ## Checklist
 
@@ -79,7 +80,7 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 ## PopChoice priority next steps (highest impact)
 
-- [ ] Refactor the quiz submit/results handoff so navigation state is explicit.
+- [x] Refactor the quiz submit/results handoff so navigation state is explicit.
 - [ ] Keep API route handlers thin and move growing account/movie-memory logic into `src/features` when needed.
 - [ ] Use positive `liked` memory as a ranking signal, not only stored history.
 - [ ] Add catalog-health reporting for missing posters, localized metadata, duplicate identities, and stale TMDB data.

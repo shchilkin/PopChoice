@@ -102,6 +102,12 @@ When code changes affect setup, scripts, architecture, services, CI, or deployme
 - Update `docs/ROADMAP-ARCHITECTURE.md` when work completes or new known follow-ups appear.
 - Keep service READMEs aligned with their actual scripts and environment variables.
 
+When adding new roadmap work:
+
+- Create a GitHub issue for each actionable new ticket before or alongside adding it to roadmap docs.
+- If the work is broad, keep the original issue as an epic/umbrella and create focused implementation issues underneath it.
+- Prefer roadmap entries that link to concrete issues; avoid long-lived untracked bullets unless they are intentionally exploratory notes.
+
 ## Gotchas
 
 - Next.js uses `apps/web/src/proxy.ts` for the CSRF cookie path. Older docs or comments may still say middleware.
