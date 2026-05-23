@@ -53,7 +53,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS movies_tmdb_id_unique
 
 CREATE TABLE IF NOT EXISTS catalog_people (
   id bigserial PRIMARY KEY,
-  tmdb_id bigint,
+  tmdb_id int,
   name text NOT NULL,
   profile_path text,
   popularity float,
@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS catalog_people (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE catalog_people
+  ALTER COLUMN tmdb_id TYPE int USING tmdb_id::int;
 
 CREATE UNIQUE INDEX IF NOT EXISTS catalog_people_tmdb_id_unique
   ON catalog_people (tmdb_id)
@@ -87,12 +90,15 @@ CREATE INDEX IF NOT EXISTS idx_catalog_genres_name_lower
 
 CREATE TABLE IF NOT EXISTS catalog_keywords (
   id bigserial PRIMARY KEY,
-  tmdb_id bigint,
+  tmdb_id int,
   name text NOT NULL,
   raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE catalog_keywords
+  ALTER COLUMN tmdb_id TYPE int USING tmdb_id::int;
 
 CREATE UNIQUE INDEX IF NOT EXISTS catalog_keywords_tmdb_id_unique
   ON catalog_keywords (tmdb_id)
@@ -132,8 +138,15 @@ CREATE TABLE IF NOT EXISTS movie_genres (
   genre_id bigint NOT NULL REFERENCES catalog_genres(id) ON DELETE CASCADE,
   source text NOT NULL DEFAULT 'tmdb',
   created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT movie_genres_source_check CHECK (source IN ('tmdb', 'manual')),
   PRIMARY KEY (movie_id, genre_id)
 );
+
+ALTER TABLE movie_genres
+  DROP CONSTRAINT IF EXISTS movie_genres_source_check;
+
+ALTER TABLE movie_genres
+  ADD CONSTRAINT movie_genres_source_check CHECK (source IN ('tmdb', 'manual'));
 
 CREATE INDEX IF NOT EXISTS idx_movie_genres_genre_id
   ON movie_genres (genre_id);
@@ -143,8 +156,15 @@ CREATE TABLE IF NOT EXISTS movie_keywords (
   keyword_id bigint NOT NULL REFERENCES catalog_keywords(id) ON DELETE CASCADE,
   source text NOT NULL DEFAULT 'tmdb',
   created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT movie_keywords_source_check CHECK (source IN ('tmdb', 'manual')),
   PRIMARY KEY (movie_id, keyword_id)
 );
+
+ALTER TABLE movie_keywords
+  DROP CONSTRAINT IF EXISTS movie_keywords_source_check;
+
+ALTER TABLE movie_keywords
+  ADD CONSTRAINT movie_keywords_source_check CHECK (source IN ('tmdb', 'manual'));
 
 CREATE INDEX IF NOT EXISTS idx_movie_keywords_keyword_id
   ON movie_keywords (keyword_id);
