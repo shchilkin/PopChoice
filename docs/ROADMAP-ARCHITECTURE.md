@@ -69,12 +69,18 @@ The main remaining risks are:
 
 ### Issues Still Present
 
-- The quiz-to-results handoff still relies on route-local state and a short-lived browser handoff marker to avoid visual flashes. A follow-up PR should simplify this architecture so the quiz route never needs to reset itself while it is still responsible for rendering the submit handoff.
 - The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
 - Account settings/profile/provider identity remain intentionally thin.
 
 Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
+
+### Backlog Hygiene
+
+- Create a GitHub issue for every actionable roadmap ticket before or alongside adding it to this document.
+- If a roadmap item is too large for one PR, keep the original issue as an epic/umbrella and create focused child issues for implementation-sized work.
+- Link roadmap items to concrete issues whenever possible so completed work can be checked off and future agents do not have to rediscover context.
+- Keep unlinked bullets for direction-setting only; convert them into issues once they become actionable.
 
 ## Target Direction
 
@@ -169,14 +175,14 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471): add a catalog metadata model for cast, directors, genres, and keywords before expanding search beyond title/year.
 - [x] [#472](https://github.com/shchilkin/PopChoice/issues/472): extend TMDB backfill/discovery to populate people, genre, and keyword metadata, with catalog-health visibility for missing coverage.
-- Persist TMDB backfill review cases in `tmdb_match_reviews`, then add an admin/back-office UI to resolve ambiguous matches, missing metadata, or rejected runtime/year confidence cases.
+- Persist TMDB backfill review cases in `tmdb_match_reviews`, then add an admin/back-office UI to resolve ambiguous matches, missing metadata, or rejected runtime/year confidence cases under [#493](https://github.com/shchilkin/PopChoice/issues/493).
 - Track catalog health signals such as duplicate movie identities, missing posters, missing localized names/overviews, missing runtimes, stale TMDB metadata, and missing cast/director/genre/keyword coverage. Admin resolution and automated refresh remain future work.
 - Create a dedicated backoffice app for catalog-health reports, TMDB match
   review queues, and later manual data repair. Do not add this UI to
-  `apps/web`; that app remains user-facing.
+  `apps/web`; that app remains user-facing. Track the epic in [#493](https://github.com/shchilkin/PopChoice/issues/493) and split child issues before broad implementation starts.
 - Periodically refresh TMDB-backed metadata for older records without destabilizing existing recommendation history.
 - Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.
-- Define migration/versioning expectations for schema changes, including production migration safety, rollback notes, and seed/backfill coordination.
+- Define migration/versioning expectations for schema changes in [#494](https://github.com/shchilkin/PopChoice/issues/494), including production migration safety, rollback notes, and seed/backfill coordination.
 
 ### Account Platform Track
 
@@ -220,8 +226,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Keep the local `movies` table as a cache/index of known titles, embeddings, localized names, poster URLs, and TMDB ids rather than the full source of truth.
 - Backfill TMDB ids for existing local movies using exact title/year matches first, then persist ambiguous or low-confidence matches for manual review.
 - Add cast, director, genre, and keyword metadata as first-class catalog data before implementing actor/director/genre search.
-- Move TMDB discovery, backfill, and metadata refresh into shared rate-limited BullMQ catalog workers before growing catalog volume. The worker should enforce one configurable TMDB request budget across all catalog-maintenance jobs, honor `429` with backoff, dedupe jobs by stable `tmdbId`/`movieId` keys, and expose queue depth/failures in Bull Board.
-- Add a back-office review queue for ambiguous TMDB matches, missing posters, duplicate identities, and metadata conflicts before applying risky automatic merges.
+- Move TMDB discovery, backfill, and metadata refresh into shared rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before growing catalog volume. The worker should enforce one configurable TMDB request budget across all catalog-maintenance jobs, honor `429` with backoff, dedupe jobs by stable `tmdbId`/`movieId` keys, and expose queue depth/failures in Bull Board.
+- Add a back-office review queue for ambiguous TMDB matches, missing posters, duplicate identities, and metadata conflicts in [#493](https://github.com/shchilkin/PopChoice/issues/493) before applying risky automatic merges.
 - Prefer TMDB ids for all cross-feature identity checks. Fall back to normalized title plus year only when TMDB identity is unavailable.
 - Design future discovery flows around dynamic TMDB candidate sets: "I have watched many films" deck mode, quiz-assisted mode, and later a preference/taste-training mode.
 
@@ -254,7 +260,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 ## Priority Items for the Next 30 Days
 
 1. [x] Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on the existing catalog fields.
-2. [ ] Refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
+2. [x] Refactor the quiz submit/results handoff in [#484](https://github.com/shchilkin/PopChoice/issues/484) so navigation state is explicit and the quiz page does not need short-lived reset guards.
 3. [x] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
 4. [x] Add [#475](https://github.com/shchilkin/PopChoice/issues/475) auth, catalog, quiz, and recommendation smoke flows on top of the isolated e2e harness.
 5. [x] Add [#476](https://github.com/shchilkin/PopChoice/issues/476) deterministic recommendation eval fixtures and scoring.
@@ -262,9 +268,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 7. [x] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
 8. [x] Populate the catalog metadata model in [#472](https://github.com/shchilkin/PopChoice/issues/472) from TMDB backfill/discovery before expanding #82 into actor/director/genre search.
 9. [x] Expand available-movies search in [#473](https://github.com/shchilkin/PopChoice/issues/473) across title, actor/director, and genre metadata populated by #472.
-10. [ ] Move TMDB discovery/backfill/metadata refresh into shared rate-limited BullMQ catalog workers before increasing catalog expansion volume.
-11. [ ] Create a dedicated backoffice app for catalog-health and TMDB review, then add shared login protection for it and `apps/bull-board`.
-12. [ ] Clarify production migration/versioning expectations for schema changes, rollbacks, and preview volume recreation.
+10. [ ] Move TMDB discovery/backfill/metadata refresh into shared rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before increasing catalog expansion volume.
+11. [ ] Plan and split the [#493](https://github.com/shchilkin/PopChoice/issues/493) backoffice/catalog-health epic, including shared login protection for it and `apps/bull-board`.
+12. [ ] Clarify production migration/versioning expectations in [#494](https://github.com/shchilkin/PopChoice/issues/494) for schema changes, rollbacks, and preview volume recreation.
 
 ## Working Checklist
 
