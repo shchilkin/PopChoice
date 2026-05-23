@@ -16,6 +16,7 @@ if (!REDIS_URL) {
 const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 
 const seedQueue = new Queue('movie-seed', { connection });
+const catalogMaintenanceQueue = new Queue('catalog-maintenance', { connection });
 const recommendationQueue = new Queue('recommendation', { connection });
 const morePicksQueue = new Queue('more-picks', { connection });
 
@@ -25,6 +26,7 @@ serverAdapter.setBasePath('/');
 createBullBoard({
   queues: [
     new BullMQAdapter(seedQueue),
+    new BullMQAdapter(catalogMaintenanceQueue),
     new BullMQAdapter(recommendationQueue),
     new BullMQAdapter(morePicksQueue),
   ],

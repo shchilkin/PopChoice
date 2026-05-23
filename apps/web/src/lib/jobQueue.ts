@@ -11,6 +11,28 @@ import type { Locale } from '@/lib/locale';
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 export const RECOMMENDATION_QUEUE_NAME = 'recommendation';
 export const MORE_PICKS_QUEUE_NAME = 'more-picks';
+export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
+
+export const CATALOG_MAINTENANCE_JOB_NAMES = {
+  discoverTMDBSourcePage: 'discover-tmdb-source-page',
+  seedTMDBMovie: 'seed-tmdb-movie',
+  backfillMovie: 'backfill-movie',
+} as const;
+
+export type CatalogMaintenanceJobName =
+  (typeof CATALOG_MAINTENANCE_JOB_NAMES)[keyof typeof CATALOG_MAINTENANCE_JOB_NAMES];
+
+export type TMDBCatalogCandidate = {
+  id: number;
+  title: string;
+  overview: string;
+  release_date: string;
+  vote_average: number;
+  vote_count?: number;
+  poster_path?: string | null;
+};
+
+export type TMDBDiscoverySource = 'now_playing' | 'upcoming' | 'top_rated' | 'popular';
 
 export type MovieSeedJobData = {
   tmdbMovies: TMDBDiscoverMovie[];
@@ -31,6 +53,37 @@ export type MorePicksJobData = {
   locale: Locale;
 };
 
+export type CatalogSeedTMDBMovieJobData = {
+  version: 1;
+  source: 'recommendation_jit' | 'tmdb_discovery' | 'manual_refresh';
+  movie: TMDBCatalogCandidate;
+  localKeys?: string[];
+  embedding?: number[];
+  language?: string;
+};
+
+export type CatalogDiscoverTMDBSourcePageJobData = {
+  version: 1;
+  source: TMDBDiscoverySource;
+  page: number;
+  language?: string;
+  minVoteCount?: number;
+  minVoteAverage?: number;
+  maxMoviesPerPage?: number;
+};
+
+export type CatalogBackfillMovieJobData = {
+  version: 1;
+  movieId: string | number;
+  reason?: 'missing_tmdb_id' | 'missing_metadata' | 'manual_refresh';
+  language?: string;
+};
+
+export type CatalogMaintenanceJobData =
+  | CatalogDiscoverTMDBSourcePageJobData
+  | CatalogSeedTMDBMovieJobData
+  | CatalogBackfillMovieJobData;
+
 export const MOVIE_SEED_JOB_OPTIONS = {
   attempts: 3,
   backoff: { type: 'exponential' as const, delay: 2000 },
@@ -43,6 +96,13 @@ export const RECOMMENDATION_JOB_OPTIONS = {
   backoff: { type: 'exponential' as const, delay: 3000 },
   removeOnComplete: 200,
   removeOnFail: 100,
+};
+
+export const CATALOG_MAINTENANCE_JOB_OPTIONS = {
+  attempts: 4,
+  backoff: { type: 'exponential' as const, delay: 5000 },
+  removeOnComplete: 500,
+  removeOnFail: 200,
 };
 
 let bullMQConnection: IORedis | null = null;
@@ -94,3 +154,24 @@ export const MORE_PICKS_JOB_OPTIONS = {
 export const morePicksQueue = queueConnection
   ? new Queue<MorePicksJobData>(MORE_PICKS_QUEUE_NAME, { connection: queueConnection })
   : null;
+
+export const catalogMaintenanceQueue = queueConnection
+  ? new Queue<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>(
+      CATALOG_MAINTENANCE_QUEUE_NAME,
+      { connection: queueConnection },
+    )
+  : null;
+
+export async function closeBullMQQueues(): Promise<void> {
+  await Promise.all([
+    seedQueue?.close(),
+    recommendationQueue?.close(),
+    morePicksQueue?.close(),
+    catalogMaintenanceQueue?.close(),
+  ]);
+  if (bullMQConnection) {
+    const connection = bullMQConnection;
+    bullMQConnection = null;
+    await connection.quit();
+  }
+}

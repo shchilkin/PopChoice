@@ -185,7 +185,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - Move candidate sourcing toward TMDB discover/search as the broad first pass.
 - Use local embeddings as enrichment and reranking, not as the complete universe of possible movies.
 - Add JIT embedding/enrichment for strong TMDB candidates.
-- Move TMDB discovery and backfill into rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before increasing catalog expansion volume:
+- [x] Move TMDB discovery and backfill into rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before increasing catalog expansion volume:
   - Add a dedicated catalog-maintenance queue for discovery pages, movie detail enrichment, metadata refresh, and per-movie backfill jobs.
   - Enforce one shared TMDB request budget across discovery, backfill, and worker-driven enrichment, with configurable concurrency and `429` backoff.
   - Use deterministic `jobId` values such as `tmdb-details:{tmdbId}:{language}` and `backfill:{movieId}` so retries and duplicate triggers do not fan out duplicate TMDB calls.
@@ -217,7 +217,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 Good next PRs, in order:
 
 1. [x] [#484](https://github.com/shchilkin/PopChoice/issues/484): refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-2. [#492](https://github.com/shchilkin/PopChoice/issues/492): move TMDB discovery/backfill/enrichment into a shared rate-limited BullMQ catalog worker before scaling catalog volume.
+2. [x] [#492](https://github.com/shchilkin/PopChoice/issues/492): move TMDB discovery/backfill/enrichment into a shared rate-limited BullMQ catalog worker before scaling catalog volume.
 3. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
 4. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
 5. Add TMDB-backed candidate-card sourcing for swipe mode.
