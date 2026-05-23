@@ -149,6 +149,30 @@ npm run test:e2e:down
 
 The smoke coverage proves `/api/health`, Available Movies filtering and empty states, auth/session flows, solo quiz submission, result rendering, recommendation feedback, and movie-memory persistence. AI-response evals remain separate so they can add fixture scoring and optional live-model runs without slowing normal e2e.
 
+### Recommendation Eval Harness
+
+Run the deterministic recommendation eval suite from the repo root:
+
+```bash
+npm run eval:recommendations
+```
+
+The default eval path uses fixture prompts, fixture user-memory constraints, and mocked recommendation outputs. It does not call OpenAI, TMDB, Redis, or PostgreSQL. The runner writes `apps/web/test-results/recommendation-evals/report.json` and prints a concise pass/fail summary. Current scoring checks:
+
+- response shape against the `ApiResponse` schema
+- main pick and alternates stay inside the fixture candidate set
+- forbidden safety terms are absent
+- watched, rejected, and explicitly forbidden titles are not repeated
+- explanation text is specific enough for the fixture expectations
+
+Run live-provider evals only when intentionally checking model/provider behavior:
+
+```bash
+npm run eval:recommendations -- --live
+```
+
+Live evals require configured provider and database environment variables such as `OPENAI_API_KEY`, `DATABASE_URL`, and usually `TMDB_API_KEY`. CI blocks on the deterministic eval job; live evals are manual so normal PR checks stay cheap and predictable.
+
 ## Project Structure
 
 ```text

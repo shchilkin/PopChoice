@@ -122,6 +122,37 @@ jobs:
           path: apps/web/coverage/
           retention-days: 30
 
+  recommendation-evals:
+    name: Recommendation Evals
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run deterministic recommendation evals
+        run: npm run eval:recommendations
+
+      - name: Upload recommendation eval report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: recommendation-eval-report
+          path: apps/web/test-results/recommendation-evals/
+          retention-days: 30
+
   storybook-tests:
     name: Storybook Tests
     needs: changes
@@ -288,6 +319,7 @@ jobs:
       - lint
       - type-check
       - server-tests
+      - recommendation-evals
       - storybook-tests
       - e2e-tests
       - build
@@ -301,6 +333,7 @@ jobs:
       LINT_RESULT: ${{ needs.lint.result }}
       TYPE_CHECK_RESULT: ${{ needs.type-check.result }}
       SERVER_TESTS_RESULT: ${{ needs.server-tests.result }}
+      RECOMMENDATION_EVALS_RESULT: ${{ needs.recommendation-evals.result }}
       STORYBOOK_TESTS_RESULT: ${{ needs.storybook-tests.result }}
       E2E_TESTS_RESULT: ${{ needs.e2e-tests.result }}
       BUILD_RESULT: ${{ needs.build.result }}
@@ -319,6 +352,7 @@ jobs:
           [[ "$LINT_RESULT" == "success" ]] || failures+=("Lint & Format: $LINT_RESULT")
           [[ "$TYPE_CHECK_RESULT" == "success" ]] || failures+=("Type Check: $TYPE_CHECK_RESULT")
           [[ "$SERVER_TESTS_RESULT" == "success" ]] || failures+=("Server Tests: $SERVER_TESTS_RESULT")
+          [[ "$RECOMMENDATION_EVALS_RESULT" == "success" ]] || failures+=("Recommendation Evals: $RECOMMENDATION_EVALS_RESULT")
           [[ "$STORYBOOK_TESTS_RESULT" == "success" ]] || failures+=("Storybook Tests: $STORYBOOK_TESTS_RESULT")
           [[ "$E2E_TESTS_RESULT" == "success" ]] || failures+=("E2E Tests: $E2E_TESTS_RESULT")
           [[ "$BUILD_RESULT" == "success" ]] || failures+=("Build: $BUILD_RESULT")

@@ -16,6 +16,7 @@
     "copy:env": "bash scripts/copy-env.sh",
     "dev": "npm run dev --workspace=apps/web",
     "dev:shared": "npm run dev --workspace=packages/shared",
+    "eval:recommendations": "npm run eval:recommendations --workspace=apps/web",
     "fix": "npm run lint:fix && npm run format:write && npm run format:package",
     "format:check": "prettier --check .",
     "format:package": "sort-package-json",

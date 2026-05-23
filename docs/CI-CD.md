@@ -4,7 +4,7 @@
 
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
-- `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, Storybook tests, e2e smoke tests, build, service CI, dependency review)
+- `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, recommendation evals, Storybook tests, e2e smoke tests, build, service CI, dependency review)
 - `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 - `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
@@ -15,22 +15,23 @@ The PR validation workflows run automatically on pull requests targeting the `de
 
 ### Jobs
 
-| Workflow                 | Job                  | Purpose                                                                         |
-| ------------------------ | -------------------- | ------------------------------------------------------------------------------- |
-| `pr.yml`                 | `changes`            | Classifies PR as docs-only vs code-changing                                     |
-| `pr.yml`                 | `lint`               | ESLint code quality + Prettier formatting                                       |
-| `pr.yml`                 | `type-check`         | TypeScript type safety (`tsc --noEmit`)                                         |
-| `pr.yml`                 | `server-tests`       | Vitest server tests with coverage collection and artifact upload                |
-| `pr.yml`                 | `storybook-tests`    | Playwright browser install + Storybook component tests                          |
-| `pr.yml`                 | `e2e-tests`          | Playwright smoke tests against isolated PostgreSQL + Redis services             |
-| `pr.yml`                 | `build`              | Next.js production build verification                                           |
-| `pr.yml`                 | `services-ci`        | Turbo test pass for `services/*`                                                |
-| `pr.yml`                 | `dependency-review`  | Blocks PRs introducing vulnerable dependencies                                  |
-| `pr.yml`                 | `pr-validation`      | Stable required check that always runs on every PR                              |
-| `container-images.yml`   | `build-images`       | Builds and publishes GHCR production images with provenance                     |
-| `container-images.yml`   | `deploy-coolify`     | Optionally triggers the Coolify deploy webhook after development images publish |
-| `movie-discovery-ci.yml` | `movie-discovery-ci` | TypeScript compilation and tests for `services/movie-discovery`                 |
-| `codeql.yml`             | `analyze`            | CodeQL static analysis for Actions and JavaScript/TypeScript                    |
+| Workflow                 | Job                    | Purpose                                                                         |
+| ------------------------ | ---------------------- | ------------------------------------------------------------------------------- |
+| `pr.yml`                 | `changes`              | Classifies PR as docs-only vs code-changing                                     |
+| `pr.yml`                 | `lint`                 | ESLint code quality + Prettier formatting                                       |
+| `pr.yml`                 | `type-check`           | TypeScript type safety (`tsc --noEmit`)                                         |
+| `pr.yml`                 | `server-tests`         | Vitest server tests with coverage collection and artifact upload                |
+| `pr.yml`                 | `recommendation-evals` | Deterministic recommendation quality fixtures and scoring                       |
+| `pr.yml`                 | `storybook-tests`      | Playwright browser install + Storybook component tests                          |
+| `pr.yml`                 | `e2e-tests`            | Playwright smoke tests against isolated PostgreSQL + Redis services             |
+| `pr.yml`                 | `build`                | Next.js production build verification                                           |
+| `pr.yml`                 | `services-ci`          | Turbo test pass for `services/*`                                                |
+| `pr.yml`                 | `dependency-review`    | Blocks PRs introducing vulnerable dependencies                                  |
+| `pr.yml`                 | `pr-validation`        | Stable required check that always runs on every PR                              |
+| `container-images.yml`   | `build-images`         | Builds and publishes GHCR production images with provenance                     |
+| `container-images.yml`   | `deploy-coolify`       | Optionally triggers the Coolify deploy webhook after development images publish |
+| `movie-discovery-ci.yml` | `movie-discovery-ci`   | TypeScript compilation and tests for `services/movie-discovery`                 |
+| `codeql.yml`             | `analyze`              | CodeQL static analysis for Actions and JavaScript/TypeScript                    |
 
 ## Workflow Features
 
@@ -51,6 +52,12 @@ The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-pla
 The `e2e-tests` job runs `npm run test:e2e`. That command starts the isolated `docker-compose.e2e.yml` services, applies the same `db/init` migrations used by production/local setup, seeds deterministic movie fixtures, starts Next.js on port `3100`, and runs Playwright. The job always runs `npm run test:e2e:down` afterwards so the disposable database volume is removed.
 
 The e2e coverage proves the real app can read seeded catalog data from PostgreSQL, that `/api/health` can reach both PostgreSQL and Redis, and that auth/session, catalog empty states, quiz submission, deterministic result rendering, feedback, and movie-memory persistence work through the browser. AI-eval coverage is tracked separately so model quality gates can use fixture scoring and optional live-provider runs.
+
+### Recommendation Evals
+
+The `recommendation-evals` job runs `npm run eval:recommendations`. This is a CI-blocking deterministic suite: it uses fixture prompts, fixture memory constraints, and mocked model outputs, then writes `apps/web/test-results/recommendation-evals/report.json`. The report is uploaded as the `recommendation-eval-report` artifact.
+
+Default evals do not require `OPENAI_API_KEY`, `TMDB_API_KEY`, Redis, or PostgreSQL. Optional live-provider evals use `npm run eval:recommendations -- --live` and are intentionally manual because they can spend API credits, depend on provider availability, and may need seeded local data.
 
 ### Code Coverage
 

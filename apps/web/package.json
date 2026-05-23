@@ -10,6 +10,7 @@
     "bull-board": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" tsx --env-file=.env scripts/bull-board.ts",
     "calibrate-similarity": "tsx --env-file=.env scripts/calibrate-similarity.ts",
     "dev": "next dev",
+    "eval:recommendations": "tsx scripts/evaluate-recommendations.ts",
     "fix": "npm run lint:fix && npm run format:write",
     "lint": "eslint .",
     "lint:check": "eslint .",
