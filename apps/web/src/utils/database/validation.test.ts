@@ -24,7 +24,7 @@ function makeSelectMock(
     gte: () => filter,
     lte: () => filter,
     neq: () => Promise.resolve(result),
-    in: () => Promise.resolve(result),
+    in: () => filter,
     limit: () => Promise.resolve(result),
     range: () => ({
       then: (onfulfilled, onrejected) =>
@@ -42,7 +42,7 @@ function makeSelectMock(
     gte: () => filter,
     lte: () => filter,
     neq: () => Promise.resolve(result),
-    in: () => Promise.resolve(result),
+    in: () => filter,
     limit: () => Promise.resolve(result),
     range: () => ({
       then: (onfulfilled, onrejected) =>
@@ -94,7 +94,7 @@ function makeMockDbClient(existingRows: { name: string; year: number }[]): {
               gte: () => filter,
               lte: () => filter,
               neq: () => Promise.resolve(result),
-              in: () => Promise.resolve(result),
+              in: () => filter,
               limit: () => Promise.resolve(result),
               range: () => ({
                 then: (onfulfilled, onrejected) =>
@@ -112,7 +112,7 @@ function makeMockDbClient(existingRows: { name: string; year: number }[]): {
               if (column === 'name') return (values as string[]).includes(row.name);
               return true;
             });
-            return Promise.resolve({ data: matchingRows, error: null });
+            return makeSelectMock(matchingRows);
           },
           delete: () => ({
             neq: () => Promise.resolve({ data: [], error: null }),

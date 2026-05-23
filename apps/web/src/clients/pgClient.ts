@@ -318,7 +318,7 @@ function createFilter<T>(pool: PgPool, state: QueryState): QueryFilter<T> {
     in: (column: string, values: unknown[]) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: 'IN', value: values });
-      return lazyResult<T>(pool, state);
+      return createFilter<T>(pool, state);
     },
     limit: (count: number) => {
       state.limitVal = count;
@@ -368,7 +368,7 @@ function createSelect<T>(pool: PgPool, state: QueryState): QuerySelect<T> {
     in: (column: string, values: unknown[]) => {
       assertSafeIdentifier(column, 'column name');
       state.wheres.push({ column, op: 'IN', value: values });
-      return lazyResult<T>(pool, state);
+      return createFilter<T>(pool, state);
     },
     limit: (count: number) => {
       state.limitVal = count;

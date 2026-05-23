@@ -153,6 +153,31 @@ describe('Movies API Route', () => {
     ).toBe(true);
   });
 
+  it('should combine runtime, score, and age rating filters for mock movies', async () => {
+    vi.mocked(getDbClient).mockReturnValueOnce({
+      isConfigured: vi.fn(() => false),
+      from: vi.fn(),
+      rpc: vi.fn(),
+    });
+
+    const request = new NextRequest(
+      'http://localhost:3000/api/movies?duration=over-120&minScore=8&ageRatings=PG-13,R',
+    );
+    const response = await GET(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.totalCount).toBeGreaterThan(0);
+    expect(
+      data.movies.every(
+        (movie: { duration: number; score_rating: number; age_rating: string }) =>
+          movie.duration > 120 &&
+          movie.score_rating >= 8 &&
+          ['PG-13', 'R'].includes(movie.age_rating),
+      ),
+    ).toBe(true);
+  });
+
   it('should return error for invalid year filters', async () => {
     const request = new NextRequest('http://localhost:3000/api/movies?yearFrom=2020&yearTo=1990');
     const response = await GET(request);
@@ -160,5 +185,19 @@ describe('Movies API Route', () => {
 
     expect(response.status).toBe(400);
     expect(data).toHaveProperty('error');
+  });
+
+  it('should return error for invalid catalog filter values', async () => {
+    const invalidDuration = await GET(
+      new NextRequest('http://localhost:3000/api/movies?duration=feature-length'),
+    );
+    const invalidScore = await GET(new NextRequest('http://localhost:3000/api/movies?minScore=11'));
+    const invalidAgeRating = await GET(
+      new NextRequest('http://localhost:3000/api/movies?ageRatings=PG,X'),
+    );
+
+    expect(invalidDuration.status).toBe(400);
+    expect(invalidScore.status).toBe(400);
+    expect(invalidAgeRating.status).toBe(400);
   });
 });
