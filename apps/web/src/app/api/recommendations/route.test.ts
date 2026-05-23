@@ -30,9 +30,11 @@ vi.mock('@/features/recommendation/input', () => ({
 const mockCreateAndStartRecommendation = vi.fn<(...args: unknown[]) => Promise<{ slug: string }>>(
   () => Promise.resolve({ slug: 'rec-test-slug' }),
 );
+const mockUsesDeterministicE2ERecommendations = vi.fn(() => false);
 
 vi.mock('@/features/recommendation/jobs', () => ({
   createAndStartRecommendation: (...args: unknown[]) => mockCreateAndStartRecommendation(...args),
+  usesDeterministicE2ERecommendations: () => mockUsesDeterministicE2ERecommendations(),
 }));
 
 import { POST } from './route';
@@ -55,6 +57,7 @@ function makeRequest(body: unknown = validBody) {
 describe('POST /api/recommendations', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUsesDeterministicE2ERecommendations.mockReturnValue(false);
   });
 
   it('returns 413 before validation or job creation when the request body is too large', async () => {
@@ -79,6 +82,17 @@ describe('POST /api/recommendations', () => {
 
     expect(response.status).toBe(201);
     expect(data).toEqual({ id: 'rec-test-slug' });
+    expect(mockGetRecommendationInputBlock).toHaveBeenCalled();
+    expect(mockCreateAndStartRecommendation).toHaveBeenCalled();
+  });
+
+  it('skips AI moderation when deterministic e2e recommendations are enabled', async () => {
+    mockUsesDeterministicE2ERecommendations.mockReturnValue(true);
+
+    const response = await POST(makeRequest());
+
+    expect(response.status).toBe(201);
+    expect(mockGetRecommendationInputBlock).not.toHaveBeenCalled();
     expect(mockCreateAndStartRecommendation).toHaveBeenCalled();
   });
 });

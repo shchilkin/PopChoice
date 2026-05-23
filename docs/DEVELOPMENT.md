@@ -139,6 +139,7 @@ The command prepares an isolated environment:
 - `docker-compose.e2e.yml` starts PostgreSQL with pgvector on `127.0.0.1:55432` and Redis on `127.0.0.1:56379`.
 - `scripts/e2e/setup-db.mjs` resets the e2e compose project, applies every `db/init/*.sql` migration through `apps/web/scripts/migrate-db.js`, and seeds deterministic movie fixtures.
 - `apps/web/playwright.e2e.config.ts` starts the app on `http://127.0.0.1:3100` with `DATABASE_URL` and `REDIS_URL` pointed at the isolated services.
+- `E2E_DETERMINISTIC_RECOMMENDATIONS=1` makes quiz submissions complete from seeded fixtures instead of calling live OpenAI/TMDB services or requiring a worker process.
 
 Stop and remove the e2e services with:
 
@@ -146,7 +147,7 @@ Stop and remove the e2e services with:
 npm run test:e2e:down
 ```
 
-The first smoke coverage intentionally focuses on `/api/health` and the Available Movies page. Auth, quiz, recommendation polling, and AI-response evals are planned as follow-up e2e/eval issues.
+The smoke coverage proves `/api/health`, Available Movies filtering and empty states, auth/session flows, solo quiz submission, result rendering, recommendation feedback, and movie-memory persistence. AI-response evals remain separate so they can add fixture scoring and optional live-model runs without slowing normal e2e.
 
 ## Project Structure
 

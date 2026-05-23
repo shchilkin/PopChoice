@@ -30,3 +30,22 @@ test('renders seeded catalog data and filters it through the real movies API', a
   await expect(page.getByRole('img', { name: 'Age rating: PG-13' })).toBeVisible();
   await expect(page.getByText('8.7')).toBeVisible();
 });
+
+test('shows a useful empty state when catalog filters match nothing', async ({ page }) => {
+  await page.goto('/available-movies');
+
+  await expect(page.getByRole('heading', { name: 'Available Movies' })).toBeVisible();
+  await expect(page.getByText(/Showing 1.4 of 4 movies/)).toBeVisible();
+
+  await page.getByPlaceholder('Movie title').fill('No Such PopChoice Fixture');
+  await page.getByRole('button', { name: 'Apply' }).click();
+
+  await expect(page.getByText('No movies found')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No matches for this search' })).toBeVisible();
+  await expect(page.getByText('PopChoice E2E Space Opera')).toHaveCount(0);
+
+  await page.locator('form').getByRole('button', { name: 'Clear' }).click();
+
+  await expect(page.getByText(/Showing 1.4 of 4 movies/)).toBeVisible();
+  await expect(page.getByText('PopChoice E2E Space Opera')).toBeVisible();
+});

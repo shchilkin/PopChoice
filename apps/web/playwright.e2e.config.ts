@@ -30,6 +30,7 @@ export default defineConfig({
     env: {
       AUTH_SESSION_SECRET: 'e2e-auth-session-secret',
       DATABASE_URL: databaseUrl,
+      E2E_DETERMINISTIC_RECOMMENDATIONS: '1',
       NEXT_PUBLIC_BASE_URL: baseURL,
       REDIS_URL: redisUrl,
       RESEND_API_KEY: '',

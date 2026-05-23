@@ -49,11 +49,9 @@ export function withAuth(handler: RouteHandler) {
     const hasApiKeyCredential = Boolean(
       req.headers.get('authorization') || req.headers.get('x-api-key'),
     );
-    const shouldUseDevAuthBypass =
-      process.env.NODE_ENV !== 'production' && !process.env.VALID_API_KEYS;
 
     // 2. Prefer API key auth for external/service callers when a key is actually supplied.
-    if (hasApiKeyCredential || shouldUseDevAuthBypass) {
+    if (hasApiKeyCredential) {
       const clientId = await validateApiKey(req);
       if (clientId !== null) {
         return handler(req, clientId);
@@ -75,6 +73,17 @@ export function withAuth(handler: RouteHandler) {
     if (csrfHeader || csrfCookie) {
       logger.warn('Auth failed: cross-origin CSRF fallback attempt');
       return NextResponse.json({ error: 'Unauthorized: invalid CSRF token.' }, { status: 401 });
+    }
+
+    const shouldUseDevAuthBypass =
+      process.env.NODE_ENV !== 'production' && !process.env.VALID_API_KEYS;
+
+    // 4. Development-only unauthenticated API fallback when no credentials were supplied.
+    if (shouldUseDevAuthBypass) {
+      const clientId = await validateApiKey(req);
+      if (clientId !== null) {
+        return handler(req, clientId);
+      }
     }
 
     return NextResponse.json(

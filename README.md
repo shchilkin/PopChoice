@@ -146,7 +146,7 @@ The e2e suite uses its own Docker compose file, ports, and disposable database s
 npm run test:e2e
 ```
 
-This command resets `docker-compose.e2e.yml`, applies `db/init` migrations, seeds deterministic movie fixtures, starts the Next.js app on `http://127.0.0.1:3100`, and runs Playwright. Stop and remove the e2e services with:
+This command resets `docker-compose.e2e.yml`, applies `db/init` migrations, seeds deterministic movie fixtures, starts the Next.js app on `http://127.0.0.1:3100`, and runs Playwright. The smoke suite covers health checks, catalog filtering and empty states, registration/login/logout/session behavior, quiz submission, deterministic result rendering, feedback, and movie-memory persistence. Stop and remove the e2e services with:
 
 ```bash
 npm run test:e2e:down
