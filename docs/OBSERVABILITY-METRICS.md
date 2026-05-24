@@ -84,6 +84,17 @@ For the Redis exporter, configure when the Redis host is not `redis:6379`:
 REDIS_EXPORTER_REDIS_ADDR=redis://redis:6379
 ```
 
+For Grafana Telegram alert notifications, configure both values on the
+observability resource:
+
+```env
+GRAFANA_TELEGRAM_BOT_TOKEN=<telegram-bot-token>
+GRAFANA_TELEGRAM_CHAT_ID=<telegram-chat-id>
+```
+
+If either value is missing, Grafana starts without provisioning the Telegram
+contact point so the observability stack can still run safely.
+
 ## Local or VPS Start
 
 From the repo root:
