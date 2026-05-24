@@ -9,8 +9,8 @@ without creating noisy paging habits while the project is still small.
 - `observability/grafana/provisioning/alerting/popchoice-alerts.yaml` provisions
   Grafana alert rules.
 - `observability/images/grafana/entrypoint.sh` optionally provisions the
-  `popchoice-telegram` contact point and notification policy when Telegram env
-  vars are present.
+  `popchoice-telegram` contact point, notification policy, and Telegram message
+  template when Telegram env vars are present.
 - `docs/OBSERVABILITY-RUNBOOKS.md` explains how to respond to each alert family.
 - `docs/OBSERVABILITY-METRICS.md` documents the metrics used by these alerts.
 
@@ -47,6 +47,18 @@ When either value is missing, Grafana starts without external receivers and
 alerts remain visible in the UI. The generated `popchoice-telegram` policy
 groups notifications by folder, alert name, and severity. After enabling it, use
 Grafana's contact point **Test** action before relying on alert delivery.
+
+Telegram messages use the `popchoice.telegram.message` template instead of
+Grafana's default message. The message is plain text and includes:
+
+- `FIRING` or `RESOLVED` plus the alert name.
+- Severity and summary when the alert provides them.
+- Firing and resolved alert instances with target labels and values when
+  available.
+- Silence, runbook, dashboard, and Grafana links when Grafana provides them.
+
+Set `GF_SERVER_ROOT_URL` on the Grafana service if Telegram links should point
+to the public Grafana domain instead of the container-local default URL.
 
 ## Alert Rules
 
