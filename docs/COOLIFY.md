@@ -276,7 +276,10 @@ on `127.0.0.1:9090` for Prometheus and `127.0.0.1:3001` for Grafana. Set
 `POPCHOICE_APP_NETWORK` if Coolify names the app resource network differently
 from `popchoice_default`, and set the Postgres exporter credentials with
 `POSTGRES_EXPORTER_DATA_SOURCE_URI`, `POSTGRES_EXPORTER_DATA_SOURCE_USER`, and
-`POSTGRES_EXPORTER_DATA_SOURCE_PASS`.
+`POSTGRES_EXPORTER_DATA_SOURCE_PASS`. Because the observability stack is a
+separate Coolify resource, duplicate the app database password into
+`POSTGRES_EXPORTER_DATA_SOURCE_PASS`; it is not inherited automatically from the
+PopChoice app resource.
 
 ## Automatic redeploys
 

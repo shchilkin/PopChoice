@@ -35,7 +35,7 @@ scrape_configs:
     metrics_path: /api/metrics
     authorization:
       type: Bearer
-      credentials: ${METRICS_BEARER_TOKEN}
+      credentials_file: /tmp/popchoice-metrics-bearer-token
     static_configs:
       - targets:
           - ${POPCHOICE_WEB_METRICS_TARGET}
@@ -44,7 +44,7 @@ scrape_configs:
     metrics_path: /metrics
     authorization:
       type: Bearer
-      credentials: ${METRICS_BEARER_TOKEN}
+      credentials_file: /tmp/popchoice-metrics-bearer-token
     static_configs:
       - targets:
           - ${POPCHOICE_WORKERS_METRICS_TARGET}

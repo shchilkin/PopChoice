@@ -72,6 +72,12 @@ POSTGRES_EXPORTER_DATA_SOURCE_USER=popchoice
 POSTGRES_EXPORTER_DATA_SOURCE_PASS=<postgres-password>
 ```
 
+In Coolify, the observability stack is a separate resource, so it does not
+inherit `POSTGRES_PASSWORD` from the PopChoice app resource. Copy the app
+database password into `POSTGRES_EXPORTER_DATA_SOURCE_PASS`; otherwise the
+exporter starts but Prometheus reports `up{job="postgres"} == 0` and the
+exporter logs `password authentication failed for user "popchoice"`.
+
 For the Redis exporter, configure when the Redis host is not `redis:6379`:
 
 ```env

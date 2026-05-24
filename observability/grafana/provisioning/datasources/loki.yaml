@@ -6,5 +6,4 @@ datasources:
     access: proxy
     url: http://observability-loki:3100
     uid: loki
-    isDefault: true
     editable: true
