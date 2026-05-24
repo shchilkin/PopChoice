@@ -7,6 +7,7 @@ import { redisOptionsFromUrl } from '@/lib/redisConnection';
 import type { SerializableTMDBEmbeddings, TMDBDiscoverMovie } from '@/features/recommendation/tmdb';
 import type { PersonFormData } from '@/features/recommendation/types';
 import type { Locale } from '@/lib/locale';
+import type { TraceCarrier } from '@/lib/tracing';
 
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 export const RECOMMENDATION_QUEUE_NAME = 'recommendation';
@@ -38,6 +39,7 @@ export type MovieSeedJobData = {
   tmdbMovies: TMDBDiscoverMovie[];
   localKeys: string[];
   tmdbEmbeddings?: SerializableTMDBEmbeddings;
+  trace?: TraceCarrier;
 };
 
 export type RecommendationJobData = {
@@ -45,12 +47,14 @@ export type RecommendationJobData = {
   quizData: PersonFormData | PersonFormData[];
   locale: Locale;
   userId?: string;
+  trace?: TraceCarrier;
 };
 
 export type MorePicksJobData = {
   recommendationId: string; // internal UUID
   slug: string; // public slug (for logging)
   locale: Locale;
+  trace?: TraceCarrier;
 };
 
 export type CatalogSeedTMDBMovieJobData = {
@@ -60,6 +64,7 @@ export type CatalogSeedTMDBMovieJobData = {
   localKeys?: string[];
   embedding?: number[];
   language?: string;
+  trace?: TraceCarrier;
 };
 
 export type CatalogDiscoverTMDBSourcePageJobData = {
@@ -70,6 +75,7 @@ export type CatalogDiscoverTMDBSourcePageJobData = {
   minVoteCount?: number;
   minVoteAverage?: number;
   maxMoviesPerPage?: number;
+  trace?: TraceCarrier;
 };
 
 export type CatalogBackfillMovieJobData = {
@@ -77,6 +83,7 @@ export type CatalogBackfillMovieJobData = {
   movieId: string | number;
   reason?: 'missing_tmdb_id' | 'missing_metadata' | 'manual_refresh';
   language?: string;
+  trace?: TraceCarrier;
 };
 
 export type CatalogMaintenanceJobData =

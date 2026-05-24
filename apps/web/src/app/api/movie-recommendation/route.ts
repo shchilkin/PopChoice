@@ -14,6 +14,7 @@ import {
   readJsonBodyWithLimit,
   requestBodyErrorResponse,
 } from '@/lib/requestBody';
+import { setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 import { withAuth } from '@/lib/withAuth';
 
 // ---------------------------------------------------------------------------
@@ -57,7 +58,23 @@ async function postHandler(req: NextRequest): Promise<Response> {
     }
 
     // Run the full AI pipeline (Steps 0.5–7)
-    const response = await runRecommendationPipeline(allPeopleData, locale);
+    const response = await withTraceSpan(
+      'recommendation.process.legacy_sync',
+      {
+        attributes: {
+          'http.route': '/api/movie-recommendation',
+          'recommendation.mode': 'legacy_sync',
+          'recommendation.people.count': allPeopleData.length,
+          locale,
+        },
+      },
+      async () =>
+        runRecommendationPipeline(allPeopleData, locale, {
+          onStageChange: (stage) => {
+            setActiveTraceAttributes({ 'recommendation.stage': stage });
+          },
+        }),
+    );
 
     const duration = Date.now() - startTime;
     logger.info(

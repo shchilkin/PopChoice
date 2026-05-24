@@ -4,7 +4,8 @@ PopChoice can run a small self-hosted log stack for production or preview VPS
 debugging: Grafana Loki stores logs, Grafana Alloy tails Docker containers, and
 Grafana provides search through the provisioned Loki data source. The same
 Grafana instance can also load the Prometheus metrics dashboard documented in
-[OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md).
+[OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md) and the Tempo traces
+documented in [OBSERVABILITY-TRACES.md](./OBSERVABILITY-TRACES.md).
 
 This stack is intentionally separate from the PopChoice app stack. Web,
 workers, Bull Board, PostgreSQL, Redis, and one-shot service containers keep

@@ -257,7 +257,18 @@ endpoints on the PopChoice resource:
 ```env
 METRICS_ENABLED=true
 METRICS_BEARER_TOKEN=<long-random-token>
+TRACING_ENABLED=true
+TRACING_SAMPLE_RATE=0.05
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://observability-otel-collector:4318/v1/traces
 ```
+
+Grafana also provisions Tempo traces plus conservative alert rules and runbooks
+for app, DB, Redis, queue, provider, disk, and monitoring-stack incidents. Keep
+the observability config in Git as the restore source of truth, and follow
+[Observability Traces](./OBSERVABILITY-TRACES.md),
+[Observability Alerts](./OBSERVABILITY-ALERTS.md), and
+[Observability Runbooks](./OBSERVABILITY-RUNBOOKS.md) when wiring notification
+contact points or testing restore.
 
 Then run the separate observability stack documented in
 [OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md). The stack listens locally

@@ -19,6 +19,7 @@ import {
   normalizeGenreLabel,
   parseTMDBReleaseYear,
 } from '@/lib/tmdb';
+import { getTraceCarrier, withTraceSpan } from '@/lib/tracing';
 
 import type { TMDBDiscoverMovie } from './tmdb';
 import type { MovieRowToInsert } from '@/lib/db/recommendations';
@@ -235,6 +236,7 @@ export async function runMorePicksPipeline(
 
   // Queue seeding job so TMDB movies are persisted for future local searches
   if (seedQueue) {
+    const queue = seedQueue;
     const tmdbMoviesForSeeding: TMDBDiscoverMovie[] = candidates.map((m) => ({
       id: m.id,
       title: m.title,
@@ -246,12 +248,25 @@ export async function runMorePicksPipeline(
       popularity: m.popularity ?? 0,
       poster_path: m.poster_path,
     }));
-    seedQueue
-      .add(
-        'seed-movies',
-        { tmdbMovies: tmdbMoviesForSeeding, localKeys: [] },
-        MOVIE_SEED_JOB_OPTIONS,
-      )
+    withTraceSpan(
+      'movie_seed.enqueue',
+      {
+        attributes: {
+          'messaging.system': 'bullmq',
+          'messaging.destination.name': 'movie-seed',
+          'messaging.operation.name': 'enqueue',
+          'movie.count': tmdbMoviesForSeeding.length,
+        },
+      },
+      async (span) => {
+        const job = await queue.add(
+          'seed-movies',
+          { tmdbMovies: tmdbMoviesForSeeding, localKeys: [], trace: getTraceCarrier() },
+          MOVIE_SEED_JOB_OPTIONS,
+        );
+        span.setAttribute('job.id', String(job.id ?? 'unknown'));
+      },
+    )
       .then(() =>
         logger.info({ queuedMovies: candidates.length }, 'more-picks pipeline: Queued seeding job'),
       )

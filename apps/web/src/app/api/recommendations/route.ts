@@ -14,6 +14,7 @@ import {
   readJsonBodyWithLimit,
   requestBodyErrorResponse,
 } from '@/lib/requestBody';
+import { withTraceSpan } from '@/lib/tracing';
 import { withAuth } from '@/lib/withAuth';
 
 // ---------------------------------------------------------------------------
@@ -62,11 +63,17 @@ async function postHandler(req: NextRequest, clientId: string): Promise<Response
 
   try {
     const userId = clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
-    const created = await createAndStartRecommendation(
-      validatedBody,
-      allPeopleData,
-      locale,
-      userId,
+    const created = await withTraceSpan(
+      'api.recommendations.create',
+      {
+        attributes: {
+          'http.route': '/api/recommendations',
+          'recommendation.mode': 'async',
+          'recommendation.people.count': allPeopleData.length,
+          locale,
+        },
+      },
+      async () => createAndStartRecommendation(validatedBody, allPeopleData, locale, userId),
     );
     return NextResponse.json({ id: created.slug }, { status: 201 });
   } catch (err) {

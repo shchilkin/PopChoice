@@ -8,6 +8,7 @@ import {
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordQueueJobEvent } from '@/lib/metrics';
+import { withTraceSpan } from '@/lib/tracing';
 
 import type { MovieSeedJobData } from '@/lib/jobQueue';
 
@@ -24,8 +25,24 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
     MOVIE_SEED_QUEUE_NAME,
     async (job) => {
       const { tmdbMovies, localKeys, tmdbEmbeddings } = job.data;
-      const embeddingsMap = deserializeTMDBEmbeddings(tmdbEmbeddings);
-      await seedMovies(tmdbMovies, new Set(localKeys), embeddingsMap);
+      await withTraceSpan(
+        'movie_seed.worker.process',
+        {
+          carrier: job.data.trace,
+          attributes: {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': MOVIE_SEED_QUEUE_NAME,
+            'messaging.operation.name': 'process',
+            'job.id': String(job.id ?? 'unknown'),
+            'job.name': job.name,
+            'movie.count': tmdbMovies.length,
+          },
+        },
+        async () => {
+          const embeddingsMap = deserializeTMDBEmbeddings(tmdbEmbeddings);
+          await seedMovies(tmdbMovies, new Set(localKeys), embeddingsMap);
+        },
+      );
     },
     { connection },
   );

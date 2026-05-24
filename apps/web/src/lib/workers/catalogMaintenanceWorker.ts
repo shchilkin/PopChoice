@@ -27,6 +27,7 @@ import {
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordQueueJobEvent, recordTMDBProviderError } from '@/lib/metrics';
+import { withTraceSpan } from '@/lib/tracing';
 
 import type {
   CatalogBackfillMovieJobData,
@@ -399,30 +400,46 @@ export function createCatalogMaintenanceWorker(): CatalogWorker | null {
   worker = new Worker<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>(
     CATALOG_MAINTENANCE_QUEUE_NAME,
     async (job) => {
-      try {
-        if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.seedTMDBMovie) {
-          await processSeedTMDBMovie(job as Job<CatalogSeedTMDBMovieJobData>);
-          return;
-        }
-        if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage) {
-          await processDiscoverTMDBSourcePage(job as Job<CatalogDiscoverTMDBSourcePageJobData>);
-          return;
-        }
-        if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie) {
-          await processBackfillMovie(job as Job<CatalogBackfillMovieJobData>);
-          return;
-        }
-        throw new Error(`Unsupported catalog maintenance job: ${job.name}`);
-      } catch (error) {
-        if (error instanceof TMDBRateLimitError) {
-          recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'rate_limited');
-          await handleRateLimit(job, worker, error);
-        }
-        if (isTimeoutError(error)) {
-          recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'timeout');
-        }
-        throw error;
-      }
+      await withTraceSpan(
+        'catalog_maintenance.worker.process',
+        {
+          carrier: job.data.trace,
+          attributes: {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': CATALOG_MAINTENANCE_QUEUE_NAME,
+            'messaging.operation.name': 'process',
+            'job.id': String(job.id ?? 'unknown'),
+            'job.name': job.name,
+            'catalog.job.source': 'source' in job.data ? job.data.source : undefined,
+          },
+        },
+        async () => {
+          try {
+            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.seedTMDBMovie) {
+              await processSeedTMDBMovie(job as Job<CatalogSeedTMDBMovieJobData>);
+              return;
+            }
+            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage) {
+              await processDiscoverTMDBSourcePage(job as Job<CatalogDiscoverTMDBSourcePageJobData>);
+              return;
+            }
+            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie) {
+              await processBackfillMovie(job as Job<CatalogBackfillMovieJobData>);
+              return;
+            }
+            throw new Error(`Unsupported catalog maintenance job: ${job.name}`);
+          } catch (error) {
+            if (error instanceof TMDBRateLimitError) {
+              recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'rate_limited');
+              await handleRateLimit(job, worker, error);
+            }
+            if (isTimeoutError(error)) {
+              recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'timeout');
+            }
+            throw error;
+          }
+        },
+      );
     },
     {
       connection,

@@ -1,6 +1,40 @@
 name: popchoice-observability
 
 services:
+  observability-tempo:
+    image: grafana/tempo:2.9.0
+    container_name: popchoice-observability-tempo
+    restart: unless-stopped
+    command: ['-config.file=/etc/tempo/tempo.yaml']
+    ports:
+      - '127.0.0.1:3200:3200'
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempodata:/var/tempo
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://127.0.0.1:3200/ready || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  observability-otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.141.0
+    container_name: popchoice-observability-otel-collector
+    restart: unless-stopped
+    command: ['--config=/etc/otelcol/config.yaml']
+    ports:
+      - '127.0.0.1:4317:4317'
+      - '127.0.0.1:4318:4318'
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    depends_on:
+      observability-tempo:
+        condition: service_healthy
+    networks:
+      - default
+      - popchoice-app
+
   observability-prometheus:
     image: prom/prometheus:v3.7.3
     container_name: popchoice-observability-prometheus
@@ -164,12 +198,15 @@ services:
         condition: service_healthy
       observability-prometheus:
         condition: service_healthy
+      observability-tempo:
+        condition: service_healthy
 
 volumes:
   alloydata:
   grafanadata:
   lokidata:
   prometheusdata:
+  tempodata:
   uptime-kuma-data:
 
 networks:

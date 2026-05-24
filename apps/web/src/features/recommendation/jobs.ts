@@ -1,6 +1,9 @@
+import { SpanStatusCode } from '@opentelemetry/api';
+
 import { RECOMMENDATION_JOB_OPTIONS, recommendationQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordRecommendationCompletion } from '@/lib/metrics';
+import { getTraceCarrier, setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 
 import {
   completeRecommendationRecord,
@@ -24,6 +27,10 @@ export async function createAndStartRecommendation(
   const recommendationId = created.id;
   const recommendationSlug = created.slug;
 
+  setActiveTraceAttributes({
+    'recommendation.id': recommendationId,
+    'recommendation.slug': recommendationSlug,
+  });
   logger.info({ recommendationId, recommendationSlug }, 'Recommendation row created');
 
   if (usesDeterministicE2ERecommendations()) {
@@ -32,13 +39,29 @@ export async function createAndStartRecommendation(
   }
 
   if (recommendationQueue) {
+    const queue = recommendationQueue;
     try {
-      await recommendationQueue.add(
-        'recommendation',
-        { recommendationId, quizData, locale, userId },
-        RECOMMENDATION_JOB_OPTIONS,
+      await withTraceSpan(
+        'recommendation.enqueue',
+        {
+          attributes: {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': 'recommendation',
+            'messaging.operation.name': 'enqueue',
+            'recommendation.id': recommendationId,
+            'recommendation.slug': recommendationSlug,
+          },
+        },
+        async (span) => {
+          const job = await queue.add(
+            'recommendation',
+            { recommendationId, quizData, locale, userId, trace: getTraceCarrier() },
+            RECOMMENDATION_JOB_OPTIONS,
+          );
+          span.setAttribute('job.id', String(job.id ?? 'unknown'));
+          logger.info({ recommendationId, jobId: job.id }, 'Recommendation job enqueued');
+        },
       );
-      logger.info({ recommendationId }, 'Recommendation job enqueued');
     } catch (err) {
       logger.warn(
         { err, recommendationId },
@@ -62,16 +85,30 @@ async function completeDeterministicE2ERecommendation(
   recommendationId: string,
   allPeopleData: PersonFormData[],
 ): Promise<void> {
-  logger.info({ recommendationId }, 'Completing recommendation with deterministic e2e fixture');
-  const startTime = Date.now();
-  await markRecommendationProcessing(recommendationId);
-  await markRecommendationStage(recommendationId, 'complete');
-  await completeRecommendationRecord(recommendationId, buildDeterministicE2EResult(allPeopleData));
-  recordRecommendationCompletion({
-    mode: 'deterministic_e2e',
-    status: 'success',
-    durationMs: Date.now() - startTime,
-  });
+  await withTraceSpan(
+    'recommendation.process.deterministic_e2e',
+    {
+      attributes: {
+        'recommendation.id': recommendationId,
+        'recommendation.mode': 'deterministic_e2e',
+      },
+    },
+    async () => {
+      logger.info({ recommendationId }, 'Completing recommendation with deterministic e2e fixture');
+      const startTime = Date.now();
+      await markRecommendationProcessing(recommendationId);
+      await markRecommendationStage(recommendationId, 'complete');
+      await completeRecommendationRecord(
+        recommendationId,
+        buildDeterministicE2EResult(allPeopleData),
+      );
+      recordRecommendationCompletion({
+        mode: 'deterministic_e2e',
+        status: 'success',
+        durationMs: Date.now() - startTime,
+      });
+    },
+  );
 }
 
 function buildDeterministicE2EResult(allPeopleData: PersonFormData[]): ApiResponse {
@@ -134,31 +171,51 @@ async function processInlineRecommendation(
   locale: Locale,
   userId?: string,
 ): Promise<void> {
-  const startTime = Date.now();
-  try {
-    await markRecommendationProcessing(recommendationId);
-    const result = await runRecommendationPipeline(allPeopleData, locale, {
-      onStageChange: (stage) => markRecommendationStage(recommendationId, stage),
-      userId,
-    });
+  await withTraceSpan(
+    'recommendation.process.inline',
+    {
+      attributes: {
+        'recommendation.id': recommendationId,
+        'recommendation.mode': 'async_inline',
+      },
+    },
+    async (span) => {
+      const startTime = Date.now();
+      try {
+        await markRecommendationProcessing(recommendationId);
+        const result = await runRecommendationPipeline(allPeopleData, locale, {
+          onStageChange: async (stage) => {
+            setActiveTraceAttributes({ 'recommendation.stage': stage });
+            await markRecommendationStage(recommendationId, stage);
+          },
+          userId,
+        });
 
-    await completeRecommendationRecord(recommendationId, result);
-    recordRecommendationCompletion({
-      mode: 'async_inline',
-      status: 'success',
-      durationMs: Date.now() - startTime,
-    });
-    logger.info({ recommendationId }, 'Inline recommendation processing completed');
-  } catch (err) {
-    recordRecommendationCompletion({
-      mode: 'async_inline',
-      status: 'failure',
-      durationMs: Date.now() - startTime,
-    });
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error({ err, recommendationId }, 'Inline recommendation processing failed');
-    await failRecommendationRecord(recommendationId, message).catch((dbErr) => {
-      logger.error({ err: dbErr, recommendationId }, 'Failed to update recommendation status');
-    });
-  }
+        await completeRecommendationRecord(recommendationId, result);
+        recordRecommendationCompletion({
+          mode: 'async_inline',
+          status: 'success',
+          durationMs: Date.now() - startTime,
+        });
+        logger.info({ recommendationId }, 'Inline recommendation processing completed');
+      } catch (err) {
+        if (err instanceof Error) {
+          span.recordException(err);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+        } else {
+          span.setStatus({ code: SpanStatusCode.ERROR, message: String(err) });
+        }
+        recordRecommendationCompletion({
+          mode: 'async_inline',
+          status: 'failure',
+          durationMs: Date.now() - startTime,
+        });
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error({ err, recommendationId }, 'Inline recommendation processing failed');
+        await failRecommendationRecord(recommendationId, message).catch((dbErr) => {
+          logger.error({ err: dbErr, recommendationId }, 'Failed to update recommendation status');
+        });
+      }
+    },
+  );
 }

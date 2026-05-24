@@ -1,0 +1,745 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: popchoice-p1
+    folder: PopChoice Alerts
+    interval: 1m
+    rules:
+      - uid: popchoice-app-down
+        title: P1 App metrics target down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: min_over_time(up{job="popchoice-web"}[5m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: min
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: PopChoice web metrics target is down.
+          description: Prometheus has reported popchoice-web as down for at least 5 minutes.
+          owner: App operator
+          action: Check the Coolify web service, container restart loop, recent deploy, and /api/health.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#app-down
+        labels:
+          severity: p1
+          owner: app
+          service: web
+          noise_profile: conservative
+        isPaused: false
+
+      - uid: popchoice-postgres-down
+        title: P1 Postgres exporter reports database down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: min_over_time(pg_up[5m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: min
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: Postgres is unavailable from the exporter.
+          description: pg_up has stayed below 1 for at least 5 minutes.
+          owner: Database operator
+          action: Check the db container health, disk space, credentials, and the latest migration or deploy.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#db-down
+        labels:
+          severity: p1
+          owner: database
+          service: postgres
+          noise_profile: conservative
+        isPaused: false
+
+      - uid: popchoice-redis-down
+        title: P1 Redis exporter reports Redis down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: min_over_time(redis_up[5m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: min
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: Redis is unavailable from the exporter.
+          description: redis_up has stayed below 1 for at least 5 minutes.
+          owner: App operator
+          action: Check the Redis container, BullMQ workers, queue dashboard, and memory or disk pressure.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#redis-down
+        labels:
+          severity: p1
+          owner: app
+          service: redis
+          noise_profile: conservative
+        isPaused: false
+
+  - orgId: 1
+    name: popchoice-p2
+    folder: PopChoice Alerts
+    interval: 1m
+    rules:
+      - uid: popchoice-queue-backlog
+        title: P2 BullMQ queue backlog sustained
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: sum by (queue) (popchoice_queue_depth{status=~"waiting|delayed"})
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 25
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 30m
+        annotations:
+          summary: A BullMQ queue has sustained backlog above 25 jobs.
+          description: Queue {{ $labels.queue }} has had waiting or delayed jobs above the conservative threshold for 30 minutes.
+          owner: App operator
+          action: Check worker health, Redis health, Bull Board failures, provider timeouts, and retry/backoff state.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#stuck-queues
+        labels:
+          severity: p2
+          owner: app
+          service: workers
+          noise_profile: conservative
+        isPaused: false
+
+      - uid: popchoice-provider-timeout-spike
+        title: P2 Provider timeout or rate-limit spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: sum by (provider) (increase(popchoice_provider_errors_total{reason=~"timeout|rate_limit"}[30m]))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 10
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: OpenAI or TMDB timeout/rate-limit errors are elevated.
+          description: Provider {{ $labels.provider }} has more than 10 timeout or rate-limit events over 30 minutes.
+          owner: App operator
+          action: Check provider status, API credentials, request volume, and whether workers should be paused or rate limits lowered.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#tmdbopenai-timeout-spike
+        labels:
+          severity: p2
+          owner: app
+          service: external-providers
+          noise_profile: conservative
+        isPaused: false
+
+      - uid: popchoice-disk-pressure
+        title: P2 Host disk usage high
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: 100 * (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"/(dev|proc|sys|run).*"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs",mountpoint!~"/(dev|proc|sys|run).*"}))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 90
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 30m
+        annotations:
+          summary: Host disk usage is above 90%.
+          description: Filesystem {{ $labels.mountpoint }} on {{ $labels.device }} is above the conservative disk pressure threshold.
+          owner: Infrastructure operator
+          action: Clean old Docker images/logs, verify backup size, and expand storage before Postgres or Prometheus writes fail.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#disk-pressure
+        labels:
+          severity: p2
+          owner: infrastructure
+          service: host
+          noise_profile: conservative
+        isPaused: false
+
+  - orgId: 1
+    name: popchoice-p3
+    folder: PopChoice Alerts
+    interval: 1m
+    rules:
+      - uid: popchoice-monitoring-target-down
+        title: P3 Monitoring scrape target down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: min by (job) (min_over_time(up{job=~"cadvisor|node-exporter|postgres|redis"}[10m]))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: min
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 15m
+        annotations:
+          summary: A monitoring scrape target is down.
+          description: Monitoring job {{ $labels.job }} has been unavailable for at least 15 minutes.
+          owner: Infrastructure operator
+          action: Restart the affected exporter or observability service and verify Grafana dashboards are filling again.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#monitoring-stack-down
+        labels:
+          severity: p3
+          owner: infrastructure
+          service: observability
+          noise_profile: conservative
+        isPaused: false
+
+      - uid: popchoice-recommendation-failure-ratio
+        title: P3 Recommendation failure ratio elevated
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: (sum(rate(popchoice_recommendations_total{status="failure"}[15m])) / clamp_min(sum(rate(popchoice_recommendations_total[15m])), 1)) and (sum(increase(popchoice_recommendations_total[15m])) > 10)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 1800
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0.5
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 10m
+        annotations:
+          summary: Recommendation failures are elevated after real traffic.
+          description: More than half of recent recommendation attempts are failing after at least 10 attempts in 15 minutes.
+          owner: App operator
+          action: Check provider errors, worker logs, recent deploys, database health, and deterministic eval status.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#tmdbopenai-timeout-spike
+        labels:
+          severity: p3
+          owner: app
+          service: recommendations
+          noise_profile: conservative
+        isPaused: false
