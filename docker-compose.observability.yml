@@ -2,14 +2,16 @@ name: popchoice-observability
 
 services:
   observability-tempo:
-    image: grafana/tempo:2.9.0
+    build:
+      context: .
+      dockerfile: observability/images/tempo/Dockerfile
+    image: popchoice-observability-tempo:${OBSERVABILITY_IMAGE_TAG:-local}
     container_name: popchoice-observability-tempo
     restart: unless-stopped
     command: ['-config.file=/etc/tempo/tempo.yaml']
     ports:
       - '127.0.0.1:3200:3200'
     volumes:
-      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempodata:/var/tempo
     healthcheck:
       test:
@@ -19,15 +21,16 @@ services:
       retries: 5
 
   observability-otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.141.0
+    build:
+      context: .
+      dockerfile: observability/images/otel-collector/Dockerfile
+    image: popchoice-observability-otel-collector:${OBSERVABILITY_IMAGE_TAG:-local}
     container_name: popchoice-observability-otel-collector
     restart: unless-stopped
     command: ['--config=/etc/otelcol/config.yaml']
     ports:
       - '127.0.0.1:4317:4317'
       - '127.0.0.1:4318:4318'
-    volumes:
-      - ./observability/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
     depends_on:
       observability-tempo:
         condition: service_healthy
@@ -36,7 +39,10 @@ services:
       - popchoice-app
 
   observability-prometheus:
-    image: prom/prometheus:v3.7.3
+    build:
+      context: .
+      dockerfile: observability/images/prometheus/Dockerfile
+    image: popchoice-observability-prometheus:${OBSERVABILITY_IMAGE_TAG:-local}
     container_name: popchoice-observability-prometheus
     restart: unless-stopped
     command:
@@ -54,8 +60,6 @@ services:
     ports:
       - '127.0.0.1:9090:9090'
     volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./observability/prometheus/rules:/etc/prometheus/rules:ro
       - prometheusdata:/prometheus
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -141,14 +145,16 @@ services:
       start_period: 30s
 
   observability-loki:
-    image: grafana/loki:3.5.7
+    build:
+      context: .
+      dockerfile: observability/images/loki/Dockerfile
+    image: popchoice-observability-loki:${OBSERVABILITY_IMAGE_TAG:-local}
     container_name: popchoice-observability-loki
     restart: unless-stopped
     command: ['-config.file=/etc/loki/loki.yaml']
     ports:
       - '127.0.0.1:3100:3100'
     volumes:
-      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
       - lokidata:/loki
     healthcheck:
       test:
@@ -158,7 +164,10 @@ services:
       retries: 5
 
   observability-alloy:
-    image: grafana/alloy:v1.11.3
+    build:
+      context: .
+      dockerfile: observability/images/alloy/Dockerfile
+    image: popchoice-observability-alloy:${OBSERVABILITY_IMAGE_TAG:-local}
     container_name: popchoice-observability-alloy
     restart: unless-stopped
     command:
@@ -171,7 +180,6 @@ services:
     ports:
       - '127.0.0.1:12345:12345'
     volumes:
-      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
       - alloydata:/var/lib/alloy/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
@@ -179,7 +187,10 @@ services:
         condition: service_healthy
 
   observability-grafana:
-    image: grafana/grafana:12.3.0
+    build:
+      context: .
+      dockerfile: observability/images/grafana/Dockerfile
+    image: popchoice-observability-grafana:${OBSERVABILITY_IMAGE_TAG:-local}
     container_name: popchoice-observability-grafana
     restart: unless-stopped
     environment:
@@ -191,8 +202,6 @@ services:
       - '127.0.0.1:3001:3000'
     volumes:
       - grafanadata:/var/lib/grafana
-      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       observability-loki:
         condition: service_healthy

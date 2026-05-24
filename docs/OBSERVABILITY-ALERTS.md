@@ -11,9 +11,8 @@ without creating noisy paging habits while the project is still small.
 - `docs/OBSERVABILITY-RUNBOOKS.md` explains how to respond to each alert family.
 - `docs/OBSERVABILITY-METRICS.md` documents the metrics used by these alerts.
 
-Grafana loads the alerting provisioning directory from the existing
-`./observability/grafana/provisioning:/etc/grafana/provisioning:ro` mount in
-`docker-compose.observability.yml`.
+Grafana loads the alerting provisioning directory from the observability
+Grafana config image built by `docker-compose.observability.yml`.
 
 ## Severity Groups
 
@@ -116,6 +115,7 @@ Back up two layers:
    - `prometheusdata`
    - `grafanadata`
    - `lokidata`
+   - `tempodata`
    - `alloydata`
    - `uptime-kuma-data`
 

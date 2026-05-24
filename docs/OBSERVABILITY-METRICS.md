@@ -8,6 +8,8 @@ exporters, or Grafana are down, recommendations keep running.
 
 - `docker-compose.observability.yml` starts Prometheus, cAdvisor, node exporter,
   Postgres exporter, Redis exporter, Grafana, Loki, Alloy, and Uptime Kuma.
+- `observability/images/*/Dockerfile` builds small config images so Coolify can
+  deploy the stack without runtime bind mounts for repo-owned YAML/JSON files.
 - `observability/prometheus/prometheus.yml` configures scrape targets.
 - `observability/prometheus/rules/popchoice.yml` adds starter recording rules.
 - `observability/grafana/provisioning/datasources/prometheus.yaml` provisions
