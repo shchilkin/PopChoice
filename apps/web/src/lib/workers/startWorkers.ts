@@ -2,6 +2,7 @@ import { closeBullMQQueues } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 
 import { createCatalogMaintenanceWorker } from './catalogMaintenanceWorker';
+import { startWorkerMetricsServer } from './metricsServer';
 import { createMorePicksWorker } from './morePicksWorker';
 import { createMovieSeedWorker } from './movieSeedWorker';
 import { createRecommendationWorker } from './recommendationWorker';
@@ -10,6 +11,7 @@ const catalogMaintenanceWorker = createCatalogMaintenanceWorker();
 const movieSeedWorker = createMovieSeedWorker();
 const recommendationWorker = createRecommendationWorker();
 const morePicksWorker = createMorePicksWorker();
+const metricsServer = startWorkerMetricsServer();
 
 if (!catalogMaintenanceWorker && !movieSeedWorker && !recommendationWorker) {
   // Both core workers failed — REDIS_URL is likely unset or Redis is unreachable.
@@ -42,6 +44,16 @@ const shutdown = async (signal: NodeJS.Signals) => {
       movieSeedWorker?.close(),
       recommendationWorker?.close(),
       morePicksWorker?.close(),
+      new Promise<void>((resolve, reject) => {
+        if (!metricsServer) {
+          resolve();
+          return;
+        }
+        metricsServer.close((error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      }),
     ]);
     await closeBullMQQueues();
     logger.info('Workers closed gracefully');

@@ -1,6 +1,92 @@
 name: popchoice-observability
 
 services:
+  observability-prometheus:
+    image: prom/prometheus:v3.7.3
+    container_name: popchoice-observability-prometheus
+    restart: unless-stopped
+    command:
+      [
+        '--config.file=/etc/prometheus/prometheus.yml',
+        '--config.expand-env',
+        '--storage.tsdb.path=/prometheus',
+        '--storage.tsdb.retention.time=15d',
+        '--web.enable-lifecycle',
+      ]
+    environment:
+      METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:-}
+      POPCHOICE_WEB_METRICS_TARGET: ${POPCHOICE_WEB_METRICS_TARGET:-web:3000}
+      POPCHOICE_WORKERS_METRICS_TARGET: ${POPCHOICE_WORKERS_METRICS_TARGET:-workers:9464}
+    ports:
+      - '127.0.0.1:9090:9090'
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheusdata:/prometheus
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - default
+      - popchoice-app
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'wget --no-verbose --tries=1 --spider http://127.0.0.1:9090/-/ready || exit 1',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  observability-cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    container_name: popchoice-observability-cadvisor
+    restart: unless-stopped
+    command: ['--docker_only=true', '--housekeeping_interval=30s']
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  observability-node-exporter:
+    image: prom/node-exporter:v1.9.1
+    container_name: popchoice-observability-node-exporter
+    restart: unless-stopped
+    command:
+      [
+        '--path.rootfs=/host',
+        '--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($$|/)',
+      ]
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+
+  observability-postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.18.1
+    container_name: popchoice-observability-postgres-exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_URI: ${POSTGRES_EXPORTER_DATA_SOURCE_URI:-db:5432/popchoice?sslmode=disable}
+      DATA_SOURCE_USER: ${POSTGRES_EXPORTER_DATA_SOURCE_USER:-popchoice}
+      DATA_SOURCE_PASS: ${POSTGRES_EXPORTER_DATA_SOURCE_PASS:-}
+    networks:
+      - default
+      - popchoice-app
+
+  observability-redis-exporter:
+    image: oliver006/redis_exporter:v1.80.1
+    container_name: popchoice-observability-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: ${REDIS_EXPORTER_REDIS_ADDR:-redis://redis:6379}
+    networks:
+      - default
+      - popchoice-app
+
   observability-uptime-kuma:
     image: louislam/uptime-kuma:1.23.16
     container_name: popchoice-observability-uptime-kuma
@@ -71,13 +157,22 @@ services:
       - '127.0.0.1:3001:3000'
     volumes:
       - grafanadata:/var/lib/grafana
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       observability-loki:
+        condition: service_healthy
+      observability-prometheus:
         condition: service_healthy
 
 volumes:
   alloydata:
   grafanadata:
   lokidata:
+  prometheusdata:
   uptime-kuma-data:
+
+networks:
+  popchoice-app:
+    name: ${POPCHOICE_APP_NETWORK:-popchoice_default}
+    external: true

@@ -4,6 +4,7 @@ import { createClient } from 'redis';
 
 import { getBuildInfo } from '@/lib/buildInfo';
 import logger from '@/lib/logger';
+import { recordDependencyHealth } from '@/lib/metrics';
 
 const { Pool } = pg;
 const CHECK_TIMEOUT_MS = 2_000;
@@ -121,6 +122,9 @@ async function checkRedis(): Promise<CheckStatus> {
 
 async function getHealthResponse(): Promise<CachedHealthResponse> {
   const [postgres, redis] = await Promise.all([checkPostgres(), checkRedis()]);
+  recordDependencyHealth('postgres', postgres === 'ok');
+  recordDependencyHealth('redis', redis === 'ok');
+
   const status: CheckStatus = postgres === 'ok' && redis === 'ok' ? 'ok' : 'error';
   const buildInfo = getBuildInfo();
   const body: HealthResponse = {

@@ -13,6 +13,7 @@ import {
   createBullMQConnection,
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { recordQueueJobEvent, recordRecommendationCompletion } from '@/lib/metrics';
 
 import type { RecommendationJobData } from '@/lib/jobQueue';
 
@@ -28,6 +29,7 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
   const worker = new Worker<RecommendationJobData>(
     RECOMMENDATION_QUEUE_NAME,
     async (job) => {
+      const startTime = Date.now();
       const { recommendationId, quizData, locale, userId } = job.data;
 
       logger.info({ recommendationId, jobId: job.id }, 'Recommendation job started');
@@ -50,7 +52,17 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
           { recommendationId, jobId: job.id, movieCount },
           'Recommendation job completed',
         );
+        recordRecommendationCompletion({
+          mode: 'async_worker',
+          status: 'success',
+          durationMs: Date.now() - startTime,
+        });
       } catch (err) {
+        recordRecommendationCompletion({
+          mode: 'async_worker',
+          status: 'failure',
+          durationMs: Date.now() - startTime,
+        });
         const message = err instanceof Error ? err.message : String(err);
         logger.error({ err, recommendationId, jobId: job.id }, 'Recommendation job failed');
 
@@ -67,6 +79,12 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
   );
 
   worker.on('completed', (job) => {
+    recordQueueJobEvent({
+      queue: RECOMMENDATION_QUEUE_NAME,
+      job: job.name,
+      event: 'completed',
+      final: true,
+    });
     logger.info(
       { jobId: job.id, recommendationId: job.data.recommendationId },
       'Recommendation job completed successfully',
@@ -75,6 +93,12 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
 
   worker.on('failed', (job, err) => {
     const attemptsMade = job?.attemptsMade ?? 0;
+    recordQueueJobEvent({
+      queue: RECOMMENDATION_QUEUE_NAME,
+      job: job?.name ?? 'unknown',
+      event: 'failed',
+      final: attemptsMade >= MAX_RECOMMENDATION_ATTEMPTS,
+    });
     logger.error(
       {
         err,

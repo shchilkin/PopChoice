@@ -6,6 +6,7 @@ import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
 import { apiResponseSchema, requestBodySchema } from '@/features/recommendation/types';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
+import { recordRecommendationCompletion } from '@/lib/metrics';
 import { isOpenAITimeoutError } from '@/lib/openaiTimeout';
 import { applyRateLimit } from '@/lib/rateLimit';
 import {
@@ -23,7 +24,14 @@ async function postHandler(req: NextRequest): Promise<Response> {
 
   try {
     const rateLimitResponse = await applyRateLimit(req);
-    if (rateLimitResponse) return rateLimitResponse;
+    if (rateLimitResponse) {
+      recordRecommendationCompletion({
+        mode: 'legacy_sync',
+        status: 'failure',
+        durationMs: Date.now() - startTime,
+      });
+      return rateLimitResponse;
+    }
 
     const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
 
@@ -40,6 +48,11 @@ async function postHandler(req: NextRequest): Promise<Response> {
 
     const inputBlock = await getRecommendationInputBlock(allPeopleData);
     if (inputBlock) {
+      recordRecommendationCompletion({
+        mode: 'legacy_sync',
+        status: 'failure',
+        durationMs: Date.now() - startTime,
+      });
       return NextResponse.json(inputBlock, { status: 422 });
     }
 
@@ -51,9 +64,20 @@ async function postHandler(req: NextRequest): Promise<Response> {
       { durationMs: duration, movieCount: response.similarMovies?.length ?? 0 },
       'Recommendation request completed',
     );
+    recordRecommendationCompletion({
+      mode: 'legacy_sync',
+      status: 'success',
+      durationMs: duration,
+    });
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
+    recordRecommendationCompletion({
+      mode: 'legacy_sync',
+      status: 'failure',
+      durationMs: Date.now() - startTime,
+    });
+
     const bodyErrorResponse = requestBodyErrorResponse(error);
     if (bodyErrorResponse) return bodyErrorResponse;
 

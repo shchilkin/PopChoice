@@ -2,7 +2,9 @@
 
 PopChoice can run a small self-hosted log stack for production or preview VPS
 debugging: Grafana Loki stores logs, Grafana Alloy tails Docker containers, and
-Grafana provides search through the provisioned Loki data source.
+Grafana provides search through the provisioned Loki data source. The same
+Grafana instance can also load the Prometheus metrics dashboard documented in
+[OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md).
 
 This stack is intentionally separate from the PopChoice app stack. Web,
 workers, Bull Board, PostgreSQL, Redis, and one-shot service containers keep
@@ -12,8 +14,8 @@ its local container logs.
 
 ## Files
 
-- `docker-compose.observability.yml` starts Loki, Alloy, Grafana, and the
-  Uptime Kuma service documented separately in
+- `docker-compose.observability.yml` starts Loki, Alloy, Grafana, Prometheus,
+  metrics exporters, and the Uptime Kuma service documented separately in
   [OBSERVABILITY-UPTIME.md](./OBSERVABILITY-UPTIME.md).
 - `observability/loki/loki.yaml` configures single-binary Loki with filesystem
   TSDB storage and seven-day retention.

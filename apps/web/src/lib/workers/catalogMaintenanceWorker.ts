@@ -26,6 +26,7 @@ import {
   createBullMQConnection,
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { recordQueueJobEvent, recordTMDBProviderError } from '@/lib/metrics';
 
 import type {
   CatalogBackfillMovieJobData,
@@ -101,6 +102,16 @@ async function handleRateLimit(
   logger.warn({ jobId: job.id, delayMs }, 'TMDB returned 429; pausing catalog queue');
   await worker.rateLimit(delayMs);
   throw Worker.RateLimitError();
+}
+
+function catalogTMDBOperationForJob(jobName: CatalogMaintenanceJobName) {
+  return jobName === CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage
+    ? 'catalog_discover'
+    : 'catalog_details';
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
 }
 
 async function findExistingMovieId(input: {
@@ -404,7 +415,11 @@ export function createCatalogMaintenanceWorker(): CatalogWorker | null {
         throw new Error(`Unsupported catalog maintenance job: ${job.name}`);
       } catch (error) {
         if (error instanceof TMDBRateLimitError) {
+          recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'rate_limited');
           await handleRateLimit(job, worker, error);
+        }
+        if (isTimeoutError(error)) {
+          recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'timeout');
         }
         throw error;
       }
@@ -423,11 +438,23 @@ export function createCatalogMaintenanceWorker(): CatalogWorker | null {
   );
 
   worker.on('completed', (job) => {
+    recordQueueJobEvent({
+      queue: CATALOG_MAINTENANCE_QUEUE_NAME,
+      job: job.name,
+      event: 'completed',
+      final: true,
+    });
     logger.info({ jobId: job.id, jobName: job.name }, 'Catalog maintenance job completed');
   });
 
   worker.on('failed', (job, err) => {
     const attemptsMade = job?.attemptsMade ?? 0;
+    recordQueueJobEvent({
+      queue: CATALOG_MAINTENANCE_QUEUE_NAME,
+      job: job?.name ?? 'unknown',
+      event: 'failed',
+      final: attemptsMade >= MAX_CATALOG_ATTEMPTS,
+    });
     logger.error(
       {
         err,

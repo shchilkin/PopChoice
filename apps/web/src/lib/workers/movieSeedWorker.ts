@@ -7,6 +7,7 @@ import {
   createBullMQConnection,
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { recordQueueJobEvent } from '@/lib/metrics';
 
 import type { MovieSeedJobData } from '@/lib/jobQueue';
 
@@ -30,6 +31,12 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
   );
 
   worker.on('completed', (job) => {
+    recordQueueJobEvent({
+      queue: MOVIE_SEED_QUEUE_NAME,
+      job: job.name,
+      event: 'completed',
+      final: true,
+    });
     logger.info(
       { jobId: job.id, queuedMovies: job.data.tmdbMovies.length },
       'Movie seeding job completed',
@@ -38,6 +45,12 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
 
   worker.on('failed', (job, err) => {
     const attemptsMade = job?.attemptsMade ?? 0;
+    recordQueueJobEvent({
+      queue: MOVIE_SEED_QUEUE_NAME,
+      job: job?.name ?? 'unknown',
+      event: 'failed',
+      final: attemptsMade >= MAX_MOVIE_SEED_ATTEMPTS,
+    });
     logger.error(
       {
         err,

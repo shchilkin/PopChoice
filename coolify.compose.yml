@@ -19,6 +19,8 @@ x-app-env: &app-env
   TMDB_API_KEY: ${TMDB_API_KEY:-}
   NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:?Set NEXT_PUBLIC_BASE_URL to the public app URL in Coolify}
   LOG_LEVEL: ${LOG_LEVEL:-info}
+  METRICS_ENABLED: ${METRICS_ENABLED:-false}
+  METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:-}
   API_KEY_HMAC_SECRET: ${API_KEY_HMAC_SECRET:-}
   AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:?Set AUTH_SESSION_SECRET in Coolify}
   VALID_API_KEYS: ${VALID_API_KEYS:-}
@@ -105,11 +107,14 @@ services:
     environment:
       <<: *app-env
       NODE_OPTIONS: --require /app/apps/web/scripts/coolify-runtime-env.cjs
+      WORKER_METRICS_PORT: 9464
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    expose:
+      - '9464'
     healthcheck:
       test:
         [

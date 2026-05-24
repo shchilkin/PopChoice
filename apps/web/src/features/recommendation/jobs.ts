@@ -1,5 +1,6 @@
 import { RECOMMENDATION_JOB_OPTIONS, recommendationQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { recordRecommendationCompletion } from '@/lib/metrics';
 
 import {
   completeRecommendationRecord,
@@ -62,9 +63,15 @@ async function completeDeterministicE2ERecommendation(
   allPeopleData: PersonFormData[],
 ): Promise<void> {
   logger.info({ recommendationId }, 'Completing recommendation with deterministic e2e fixture');
+  const startTime = Date.now();
   await markRecommendationProcessing(recommendationId);
   await markRecommendationStage(recommendationId, 'complete');
   await completeRecommendationRecord(recommendationId, buildDeterministicE2EResult(allPeopleData));
+  recordRecommendationCompletion({
+    mode: 'deterministic_e2e',
+    status: 'success',
+    durationMs: Date.now() - startTime,
+  });
 }
 
 function buildDeterministicE2EResult(allPeopleData: PersonFormData[]): ApiResponse {
@@ -127,6 +134,7 @@ async function processInlineRecommendation(
   locale: Locale,
   userId?: string,
 ): Promise<void> {
+  const startTime = Date.now();
   try {
     await markRecommendationProcessing(recommendationId);
     const result = await runRecommendationPipeline(allPeopleData, locale, {
@@ -135,8 +143,18 @@ async function processInlineRecommendation(
     });
 
     await completeRecommendationRecord(recommendationId, result);
+    recordRecommendationCompletion({
+      mode: 'async_inline',
+      status: 'success',
+      durationMs: Date.now() - startTime,
+    });
     logger.info({ recommendationId }, 'Inline recommendation processing completed');
   } catch (err) {
+    recordRecommendationCompletion({
+      mode: 'async_inline',
+      status: 'failure',
+      durationMs: Date.now() - startTime,
+    });
     const message = err instanceof Error ? err.message : String(err);
     logger.error({ err, recommendationId }, 'Inline recommendation processing failed');
     await failRecommendationRecord(recommendationId, message).catch((dbErr) => {
