@@ -8,6 +8,9 @@ without creating noisy paging habits while the project is still small.
 
 - `observability/grafana/provisioning/alerting/popchoice-alerts.yaml` provisions
   Grafana alert rules.
+- `observability/images/grafana/entrypoint.sh` optionally provisions the
+  `popchoice-telegram` contact point and notification policy when Telegram env
+  vars are present.
 - `docs/OBSERVABILITY-RUNBOOKS.md` explains how to respond to each alert family.
 - `docs/OBSERVABILITY-METRICS.md` documents the metrics used by these alerts.
 
@@ -32,11 +35,18 @@ Every rule includes:
 - `noDataState: OK` for application/dependency rules so a fresh or partially
   deployed stack does not fire before metrics exist.
 
-The first version intentionally does not provision external notification
-receivers. Use Grafana's UI to add email, Telegram, Slack, or webhook contact
-points after the stack is stable, then route by the `severity` label. Until
-then, alerts are visible in Grafana and should be paired with Uptime Kuma or
-Coolify notifications for the most important uptime checks.
+Telegram notifications are provisioned automatically when both env vars are set
+on the observability resource:
+
+```env
+GRAFANA_TELEGRAM_BOT_TOKEN=<telegram-bot-token>
+GRAFANA_TELEGRAM_CHAT_ID=<telegram-chat-id>
+```
+
+When either value is missing, Grafana starts without external receivers and
+alerts remain visible in the UI. The generated `popchoice-telegram` policy
+groups notifications by folder, alert name, and severity. After enabling it, use
+Grafana's contact point **Test** action before relying on alert delivery.
 
 ## Alert Rules
 
@@ -155,7 +165,8 @@ This first alert set avoids:
 - short windows under 5 minutes for outage alerts
 - queue alerts on single failed jobs
 - provider alerts on isolated timeout blips
-- external notification receivers before contact points are intentionally set
+- required external notification env vars that would prevent Grafana from
+  starting when Telegram has not been configured yet
 
 Tighten thresholds only after observing a few weeks of real traffic and
 maintenance patterns.
