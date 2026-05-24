@@ -251,6 +251,22 @@ separate observability stack and configure the monitors in
 read-only by default so production monitoring does not spend AI-provider
 credits.
 
+For Prometheus metrics and the initial Grafana dashboard, enable the app metrics
+endpoints on the PopChoice resource:
+
+```env
+METRICS_ENABLED=true
+METRICS_BEARER_TOKEN=<long-random-token>
+```
+
+Then run the separate observability stack documented in
+[OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md). The stack listens locally
+on `127.0.0.1:9090` for Prometheus and `127.0.0.1:3001` for Grafana. Set
+`POPCHOICE_APP_NETWORK` if Coolify names the app resource network differently
+from `popchoice_default`, and set the Postgres exporter credentials with
+`POSTGRES_EXPORTER_DATA_SOURCE_URI`, `POSTGRES_EXPORTER_DATA_SOURCE_USER`, and
+`POSTGRES_EXPORTER_DATA_SOURCE_PASS`.
+
 ## Automatic redeploys
 
 For a simple continuous deployment path:

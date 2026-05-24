@@ -1,6 +1,7 @@
 import z from 'zod';
 
 import logger from '@/lib/logger';
+import { recordTMDBProviderError } from '@/lib/metrics';
 
 import type { TMDBCatalogCandidate, TMDBDiscoverySource } from '@/lib/jobQueue';
 
@@ -156,6 +157,7 @@ export async function fetchMovieDetails(
     });
 
     if (!response.ok) {
+      recordTMDBProviderError('catalog_details', 'http_error');
       logger.warn(
         { movieId, status: response.status, statusText: response.statusText },
         'TMDB movie details fetch failed',
@@ -166,6 +168,12 @@ export async function fetchMovieDetails(
     return (await response.json()) as TMDBMovieDetails;
   } catch (error) {
     if (error instanceof TMDBRateLimitError) throw error;
+    recordTMDBProviderError(
+      'catalog_details',
+      error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')
+        ? 'timeout'
+        : 'error',
+    );
     logger.warn({ err: error, movieId }, 'TMDB movie details fetch failed');
     return null;
   }
@@ -229,11 +237,13 @@ export async function fetchTMDBSourcePage(input: {
   });
 
   if (!response.ok) {
+    recordTMDBProviderError('catalog_discover', 'http_error');
     throw new Error(`TMDB source page API error: ${response.status} ${response.statusText}`);
   }
 
   const parsed = tmdbListResponseSchema.safeParse(await response.json());
   if (!parsed.success) {
+    recordTMDBProviderError('catalog_discover', 'invalid_response');
     logger.warn(
       { source: input.source, page: input.page, zodError: parsed.error },
       'TMDB source page response validation failed',
@@ -295,11 +305,13 @@ async function tmdbSearch(
 
   const response = await tmdbGet(apiKey, '/search/movie', params);
   if (!response.ok) {
+    recordTMDBProviderError('catalog_details', 'http_error');
     throw new Error(`TMDB search API error: ${response.status} ${response.statusText}`);
   }
 
   const parsed = tmdbSearchResponseSchema.safeParse(await response.json());
   if (!parsed.success) {
+    recordTMDBProviderError('catalog_details', 'invalid_response');
     logger.warn({ title, year, zodError: parsed.error }, 'TMDB search response validation failed');
     return [];
   }

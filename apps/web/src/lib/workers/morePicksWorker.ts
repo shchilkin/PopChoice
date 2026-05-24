@@ -7,6 +7,7 @@ import {
   createBullMQConnection,
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { recordQueueJobEvent } from '@/lib/metrics';
 
 import type { MorePicksJobData } from '@/lib/jobQueue';
 
@@ -30,16 +31,29 @@ export function createMorePicksWorker(): Worker<MorePicksJobData> | null {
   );
 
   worker.on('completed', (job) => {
+    recordQueueJobEvent({
+      queue: MORE_PICKS_QUEUE_NAME,
+      job: job.name,
+      event: 'completed',
+      final: true,
+    });
     logger.info({ jobId: job.id, slug: job.data.slug }, 'More-picks job completed successfully');
   });
 
   worker.on('failed', (job, err) => {
+    const attemptsMade = job?.attemptsMade ?? 0;
+    recordQueueJobEvent({
+      queue: MORE_PICKS_QUEUE_NAME,
+      job: job?.name ?? 'unknown',
+      event: 'failed',
+      final: attemptsMade >= MAX_ATTEMPTS,
+    });
     logger.error(
       {
         err,
         jobId: job?.id,
         slug: job?.data?.slug,
-        attemptsMade: job?.attemptsMade ?? 0,
+        attemptsMade,
         maxAttempts: MAX_ATTEMPTS,
       },
       'More-picks job failed',

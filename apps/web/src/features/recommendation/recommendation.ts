@@ -3,6 +3,7 @@ import { getOpenAIClient } from '@/clients/openaiClient';
 import { MovieService } from '@/integrations/tmdb';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG, type Locale } from '@/lib/locale';
 import logger from '@/lib/logger';
+import { recordOpenAIProviderError } from '@/lib/metrics';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
@@ -134,6 +135,7 @@ export async function getRecommendation(
       JSON.parse(recommendation.choices[0].message.content),
     );
   } catch (error) {
+    recordOpenAIProviderError('ranking', error);
     throw new Error(`Failed to get recommendation from OpenAI: ${error}`);
   }
 }
@@ -214,6 +216,7 @@ Remember: respond in ${language} only.`;
 
           return { ...movie, aiDescription };
         } catch (error) {
+          recordOpenAIProviderError('description', error);
           const isRateLimit =
             typeof error === 'object' &&
             error !== null &&

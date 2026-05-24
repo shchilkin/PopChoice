@@ -4,6 +4,7 @@ import { getDbClient } from '@/clients/dbClient';
 import { getOpenAIClient } from '@/clients/openaiClient';
 import { IMAGE_BASE_URL } from '@/integrations/tmdb';
 import logger from '@/lib/logger';
+import { recordOpenAIProviderError, recordTMDBProviderError } from '@/lib/metrics';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 import {
@@ -169,21 +170,25 @@ export async function fetchTMDBDiscoverMovies(
     });
 
     if (!response.ok) {
+      recordTMDBProviderError('movie_discover', 'http_error');
       logger.warn({ status: response.status }, 'TMDB discover request failed');
       return [];
     }
 
     const parsedResponse = tmdbDiscoverResponseSchema.safeParse(await response.json());
     if (!parsedResponse.success) {
+      recordTMDBProviderError('movie_discover', 'invalid_response');
       logger.warn({ zodError: parsedResponse.error }, 'TMDB discover response validation failed');
       return [];
     }
     return (parsedResponse.data.results ?? []).slice(0, MAX_TOTAL_MOVIES);
   } catch (error) {
     if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
+      recordTMDBProviderError('movie_discover', 'timeout');
       logger.warn({ timeoutMs: TMDB_DISCOVER_FETCH_TIMEOUT_MS }, 'TMDB discover request timed out');
       return [];
     }
+    recordTMDBProviderError('movie_discover', 'error');
     logger.warn({ err: error }, 'Error fetching movies from TMDB discover');
     return [];
   }
@@ -226,6 +231,7 @@ export async function scoreAndConvertTMDBMovies(
     );
     rawEmbeddings = response.data.map((d) => d.embedding);
   } catch (error) {
+    recordOpenAIProviderError('similarity_embedding', error);
     logger.warn(
       { err: error },
       'Failed to embed TMDB movies for similarity scoring — using fallback score',

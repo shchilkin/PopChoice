@@ -1,5 +1,6 @@
 import { getOpenAIClient } from '@/clients/openaiClient';
 import logger from '@/lib/logger';
+import { recordOpenAIProviderError } from '@/lib/metrics';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
@@ -127,6 +128,7 @@ export async function refineQueryWithLLM(allPeopleData: PersonFormData[]): Promi
 
     return refinedTags;
   } catch (error) {
+    recordOpenAIProviderError('query_enrichment', error);
     const err =
       error instanceof Error
         ? { name: error.name, message: error.message }
@@ -165,6 +167,7 @@ export async function createEmbedding(
     }
     return embeddingResponse.data[0].embedding;
   } catch (error) {
+    recordOpenAIProviderError('embedding', error);
     throw new Error(`Failed to create embedding: ${error}`);
   }
 }

@@ -1,0 +1,12 @@
+groups:
+  - name: popchoice-recording-rules
+    interval: 30s
+    rules:
+      - record: popchoice:recommendation_failure_rate5m
+        expr: |
+          sum(rate(popchoice_recommendations_total{status="failure"}[5m]))
+          /
+          clamp_min(sum(rate(popchoice_recommendations_total[5m])), 1)
+
+      - record: popchoice:queue_failed_jobs5m
+        expr: sum by (queue) (increase(popchoice_queue_jobs_total{event="failed",final="true"}[5m]))
