@@ -1,0 +1,83 @@
+name: popchoice-observability
+
+services:
+  observability-uptime-kuma:
+    image: louislam/uptime-kuma:1.23.16
+    container_name: popchoice-observability-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3002:3001'
+    volumes:
+      - uptime-kuma-data:/app/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:3001'').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  observability-loki:
+    image: grafana/loki:3.5.7
+    container_name: popchoice-observability-loki
+    restart: unless-stopped
+    command: ['-config.file=/etc/loki/loki.yaml']
+    ports:
+      - '127.0.0.1:3100:3100'
+    volumes:
+      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - lokidata:/loki
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  observability-alloy:
+    image: grafana/alloy:v1.11.3
+    container_name: popchoice-observability-alloy
+    restart: unless-stopped
+    command:
+      [
+        'run',
+        '--server.http.listen-addr=0.0.0.0:12345',
+        '--storage.path=/var/lib/alloy/data',
+        '/etc/alloy/config.alloy',
+      ]
+    ports:
+      - '127.0.0.1:12345:12345'
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloydata:/var/lib/alloy/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      observability-loki:
+        condition: service_healthy
+
+  observability-grafana:
+    image: grafana/grafana:12.3.0
+    container_name: popchoice-observability-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD before starting observability}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    ports:
+      - '127.0.0.1:3001:3000'
+    volumes:
+      - grafanadata:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      observability-loki:
+        condition: service_healthy
+
+volumes:
+  alloydata:
+  grafanadata:
+  lokidata:
+  uptime-kuma-data:

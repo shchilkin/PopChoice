@@ -1,0 +1,85 @@
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  labels     = { stack = "popchoice" }
+  forward_to = [loki.process.popchoice.receiver]
+}
+
+loki.process "popchoice" {
+  stage.docker {}
+
+  stage.json {
+    expressions = {
+      level              = "level",
+      msg                = "msg",
+      requestId          = "requestId",
+      reqId              = "reqId",
+      recommendationId   = "recommendationId",
+      recommendationSlug = "recommendationSlug",
+      queue              = "queue",
+      queueName          = "queueName",
+      jobId              = "jobId",
+      jobName            = "jobName",
+      stage              = "stage",
+      userId             = "userId",
+      err                = "err.message",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      requestId          = "",
+      reqId              = "",
+      recommendationId   = "",
+      recommendationSlug = "",
+      queue              = "",
+      queueName          = "",
+      jobId              = "",
+      jobName            = "",
+      stage              = "",
+      userId             = "",
+      err                = "",
+      msg                = "",
+    }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://observability-loki:3100/loki/api/v1/push"
+  }
+}

@@ -238,6 +238,19 @@ Run this checklist after production deploys and after any infrastructure change:
 - Worker logs show Redis readiness and recommendation job completion.
 - The latest PostgreSQL backup exists in the configured backup destination.
 
+## Optional observability stack
+
+For searchable Docker/Coolify logs, run the separate Loki, Alloy, and Grafana
+stack documented in [OBSERVABILITY-LOGS.md](./OBSERVABILITY-LOGS.md). Keep it as
+a separate Coolify Docker Compose resource so PopChoice containers do not depend
+on Loki availability at runtime.
+
+For external uptime and cheap synthetic monitoring, run Uptime Kuma as a
+separate observability stack and configure the monitors in
+[Uptime Kuma Monitoring](./OBSERVABILITY-UPTIME.md). Keep those checks
+read-only by default so production monitoring does not spend AI-provider
+credits.
+
 ## Automatic redeploys
 
 For a simple continuous deployment path:

@@ -151,8 +151,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 ### Operational Observability Track
 
 - [ ] Build the self-hosted observability stack under [#498](https://github.com/shchilkin/PopChoice/issues/498). This is intentionally a learning track: SaaS tools would be simpler, but self-hosting teaches uptime checks, log shipping, metrics, traces, alerts, retention, and backups.
-- [ ] Add Uptime Kuma health and synthetic monitoring in [#502](https://github.com/shchilkin/PopChoice/issues/502) for `/api/health`, build metadata, and cheap smoke checks before deeper instrumentation.
-- [ ] Add Grafana Loki log aggregation in [#499](https://github.com/shchilkin/PopChoice/issues/499) so Coolify/Docker logs are searchable by service, level, request id, recommendation id, queue, job id, and stage.
+- [x] Add Uptime Kuma health and synthetic monitoring in [#502](https://github.com/shchilkin/PopChoice/issues/502) for `/api/health`, build metadata, and cheap smoke checks before deeper instrumentation. See [Uptime Kuma Monitoring](./OBSERVABILITY-UPTIME.md).
+- [x] Add Grafana Loki log aggregation in [#499](https://github.com/shchilkin/PopChoice/issues/499) so Coolify/Docker logs are searchable by service, level, request id, recommendation id, queue, job id, and stage. See [Observability Logs](./OBSERVABILITY-LOGS.md).
 - [ ] Add Prometheus metrics and Grafana dashboards in [#501](https://github.com/shchilkin/PopChoice/issues/501) for container health, Postgres, Redis, BullMQ queues, recommendation latency, provider timeouts, and failed jobs.
 - [ ] Add OpenTelemetry traces with Tempo in [#500](https://github.com/shchilkin/PopChoice/issues/500) once the low-noise uptime/logs/metrics foundation exists.
 - [ ] Add alert routing, retention, backups, and incident runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503) so the monitoring stack stays useful and recoverable.
