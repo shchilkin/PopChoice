@@ -7,6 +7,7 @@ import {
 } from '@/features/recommendation/morePicksPersistence';
 import { MORE_PICKS_JOB_OPTIONS, morePicksQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
+import { getTraceCarrier, setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 
 import { runMorePicksPipeline } from './morePicksPipeline';
 
@@ -22,32 +23,45 @@ export async function processMorePicksRecommendation(params: {
 }): Promise<void> {
   const { recommendationId, slug, locale, quizData: providedQuizData } = params;
 
-  await markMorePicksStatus(recommendationId, 'processing');
+  await withTraceSpan(
+    'recommendation.more_picks.process',
+    {
+      attributes: {
+        'recommendation.id': recommendationId,
+        'recommendation.slug': slug,
+        'recommendation.stage': 'more-picks',
+      },
+    },
+    async () => {
+      await markMorePicksStatus(recommendationId, 'processing');
 
-  try {
-    const quizData = providedQuizData ?? (await loadRecommendationQuizData(recommendationId));
-    if (!quizData) {
-      throw new Error('Quiz data not found for recommendation');
-    }
+      try {
+        const quizData = providedQuizData ?? (await loadRecommendationQuizData(recommendationId));
+        if (!quizData) {
+          throw new Error('Quiz data not found for recommendation');
+        }
 
-    const excludeIds = await getMorePicksExcludeIds(recommendationId);
-    const movies = await runMorePicksPipeline(quizData, excludeIds, 2, locale);
+        const excludeIds = await getMorePicksExcludeIds(recommendationId);
+        setActiveTraceAttributes({ 'recommendation.stage': 'more-picks-search' });
+        const movies = await runMorePicksPipeline(quizData, excludeIds, 2, locale);
 
-    await storeMorePicks(recommendationId, movies);
-    await markMorePicksStatus(recommendationId, 'completed');
+        await storeMorePicks(recommendationId, movies);
+        await markMorePicksStatus(recommendationId, 'completed');
 
-    logger.info(
-      { recommendationId, slug, movieCount: movies.length },
-      'More-picks processing completed',
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger.error({ err, recommendationId, slug }, 'More-picks processing failed');
-    await markMorePicksStatus(recommendationId, 'failed', message).catch((dbErr) => {
-      logger.error({ err: dbErr, recommendationId }, 'Failed to update more_picks_status');
-    });
-    throw err;
-  }
+        logger.info(
+          { recommendationId, slug, movieCount: movies.length },
+          'More-picks processing completed',
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error({ err, recommendationId, slug }, 'More-picks processing failed');
+        await markMorePicksStatus(recommendationId, 'failed', message).catch((dbErr) => {
+          logger.error({ err: dbErr, recommendationId }, 'Failed to update more_picks_status');
+        });
+        throw err;
+      }
+    },
+  );
 }
 
 export async function startMorePicksRequest(
@@ -58,13 +72,29 @@ export async function startMorePicksRequest(
   const { recommendationId, quizData } = claimed;
 
   if (morePicksQueue) {
+    const queue = morePicksQueue;
     try {
-      await morePicksQueue.add(
-        'more-picks',
-        { recommendationId, slug, locale },
-        MORE_PICKS_JOB_OPTIONS,
+      await withTraceSpan(
+        'recommendation.more_picks.enqueue',
+        {
+          attributes: {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': 'more-picks',
+            'messaging.operation.name': 'enqueue',
+            'recommendation.id': recommendationId,
+            'recommendation.slug': slug,
+          },
+        },
+        async (span) => {
+          const job = await queue.add(
+            'more-picks',
+            { recommendationId, slug, locale, trace: getTraceCarrier() },
+            MORE_PICKS_JOB_OPTIONS,
+          );
+          span.setAttribute('job.id', String(job.id ?? 'unknown'));
+          logger.info({ recommendationId, slug, jobId: job.id }, 'More-picks job enqueued');
+        },
       );
-      logger.info({ recommendationId, slug }, 'More-picks job enqueued');
       return;
     } catch (err) {
       logger.warn(

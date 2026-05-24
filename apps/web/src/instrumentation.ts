@@ -9,5 +9,8 @@
  */
 
 export async function register() {
-  // Reserved for future instrumentation (tracing, metrics, etc.).
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { initTracing } = await import('@/lib/tracingSetup');
+    initTracing('web');
+  }
 }

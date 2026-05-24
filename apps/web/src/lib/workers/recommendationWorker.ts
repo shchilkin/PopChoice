@@ -14,6 +14,7 @@ import {
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordQueueJobEvent, recordRecommendationCompletion } from '@/lib/metrics';
+import { setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 
 import type { RecommendationJobData } from '@/lib/jobQueue';
 
@@ -29,51 +30,75 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
   const worker = new Worker<RecommendationJobData>(
     RECOMMENDATION_QUEUE_NAME,
     async (job) => {
-      const startTime = Date.now();
       const { recommendationId, quizData, locale, userId } = job.data;
 
-      logger.info({ recommendationId, jobId: job.id }, 'Recommendation job started');
+      await withTraceSpan(
+        'recommendation.worker.process',
+        {
+          carrier: job.data.trace,
+          attributes: {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': RECOMMENDATION_QUEUE_NAME,
+            'messaging.operation.name': 'process',
+            'job.id': String(job.id ?? 'unknown'),
+            'job.name': job.name,
+            'recommendation.id': recommendationId,
+            'recommendation.mode': 'async_worker',
+          },
+        },
+        async () => {
+          const startTime = Date.now();
 
-      // Mark as processing
-      await markRecommendationProcessing(recommendationId);
+          logger.info({ recommendationId, jobId: job.id }, 'Recommendation job started');
 
-      try {
-        const allPeopleData = Array.isArray(quizData) ? quizData : [quizData];
+          // Mark as processing
+          await markRecommendationProcessing(recommendationId);
 
-        // Run the full AI pipeline
-        const result = await runRecommendationPipeline(allPeopleData, locale, {
-          onStageChange: (stage) => markRecommendationStage(recommendationId, stage),
-          userId,
-        });
+          try {
+            const allPeopleData = Array.isArray(quizData) ? quizData : [quizData];
 
-        const movieCount = await completeRecommendationRecord(recommendationId, result);
+            // Run the full AI pipeline
+            const result = await runRecommendationPipeline(allPeopleData, locale, {
+              onStageChange: async (stage) => {
+                setActiveTraceAttributes({ 'recommendation.stage': stage });
+                await markRecommendationStage(recommendationId, stage);
+              },
+              userId,
+            });
 
-        logger.info(
-          { recommendationId, jobId: job.id, movieCount },
-          'Recommendation job completed',
-        );
-        recordRecommendationCompletion({
-          mode: 'async_worker',
-          status: 'success',
-          durationMs: Date.now() - startTime,
-        });
-      } catch (err) {
-        recordRecommendationCompletion({
-          mode: 'async_worker',
-          status: 'failure',
-          durationMs: Date.now() - startTime,
-        });
-        const message = err instanceof Error ? err.message : String(err);
-        logger.error({ err, recommendationId, jobId: job.id }, 'Recommendation job failed');
+            const movieCount = await completeRecommendationRecord(recommendationId, result);
 
-        // Mark as failed — will be overwritten on retry, becomes permanent on last attempt
-        await failRecommendationRecord(recommendationId, message).catch((dbErr) => {
-          logger.error({ err: dbErr, recommendationId }, 'Failed to update recommendation status');
-        });
+            logger.info(
+              { recommendationId, jobId: job.id, movieCount },
+              'Recommendation job completed',
+            );
+            recordRecommendationCompletion({
+              mode: 'async_worker',
+              status: 'success',
+              durationMs: Date.now() - startTime,
+            });
+          } catch (err) {
+            recordRecommendationCompletion({
+              mode: 'async_worker',
+              status: 'failure',
+              durationMs: Date.now() - startTime,
+            });
+            const message = err instanceof Error ? err.message : String(err);
+            logger.error({ err, recommendationId, jobId: job.id }, 'Recommendation job failed');
 
-        // Rethrow so BullMQ handles retries
-        throw err;
-      }
+            // Mark as failed — will be overwritten on retry, becomes permanent on last attempt
+            await failRecommendationRecord(recommendationId, message).catch((dbErr) => {
+              logger.error(
+                { err: dbErr, recommendationId },
+                'Failed to update recommendation status',
+              );
+            });
+
+            // Rethrow so BullMQ handles retries
+            throw err;
+          }
+        },
+      );
     },
     { connection },
   );

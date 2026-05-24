@@ -9,6 +9,7 @@ import { getDbClient } from '@/clients/dbClient';
 import { enqueueCatalogSeedTMDBMovies } from '@/features/catalogMaintenance/jobs';
 import { getUserRecommendationFeedbackMoviePreferences } from '@/lib/db/recommendations';
 import logger from '@/lib/logger';
+import { setActiveTraceAttributes } from '@/lib/tracing';
 
 import {
   applyFeedbackToLocalMovies,
@@ -105,6 +106,7 @@ export async function runRecommendationPipeline(
   const mentionedTitleKeys = getMentionedMovieTitleKeys(allPeopleData);
 
   async function emitStage(stage: RecommendationStage): Promise<void> {
+    setActiveTraceAttributes({ 'recommendation.stage': stage });
     try {
       await options.onStageChange?.(stage);
     } catch (err) {

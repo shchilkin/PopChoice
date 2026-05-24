@@ -8,6 +8,7 @@ import {
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordQueueJobEvent } from '@/lib/metrics';
+import { withTraceSpan } from '@/lib/tracing';
 
 import type { MorePicksJobData } from '@/lib/jobQueue';
 
@@ -24,8 +25,25 @@ export function createMorePicksWorker(): Worker<MorePicksJobData> | null {
     MORE_PICKS_QUEUE_NAME,
     async (job) => {
       const { recommendationId, slug, locale } = job.data;
-      logger.info({ recommendationId, slug, jobId: job.id }, 'More-picks job started');
-      await processMorePicksRecommendation({ recommendationId, slug, locale });
+      await withTraceSpan(
+        'recommendation.more_picks.worker.process',
+        {
+          carrier: job.data.trace,
+          attributes: {
+            'messaging.system': 'bullmq',
+            'messaging.destination.name': MORE_PICKS_QUEUE_NAME,
+            'messaging.operation.name': 'process',
+            'job.id': String(job.id ?? 'unknown'),
+            'job.name': job.name,
+            'recommendation.id': recommendationId,
+            'recommendation.slug': slug,
+          },
+        },
+        async () => {
+          logger.info({ recommendationId, slug, jobId: job.id }, 'More-picks job started');
+          await processMorePicksRecommendation({ recommendationId, slug, locale });
+        },
+      );
     },
     { connection },
   );

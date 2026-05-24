@@ -154,8 +154,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Add Uptime Kuma health and synthetic monitoring in [#502](https://github.com/shchilkin/PopChoice/issues/502) for `/api/health`, build metadata, and cheap smoke checks before deeper instrumentation. See [Uptime Kuma Monitoring](./OBSERVABILITY-UPTIME.md).
 - [x] Add Grafana Loki log aggregation in [#499](https://github.com/shchilkin/PopChoice/issues/499) so Coolify/Docker logs are searchable by service, level, request id, recommendation id, queue, job id, and stage. See [Observability Logs](./OBSERVABILITY-LOGS.md).
 - [x] Add Prometheus metrics and Grafana dashboards in [#501](https://github.com/shchilkin/PopChoice/issues/501) for container health, Postgres, Redis, BullMQ queues, recommendation latency, provider timeouts, and failed jobs. See [Observability Metrics](./OBSERVABILITY-METRICS.md).
-- [ ] Add OpenTelemetry traces with Tempo in [#500](https://github.com/shchilkin/PopChoice/issues/500) once the low-noise uptime/logs/metrics foundation exists.
-- [ ] Add alert routing, retention, backups, and incident runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503) so the monitoring stack stays useful and recoverable.
+- [x] Add OpenTelemetry traces with Tempo in [#500](https://github.com/shchilkin/PopChoice/issues/500) once the low-noise uptime/logs/metrics foundation exists. See [Observability Traces](./OBSERVABILITY-TRACES.md).
+- [x] Add alert routing, retention, backups, and incident runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503) so the monitoring stack stays useful and recoverable. See [Observability Alerts](./OBSERVABILITY-ALERTS.md) and [Observability Runbooks](./OBSERVABILITY-RUNBOOKS.md).
 - Enable Coolify notifications for failed deploys, failed backups, server disk/resource warnings, and unhealthy or restarting containers where supported.
 - Add external uptime monitoring for `https://pop-choice.shchilkin.dev/api/health`, then consider a deeper synthetic recommendation smoke check.
 - Add application error tracking for frontend, API routes, and workers so browser errors, API exceptions, and background job failures are visible outside Coolify logs.
@@ -277,7 +277,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 10. [x] Move TMDB discovery/backfill/metadata refresh into shared rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before increasing catalog expansion volume.
 11. [ ] Plan and split the [#493](https://github.com/shchilkin/PopChoice/issues/493) backoffice/catalog-health epic, including shared login protection for it and `apps/bull-board`.
 12. [ ] Clarify production migration/versioning expectations in [#494](https://github.com/shchilkin/PopChoice/issues/494) for schema changes, rollbacks, and preview volume recreation.
-13. [ ] Continue the self-hosted observability epic in [#498](https://github.com/shchilkin/PopChoice/issues/498) with traces in [#500](https://github.com/shchilkin/PopChoice/issues/500) and alerting/runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503).
+13. [x] Complete the first self-hosted observability track in [#498](https://github.com/shchilkin/PopChoice/issues/498) with uptime, logs, metrics, traces, alerts, retention, backups, and runbooks.
 
 ## Working Checklist
 

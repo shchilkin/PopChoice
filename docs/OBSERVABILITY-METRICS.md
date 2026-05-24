@@ -14,6 +14,8 @@ exporters, or Grafana are down, recommendations keep running.
   the Prometheus data source.
 - `observability/grafana/provisioning/dashboards/popchoice.yaml` loads
   dashboards from `observability/grafana/dashboards`.
+- `observability/grafana/provisioning/alerting/popchoice-alerts.yaml`
+  provisions conservative Grafana alert rules.
 - `observability/grafana/dashboards/popchoice-overview.json` is the initial
   PopChoice overview dashboard.
 
@@ -129,16 +131,21 @@ Panels may be empty until the relevant metric has been emitted. For example,
 recommendation latency appears only after a recommendation completes, and
 dependency health appears after `/api/health` has been called.
 
-## Alert Candidates
+## Alerts
 
-No alert routing is enabled by default yet; that belongs to
-[#503](https://github.com/shchilkin/PopChoice/issues/503). Good candidates for
-the next step:
+Grafana provisions a first conservative alert set for
+[#503](https://github.com/shchilkin/PopChoice/issues/503). The rules are grouped
+by severity and include owner/action annotations:
 
-- `up{job="popchoice-web"} == 0` for more than 2 minutes
-- `up{job="popchoice-workers"} == 0` for more than 2 minutes
-- `pg_up == 0` or `redis_up == 0` for more than 2 minutes
-- non-zero final queue failures over 10 minutes
-- high recommendation failure ratio over 10 minutes
-- host disk usage above 85%
-- repeated OpenAI/TMDB timeouts
+- P1: app, Postgres, and Redis outages.
+- P2: sustained queue backlog, provider timeout/rate-limit spikes, and disk
+  pressure.
+- P3: monitoring scrape target failures and elevated recommendation failure
+  ratio.
+
+See [Observability Alerts](./OBSERVABILITY-ALERTS.md) for thresholds, retention,
+and backup expectations. See
+[Observability Runbooks](./OBSERVABILITY-RUNBOOKS.md) for incident response.
+
+For Tempo traces and request/job correlation, see
+[Observability Traces](./OBSERVABILITY-TRACES.md).
