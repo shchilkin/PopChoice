@@ -30,6 +30,8 @@ jobs:
             dockerfile: apps/web/workers.Dockerfile
           - name: bull-board
             dockerfile: apps/web/bull-board.Dockerfile
+          - name: docs
+            dockerfile: apps/docs/Dockerfile
           - name: db-migrate
             dockerfile: services/db-migrate/Dockerfile
           - name: movie-seed
