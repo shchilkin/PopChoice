@@ -1,9 +1,13 @@
 'use client';
 import confetti from 'canvas-confetti';
 import React, { useCallback, useMemo, useRef } from 'react';
-import ReactCanvasConfetti from 'react-canvas-confetti';
+import ReactCanvasConfettiImport from 'react-canvas-confetti';
 
 import { MascotSVG, MascotSVGProps } from './MascotSVG';
+
+const ReactCanvasConfetti =
+  (ReactCanvasConfettiImport as unknown as { default?: typeof ReactCanvasConfettiImport })
+    .default ?? ReactCanvasConfettiImport;
 
 export const Mascot: React.FC<MascotSVGProps> = (props) => {
   const mascotRef = useRef<HTMLDivElement>(null);
