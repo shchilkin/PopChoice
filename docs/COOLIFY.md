@@ -235,6 +235,8 @@ to `db` and `redis`.
 Run this checklist after production deploys and after any infrastructure change:
 
 - `https://your-domain.example` loads with a trusted certificate.
+- `https://docs.your-domain.example/docs` loads the documentation site if the
+  `docs` service is enabled.
 - `https://your-domain.example/api/health` returns `200`.
 - `https://your-domain.example/api/build` shows the expected beta version and
   commit hash.
@@ -294,7 +296,13 @@ For a simple continuous deployment path:
    Coolify deploy webhook URL.
 3. Add the repository secret `COOLIFY_TOKEN` with a Coolify API token that has
    deploy permission.
-4. Merge to `development`.
+4. Optional but recommended: add `POPCHOICE_PRODUCTION_BASE_URL`, for example
+   `https://pop-choice.shchilkin.dev`, so GitHub Actions can verify
+   `/api/health` and `/api/build` after the webhook runs.
+5. Optional if Grafana is reachable from GitHub Actions: add `GRAFANA_URL` and
+   `GRAFANA_SERVICE_ACCOUNT_TOKEN` so the deploy job can create a short silence
+   for deploy-sensitive alerts before triggering Coolify.
+6. Merge to `development`.
 
 GitHub Actions builds and publishes every PopChoice runtime image first. Only
 after the full image matrix succeeds does the workflow call the deploy webhook.
@@ -302,17 +310,13 @@ The webhook call is an authenticated `GET` request using
 `Authorization: Bearer ${COOLIFY_TOKEN}`. Coolify then pulls the already-built
 `development` images and restarts the stack.
 
-Current observability caveat: a normal redeploy may briefly stop or replace the
-web container before Prometheus can scrape `web:3000` again. If that gap lasts
-longer than the current Grafana alert window, Telegram can report the app
-metrics target as down even when the deploy eventually recovers. Treat that as
-deployment-context signal, not as proof of a user-facing outage by itself.
-Follow-up issues track the planned improvements: Telegram formatting in
-[#525](https://github.com/shchilkin/PopChoice/issues/525), deploy-sensitive
-alert severity tuning in
-[#526](https://github.com/shchilkin/PopChoice/issues/526), and short
-deploy-aware silences plus post-deploy health verification in
-[#527](https://github.com/shchilkin/PopChoice/issues/527).
+Normal redeploys may briefly stop or replace the web container before
+Prometheus can scrape `web:3000` again. That alert is now a P2
+deploy-sensitive visibility signal. When Grafana secrets are present, the
+workflow creates a short silence for `noise_profile=deploy-sensitive` before
+the webhook. When `POPCHOICE_PRODUCTION_BASE_URL` is present, the workflow then
+polls public `/api/health` and `/api/build` and fails if production does not
+recover in time.
 
 To smoke-test the same path without a new merge, manually run the
 `Container Images` workflow on the `development` branch. Manual runs rebuild and
@@ -327,6 +331,25 @@ auditability at the cost of one manual promotion step.
 Do not point Coolify at source builds for production while also using GHCR
 images. Choose one deployment source of truth; the recommended production path
 is GHCR images plus this compose file.
+
+### Documentation service
+
+The `docs` service deploys the Fumadocs site from the same GHCR image bundle as
+the application runtime:
+
+```ini
+APP_IMAGE_PREFIX=ghcr.io/<owner>/<repo>
+IMAGE_TAG=development
+```
+
+Point a separate public domain, such as `docs.your-domain.example`, at the
+`docs` service in Coolify. The service listens on port `3000` and redirects `/`
+to `/docs`. It does not need application secrets, Postgres, Redis, OpenAI, or
+TMDB credentials.
+
+Keep the docs service on the same `IMAGE_TAG` as the app services. This makes
+the deployed documentation describe the same commit as the running app and keeps
+rollback behavior predictable.
 
 ## Pull request previews
 

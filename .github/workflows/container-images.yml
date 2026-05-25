@@ -30,6 +30,8 @@ jobs:
             dockerfile: apps/web/workers.Dockerfile
           - name: bull-board
             dockerfile: apps/web/bull-board.Dockerfile
+          - name: docs
+            dockerfile: apps/docs/Dockerfile
           - name: db-migrate
             dockerfile: services/db-migrate/Dockerfile
           - name: movie-seed
@@ -96,11 +98,11 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
         if: env.PUSH_IMAGE == 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -108,7 +110,7 @@ jobs:
 
       - name: Build and publish image
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.dockerfile }}
@@ -169,10 +171,20 @@ jobs:
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'development'
     needs: build-images
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
       COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
+      POPCHOICE_PRODUCTION_BASE_URL: ${{ secrets.POPCHOICE_PRODUCTION_BASE_URL }}
+      EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
     steps:
+      - name: Checkout deploy scripts
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        uses: actions/checkout@v6
+
       - name: Validate Coolify deploy secrets
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN == ''
         run: |
@@ -180,11 +192,19 @@ jobs:
           echo "Create a Coolify API token with deploy permission and save it as the COOLIFY_TOKEN repository secret."
           exit 1
 
+      - name: Create Grafana deploy silence
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        run: scripts/create-grafana-deploy-silence.sh
+
       - name: Trigger Coolify deploy webhook
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
         run: |
           curl -fsS --request GET "${COOLIFY_DEPLOY_WEBHOOK}" \
             -H "Authorization: Bearer ${COOLIFY_TOKEN}"
+
+      - name: Verify production recovered
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        run: scripts/verify-production-deploy.sh
 
       - name: Skip deploy when webhook is not configured
         if: env.COOLIFY_DEPLOY_WEBHOOK == ''

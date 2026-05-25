@@ -109,15 +109,19 @@ These tune BullMQ workers and the standalone catalog services described in
 Coolify uses `coolify.compose.yml` as the runtime source of truth. For the full
 deployment flow, see [Coolify](/docs/COOLIFY) and [CI/CD](/docs/CI-CD).
 
-| Variable                                   | Owner / service            | Local / prod / CI                     | Default / fallback            | Notes                                                       |
-| ------------------------------------------ | -------------------------- | ------------------------------------- | ----------------------------- | ----------------------------------------------------------- |
-| `APP_IMAGE_PREFIX`                         | Coolify compose            | Optional prod                         | `ghcr.io/shchilkin/popchoice` | Public deployment metadata.                                 |
-| `IMAGE_TAG`                                | Coolify compose            | Required to pin release intentionally | `development`                 | Use one tag for all PopChoice runtime images.               |
-| `SERVICE_NAME_DB`                          | Coolify runtime env helper | Optional                              | `db`                          | Lets Coolify service names differ from local Compose names. |
-| `SERVICE_NAME_REDIS`                       | Coolify runtime env helper | Optional                              | `redis`                       | Lets Coolify service names differ from local Compose names. |
-| `COOLIFY_DEPLOY_WEBHOOK`                   | GitHub Actions secret      | Required only for auto-deploy         | None                          | Secret URL. Stored in GitHub repository secrets.            |
-| `COOLIFY_TOKEN`                            | GitHub Actions secret      | Required with deploy webhook          | None                          | Secret API token used as `Authorization: Bearer`.           |
-| `COOLIFY_BRANCH` / `COOLIFY_RESOURCE_UUID` | Coolify/build metadata     | Platform-provided or optional         | Empty                         | Non-secret deployment metadata.                             |
+| Variable                                   | Owner / service            | Local / prod / CI                     | Default / fallback            | Notes                                                                            |
+| ------------------------------------------ | -------------------------- | ------------------------------------- | ----------------------------- | -------------------------------------------------------------------------------- |
+| `APP_IMAGE_PREFIX`                         | Coolify compose            | Optional prod                         | `ghcr.io/shchilkin/popchoice` | Public deployment metadata.                                                      |
+| `IMAGE_TAG`                                | Coolify compose            | Required to pin release intentionally | `development`                 | Use one tag for all PopChoice runtime images.                                    |
+| `SERVICE_NAME_DB`                          | Coolify runtime env helper | Optional                              | `db`                          | Lets Coolify service names differ from local Compose names.                      |
+| `SERVICE_NAME_REDIS`                       | Coolify runtime env helper | Optional                              | `redis`                       | Lets Coolify service names differ from local Compose names.                      |
+| `COOLIFY_DEPLOY_WEBHOOK`                   | GitHub Actions secret      | Required only for auto-deploy         | None                          | Secret URL. Stored in GitHub repository secrets.                                 |
+| `COOLIFY_TOKEN`                            | GitHub Actions secret      | Required with deploy webhook          | None                          | Secret API token used as `Authorization: Bearer`.                                |
+| `POPCHOICE_PRODUCTION_BASE_URL`            | GitHub Actions secret      | Optional for post-deploy verification | None                          | Public app origin used to poll `/api/health` and `/api/build` after auto-deploy. |
+| `GRAFANA_URL`                              | GitHub Actions secret      | Optional for deploy silences          | None                          | Grafana origin used by deploy workflow to create temporary silences.             |
+| `GRAFANA_SERVICE_ACCOUNT_TOKEN`            | GitHub Actions secret      | Optional with `GRAFANA_URL`           | None                          | Secret token with permission to create Grafana silences.                         |
+| `DEPLOY_SILENCE_MINUTES`                   | GitHub Actions env         | Optional                              | `15`                          | Duration for the deploy-sensitive alert silence window.                          |
+| `COOLIFY_BRANCH` / `COOLIFY_RESOURCE_UUID` | Coolify/build metadata     | Platform-provided or optional         | Empty                         | Non-secret deployment metadata.                                                  |
 
 ## Build Metadata
 
@@ -172,7 +176,7 @@ resource.
 | `GRAFANA_ADMIN_PASSWORD`             | Grafana                     | Required for observability stack startup             | None                                              | Secret.                                                                                |
 | `GRAFANA_TELEGRAM_BOT_TOKEN`         | Grafana alerting            | Optional                                             | Missing value skips Telegram contact provisioning | Secret.                                                                                |
 | `GRAFANA_TELEGRAM_CHAT_ID`           | Grafana alerting            | Optional                                             | Missing value skips Telegram contact provisioning | Private destination id.                                                                |
-| `GF_SERVER_ROOT_URL`                 | Grafana                     | Optional                                             | Grafana default                                   | Set to public Grafana URL so alert links are useful outside Docker.                    |
+| `GF_SERVER_ROOT_URL`                 | Grafana                     | Optional                                             | `http://localhost:3000`                           | Set to public Grafana URL so alert links are useful outside Docker.                    |
 
 ## Docs App
 

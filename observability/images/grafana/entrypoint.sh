@@ -11,24 +11,25 @@ templates:
   - orgId: 1
     name: popchoice.telegram.message
     template: |
+      {{ define "popchoice.alert.target" -}}
+      {{- with index .Labels "service" }}{{ . }}{{ else }}{{ with index .Labels "job" }}{{ . }}{{ else }}target{{ end }}{{ end -}}
+      {{- with index .Labels "instance" }} ({{ . }}){{ end -}}
+      {{- end }}
       {{ define "popchoice.telegram.message" }}
-      {{ if eq .Status "firing" }}FIRING{{ else }}RESOLVED{{ end }}: {{ with index .CommonLabels "alertname" }}{{ . }}{{ else }}Grafana alert{{ end }}
-      {{ with index .CommonLabels "severity" }}
-      Severity: {{ . }}
-      {{ end }}
+      {{ if eq .Status "firing" }}FIRING{{ else }}RESOLVED{{ end }} {{ with index .CommonLabels "severity" }}{{ . }}{{ end }}: {{ with index .CommonLabels "alertname" }}{{ . }}{{ else }}Grafana alert{{ end }}
       {{ with index .CommonAnnotations "summary" }}
-      Summary: {{ . }}
+      {{ . }}
+      {{ end }}
+      {{ with index .CommonAnnotations "action" }}
+      Action: {{ . }}
       {{ end }}
 
       {{ if .Alerts.Firing }}
-      Firing ({{ len .Alerts.Firing }}):
+      Firing: {{ len .Alerts.Firing }}
       {{ range .Alerts.Firing }}
-      - {{ with index .Labels "instance" }}{{ . }}{{ else }}{{ with index .Labels "job" }}{{ . }}{{ else }}alert instance{{ end }}{{ end }}
+      - {{ template "popchoice.alert.target" . }}
         {{ with index .Annotations "description" }}
-        Description: {{ . }}
-        {{ end }}
-        {{ with .ValueString }}
-        Value: {{ . }}
+        {{ . }}
         {{ end }}
         {{ with .SilenceURL }}
         Silence: {{ . }}
@@ -40,12 +41,9 @@ templates:
       {{ end }}
 
       {{ if .Alerts.Resolved }}
-      Resolved ({{ len .Alerts.Resolved }}):
+      Resolved: {{ len .Alerts.Resolved }}
       {{ range .Alerts.Resolved }}
-      - {{ with index .Labels "instance" }}{{ . }}{{ else }}{{ with index .Labels "job" }}{{ . }}{{ else }}alert instance{{ end }}{{ end }}
-        {{ with .ValueString }}
-        Last value: {{ . }}
-        {{ end }}
+      - {{ template "popchoice.alert.target" . }}
         {{ with .DashboardURL }}
         Dashboard: {{ . }}
         {{ end }}

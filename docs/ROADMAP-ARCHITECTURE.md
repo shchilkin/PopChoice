@@ -160,10 +160,10 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Add Prometheus metrics and Grafana dashboards in [#501](https://github.com/shchilkin/PopChoice/issues/501) for container health, Postgres, Redis, BullMQ queues, recommendation latency, provider timeouts, and failed jobs. See [Observability Metrics](/docs/OBSERVABILITY-METRICS).
 - [x] Add OpenTelemetry traces with Tempo in [#500](https://github.com/shchilkin/PopChoice/issues/500) once the low-noise uptime/logs/metrics foundation exists. See [Observability Traces](/docs/OBSERVABILITY-TRACES).
 - [x] Add alert routing, retention, backups, and incident runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503) so the monitoring stack stays useful and recoverable. See [Observability Alerts](/docs/OBSERVABILITY-ALERTS) and [Observability Runbooks](/docs/OBSERVABILITY-RUNBOOKS).
-- [ ] Deploy the self-hosted observability stack to production in [#508](https://github.com/shchilkin/PopChoice/issues/508), including Coolify wiring, secrets, access control, alert contact points, backup coverage, and post-deploy verification.
-- [ ] Improve Telegram alert readability in [#525](https://github.com/shchilkin/PopChoice/issues/525) so mobile notifications show concise firing/resolved state, service, instance, severity, runbook, and silence links instead of raw Grafana expression payloads.
-- [ ] Tune deploy-sensitive metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so scrape visibility gaps during ordinary redeploys are not treated like confirmed user-facing P1 outages.
-- [ ] Add deployment-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527) so normal Coolify redeploys do not create avoidable alert noise while failed or unrecovered deploys still notify clearly.
+- [x] Deploy the self-hosted observability stack to production in [#508](https://github.com/shchilkin/PopChoice/issues/508), including Coolify wiring, secrets, access control, alert contact points, backup coverage, and post-deploy verification.
+- [x] Improve Telegram alert readability in [#525](https://github.com/shchilkin/PopChoice/issues/525) so mobile notifications show concise firing/resolved state, service, instance, severity, runbook, and silence links instead of raw Grafana expression payloads.
+- [x] Tune deploy-sensitive metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so scrape visibility gaps during ordinary redeploys are not treated like confirmed user-facing P1 outages.
+- [x] Add deployment-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527) so normal Coolify redeploys do not create avoidable alert noise while failed or unrecovered deploys still notify clearly.
 - Enable Coolify notifications for failed deploys, failed backups, server disk/resource warnings, and unhealthy or restarting containers where supported.
 - Add external uptime monitoring for `https://pop-choice.shchilkin.dev/api/health`, then consider a deeper synthetic recommendation smoke check.
 - Add application error tracking for frontend, API routes, and workers so browser errors, API exceptions, and background job failures are visible outside Coolify logs.
@@ -286,10 +286,10 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 11. [ ] Plan and split the [#493](https://github.com/shchilkin/PopChoice/issues/493) backoffice/catalog-health epic, including shared login protection for it and `apps/bull-board`.
 12. [x] Clarify production migration/versioning expectations in [#494](https://github.com/shchilkin/PopChoice/issues/494) for schema changes, rollbacks, and preview volume recreation.
 13. [x] Complete the first self-hosted observability track in [#498](https://github.com/shchilkin/PopChoice/issues/498) with uptime, logs, metrics, traces, alerts, retention, backups, and runbooks.
-14. [ ] Deploy the self-hosted observability stack to production in [#508](https://github.com/shchilkin/PopChoice/issues/508) and verify metrics, logs, traces, alerts, access control, and backups on the VPS.
-15. [ ] Improve Grafana Telegram alert formatting in [#525](https://github.com/shchilkin/PopChoice/issues/525) after the first production alert examples.
-16. [ ] Reclassify deploy-sensitive app metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so P1 remains reserved for user-facing or core dependency outages.
-17. [ ] Plan deploy-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527).
+14. [x] Deploy the self-hosted observability stack to production in [#508](https://github.com/shchilkin/PopChoice/issues/508) and verify metrics, logs, traces, alerts, access control, and backups on the VPS.
+15. [x] Improve Grafana Telegram alert formatting in [#525](https://github.com/shchilkin/PopChoice/issues/525) after the first production alert examples.
+16. [x] Reclassify deploy-sensitive app metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so P1 remains reserved for user-facing or core dependency outages.
+17. [x] Plan deploy-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527).
 
 ## Working Checklist
 

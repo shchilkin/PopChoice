@@ -104,6 +104,7 @@ The `dependency-review` job uses `actions/dependency-review-action` to block any
 - `ghcr.io/<owner>/<repo>/web`
 - `ghcr.io/<owner>/<repo>/workers`
 - `ghcr.io/<owner>/<repo>/bull-board`
+- `ghcr.io/<owner>/<repo>/docs`
 - `ghcr.io/<owner>/<repo>/db-migrate`
 - `ghcr.io/<owner>/<repo>/movie-seed`
 - `ghcr.io/<owner>/<repo>/movie-discovery`
@@ -139,8 +140,8 @@ For simple continuous deployment, keep `IMAGE_TAG=development` in Coolify and
 let the optional deploy webhook run after the image matrix succeeds. For a
 stricter promotion flow, set `IMAGE_TAG=sha-<12-char-github-sha>` and redeploy
 that exact release bundle. Every PopChoice service must use the same
-`IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, and service images from
-different commits is not a supported deployment shape.
+`IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, `docs`, and service images
+from different commits is not a supported deployment shape.
 
 Set the repository secrets `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` to
 enable redeploys after pushes to `development`. `COOLIFY_TOKEN` must be a
@@ -153,6 +154,19 @@ before the webhook is called, so Coolify pulls the images from that workflow
 run. When the webhook secret is absent, images are still published, but
 deployment remains manual. When the webhook is present but the token is missing,
 the deploy job fails to make the misconfiguration visible.
+
+The deploy job also supports deploy-aware observability hooks:
+
+- Set `GRAFANA_URL` and `GRAFANA_SERVICE_ACCOUNT_TOKEN` to create a short
+  Grafana silence for alerts labeled `noise_profile=deploy-sensitive` before
+  the Coolify webhook runs.
+- Set `POPCHOICE_PRODUCTION_BASE_URL` to poll public `/api/health` and
+  `/api/build` after the webhook. The job fails if production does not recover
+  within the retry budget.
+
+If these optional secrets are absent, the workflow keeps the older behavior:
+publish images and trigger Coolify without creating silences or performing
+post-deploy verification.
 
 For provenance in `/api/build`, pass these non-secret runtime variables to the
 deployed web container when using a prebuilt image:

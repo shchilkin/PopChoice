@@ -160,6 +160,40 @@ services:
       retries: 5
       start_period: 30s
 
+  docs:
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/docs:${IMAGE_TAG:-development}
+    pull_policy: always
+    restart: unless-stopped
+    command:
+      [
+        'npm',
+        'run',
+        'start',
+        '--workspace=apps/docs',
+        '--',
+        '--hostname',
+        '0.0.0.0',
+        '--port',
+        '3000',
+      ]
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    expose:
+      - '3000'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'node -e "fetch(''http://127.0.0.1:3000/docs'').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
   movie-seed:
     profiles: ['tools']
     image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/movie-seed:${IMAGE_TAG:-development}
