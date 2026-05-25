@@ -235,6 +235,8 @@ to `db` and `redis`.
 Run this checklist after production deploys and after any infrastructure change:
 
 - `https://your-domain.example` loads with a trusted certificate.
+- `https://docs.your-domain.example/docs` loads the documentation site if the
+  `docs` service is enabled.
 - `https://your-domain.example/api/health` returns `200`.
 - `https://your-domain.example/api/build` shows the expected beta version and
   commit hash.
@@ -327,6 +329,25 @@ auditability at the cost of one manual promotion step.
 Do not point Coolify at source builds for production while also using GHCR
 images. Choose one deployment source of truth; the recommended production path
 is GHCR images plus this compose file.
+
+### Documentation service
+
+The `docs` service deploys the Fumadocs site from the same GHCR image bundle as
+the application runtime:
+
+```ini
+APP_IMAGE_PREFIX=ghcr.io/<owner>/<repo>
+IMAGE_TAG=development
+```
+
+Point a separate public domain, such as `docs.your-domain.example`, at the
+`docs` service in Coolify. The service listens on port `3000` and redirects `/`
+to `/docs`. It does not need application secrets, Postgres, Redis, OpenAI, or
+TMDB credentials.
+
+Keep the docs service on the same `IMAGE_TAG` as the app services. This makes
+the deployed documentation describe the same commit as the running app and keeps
+rollback behavior predictable.
 
 ## Pull request previews
 
