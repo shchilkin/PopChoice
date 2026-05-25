@@ -1,10 +1,14 @@
+---
+title: 'Setup Guide'
+---
+
 # Setup Guide
 
 ## Environment Variables
 
 Create a `.env` file in your project root with the following variables:
 
-```env
+```ini
 # OpenAI Configuration
 OPENAI_API_KEY=your-openai-api-key-here
 
@@ -89,7 +93,7 @@ This application uses a generic database client abstraction (`apps/web/src/clien
 5. **Configure environment variables**
    Add `DATABASE_URL` to your `.env` file:
 
-   ```env
+   ```ini
    DATABASE_URL=postgresql://user:password@host:5432/dbname
    ```
 
@@ -141,7 +145,7 @@ Keys are stored as **scrypt digests** in the `VALID_API_KEYS` environment variab
 
 4. **Add the hash** to your environment:
 
-   ```env
+   ```ini
    API_KEY_HMAC_SECRET=<your-derivation-secret>
    VALID_API_KEYS=<scrypt-digest-of-key1>,<scrypt-digest-of-key2>
    ```
@@ -179,7 +183,7 @@ docker compose up redis -d
 
 Then add to your `.env`:
 
-```env
+```ini
 REDIS_URL=redis://localhost:6379
 ```
 
@@ -268,7 +272,7 @@ For VPS production deployments, use [`coolify.compose.yml`](../coolify.compose.y
 It runs PostgreSQL with pgvector, Redis, the web app, workers, Bull Board, and a
 web-start migration step.
 
-See [Deploying PopChoice with Coolify](./COOLIFY.md) for the full setup flow.
+See [Deploying PopChoice with Coolify](/docs/COOLIFY) for the full setup flow.
 
 If you need to migrate an existing production database manually, run:
 

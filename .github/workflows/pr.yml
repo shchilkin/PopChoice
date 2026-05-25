@@ -274,6 +274,33 @@ jobs:
           NEXT_FONT_GOOGLE_DISABLE: 1
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
+  docs-build:
+    name: Docs Build
+    needs: changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check docs
+        run: npm run type-check:docs
+
+      - name: Build docs
+        run: npm run build:docs
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
   services-ci:
     name: Services CI
     needs: changes
@@ -323,6 +350,7 @@ jobs:
       - storybook-tests
       - e2e-tests
       - build
+      - docs-build
       - services-ci
       - dependency-review
     runs-on: ubuntu-latest
@@ -337,13 +365,18 @@ jobs:
       STORYBOOK_TESTS_RESULT: ${{ needs.storybook-tests.result }}
       E2E_TESTS_RESULT: ${{ needs.e2e-tests.result }}
       BUILD_RESULT: ${{ needs.build.result }}
+      DOCS_BUILD_RESULT: ${{ needs.docs-build.result }}
       SERVICES_CI_RESULT: ${{ needs.services-ci.result }}
       DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
     steps:
       - name: Validate workflow outcome
         run: |
           if [[ "$DOCS_ONLY" == "true" ]]; then
-            echo "Docs-only pull request detected. Full CI jobs were intentionally skipped."
+            if [[ "$DOCS_BUILD_RESULT" != "success" ]]; then
+              echo "Docs-only pull request detected, but Docs Build did not pass: $DOCS_BUILD_RESULT"
+              exit 1
+            fi
+            echo "Docs-only pull request detected. Full app CI jobs were intentionally skipped, and Docs Build passed."
             exit 0
           fi
 
@@ -356,6 +389,7 @@ jobs:
           [[ "$STORYBOOK_TESTS_RESULT" == "success" ]] || failures+=("Storybook Tests: $STORYBOOK_TESTS_RESULT")
           [[ "$E2E_TESTS_RESULT" == "success" ]] || failures+=("E2E Tests: $E2E_TESTS_RESULT")
           [[ "$BUILD_RESULT" == "success" ]] || failures+=("Build: $BUILD_RESULT")
+          [[ "$DOCS_BUILD_RESULT" == "success" ]] || failures+=("Docs Build: $DOCS_BUILD_RESULT")
           [[ "$SERVICES_CI_RESULT" == "success" ]] || failures+=("Services CI: $SERVICES_CI_RESULT")
           [[ "$DEPENDENCY_REVIEW_RESULT" == "success" ]] || failures+=("Dependency Review: $DEPENDENCY_REVIEW_RESULT")
 

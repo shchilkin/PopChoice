@@ -1,3 +1,7 @@
+---
+title: 'PopChoice Background Services'
+---
+
 # PopChoice Background Services
 
 This document describes the background services that populate and maintain the movie database used by PopChoice.
@@ -294,7 +298,7 @@ CATALOG_HEALTH_FORMAT=json CATALOG_HEALTH_SAMPLE_LIMIT=3 npm run catalog:health
 
 The recommendation feature combines local vector search with a TMDB fallback. The HTTP routes are now thin entrypoints over feature-owned modules in `apps/web/src/features/recommendation`.
 
-> Product direction: the current implementation is local-vector-first with TMDB fallback because that was enough for the original course-sized catalog. The next recommendation roadmap moves toward TMDB-first candidate generation, with the local database acting as cache, enrichment, identity, embeddings, history, and user-memory storage. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
+> Product direction: the current implementation is local-vector-first with TMDB fallback because that was enough for the original course-sized catalog. The next recommendation roadmap moves toward TMDB-first candidate generation, with the local database acting as cache, enrichment, identity, embeddings, history, and user-memory storage. See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP).
 
 ### Current ownership
 

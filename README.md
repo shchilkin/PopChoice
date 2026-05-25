@@ -214,6 +214,14 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 
 ## 📖 Documentation
 
+The Git-backed documentation source lives in [`docs/`](./docs). A Fumadocs site
+renders the same files from `apps/docs`:
+
+```bash
+npm run dev:docs     # http://localhost:3003
+npm run build:docs   # production docs build
+```
+
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
 - **[Development Guide](./docs/DEVELOPMENT.md)** — Development workflows, scripts, and project structure
 - **[Agent Guide](./AGENTS.md)** — Repo-specific guidance for AI/code agents working in this workspace
@@ -229,6 +237,7 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 
 ```text
 apps/
+├── docs/               # Fumadocs documentation site rendering docs/
 ├── web/
 │   └── src/
 │       ├── app/           # Next.js app routes, pages, and HTTP boundaries
@@ -265,7 +274,9 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 ```bash
 # Development
 npm run dev                         # Start development server (repo root)
+npm run dev:docs                    # Start documentation site at http://localhost:3003
 npm run build                       # Build for production (repo root)
+npm run build:docs                  # Build the documentation site
 npm run start --workspace=apps/web  # Start production server (apps/web)
 cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
 cd apps/web && npm run bull-board    # Launch BullMQ dashboard (apps/web)

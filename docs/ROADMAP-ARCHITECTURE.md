@@ -1,3 +1,7 @@
+---
+title: 'Architecture Roadmap (Current Workspace, Next Boundary Steps)'
+---
+
 # Architecture Roadmap (Current Workspace, Next Boundary Steps)
 
 ## Purpose
@@ -69,11 +73,11 @@ The main remaining risks are:
 
 ### Issues Still Present
 
-- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md).
+- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
 - Account settings/profile/provider identity remain intentionally thin.
 
-Reference: use [BOUNDARIES.md](./BOUNDARIES.md) as the current ownership baseline.
+Reference: use [BOUNDARIES.md](/docs/BOUNDARIES) as the current ownership baseline.
 
 ### Backlog Hygiene
 
@@ -151,11 +155,11 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 ### Operational Observability Track
 
 - [x] Build the self-hosted observability stack under [#498](https://github.com/shchilkin/PopChoice/issues/498). This is intentionally a learning track: SaaS tools would be simpler, but self-hosting teaches uptime checks, log shipping, metrics, traces, alerts, retention, and backups.
-- [x] Add Uptime Kuma health and synthetic monitoring in [#502](https://github.com/shchilkin/PopChoice/issues/502) for `/api/health`, build metadata, and cheap smoke checks before deeper instrumentation. See [Uptime Kuma Monitoring](./OBSERVABILITY-UPTIME.md).
-- [x] Add Grafana Loki log aggregation in [#499](https://github.com/shchilkin/PopChoice/issues/499) so Coolify/Docker logs are searchable by service, level, request id, recommendation id, queue, job id, and stage. See [Observability Logs](./OBSERVABILITY-LOGS.md).
-- [x] Add Prometheus metrics and Grafana dashboards in [#501](https://github.com/shchilkin/PopChoice/issues/501) for container health, Postgres, Redis, BullMQ queues, recommendation latency, provider timeouts, and failed jobs. See [Observability Metrics](./OBSERVABILITY-METRICS.md).
-- [x] Add OpenTelemetry traces with Tempo in [#500](https://github.com/shchilkin/PopChoice/issues/500) once the low-noise uptime/logs/metrics foundation exists. See [Observability Traces](./OBSERVABILITY-TRACES.md).
-- [x] Add alert routing, retention, backups, and incident runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503) so the monitoring stack stays useful and recoverable. See [Observability Alerts](./OBSERVABILITY-ALERTS.md) and [Observability Runbooks](./OBSERVABILITY-RUNBOOKS.md).
+- [x] Add Uptime Kuma health and synthetic monitoring in [#502](https://github.com/shchilkin/PopChoice/issues/502) for `/api/health`, build metadata, and cheap smoke checks before deeper instrumentation. See [Uptime Kuma Monitoring](/docs/OBSERVABILITY-UPTIME).
+- [x] Add Grafana Loki log aggregation in [#499](https://github.com/shchilkin/PopChoice/issues/499) so Coolify/Docker logs are searchable by service, level, request id, recommendation id, queue, job id, and stage. See [Observability Logs](/docs/OBSERVABILITY-LOGS).
+- [x] Add Prometheus metrics and Grafana dashboards in [#501](https://github.com/shchilkin/PopChoice/issues/501) for container health, Postgres, Redis, BullMQ queues, recommendation latency, provider timeouts, and failed jobs. See [Observability Metrics](/docs/OBSERVABILITY-METRICS).
+- [x] Add OpenTelemetry traces with Tempo in [#500](https://github.com/shchilkin/PopChoice/issues/500) once the low-noise uptime/logs/metrics foundation exists. See [Observability Traces](/docs/OBSERVABILITY-TRACES).
+- [x] Add alert routing, retention, backups, and incident runbooks in [#503](https://github.com/shchilkin/PopChoice/issues/503) so the monitoring stack stays useful and recoverable. See [Observability Alerts](/docs/OBSERVABILITY-ALERTS) and [Observability Runbooks](/docs/OBSERVABILITY-RUNBOOKS).
 - [ ] Deploy the self-hosted observability stack to production in [#508](https://github.com/shchilkin/PopChoice/issues/508), including Coolify wiring, secrets, access control, alert contact points, backup coverage, and post-deploy verification.
 - Enable Coolify notifications for failed deploys, failed backups, server disk/resource warnings, and unhealthy or restarting containers where supported.
 - Add external uptime monitoring for `https://pop-choice.shchilkin.dev/api/health`, then consider a deeper synthetic recommendation smoke check.
@@ -253,7 +257,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Add an alternate taste-swipe mode for users who have watched many films and prefer to react to concrete movie cards instead of answering abstract questions.
 - Move toward TMDB-first candidate generation: use TMDB for broad discovery and keep the local database as a cache/enrichment/reranking layer rather than the whole movie universe.
 - Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.
-- See [RECOMMENDATION-ROADMAP.md](./RECOMMENDATION-ROADMAP.md) for the staged plan.
+- See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP) for the staged plan.
 
 ### Group Recommendation Rooms Track
 

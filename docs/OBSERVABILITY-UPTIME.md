@@ -1,3 +1,7 @@
+---
+title: 'Uptime Kuma Monitoring'
+---
+
 # Uptime Kuma Monitoring
 
 Issue [#502](https://github.com/shchilkin/PopChoice/issues/502) starts the

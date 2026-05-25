@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
+    "build:docs": "npm run build --workspace=apps/docs",
     "build:services": "turbo run build --filter=./services/*",
     "catalog:backfill:enqueue": "npm run enqueue:catalog-maintenance --workspace=apps/web -- backfill",
     "catalog:discovery:enqueue": "npm run enqueue:catalog-maintenance --workspace=apps/web -- discovery",
@@ -17,6 +18,7 @@
     "cleanup:local-db": "bash scripts/cleanup-local-db.sh",
     "copy:env": "bash scripts/copy-env.sh",
     "dev": "npm run dev --workspace=apps/web",
+    "dev:docs": "npm run dev --workspace=apps/docs",
     "dev:shared": "npm run dev --workspace=packages/shared",
     "eval:recommendations": "npm run eval:recommendations --workspace=apps/web",
     "eval:recommendations:real-data": "npm run eval:recommendations --workspace=apps/web -- --real-data",
@@ -39,7 +41,8 @@
     "test:server": "npm run test:server --workspace=apps/web",
     "test:services": "turbo run test --filter=./services/*",
     "test:storybook": "npm run test:storybook --workspace=apps/web",
-    "type-check": "npm run build --workspace=packages/shared && npm run type-check --workspace=apps/web"
+    "type-check": "npm run build --workspace=packages/shared && npm run type-check --workspace=apps/web",
+    "type-check:docs": "npm run type-check --workspace=apps/docs"
   },
   "devDependencies": {
     "husky": "^9.1.7",

@@ -1,3 +1,7 @@
+---
+title: 'Maintainability Checklist'
+---
+
 # Maintainability Checklist
 
 Use this checklist for lightweight, periodic maintainability reviews of PopChoice. Mark items as you verify them, and open focused follow-up issues for anything that stays unchecked.
