@@ -6,6 +6,7 @@ title: 'Development Guide'
 
 For ongoing code health reviews, use the **[Maintainability Checklist](/docs/MAINTAINABILITY-CHECKLIST)**.
 For ownership rules across the current workspace layout, use **[Architecture Boundaries](/docs/BOUNDARIES)**.
+For docs ownership, navigation, and issue hygiene, use **[Documentation Governance](/docs/DOCUMENTATION-GOVERNANCE)**.
 
 ## Prerequisites
 
