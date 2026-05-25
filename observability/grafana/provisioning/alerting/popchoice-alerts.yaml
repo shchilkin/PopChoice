@@ -6,97 +6,6 @@ groups:
     folder: PopChoice Alerts
     interval: 1m
     rules:
-      - uid: popchoice-app-down
-        title: P1 App metrics target down
-        condition: C
-        data:
-          - refId: A
-            relativeTimeRange:
-              from: 600
-              to: 0
-            datasourceUid: prometheus
-            model:
-              datasource:
-                type: prometheus
-                uid: prometheus
-              editorMode: code
-              expr: min_over_time(up{job="popchoice-web"}[5m])
-              instant: true
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: A
-          - refId: B
-            relativeTimeRange:
-              from: 600
-              to: 0
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator:
-                    params: []
-                    type: gt
-                  operator:
-                    type: and
-                  query:
-                    params:
-                      - B
-                  reducer:
-                    params: []
-                    type: last
-                  type: query
-              datasource:
-                type: __expr__
-                uid: __expr__
-              expression: A
-              intervalMs: 1000
-              maxDataPoints: 43200
-              reducer: min
-              refId: B
-              type: reduce
-          - refId: C
-            relativeTimeRange:
-              from: 600
-              to: 0
-            datasourceUid: __expr__
-            model:
-              conditions:
-                - evaluator:
-                    params:
-                      - 1
-                    type: lt
-                  operator:
-                    type: and
-                  query:
-                    params:
-                      - C
-                  reducer:
-                    params: []
-                    type: last
-                  type: query
-              datasource:
-                type: __expr__
-                uid: __expr__
-              expression: B
-              intervalMs: 1000
-              maxDataPoints: 43200
-              refId: C
-              type: threshold
-        noDataState: OK
-        execErrState: Alerting
-        for: 5m
-        annotations:
-          summary: PopChoice web metrics target is down.
-          description: Prometheus has reported popchoice-web as down for at least 5 minutes.
-          owner: App operator
-          action: Check the Coolify web service, container restart loop, recent deploy, and /api/health.
-          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#app-down
-        labels:
-          severity: p1
-          owner: app
-          service: web
-          noise_profile: conservative
-        isPaused: false
-
       - uid: popchoice-postgres-down
         title: P1 Postgres exporter reports database down
         condition: C
@@ -284,6 +193,97 @@ groups:
     folder: PopChoice Alerts
     interval: 1m
     rules:
+      - uid: popchoice-app-down
+        title: P2 App metrics scrape target down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: prometheus
+              editorMode: code
+              expr: min_over_time(up{job="popchoice-web"}[5m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params: []
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - B
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: min
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: lt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - C
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: B
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        annotations:
+          summary: PopChoice web metrics scrape target is down.
+          description: Prometheus has reported popchoice-web metrics as down for at least 5 minutes. This can happen during normal deploy churn; confirm public health before treating it as user-facing.
+          owner: App operator
+          action: Check Coolify deploy status, /api/health, /api/build, and whether the web container recovered after redeploy.
+          runbook_url: docs/OBSERVABILITY-RUNBOOKS.md#app-metrics-scrape-target-down
+        labels:
+          severity: p2
+          owner: app
+          service: web
+          noise_profile: deploy-sensitive
+        isPaused: false
+
       - uid: popchoice-queue-backlog
         title: P2 BullMQ queue backlog sustained
         condition: C

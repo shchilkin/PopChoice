@@ -35,12 +35,10 @@ Owner: App operator.
 
 Symptoms:
 
-- Grafana alert: `P1 App metrics target down`.
 - `/api/health` fails or times out.
 - Coolify shows the web container unhealthy or restarting.
-- During a redeploy, the metrics target can be down briefly while the public app
-  is still recovering. Confirm public health before treating the scrape alert as
-  a user-facing outage.
+- Uptime Kuma `popchoice-prod-health` is down after retries.
+- Post-deploy verification fails to recover before its retry budget expires.
 
 Immediate checks:
 
@@ -62,9 +60,8 @@ Actions:
    image tag.
 
 Follow-up alerting work is tracked in
-[#526](https://github.com/shchilkin/PopChoice/issues/526) and
-[#527](https://github.com/shchilkin/PopChoice/issues/527) so normal redeploy
-churn can be separated from confirmed outages.
+the deploy workflow so normal redeploy churn can be separated from confirmed
+outages.
 
 Recovery check:
 
@@ -72,6 +69,45 @@ Recovery check:
 - Prometheus target `popchoice-web` is up.
 - A cheap recommendation smoke flow reaches a persisted result without live
   provider spending unless explicitly intended.
+
+## App Metrics Scrape Target Down
+
+Owner: App operator.
+
+Symptoms:
+
+- Grafana alert: `P2 App metrics scrape target down`.
+- Prometheus target `popchoice-web` is down.
+- Grafana panels for app metrics are stale or empty.
+- Public `/api/health` may still be healthy during normal Coolify redeploy
+  churn.
+
+Immediate checks:
+
+```bash
+curl -i https://your-domain.example/api/health
+curl -i https://your-domain.example/api/build
+docker ps --filter name=web
+```
+
+Actions:
+
+1. Check whether a Coolify deploy is currently running or just completed.
+2. If `/api/health` is healthy and `/api/build` reports the expected commit,
+   treat this as a metrics visibility issue and wait for the scrape target to
+   recover.
+3. If `/api/health` fails, follow the App Down runbook.
+4. If the target stays down after the app recovers, check
+   `METRICS_ENABLED`, `METRICS_BEARER_TOKEN`, `POPCHOICE_WEB_METRICS_TARGET`,
+   and Prometheus logs.
+5. During planned deploys, use the deploy-aware silence script or the GitHub
+   deploy workflow so this alert does not create avoidable noise.
+
+Recovery check:
+
+- `/api/health` returns `200`.
+- `/api/build` reports the expected commit or image metadata.
+- Prometheus target `popchoice-web` returns to `up == 1`.
 
 ## DB Down
 

@@ -53,35 +53,25 @@ groups notifications by folder, alert name, and severity. After enabling it, use
 Grafana's contact point **Test** action before relying on alert delivery.
 
 Telegram messages use the `popchoice.telegram.message` template instead of
-Grafana's default message. The message is plain text and includes:
+Grafana's default message. The message is intentionally short for mobile triage
+and includes:
 
-- `FIRING` or `RESOLVED` plus the alert name.
-- Severity and summary when the alert provides them.
-- Firing and resolved alert instances with target labels and values when
-  available.
+- `FIRING` or `RESOLVED`, severity, and alert name.
+- The summary and action annotation when the alert provides them.
+- A compact list of firing or resolved targets.
 - Silence, runbook, dashboard, and Grafana links when Grafana provides them.
+
+Raw Grafana expression values are intentionally omitted from Telegram
+notifications. Open Grafana or Prometheus when the expression payload is needed
+for deeper debugging.
 
 Set `GF_SERVER_ROOT_URL` on the Grafana service if Telegram links should point
 to the public Grafana domain instead of the container-local default URL.
-
-Known follow-up: the first production Telegram examples show that the current
-message still exposes too much raw Grafana expression state for mobile triage.
-Track template cleanup in
-[#525](https://github.com/shchilkin/PopChoice/issues/525).
 
 ## Alert Rules
 
 ### P1
 
-- `P1 App metrics target down`
-  - Owner: App operator.
-  - Trigger: `popchoice-web` scrape target stays down for 5 minutes.
-  - Action: check Coolify web service, restart loops, recent deploy, and
-    `/api/health`.
-  - Current caveat: ordinary redeploys can briefly make the metrics target
-    unavailable even when the user-facing app recovers normally. Track severity
-    and threshold tuning in
-    [#526](https://github.com/shchilkin/PopChoice/issues/526).
 - `P1 Postgres exporter reports database down`
   - Owner: Database operator.
   - Trigger: `pg_up` stays below 1 for 5 minutes.
@@ -93,6 +83,13 @@ Track template cleanup in
 
 ### P2
 
+- `P2 App metrics scrape target down`
+  - Owner: App operator.
+  - Trigger: `popchoice-web` metrics scrape target stays down for 5 minutes.
+  - Action: check Coolify deploy status, public `/api/health`, `/api/build`,
+    and whether the web container recovered.
+  - Semantics: this is a monitoring visibility/deploy churn signal, not proof
+    of a user-facing outage by itself.
 - `P2 BullMQ queue backlog sustained`
   - Owner: App operator.
   - Trigger: waiting plus delayed jobs stay above 25 for 30 minutes.
@@ -199,16 +196,19 @@ maintenance patterns.
 ## Deploy-Aware Alerting Follow-Ups
 
 Production redeploys can intentionally restart web and worker containers. Until
-the deploy pipeline creates short maintenance silences, a metrics scrape target
+the deploy pipeline creates a short maintenance silence, a metrics scrape target
 alert during a normal redeploy should be investigated in context with Coolify
 deployment status, public `/api/health`, and `/api/build`.
 
-Track the next alerting pass in:
+The `Container Images` workflow now supports a conservative deploy-aware path:
 
-- [#525](https://github.com/shchilkin/PopChoice/issues/525): improve Telegram
-  alert message formatting.
-- [#526](https://github.com/shchilkin/PopChoice/issues/526): reclassify
-  deploy-sensitive metrics target alerts so they do not page like confirmed
-  user-facing outages.
-- [#527](https://github.com/shchilkin/PopChoice/issues/527): add
-  deployment-aware silences and post-deploy verification.
+- Before the Coolify webhook, `scripts/create-grafana-deploy-silence.sh`
+  creates a short Grafana silence for alerts labeled
+  `noise_profile=deploy-sensitive` when `GRAFANA_URL` and
+  `GRAFANA_SERVICE_ACCOUNT_TOKEN` are configured.
+- After the webhook, `scripts/verify-production-deploy.sh` can poll
+  `/api/health` and `/api/build` when `POPCHOICE_PRODUCTION_BASE_URL` is
+  configured.
+
+Failed deploys or services that do not recover still fail the deploy workflow
+and should be treated as real incidents.
