@@ -38,6 +38,9 @@ Symptoms:
 - Grafana alert: `P1 App metrics target down`.
 - `/api/health` fails or times out.
 - Coolify shows the web container unhealthy or restarting.
+- During a redeploy, the metrics target can be down briefly while the public app
+  is still recovering. Confirm public health before treating the scrape alert as
+  a user-facing outage.
 
 Immediate checks:
 
@@ -57,6 +60,11 @@ Actions:
 4. Check DB and Redis health because `/api/health` depends on both.
 5. If the latest deploy caused the outage, roll back to the last known good
    image tag.
+
+Follow-up alerting work is tracked in
+[#526](https://github.com/shchilkin/PopChoice/issues/526) and
+[#527](https://github.com/shchilkin/PopChoice/issues/527) so normal redeploy
+churn can be separated from confirmed outages.
 
 Recovery check:
 

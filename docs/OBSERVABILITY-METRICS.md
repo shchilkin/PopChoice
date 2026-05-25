@@ -170,6 +170,13 @@ by severity and include owner/action annotations:
 - P3: monitoring scrape target failures and elevated recommendation failure
   ratio.
 
+The current app target alert is intentionally conservative, but first
+production examples show it can be noisy during normal Coolify redeploys. Track
+message formatting in [#525](https://github.com/shchilkin/PopChoice/issues/525),
+severity tuning in [#526](https://github.com/shchilkin/PopChoice/issues/526),
+and deploy-aware silences in
+[#527](https://github.com/shchilkin/PopChoice/issues/527).
+
 See [Observability Alerts](/docs/OBSERVABILITY-ALERTS) for thresholds, retention,
 and backup expectations. See
 [Observability Runbooks](/docs/OBSERVABILITY-RUNBOOKS) for incident response.

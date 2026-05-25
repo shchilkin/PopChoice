@@ -302,6 +302,18 @@ The webhook call is an authenticated `GET` request using
 `Authorization: Bearer ${COOLIFY_TOKEN}`. Coolify then pulls the already-built
 `development` images and restarts the stack.
 
+Current observability caveat: a normal redeploy may briefly stop or replace the
+web container before Prometheus can scrape `web:3000` again. If that gap lasts
+longer than the current Grafana alert window, Telegram can report the app
+metrics target as down even when the deploy eventually recovers. Treat that as
+deployment-context signal, not as proof of a user-facing outage by itself.
+Follow-up issues track the planned improvements: Telegram formatting in
+[#525](https://github.com/shchilkin/PopChoice/issues/525), deploy-sensitive
+alert severity tuning in
+[#526](https://github.com/shchilkin/PopChoice/issues/526), and short
+deploy-aware silences plus post-deploy health verification in
+[#527](https://github.com/shchilkin/PopChoice/issues/527).
+
 To smoke-test the same path without a new merge, manually run the
 `Container Images` workflow on the `development` branch. Manual runs rebuild and
 republish the same image set, update the `development` image tag, then call the
