@@ -103,6 +103,10 @@ Telegram alert notifications use a PopChoice-specific plain-text template. Set
 `GF_SERVER_ROOT_URL` to the public Grafana URL if silence, dashboard, and
 Grafana links should be useful outside the Docker network.
 
+The template is intentionally compact for mobile triage: firing or resolved
+state, severity, alert name, summary, action, affected targets, and links. Raw
+Grafana expression values are omitted from Telegram notifications.
+
 ## Local or VPS Start
 
 From the repo root:
@@ -164,18 +168,18 @@ Grafana provisions a first conservative alert set for
 [#503](https://github.com/shchilkin/PopChoice/issues/503). The rules are grouped
 by severity and include owner/action annotations:
 
-- P1: app, Postgres, and Redis outages.
-- P2: sustained queue backlog, provider timeout/rate-limit spikes, and disk
-  pressure.
+- P1: Postgres and Redis outages. Public app outage paging should come from
+  Uptime Kuma `popchoice-prod-health` or failed post-deploy verification, not
+  app metrics scrape visibility alone.
+- P2: app metrics scrape target downtime, sustained queue backlog, provider
+  timeout/rate-limit spikes, and disk pressure.
 - P3: monitoring scrape target failures and elevated recommendation failure
   ratio.
 
-The current app target alert is intentionally conservative, but first
-production examples show it can be noisy during normal Coolify redeploys. Track
-message formatting in [#525](https://github.com/shchilkin/PopChoice/issues/525),
-severity tuning in [#526](https://github.com/shchilkin/PopChoice/issues/526),
-and deploy-aware silences in
-[#527](https://github.com/shchilkin/PopChoice/issues/527).
+Deploy-sensitive scrape alerts carry `noise_profile=deploy-sensitive`. The
+GitHub deploy workflow can create a short Grafana silence for that label before
+triggering Coolify and then verify public `/api/health` plus `/api/build` after
+the webhook.
 
 See [Observability Alerts](/docs/OBSERVABILITY-ALERTS) for thresholds, retention,
 and backup expectations. See
