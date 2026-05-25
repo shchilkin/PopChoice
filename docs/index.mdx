@@ -1,0 +1,38 @@
+---
+title: PopChoice Documentation
+description: The project control center for PopChoice architecture, operations, roadmap, and evaluation work.
+---
+
+# PopChoice Documentation
+
+PopChoice is a movie recommendation app built around Next.js, OpenAI embeddings,
+PostgreSQL with pgvector, Redis-backed BullMQ workers, and TMDB metadata. This
+documentation site is the Git-backed source of truth for how the project is
+built, operated, and evolved.
+
+## Start Here
+
+- [Development](/docs/DEVELOPMENT) covers the local development loop.
+- [Architecture Boundaries](/docs/BOUNDARIES) explains where code should live.
+- [Services](/docs/SERVICES) describes the background services and catalog jobs.
+- [Architecture Roadmap](/docs/ROADMAP-ARCHITECTURE) tracks the system roadmap.
+- [Recommendation Roadmap](/docs/RECOMMENDATION-ROADMAP) tracks recommendation and AI
+  product work.
+
+## Operations
+
+- [Setup](/docs/SETUP) and [Coolify](/docs/COOLIFY) cover local and deployment setup.
+- [CI/CD](/docs/CI-CD) explains checks, release automation, and deployment flow.
+- [Observability Metrics](/docs/OBSERVABILITY-METRICS), [Alerts](/docs/OBSERVABILITY-ALERTS),
+  [Logs](/docs/OBSERVABILITY-LOGS), [Traces](/docs/OBSERVABILITY-TRACES), [Uptime](/docs/OBSERVABILITY-UPTIME),
+  and [Runbooks](/docs/OBSERVABILITY-RUNBOOKS) cover production health.
+
+## Product And Quality
+
+- [Maintainability Checklist](/docs/MAINTAINABILITY-CHECKLIST) is the engineering
+  quality bar for future changes.
+- [Design Guidelines](/docs/design-guidelines) and [Storybook Theming](/docs/storybook-theming)
+  document the UI system.
+
+When adding new long-lived project knowledge, prefer adding or updating a page in
+this docs tree and linking any related GitHub issues from there.

@@ -1,3 +1,7 @@
+---
+title: 'PopChoice Design Guidelines'
+---
+
 # PopChoice Design Guidelines
 
 Design system reference extracted from the PopChoice UI prototype. Use these tokens, patterns, and conventions when building or modifying any PopChoice interface.

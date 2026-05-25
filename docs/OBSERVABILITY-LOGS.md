@@ -1,11 +1,15 @@
+---
+title: 'Observability Logs'
+---
+
 # Observability Logs
 
 PopChoice can run a small self-hosted log stack for production or preview VPS
 debugging: Grafana Loki stores logs, Grafana Alloy tails Docker containers, and
 Grafana provides search through the provisioned Loki data source. The same
 Grafana instance can also load the Prometheus metrics dashboard documented in
-[OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md) and the Tempo traces
-documented in [OBSERVABILITY-TRACES.md](./OBSERVABILITY-TRACES.md).
+[OBSERVABILITY-METRICS.md](/docs/OBSERVABILITY-METRICS) and the Tempo traces
+documented in [OBSERVABILITY-TRACES.md](/docs/OBSERVABILITY-TRACES).
 
 This stack is intentionally separate from the PopChoice app stack. Web,
 workers, Bull Board, PostgreSQL, Redis, and one-shot service containers keep
@@ -17,7 +21,7 @@ its local container logs.
 
 - `docker-compose.observability.yml` starts Loki, Alloy, Grafana, Prometheus,
   metrics exporters, and the Uptime Kuma service documented separately in
-  [OBSERVABILITY-UPTIME.md](./OBSERVABILITY-UPTIME.md).
+  [OBSERVABILITY-UPTIME.md](/docs/OBSERVABILITY-UPTIME).
 - `observability/loki/loki.yaml` configures single-binary Loki with filesystem
   TSDB storage and seven-day retention.
 - `observability/alloy/config.alloy` discovers Docker containers, parses Docker
@@ -97,75 +101,75 @@ for identifier searches.
 
 Recent web logs:
 
-```logql
+```text
 {stack="popchoice", service="web"}
 ```
 
 Application errors across web and workers:
 
-```logql
+```text
 {stack="popchoice", level=~"50|60"}
 ```
 
 Warnings and errors for workers:
 
-```logql
+```text
 {stack="popchoice", service="workers", level=~"40|50|60"}
 ```
 
 One request id, supporting both common field names:
 
-```logql
+```text
 {stack="popchoice", service="web"} | requestId="req_123"
 ```
 
-```logql
+```text
 {stack="popchoice", service="web"} | reqId="req_123"
 ```
 
 One recommendation flow across API and workers:
 
-```logql
+```text
 {stack="popchoice", service=~"web|workers"} | recommendationId="rec_123"
 ```
 
 Recommendation stage updates or failures:
 
-```logql
+```text
 {stack="popchoice", service=~"web|workers"} | recommendationId="rec_123" | stage="descriptions"
 ```
 
 One BullMQ job id:
 
-```logql
+```text
 {stack="popchoice", service="workers"} | jobId="tmdb-seed:550:en-US"
 ```
 
 Queue-related worker logs, depending on which field exists in the log line:
 
-```logql
+```text
 {stack="popchoice", service="workers"} | queue="recommendation"
 ```
 
-```logql
+```text
 {stack="popchoice", service="workers"} | queueName="catalog-maintenance"
 ```
 
 Catalog maintenance job completions and failures:
 
-```logql
+```text
 {stack="popchoice", service="workers"} | jobName="seed-tmdb-movie"
 ```
 
 Plain text fallback for infrastructure logs or older unstructured lines:
 
-```logql
+```text
 {stack="popchoice", service=~"db|redis|bull-board"} |= "error"
 ```
 
 Parse original JSON at query time when a field was not promoted by Alloy:
 
-```logql
+```text
 {stack="popchoice", service="web"} | json | userId="user_123"
 ```
 

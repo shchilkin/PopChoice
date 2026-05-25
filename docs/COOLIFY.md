@@ -1,3 +1,7 @@
+---
+title: 'Deploying PopChoice with Coolify'
+---
+
 # Deploying PopChoice with Coolify
 
 This project is ready to run on a VPS with Coolify using `coolify.compose.yml`.
@@ -35,7 +39,7 @@ and Redis so data survives redeploys.
 The compose file is intentionally runtime-only for PopChoice services. It pulls
 prebuilt images using:
 
-```env
+```ini
 APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 IMAGE_TAG=development
 ```
@@ -54,7 +58,7 @@ credentials.
 
 Set these in Coolify before the first deploy:
 
-```env
+```ini
 OPENAI_API_KEY=...
 POSTGRES_PASSWORD=...
 AUTH_SESSION_SECRET=...
@@ -66,7 +70,7 @@ For Docker Compose resources, these must exist in the resource's
 **Environment Variables** page. If you keep the real values as Coolify shared
 variables, add resource variables that reference them:
 
-```env
+```ini
 OPENAI_API_KEY={{ environment.OPENAI_API_KEY }}
 POSTGRES_PASSWORD={{ environment.POSTGRES_PASSWORD }}
 AUTH_SESSION_SECRET={{ environment.AUTH_SESSION_SECRET }}
@@ -83,7 +87,7 @@ initialization, so a missing value now fails before containers are created.
 
 Recommended optional variables:
 
-```env
+```ini
 APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 POSTGRES_USER=popchoice
 POSTGRES_DB=popchoice
@@ -113,7 +117,7 @@ API_KEY_HMAC_SECRET="$(openssl rand -hex 32)" node -e "const {randomBytes,scrypt
 
 Store only these values in Coolify:
 
-```env
+```ini
 API_KEY_HMAC_SECRET=<API_KEY_HMAC_SECRET output>
 VALID_API_KEYS=<VALID_API_KEYS output>
 ```
@@ -125,7 +129,7 @@ External callers send that plaintext value as `Authorization: Bearer <key>` or
 If you store these as project shared variables, reference them from the Docker
 Compose resource environment:
 
-```env
+```ini
 API_KEY_HMAC_SECRET={{ project.API_KEY_HMAC_SECRET }}
 VALID_API_KEYS={{ project.VALID_API_KEYS }}
 ```
@@ -136,7 +140,7 @@ Password reset requests use Resend in production. Create a Resend API key and
 verify a sending domain such as `mail.your-domain.example`, then set these
 variables on the Coolify Compose resource:
 
-```env
+```ini
 RESEND_API_KEY={{ project.RESEND_API_KEY }}
 EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
 EMAIL_REPLY_TO=support@your-domain.example
@@ -164,7 +168,7 @@ await PopChoice.info();
 
 Set these optional variables on the Coolify Compose resource:
 
-```env
+```ini
 APP_VERSION=0.1.0-beta.0
 APP_CHANNEL=beta
 APP_COMMIT_SHA=<current git commit sha>
@@ -241,20 +245,20 @@ Run this checklist after production deploys and after any infrastructure change:
 ## Optional observability stack
 
 For searchable Docker/Coolify logs, run the separate Loki, Alloy, and Grafana
-stack documented in [OBSERVABILITY-LOGS.md](./OBSERVABILITY-LOGS.md). Keep it as
+stack documented in [OBSERVABILITY-LOGS.md](/docs/OBSERVABILITY-LOGS). Keep it as
 a separate Coolify Docker Compose resource so PopChoice containers do not depend
 on Loki availability at runtime.
 
 For external uptime and cheap synthetic monitoring, run Uptime Kuma as a
 separate observability stack and configure the monitors in
-[Uptime Kuma Monitoring](./OBSERVABILITY-UPTIME.md). Keep those checks
+[Uptime Kuma Monitoring](/docs/OBSERVABILITY-UPTIME). Keep those checks
 read-only by default so production monitoring does not spend AI-provider
 credits.
 
 For Prometheus metrics and the initial Grafana dashboard, enable the app metrics
 endpoints on the PopChoice resource:
 
-```env
+```ini
 METRICS_ENABLED=true
 METRICS_BEARER_TOKEN=<long-random-token>
 TRACING_ENABLED=true
@@ -265,13 +269,13 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://observability-otel-collector:4318/v1/t
 Grafana also provisions Tempo traces plus conservative alert rules and runbooks
 for app, DB, Redis, queue, provider, disk, and monitoring-stack incidents. Keep
 the observability config in Git as the restore source of truth, and follow
-[Observability Traces](./OBSERVABILITY-TRACES.md),
-[Observability Alerts](./OBSERVABILITY-ALERTS.md), and
-[Observability Runbooks](./OBSERVABILITY-RUNBOOKS.md) when wiring notification
+[Observability Traces](/docs/OBSERVABILITY-TRACES),
+[Observability Alerts](/docs/OBSERVABILITY-ALERTS), and
+[Observability Runbooks](/docs/OBSERVABILITY-RUNBOOKS) when wiring notification
 contact points or testing restore.
 
 Then run the separate observability stack documented in
-[OBSERVABILITY-METRICS.md](./OBSERVABILITY-METRICS.md). The stack listens locally
+[OBSERVABILITY-METRICS.md](/docs/OBSERVABILITY-METRICS). The stack listens locally
 on `127.0.0.1:9090` for Prometheus and `127.0.0.1:3001` for Grafana. Set
 `POPCHOICE_APP_NETWORK` if Coolify names the app resource network differently
 from `popchoice_default`, and set the Postgres exporter credentials with
@@ -388,7 +392,7 @@ published by CI.
 
 Set the web container's non-secret provenance variables from the image artifact:
 
-```env
+```ini
 APP_COMMIT_SHA=<artifact commitSha>
 APP_GIT_BRANCH=<github ref name>
 APP_PR_NUMBER=<artifact pullRequestNumber>
@@ -501,7 +505,7 @@ The compose file includes a profiled `movie-discovery` service for scheduled
 TMDB discovery syncs. Enable the `discovery` profile only if you want automatic
 catalog growth. It requires:
 
-```env
+```ini
 TMDB_API_KEY=...
 OPENAI_API_KEY=...
 DATABASE_URL=...

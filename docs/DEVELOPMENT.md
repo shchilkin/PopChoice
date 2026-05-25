@@ -1,7 +1,11 @@
+---
+title: 'Development Guide'
+---
+
 # Development Guide
 
-For ongoing code health reviews, use the **[Maintainability Checklist](./MAINTAINABILITY-CHECKLIST.md)**.
-For ownership rules across the current workspace layout, use **[Architecture Boundaries](./BOUNDARIES.md)**.
+For ongoing code health reviews, use the **[Maintainability Checklist](/docs/MAINTAINABILITY-CHECKLIST)**.
+For ownership rules across the current workspace layout, use **[Architecture Boundaries](/docs/BOUNDARIES)**.
 
 ## Prerequisites
 
@@ -30,8 +34,11 @@ For ownership rules across the current workspace layout, use **[Architecture Bou
 ### Development
 
 - `npm run dev` - Start development server
+- `npm run dev:docs` - Start the Fumadocs documentation site on `http://localhost:3003`
 - `npm run build` - Build production application
+- `npm run build:docs` - Build the Fumadocs documentation site
 - `npm run start --workspace=apps/web` - Start production server
+- `npm run start --workspace=apps/docs` - Start the production documentation server after `npm run build:docs`
 - `npm run copy:env` - Copy the root `.env` into `apps/*`, `services/*`, and `packages/shared`
 - `npm run migrate:db` - Apply all idempotent SQL migrations from `db/init`
 - `npm run storybook` - Start Storybook development server
@@ -228,4 +235,4 @@ db/                        # SQL scripts and DB initialization assets
 - `apps/web/src/utils` should stay narrow and reusable, not absorb end-to-end orchestration.
 - Root `services/*` are standalone background or offline runtimes.
 
-See [BOUNDARIES.md](./BOUNDARIES.md) for the full ownership definitions.
+See [BOUNDARIES.md](/docs/BOUNDARIES) for the full ownership definitions.

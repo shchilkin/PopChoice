@@ -1,3 +1,7 @@
+---
+title: 'Observability Runbooks'
+---
+
 # Observability Runbooks
 
 These runbooks pair with the provisioned Grafana alerts in

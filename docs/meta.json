@@ -1,0 +1,27 @@
+{
+  "title": "PopChoice",
+  "pages": [
+    "index",
+    "---Project---",
+    "DEVELOPMENT",
+    "BOUNDARIES",
+    "SERVICES",
+    "ROADMAP-ARCHITECTURE",
+    "RECOMMENDATION-ROADMAP",
+    "MAINTAINABILITY-CHECKLIST",
+    "---Operations---",
+    "SETUP",
+    "COOLIFY",
+    "CI-CD",
+    "---Observability---",
+    "OBSERVABILITY-METRICS",
+    "OBSERVABILITY-ALERTS",
+    "OBSERVABILITY-LOGS",
+    "OBSERVABILITY-TRACES",
+    "OBSERVABILITY-UPTIME",
+    "OBSERVABILITY-RUNBOOKS",
+    "---Design---",
+    "design-guidelines",
+    "storybook-theming"
+  ]
+}

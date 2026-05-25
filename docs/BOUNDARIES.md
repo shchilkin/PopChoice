@@ -1,3 +1,7 @@
+---
+title: 'Architecture Boundaries'
+---
+
 # Architecture Boundaries
 
 This document defines the intended ownership boundaries for PopChoice in its current workspace layout. The goal is to keep the current structure understandable now and easier to extract into dedicated packages later.

@@ -1,3 +1,7 @@
+---
+title: 'Observability Alerts, Retention, and Backups'
+---
+
 # Observability Alerts, Retention, and Backups
 
 PopChoice provisions a first conservative set of Grafana-managed alerts for the
@@ -38,7 +42,7 @@ Every rule includes:
 Telegram notifications are provisioned automatically when both env vars are set
 on the observability resource:
 
-```env
+```ini
 GRAFANA_TELEGRAM_BOT_TOKEN=<telegram-bot-token>
 GRAFANA_TELEGRAM_CHAT_ID=<telegram-chat-id>
 ```

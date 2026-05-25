@@ -1,3 +1,7 @@
+---
+title: 'Observability Metrics'
+---
+
 # Observability Metrics
 
 PopChoice can run a small self-hosted Prometheus stack for application and VPS
@@ -37,7 +41,7 @@ The worker process exposes metrics at:
 
 Production metrics are disabled by default. Enable them on the app stack with:
 
-```env
+```ini
 METRICS_ENABLED=true
 METRICS_BEARER_TOKEN=<long-random-token>
 WORKER_METRICS_PORT=9464
@@ -66,7 +70,7 @@ observability resource.
 
 For the Postgres exporter, configure:
 
-```env
+```ini
 POSTGRES_EXPORTER_DATA_SOURCE_URI=db:5432/popchoice?sslmode=disable
 POSTGRES_EXPORTER_DATA_SOURCE_USER=popchoice
 POSTGRES_EXPORTER_DATA_SOURCE_PASS=<postgres-password>
@@ -80,14 +84,14 @@ exporter logs `password authentication failed for user "popchoice"`.
 
 For the Redis exporter, configure when the Redis host is not `redis:6379`:
 
-```env
+```ini
 REDIS_EXPORTER_REDIS_ADDR=redis://redis:6379
 ```
 
 For Grafana Telegram alert notifications, configure both values on the
 observability resource:
 
-```env
+```ini
 GRAFANA_TELEGRAM_BOT_TOKEN=<telegram-bot-token>
 GRAFANA_TELEGRAM_CHAT_ID=<telegram-chat-id>
 ```
@@ -166,9 +170,9 @@ by severity and include owner/action annotations:
 - P3: monitoring scrape target failures and elevated recommendation failure
   ratio.
 
-See [Observability Alerts](./OBSERVABILITY-ALERTS.md) for thresholds, retention,
+See [Observability Alerts](/docs/OBSERVABILITY-ALERTS) for thresholds, retention,
 and backup expectations. See
-[Observability Runbooks](./OBSERVABILITY-RUNBOOKS.md) for incident response.
+[Observability Runbooks](/docs/OBSERVABILITY-RUNBOOKS) for incident response.
 
 For Tempo traces and request/job correlation, see
-[Observability Traces](./OBSERVABILITY-TRACES.md).
+[Observability Traces](/docs/OBSERVABILITY-TRACES).

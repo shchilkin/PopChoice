@@ -1,3 +1,7 @@
+---
+title: 'Storybook Theme Support'
+---
+
 # Storybook Theme Support
 
 This document explains how to use the dark and light theme support in Storybook for component development.

@@ -1,3 +1,7 @@
+---
+title: 'Observability Traces'
+---
+
 # Observability Traces
 
 PopChoice can emit OpenTelemetry traces to the self-hosted observability stack:

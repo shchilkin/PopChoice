@@ -1,3 +1,7 @@
+---
+title: 'CI/CD Documentation'
+---
+
 # CI/CD Documentation
 
 ## GitHub Actions Workflow
@@ -126,7 +130,7 @@ Coolify consumes the published images through `coolify.compose.yml`. The compose
 file does not build application images on the server; it pulls every PopChoice
 runtime from:
 
-```env
+```ini
 APP_IMAGE_PREFIX=ghcr.io/<owner>/<repo>
 IMAGE_TAG=development
 ```
@@ -153,7 +157,7 @@ the deploy job fails to make the misconfiguration visible.
 For provenance in `/api/build`, pass these non-secret runtime variables to the
 deployed web container when using a prebuilt image:
 
-```env
+```ini
 APP_COMMIT_SHA=<github workflow commit sha>
 APP_GIT_BRANCH=<github ref name>
 APP_PR_NUMBER=<pull request number, if any>
