@@ -64,6 +64,11 @@ Grafana's default message. The message is plain text and includes:
 Set `GF_SERVER_ROOT_URL` on the Grafana service if Telegram links should point
 to the public Grafana domain instead of the container-local default URL.
 
+Known follow-up: the first production Telegram examples show that the current
+message still exposes too much raw Grafana expression state for mobile triage.
+Track template cleanup in
+[#525](https://github.com/shchilkin/PopChoice/issues/525).
+
 ## Alert Rules
 
 ### P1
@@ -73,6 +78,10 @@ to the public Grafana domain instead of the container-local default URL.
   - Trigger: `popchoice-web` scrape target stays down for 5 minutes.
   - Action: check Coolify web service, restart loops, recent deploy, and
     `/api/health`.
+  - Current caveat: ordinary redeploys can briefly make the metrics target
+    unavailable even when the user-facing app recovers normally. Track severity
+    and threshold tuning in
+    [#526](https://github.com/shchilkin/PopChoice/issues/526).
 - `P1 Postgres exporter reports database down`
   - Owner: Database operator.
   - Trigger: `pg_up` stays below 1 for 5 minutes.
@@ -186,3 +195,20 @@ This first alert set avoids:
 
 Tighten thresholds only after observing a few weeks of real traffic and
 maintenance patterns.
+
+## Deploy-Aware Alerting Follow-Ups
+
+Production redeploys can intentionally restart web and worker containers. Until
+the deploy pipeline creates short maintenance silences, a metrics scrape target
+alert during a normal redeploy should be investigated in context with Coolify
+deployment status, public `/api/health`, and `/api/build`.
+
+Track the next alerting pass in:
+
+- [#525](https://github.com/shchilkin/PopChoice/issues/525): improve Telegram
+  alert message formatting.
+- [#526](https://github.com/shchilkin/PopChoice/issues/526): reclassify
+  deploy-sensitive metrics target alerts so they do not page like confirmed
+  user-facing outages.
+- [#527](https://github.com/shchilkin/PopChoice/issues/527): add
+  deployment-aware silences and post-deploy verification.
