@@ -176,7 +176,8 @@ is still being built. If the username and password are missing, Bull Board
 starts with a warning and no operator login. Set `OPERATOR_AUTH_REQUIRED=1` when
 you want fail-closed behavior. Leave the Compose health check on `/healthz`;
 that endpoint intentionally bypasses the login prompt so Coolify can verify the
-container without storing operator credentials in the health check.
+container without storing operator credentials in the health check. Protected
+Bull Board routes are rate-limited in-process to slow repeated login attempts.
 
 ### Version and build metadata
 

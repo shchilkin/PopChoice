@@ -124,6 +124,8 @@ OPERATOR_AUTH_REALM=PopChoice Operators
 
 The Coolify service uses `/healthz` for unauthenticated container health checks;
 all Bull Board UI routes are behind the operator login when credentials are set.
+Operator routes are also rate-limited in-process to slow down repeated Basic
+Auth attempts.
 
 ### Backoffice (planned operator app)
 

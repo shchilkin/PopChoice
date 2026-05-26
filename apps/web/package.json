@@ -50,6 +50,7 @@
     "bullmq": "^5.77.3",
     "canvas-confetti": "^1.9.4",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "ioredis": "^5.10.1",
     "lucide-react": "^1.16.0",
     "motion": "^12.40.0",

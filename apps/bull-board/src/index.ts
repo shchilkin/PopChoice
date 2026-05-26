@@ -8,12 +8,15 @@ import {
 } from '@pop-choice/shared';
 import { Queue } from 'bullmq';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { Redis } from 'ioredis';
 
 import type { RequestHandler } from 'express';
 
 const PORT = Number(process.env.PORT ?? process.env.BULL_BOARD_PORT ?? 4000);
 const REDIS_URL = process.env.REDIS_URL;
+const OPERATOR_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
 
 if (!REDIS_URL) {
   console.error('Error: REDIS_URL is not set. Add it to your .env file.');
@@ -64,6 +67,15 @@ createBullBoard({
 
 const app = express();
 app.get('/healthz', (_request, response) => response.status(200).send('ok'));
+app.use(
+  rateLimit({
+    windowMs: OPERATOR_AUTH_RATE_LIMIT_WINDOW_MS,
+    limit: OPERATOR_AUTH_RATE_LIMIT_MAX,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: 'Too many operator requests, please try again later.',
+  }),
+);
 app.use(createOperatorAuthMiddleware());
 app.use('/', serverAdapter.getRouter());
 
