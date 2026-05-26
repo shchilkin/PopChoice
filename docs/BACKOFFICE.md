@@ -17,10 +17,10 @@ Use a dedicated workspace app:
 apps/backoffice/
 ```
 
-The deployment model should match `apps/bull-board`:
+The deployment model matches `apps/bull-board`:
 
-- build and publish a separate container image, for example
-  `ghcr.io/shchilkin/popchoice/backoffice`;
+- build and publish a separate `ghcr.io/shchilkin/popchoice/backoffice`
+  container image;
 - run it as a separate `backoffice` service in `coolify.compose.yml`;
 - expose container port `3000`;
 - assign a private/admin Coolify domain; shared operator auth can stay optional
@@ -39,7 +39,8 @@ The first backoffice release should be read-only:
 
 - [#549](https://github.com/shchilkin/PopChoice/issues/549): catalog-health
   overview for missing metadata, duplicate identities, stale TMDB data, and
-  missing cast/director/genre/keyword coverage.
+  missing cast/director/genre/keyword coverage. This is implemented as the
+  first read-only `apps/backoffice` screen.
 - [#550](https://github.com/shchilkin/PopChoice/issues/550): TMDB match review
   queue for `tmdb_match_reviews` rows.
 
@@ -65,35 +66,36 @@ Use shared boundaries deliberately:
   state.
 - `packages/shared` is the preferred home for cross-app database/query helpers
   once both backoffice and services need the same behavior.
-- `services/movie-backfill` can keep the CLI entrypoint for `catalog:health`,
-  but shared catalog-health query logic should move behind a shared module
-  before the browser UI duplicates complex SQL.
+- `services/movie-backfill` keeps the CLI entrypoint for `catalog:health`, but
+  shared catalog-health query logic now lives in `packages/shared` so the
+  browser UI and CLI use the same SQL semantics.
 - `apps/web` remains user-facing and should not import or host admin review UI.
 - `apps/bull-board` remains the queue monitoring app; shared auth should wrap
   it instead of merging it with backoffice.
 
 ## Local Development
 
-Once the app exists, use workspace scripts that mirror the other apps:
+Use workspace scripts that mirror the other apps:
 
 ```bash
-npm run dev --workspace=apps/backoffice
-npm run build --workspace=apps/backoffice
+npm run dev:backoffice
+npm run build:backoffice
 npm run start --workspace=apps/backoffice
 ```
 
-The local app should read the root `.env` through the same environment-copying
-workflow as the rest of the repository. It will need at least:
+Run `npm run copy:env` after editing root `.env`; it copies values into
+`apps/backoffice/.env` for the local dev script. The app needs at least:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
 - `REDIS_URL` only when a screen needs queue state or job actions;
 - `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
-  operator routes locally.
+  operator routes locally;
+- `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
+  report shape.
 
 ## Production Deployment
 
-When implemented, add a `backoffice` service to `coolify.compose.yml` beside
-`bull-board`:
+`coolify.compose.yml` includes a `backoffice` service beside `bull-board`:
 
 ```yaml
 backoffice:

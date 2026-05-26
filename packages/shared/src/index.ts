@@ -39,3 +39,12 @@ export {
   verifyOperatorBasicAuthHeader,
 } from './operatorAuth.js';
 export type { OperatorAuthConfig } from './operatorAuth.js';
+export { formatCatalogHealthReport, getCatalogHealthReport } from './catalogHealth.js';
+export type {
+  CatalogHealthIssue,
+  CatalogHealthOptions,
+  CatalogHealthReport,
+  CatalogMovieSample,
+  DuplicateIdentityGroup,
+  DuplicateIdentityReport,
+} from './catalogHealth.js';
