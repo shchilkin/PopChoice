@@ -10,6 +10,7 @@ if [ ! -f "$ROOT_ENV" ]; then
 fi
 
 TARGETS=(
+  apps/backoffice
   apps/web
   services/movie-backfill
   services/movie-discovery

@@ -36,8 +36,10 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 
 - `npm run dev` - Start development server
 - `npm run dev:docs` - Start the Fumadocs documentation site on `http://localhost:3003`
+- `npm run dev:backoffice` - Start the operator catalog-health UI on `http://localhost:3000`
 - `npm run build` - Build production application
 - `npm run build:docs` - Build the Fumadocs documentation site
+- `npm run build:backoffice` - Build the operator backoffice app
 - `npm run start --workspace=apps/web` - Start production server
 - `npm run start --workspace=apps/docs` - Start the production documentation server after `npm run build:docs`
 - `npm run copy:env` - Copy the root `.env` into `apps/*`, `services/*`, and `packages/shared`
@@ -219,7 +221,7 @@ apps/
 │       ├── styles/        # Styling and theme assets
 │       └── utils/         # Reusable utility helpers
 ├── bull-board/            # Queue monitoring app
-├── backoffice/            # Planned operator app for catalog health and review
+├── backoffice/            # Operator app for catalog health and review
 packages/
 └── shared/                # Shared helpers reused by root services
 services/

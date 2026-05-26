@@ -127,12 +127,13 @@ all Bull Board UI routes are behind the operator login when credentials are set.
 Operator routes are also rate-limited in-process to slow down repeated Basic
 Auth attempts.
 
-### Backoffice (planned operator app)
+### Backoffice
 
-Backoffice/catalog-health UI is planned as a dedicated `apps/backoffice/`
-workspace app, deployed as a separate Coolify service like `apps/bull-board`.
-It should expose catalog-health reports, TMDB match review queues, and later
-manual repair actions without putting admin UI inside `apps/web`.
+Backoffice/catalog-health UI lives in the dedicated `apps/backoffice/` workspace
+app and deploys as a separate Coolify service like `apps/bull-board`. The first
+screen is a protected, read-only catalog-health overview. Later screens should
+add TMDB match review queues and manual repair actions without putting admin UI
+inside `apps/web`.
 
 See [Backoffice Plan](/docs/BACKOFFICE) and
 [#493](https://github.com/shchilkin/PopChoice/issues/493).
@@ -284,7 +285,10 @@ DRY_RUN=true npm run dev # dry run
 
 ### Catalog health report
 
-`movie-backfill` also owns a read-only catalog health report for metadata visibility. It only runs `SELECT` queries and reports:
+`movie-backfill` exposes a read-only catalog health report for metadata
+visibility. The shared query logic lives in `packages/shared`, so the CLI report
+and `apps/backoffice` browser overview use the same `SELECT`-only semantics. It
+reports:
 
 - Missing `poster_url`, `localized_name`, `tmdb_id`, runtime, age rating, and TMDB match timestamps.
 - TMDB-backed rows whose `tmdb_matched_at` is older than the stale threshold.
@@ -298,9 +302,11 @@ Run it from the repo root:
 npm run catalog:health
 ```
 
-The current report is CLI-only. A future dedicated backoffice app should expose
-the same data in a browser without putting admin or operational UI inside the
-user-facing `apps/web` application.
+The same data is available in the dedicated backoffice app:
+
+```bash
+npm run dev:backoffice
+```
 
 Useful options:
 
