@@ -33,3 +33,9 @@ export {
   parsePositiveFloat,
   requireEnvVars,
 } from './config.js';
+export {
+  operatorAuthChallenge,
+  readOperatorAuthConfig,
+  verifyOperatorBasicAuthHeader,
+} from './operatorAuth.js';
+export type { OperatorAuthConfig } from './operatorAuth.js';

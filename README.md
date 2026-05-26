@@ -192,6 +192,8 @@ npm run bull-board
 ```
 
 Open [http://localhost:3001](http://localhost:3001) to inspect BullMQ queues locally.
+Set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` before exposing Bull
+Board outside localhost.
 
 ### Optional — Storybook component workshop
 

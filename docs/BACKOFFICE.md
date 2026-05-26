@@ -47,10 +47,14 @@ Mutation flows belong later:
 - [#551](https://github.com/shchilkin/PopChoice/issues/551): review actions and
   audit history for applying, rejecting, or deferring catalog fixes.
 
-Shared operator auth is a prerequisite for public exposure:
+Shared operator auth is the login model for public exposure:
 
 - [#548](https://github.com/shchilkin/PopChoice/issues/548): shared login
   protection for `apps/backoffice` and `apps/bull-board`.
+- `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` protect Bull Board now
+  and should be reused by the future backoffice app.
+- User-facing app login stays separate; operator credentials must not be added
+  to normal `apps/web` routes.
 
 ## Code Sharing
 
@@ -82,7 +86,8 @@ workflow as the rest of the repository. It will need at least:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
 - `REDIS_URL` only when a screen needs queue state or job actions;
-- future shared operator-auth secrets from #548.
+- `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
+  operator routes locally.
 
 ## Production Deployment
 
@@ -99,6 +104,10 @@ backoffice:
     DATABASE_URL: postgresql://${POSTGRES_USER:-popchoice}:${POSTGRES_PASSWORD}@${SERVICE_NAME_DB:-db}:5432/${POSTGRES_DB:-popchoice}
     REDIS_URL: redis://${SERVICE_NAME_REDIS:-redis}:6379
     PORT: 3000
+    OPERATOR_AUTH_REQUIRED: ${OPERATOR_AUTH_REQUIRED:-1}
+    OPERATOR_AUTH_USERNAME: ${OPERATOR_AUTH_USERNAME:-}
+    OPERATOR_AUTH_PASSWORD: ${OPERATOR_AUTH_PASSWORD:-}
+    OPERATOR_AUTH_REALM: ${OPERATOR_AUTH_REALM:-PopChoice Operators}
   depends_on:
     db:
       condition: service_healthy
@@ -109,8 +118,7 @@ backoffice:
 ```
 
 In Coolify, assign a private/admin domain to `backoffice` with port `3000`,
-just like `bull-board`. Do not expose it publicly until #548 protects both
-operator surfaces.
+just like `bull-board`. Do not expose it publicly without operator credentials.
 
 ## Preview Policy
 

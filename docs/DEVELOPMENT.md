@@ -49,6 +49,8 @@ Workspace-local scripts used during app development:
 
 - `cd apps/web && npm run start:workers` - Start BullMQ workers for async recommendations
 - `cd apps/web && npm run bull-board` - Open the BullMQ dashboard locally
+  (`OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` enable the same login
+  used in production)
 - `npm run catalog:discovery:enqueue` - Queue TMDB discovery pages for the rate-limited catalog worker
 - `npm run catalog:backfill:enqueue` - Queue existing movies for the rate-limited catalog backfill worker
 
