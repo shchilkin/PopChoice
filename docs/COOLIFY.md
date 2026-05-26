@@ -31,6 +31,9 @@ less pleasant on 2 GB RAM.
    `3000`, set the service domain as `https://your-domain.example:3000`.
 6. Optional: assign a private/admin domain to `bull-board`, also with port
    `3000`.
+7. Future: assign a private/admin domain to `backoffice`, also with port
+   `3000`, after shared operator auth is in place. The backoffice should be a
+   separate service like `bull-board`, not a route inside `web`.
 
 Coolify treats Docker Compose as the source of truth for services, environment
 variables, and storage. The compose file declares named volumes for PostgreSQL
