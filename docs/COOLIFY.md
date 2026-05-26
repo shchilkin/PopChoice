@@ -178,9 +178,10 @@ want fail-closed behavior. Leave the Compose health checks on `/healthz`; that
 endpoint intentionally bypasses the login prompt so Coolify can verify
 containers without storing operator credentials in health checks. Protected
 operator routes are rate-limited in-process to slow repeated login attempts. In
-the backoffice, successful requests are skipped by the limiter; tune
-`OPERATOR_AUTH_RATE_LIMIT_MAX` and `OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS` if
-manual testing needs a wider window.
+Bull Board and the backoffice, successful requests are skipped by the limiter;
+tune `OPERATOR_AUTH_RATE_LIMIT_MAX` and
+`OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS` if manual testing needs a wider
+window.
 
 ### Version and build metadata
 

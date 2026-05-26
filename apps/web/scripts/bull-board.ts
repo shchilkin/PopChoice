@@ -17,12 +17,23 @@ import type { RedisOptions } from 'ioredis';
 
 const PORT = Number(process.env.PORT ?? process.env.BULL_BOARD_PORT ?? 3001);
 const REDIS_URL = process.env.REDIS_URL;
-const OPERATOR_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
+const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
+const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
 
 if (!REDIS_URL) {
   console.error('Error: REDIS_URL is not set. Add it to your .env file.');
   process.exit(1);
+}
+
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+  if (!value || value.trim() === '') return fallback;
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`Expected a positive integer, received "${value}".`);
+  }
+
+  return parsed;
 }
 
 function redisOptionsFromUrl(redisUrl: string, overrides: RedisOptions = {}): RedisOptions {
@@ -86,6 +97,15 @@ const morePicksQueue = new Queue('more-picks', { connection });
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/');
 
+const operatorAuthRateLimitWindowSeconds = parsePositiveInteger(
+  process.env.OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+  DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+);
+const operatorAuthRateLimitMax = parsePositiveInteger(
+  process.env.OPERATOR_AUTH_RATE_LIMIT_MAX,
+  DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX,
+);
+
 createBullBoard({
   queues: [
     new BullMQAdapter(seedQueue),
@@ -97,13 +117,15 @@ createBullBoard({
 });
 
 const app = express();
+app.set('trust proxy', 1);
 app.get('/healthz', (_request, response) => response.status(200).send('ok'));
 app.use(
   rateLimit({
-    windowMs: OPERATOR_AUTH_RATE_LIMIT_WINDOW_MS,
-    limit: OPERATOR_AUTH_RATE_LIMIT_MAX,
+    windowMs: operatorAuthRateLimitWindowSeconds * 1000,
+    limit: operatorAuthRateLimitMax,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
     message: 'Too many operator requests, please try again later.',
   }),
 );
