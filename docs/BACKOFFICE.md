@@ -111,6 +111,10 @@ backoffice:
     OPERATOR_AUTH_USERNAME: ${OPERATOR_AUTH_USERNAME:-}
     OPERATOR_AUTH_PASSWORD: ${OPERATOR_AUTH_PASSWORD:-}
     OPERATOR_AUTH_REALM: ${OPERATOR_AUTH_REALM:-PopChoice Operators}
+    OPERATOR_AUTH_RATE_LIMIT_MAX: ${OPERATOR_AUTH_RATE_LIMIT_MAX:-30}
+    OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS: ${OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS:-900}
+    CATALOG_HEALTH_SAMPLE_LIMIT: ${CATALOG_HEALTH_SAMPLE_LIMIT:-5}
+    CATALOG_HEALTH_STALE_DAYS: ${CATALOG_HEALTH_STALE_DAYS:-180}
   depends_on:
     db:
       condition: service_healthy
@@ -124,7 +128,9 @@ In Coolify, assign a private/admin domain to `backoffice` with port `3000`,
 just like `bull-board`. During the pet-project phase, operator auth can be
 optional; set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when you want
 the shared login prompt, or set `OPERATOR_AUTH_REQUIRED=1` for fail-closed
-behavior.
+behavior. The backoffice rate limiter counts unsuccessful requests only and can
+be tuned with `OPERATOR_AUTH_RATE_LIMIT_MAX` and
+`OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS`.
 
 ## Preview Policy
 
