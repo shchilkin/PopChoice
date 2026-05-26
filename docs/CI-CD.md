@@ -104,6 +104,7 @@ The `dependency-review` job uses `actions/dependency-review-action` to block any
 - `ghcr.io/<owner>/<repo>/web`
 - `ghcr.io/<owner>/<repo>/workers`
 - `ghcr.io/<owner>/<repo>/bull-board`
+- `ghcr.io/<owner>/<repo>/storybook`
 - `ghcr.io/<owner>/<repo>/docs`
 - `ghcr.io/<owner>/<repo>/db-migrate`
 - `ghcr.io/<owner>/<repo>/movie-seed`
@@ -140,8 +141,8 @@ For simple continuous deployment, keep `IMAGE_TAG=development` in Coolify and
 let the optional deploy webhook run after the image matrix succeeds. For a
 stricter promotion flow, set `IMAGE_TAG=sha-<12-char-github-sha>` and redeploy
 that exact release bundle. Every PopChoice service must use the same
-`IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, `docs`, and service images
-from different commits is not a supported deployment shape.
+`IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, `storybook`, `docs`, and
+service images from different commits is not a supported deployment shape.
 
 Set the repository secrets `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` to
 enable redeploys after pushes to `development`. `COOLIFY_TOKEN` must be a

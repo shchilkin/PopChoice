@@ -137,7 +137,7 @@ services:
       [
         'sh',
         '-lc',
-        'export REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec node_modules/.bin/tsx apps/web/scripts/bull-board.ts',
+        'export REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec npm run start:bull-board --workspace=apps/web',
       ]
     environment:
       SERVICE_NAME_REDIS: ${SERVICE_NAME_REDIS:-redis}
@@ -165,6 +165,19 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  storybook:
+    image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/storybook:${IMAGE_TAG:-development}
+    pull_policy: always
+    restart: unless-stopped
+    expose:
+      - '80'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/ >/dev/null || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
 
   backoffice:
     image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/backoffice:${IMAGE_TAG:-development}

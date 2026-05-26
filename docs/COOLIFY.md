@@ -35,6 +35,9 @@ less pleasant on 2 GB RAM.
 7. Optional: assign a private/admin domain to `backoffice`, also with port
    `3000`. The backoffice is a separate service like `bull-board`, not a route
    inside `web`, and uses the same operator auth variables.
+8. Optional: assign an internal/design-review domain to `storybook`, with port
+   `80`. The Storybook service is static nginx output and does not need app
+   secrets, Postgres, Redis, OpenAI, or TMDB credentials.
 
 Coolify treats Docker Compose as the source of truth for services, environment
 variables, and storage. The compose file declares named volumes for PostgreSQL
@@ -51,8 +54,9 @@ IMAGE_TAG=development
 Use `IMAGE_TAG=development` for simple auto-deploys from the latest successful
 `development` build. Use `IMAGE_TAG=sha-<12-char-github-sha>` when you want to
 promote or roll back an exact immutable release. Keep the same `IMAGE_TAG` for
-`web`, `workers`, `bull-board`, `movie-seed`, `movie-discovery`, and
-`movie-backfill`; running mixed commits is intentionally not supported.
+`web`, `workers`, `bull-board`, `storybook`, `docs`, `backoffice`,
+`movie-seed`, `movie-discovery`, and `movie-backfill`; running mixed commits is
+intentionally not supported.
 
 If the GHCR packages are private, add registry credentials in Coolify so the VPS
 can pull `ghcr.io/shchilkin/popchoice/*`. Public packages do not need registry
@@ -246,6 +250,8 @@ Make sure the `container-images.yml` workflow has already published the selected
    starts Next.js.
 3. `workers` and `bull-board` start against the same internal Redis and
    PostgreSQL services.
+4. `backoffice`, `docs`, and `storybook` start as independent operator/docs UI
+   surfaces.
 
 After deployment, set the Coolify health check path for the `web` service to:
 
@@ -273,6 +279,8 @@ Run this checklist after production deploys and after any infrastructure change:
 - `https://your-domain.example/api/health` returns `200`.
 - `https://your-domain.example/api/build` shows the expected beta version and
   commit hash.
+- `https://storybook.your-domain.example` loads the component workshop if the
+  `storybook` service is enabled.
 - A quiz submission creates and completes a recommendation.
 - Worker logs show Redis readiness and recommendation job completion.
 - The latest PostgreSQL backup exists in the configured backup destination.
@@ -384,6 +392,17 @@ Keep the docs service on the same `IMAGE_TAG` as the app services. This makes
 the deployed documentation describe the same commit as the running app and keeps
 rollback behavior predictable.
 
+## Storybook service
+
+The `storybook` service deploys the static Storybook build from the same GHCR
+image bundle as the application runtime. Point a separate internal or
+design-review domain, such as `storybook.your-domain.example`, at the
+`storybook` service in Coolify and use port `80`.
+
+The service is static nginx output. It does not need application secrets,
+Postgres, Redis, OpenAI, or TMDB credentials. Keep it on the same `IMAGE_TAG` as
+the app services so component docs match the deployed code.
+
 ## Pull request previews
 
 Use Coolify's GitHub App integration for PR previews so deployments can be
@@ -435,6 +454,8 @@ GitHub Actions builds production images in
 ghcr.io/shchilkin/popchoice/web
 ghcr.io/shchilkin/popchoice/workers
 ghcr.io/shchilkin/popchoice/bull-board
+ghcr.io/shchilkin/popchoice/storybook
+ghcr.io/shchilkin/popchoice/docs
 ghcr.io/shchilkin/popchoice/db-migrate
 ghcr.io/shchilkin/popchoice/movie-seed
 ghcr.io/shchilkin/popchoice/movie-discovery
@@ -450,6 +471,7 @@ digest-pinned references for Coolify previews whenever possible:
 ghcr.io/shchilkin/popchoice/web@sha256:<digest>
 ghcr.io/shchilkin/popchoice/workers@sha256:<digest>
 ghcr.io/shchilkin/popchoice/bull-board@sha256:<digest>
+ghcr.io/shchilkin/popchoice/storybook@sha256:<digest>
 ```
 
 The preview stack should pull those images and run them with the same commands,

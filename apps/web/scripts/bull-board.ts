@@ -1,16 +1,15 @@
 import { createBullBoard } from '@bull-board/api';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { Queue } from 'bullmq';
-import express from 'express';
-import rateLimit from 'express-rate-limit';
-import IORedis from 'ioredis';
-
 import {
   operatorAuthChallenge,
   readOperatorAuthConfig,
   verifyOperatorBasicAuthHeader,
-} from '../../../packages/shared/src/operatorAuth.js';
+} from '@pop-choice/shared';
+import { Queue } from 'bullmq';
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { Redis } from 'ioredis';
 
 import type { RequestHandler } from 'express';
 import type { RedisOptions } from 'ioredis';
@@ -87,7 +86,7 @@ function createOperatorAuthMiddleware(): RequestHandler {
   };
 }
 
-const connection = new IORedis(redisOptionsFromUrl(REDIS_URL, { maxRetriesPerRequest: null }));
+const connection = new Redis(redisOptionsFromUrl(REDIS_URL, { maxRetriesPerRequest: null }));
 
 const seedQueue = new Queue('movie-seed', { connection });
 const catalogMaintenanceQueue = new Queue('catalog-maintenance', { connection });

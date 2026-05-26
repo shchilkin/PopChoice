@@ -6,6 +6,7 @@
   "scripts": {
     "analyze-movies": "tsx scripts/analyze-movies.ts",
     "build": "next build",
+    "build:bull-board": "tsc -p tsconfig.bull-board.json",
     "build-storybook": "storybook build",
     "bull-board": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" tsx --env-file=.env scripts/bull-board.ts",
     "calibrate-similarity": "tsx --env-file=.env scripts/calibrate-similarity.ts",
@@ -18,6 +19,7 @@
     "lint:fix": "eslint . --fix",
     "migrate:db": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" node scripts/migrate-db.js",
     "start": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" next start",
+    "start:bull-board": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" node dist/bull-board/scripts/bull-board.js",
     "start:storybook": "serve -s storybook-static -l tcp://0.0.0.0:${PORT:-3000}",
     "start:with-migrations": "npm run migrate:db && npm run start",
     "start:workers": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" tsx src/lib/workers/startWorkers.ts",
