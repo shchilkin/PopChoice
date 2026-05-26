@@ -47,7 +47,7 @@ export function readOperatorAuthConfig(
   const username = env.OPERATOR_AUTH_USERNAME?.trim() ?? '';
   const password = env.OPERATOR_AUTH_PASSWORD ?? '';
   const realm = env.OPERATOR_AUTH_REALM?.trim() || DEFAULT_REALM;
-  const required = parseBooleanEnv(env.OPERATOR_AUTH_REQUIRED, env.NODE_ENV === 'production');
+  const required = parseBooleanEnv(env.OPERATOR_AUTH_REQUIRED, false);
 
   if (!username && !password) {
     if (required) {

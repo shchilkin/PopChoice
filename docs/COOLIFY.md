@@ -30,8 +30,8 @@ less pleasant on 2 GB RAM.
 5. Assign a domain to the `web` service. Because the container listens on port
    `3000`, set the service domain as `https://your-domain.example:3000`.
 6. Optional: assign a private/admin domain to `bull-board`, also with port
-   `3000`. Set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` before
-   exposing it outside localhost.
+   `3000`. Set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when you
+   want the shared operator login prompt.
 7. Future: assign a private/admin domain to `backoffice`, also with port
    `3000`. The backoffice should be a separate service like `bull-board`, not a
    route inside `web`, and should use the same operator auth variables.
@@ -170,9 +170,11 @@ OPERATOR_AUTH_PASSWORD=<long random password>
 OPERATOR_AUTH_REALM=PopChoice Operators
 ```
 
-`OPERATOR_AUTH_REQUIRED` defaults to `1` for the Coolify `bull-board` service.
-If the username or password is missing, the Bull Board container fails closed
-instead of starting unprotected. Leave the Compose health check on `/healthz`;
+`OPERATOR_AUTH_REQUIRED` defaults to `0` for the Coolify `bull-board` service so
+the pet-project deployment does not break while the full backoffice/RBAC model
+is still being built. If the username and password are missing, Bull Board
+starts with a warning and no operator login. Set `OPERATOR_AUTH_REQUIRED=1` when
+you want fail-closed behavior. Leave the Compose health check on `/healthz`;
 that endpoint intentionally bypasses the login prompt so Coolify can verify the
 container without storing operator credentials in the health check.
 

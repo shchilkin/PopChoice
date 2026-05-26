@@ -182,9 +182,9 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Clarify idempotency and retry behavior for recommendation creation, worker retries, more-picks jobs, and failed queue recovery.
 - [x] Add a shared operator login model for operational apps in
       [#548](https://github.com/shchilkin/PopChoice/issues/548). `apps/bull-board`
-      now supports shared Basic Auth with a fail-closed Coolify configuration, and
-      future backoffice routes should reuse the same operator-auth contract instead
-      of embedding admin access in the user-facing web app.
+      now supports shared Basic Auth with optional fail-closed behavior, and future
+      backoffice routes should reuse the same operator-auth contract instead of
+      embedding admin access in the user-facing web app.
 - Add dependency/security scanning, static security checks, and periodic security review expectations to CI or maintenance workflows.
 
 ### Data Quality Track

@@ -23,7 +23,8 @@ The deployment model should match `apps/bull-board`:
   `ghcr.io/shchilkin/popchoice/backoffice`;
 - run it as a separate `backoffice` service in `coolify.compose.yml`;
 - expose container port `3000`;
-- assign a private/admin Coolify domain only when shared operator auth is ready;
+- assign a private/admin Coolify domain; shared operator auth can stay optional
+  until the full role-based backoffice model is ready;
 - pin it with the same `IMAGE_TAG` release bundle as `web`, `workers`,
   `bull-board`, and `docs`.
 
@@ -104,7 +105,7 @@ backoffice:
     DATABASE_URL: postgresql://${POSTGRES_USER:-popchoice}:${POSTGRES_PASSWORD}@${SERVICE_NAME_DB:-db}:5432/${POSTGRES_DB:-popchoice}
     REDIS_URL: redis://${SERVICE_NAME_REDIS:-redis}:6379
     PORT: 3000
-    OPERATOR_AUTH_REQUIRED: ${OPERATOR_AUTH_REQUIRED:-1}
+    OPERATOR_AUTH_REQUIRED: ${OPERATOR_AUTH_REQUIRED:-0}
     OPERATOR_AUTH_USERNAME: ${OPERATOR_AUTH_USERNAME:-}
     OPERATOR_AUTH_PASSWORD: ${OPERATOR_AUTH_PASSWORD:-}
     OPERATOR_AUTH_REALM: ${OPERATOR_AUTH_REALM:-PopChoice Operators}
@@ -118,7 +119,10 @@ backoffice:
 ```
 
 In Coolify, assign a private/admin domain to `backoffice` with port `3000`,
-just like `bull-board`. Do not expose it publicly without operator credentials.
+just like `bull-board`. During the pet-project phase, operator auth can be
+optional; set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when you want
+the shared login prompt, or set `OPERATOR_AUTH_REQUIRED=1` for fail-closed
+behavior.
 
 ## Preview Policy
 

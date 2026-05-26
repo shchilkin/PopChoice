@@ -15,8 +15,8 @@ describe('operator auth helpers', () => {
     expect(readOperatorAuthConfig({ NODE_ENV: 'development' })).toBeNull();
   });
 
-  it('requires credentials when production defaults require operator auth', () => {
-    expect(() => readOperatorAuthConfig({ NODE_ENV: 'production' })).toThrow(
+  it('requires credentials when operator auth is explicitly required', () => {
+    expect(() => readOperatorAuthConfig({ OPERATOR_AUTH_REQUIRED: '1' })).toThrow(
       /OPERATOR_AUTH_USERNAME and OPERATOR_AUTH_PASSWORD/,
     );
   });
