@@ -112,6 +112,21 @@ A separate monitoring UI is available in `apps/bull-board/`. It provides a web i
 npx --prefix apps/bull-board tsx --env-file=.env apps/bull-board/src/index.ts
 ```
 
+Bull Board is an operator surface. Local development can run without operator
+credentials, but production deployments require shared Basic Auth before public
+exposure:
+
+```ini
+OPERATOR_AUTH_USERNAME=...
+OPERATOR_AUTH_PASSWORD=...
+OPERATOR_AUTH_REALM=PopChoice Operators
+```
+
+The Coolify service uses `/healthz` for unauthenticated container health checks;
+all Bull Board UI routes are behind the operator login when credentials are set.
+Operator routes are also rate-limited in-process to slow down repeated Basic
+Auth attempts.
+
 ### Backoffice (planned operator app)
 
 Backoffice/catalog-health UI is planned as a dedicated `apps/backoffice/`

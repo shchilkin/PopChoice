@@ -203,6 +203,10 @@ cd apps/web
 npm run bull-board
 ```
 
+Local Bull Board runs without a login unless `OPERATOR_AUTH_USERNAME` and
+`OPERATOR_AUTH_PASSWORD` are set. Production deployments should always set
+those credentials before assigning a domain.
+
 ### Production Redis
 
 1. **Provision a Redis instance**

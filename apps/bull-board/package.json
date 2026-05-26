@@ -10,8 +10,10 @@
   "dependencies": {
     "@bull-board/api": "^7.1.5",
     "@bull-board/express": "^7.1.5",
+    "@pop-choice/shared": "*",
     "bullmq": "^5.77.3",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
     "ioredis": "^5.10.1"
   },
   "devDependencies": {

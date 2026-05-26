@@ -30,10 +30,11 @@ less pleasant on 2 GB RAM.
 5. Assign a domain to the `web` service. Because the container listens on port
    `3000`, set the service domain as `https://your-domain.example:3000`.
 6. Optional: assign a private/admin domain to `bull-board`, also with port
-   `3000`.
+   `3000`. Set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when you
+   want the shared operator login prompt.
 7. Future: assign a private/admin domain to `backoffice`, also with port
-   `3000`, after shared operator auth is in place. The backoffice should be a
-   separate service like `bull-board`, not a route inside `web`.
+   `3000`. The backoffice should be a separate service like `bull-board`, not a
+   route inside `web`, and should use the same operator auth variables.
 
 Coolify treats Docker Compose as the source of truth for services, environment
 variables, and storage. The compose file declares named volumes for PostgreSQL
@@ -101,6 +102,9 @@ VALID_API_KEYS=...
 RESEND_API_KEY=...
 EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
 EMAIL_REPLY_TO=support@your-domain.example
+OPERATOR_AUTH_USERNAME=...
+OPERATOR_AUTH_PASSWORD=...
+OPERATOR_AUTH_REALM=PopChoice Operators
 ```
 
 Set `NEXT_PUBLIC_BASE_URL` to the URL users see in their browser, without a
@@ -152,6 +156,28 @@ EMAIL_REPLY_TO=support@your-domain.example
 `EMAIL_REPLY_TO` is optional. In local development and previews, the app exposes
 the reset URL after a successful forgot-password request so the flow can be
 tested without sending real mail. In production, the URL is sent only by email.
+
+### Operator surfaces
+
+Bull Board and the future backoffice app are operational/admin surfaces. They
+use shared Basic Auth that is separate from the normal user-facing app login.
+Before assigning a public or admin domain to Bull Board, set these variables on
+the Coolify Compose resource:
+
+```ini
+OPERATOR_AUTH_USERNAME=<operator username>
+OPERATOR_AUTH_PASSWORD=<long random password>
+OPERATOR_AUTH_REALM=PopChoice Operators
+```
+
+`OPERATOR_AUTH_REQUIRED` defaults to `0` for the Coolify `bull-board` service so
+the pet-project deployment does not break while the full backoffice/RBAC model
+is still being built. If the username and password are missing, Bull Board
+starts with a warning and no operator login. Set `OPERATOR_AUTH_REQUIRED=1` when
+you want fail-closed behavior. Leave the Compose health check on `/healthz`;
+that endpoint intentionally bypasses the login prompt so Coolify can verify the
+container without storing operator credentials in the health check. Protected
+Bull Board routes are rate-limited in-process to slow repeated login attempts.
 
 ### Version and build metadata
 

@@ -180,10 +180,11 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Sanitize client-facing error responses so internal exception details, upstream payloads, and infrastructure hints stay out of API responses.
 - Validate required environment variables on application startup for web, workers, and root services so misconfigured deployments fail early.
 - Clarify idempotency and retry behavior for recommendation creation, worker retries, more-picks jobs, and failed queue recovery.
-- Add a shared operator login model for operational apps in
-  [#548](https://github.com/shchilkin/PopChoice/issues/548). `apps/bull-board`
-  is currently unprotected, and a future backoffice app should use the same
-  protection instead of embedding admin access in the user-facing web app.
+- [x] Add a shared operator login model for operational apps in
+      [#548](https://github.com/shchilkin/PopChoice/issues/548). `apps/bull-board`
+      now supports shared Basic Auth with optional fail-closed behavior, and future
+      backoffice routes should reuse the same operator-auth contract instead of
+      embedding admin access in the user-facing web app.
 - Add dependency/security scanning, static security checks, and periodic security review expectations to CI or maintenance workflows.
 
 ### Data Quality Track
