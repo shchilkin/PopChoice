@@ -19,8 +19,8 @@ import type {
 const DEFAULT_PORT = 3000;
 const DEFAULT_SAMPLE_LIMIT = 5;
 const DEFAULT_STALE_AFTER_DAYS = 180;
-const OPERATOR_AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
-const OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
+const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
+const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
 
 function parsePositiveInteger(value: string | undefined, fallback: number): number {
   if (!value || value.trim() === '') return fallback;
@@ -334,6 +334,14 @@ const staleAfterDays = parsePositiveInteger(
   process.env.CATALOG_HEALTH_STALE_DAYS,
   DEFAULT_STALE_AFTER_DAYS,
 );
+const operatorAuthRateLimitWindowSeconds = parsePositiveInteger(
+  process.env.OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+  DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS,
+);
+const operatorAuthRateLimitMax = parsePositiveInteger(
+  process.env.OPERATOR_AUTH_RATE_LIMIT_MAX,
+  DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX,
+);
 const operatorAuthConfig = readOperatorAuthConfig();
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -345,13 +353,15 @@ initDatabase(databaseUrl);
 
 const app = express();
 
+app.set('trust proxy', 1);
 app.get('/healthz', (_request, response) => response.status(200).send('ok'));
 app.use(
   rateLimit({
-    windowMs: OPERATOR_AUTH_RATE_LIMIT_WINDOW_MS,
-    limit: OPERATOR_AUTH_RATE_LIMIT_MAX,
+    windowMs: operatorAuthRateLimitWindowSeconds * 1000,
+    limit: operatorAuthRateLimitMax,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
+    skipSuccessfulRequests: true,
     message: 'Too many backoffice requests, please try again later.',
   }),
 );
