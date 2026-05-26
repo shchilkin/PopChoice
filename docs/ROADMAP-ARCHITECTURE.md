@@ -164,6 +164,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Improve Telegram alert readability in [#525](https://github.com/shchilkin/PopChoice/issues/525) so mobile notifications show concise firing/resolved state, service, instance, severity, runbook, and silence links instead of raw Grafana expression payloads.
 - [x] Tune deploy-sensitive metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so scrape visibility gaps during ordinary redeploys are not treated like confirmed user-facing P1 outages.
 - [x] Add deployment-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527) so normal Coolify redeploys do not create avoidable alert noise while failed or unrecovered deploys still notify clearly.
+- Harden the Coolify preview certificate strategy in [#545](https://github.com/shchilkin/PopChoice/issues/545) so preview deployments do not exhaust Let's Encrypt limits for `shchilkin.dev` and block production observability domains such as Grafana.
 - Enable Coolify notifications for failed deploys, failed backups, server disk/resource warnings, and unhealthy or restarting containers where supported.
 - Add external uptime monitoring for `https://pop-choice.shchilkin.dev/api/health`, then consider a deeper synthetic recommendation smoke check.
 - Add application error tracking for frontend, API routes, and workers so browser errors, API exceptions, and background job failures are visible outside Coolify logs.
