@@ -217,6 +217,7 @@ apps/
 │       ├── styles/        # Styling and theme assets
 │       └── utils/         # Reusable utility helpers
 ├── bull-board/            # Queue monitoring app
+├── backoffice/            # Planned operator app for catalog health and review
 packages/
 └── shared/                # Shared helpers reused by root services
 services/

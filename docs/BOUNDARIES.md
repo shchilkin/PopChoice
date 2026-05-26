@@ -10,8 +10,9 @@ This document defines the intended ownership boundaries for PopChoice in its cur
 
 - `apps/web` owns the user-facing Next.js app, API routes, page composition, and app-specific runtime wiring.
 - `apps/bull-board` owns queue monitoring UI and operational tooling for BullMQ.
-- Future admin/backoffice screens should live in a dedicated app, not in
-  `apps/web`.
+- Future admin/backoffice screens should live in a dedicated `apps/backoffice`
+  app, deployed like `apps/bull-board`, not in `apps/web`. See
+  [Backoffice Plan](/docs/BACKOFFICE).
 - `services/*` own background and offline processes that can run independently from the web app.
 - `packages/shared` owns low-level shared helpers already reused across root services.
 

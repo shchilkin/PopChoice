@@ -112,6 +112,16 @@ A separate monitoring UI is available in `apps/bull-board/`. It provides a web i
 npx --prefix apps/bull-board tsx --env-file=.env apps/bull-board/src/index.ts
 ```
 
+### Backoffice (planned operator app)
+
+Backoffice/catalog-health UI is planned as a dedicated `apps/backoffice/`
+workspace app, deployed as a separate Coolify service like `apps/bull-board`.
+It should expose catalog-health reports, TMDB match review queues, and later
+manual repair actions without putting admin UI inside `apps/web`.
+
+See [Backoffice Plan](/docs/BACKOFFICE) and
+[#493](https://github.com/shchilkin/PopChoice/issues/493).
+
 ---
 
 ## `services/movie-seed`
