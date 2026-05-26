@@ -202,6 +202,8 @@ npm run storybook
 ```
 
 Open [http://localhost:6006](http://localhost:6006) to browse and develop UI components in isolation.
+The static Storybook build is also published as a GHCR image and can be deployed
+as a separate Coolify service for design review.
 
 ### Troubleshooting
 
@@ -280,8 +282,10 @@ npm run dev                         # Start development server (repo root)
 npm run dev:docs                    # Start documentation site at http://localhost:3003
 npm run dev:backoffice              # Start catalog-health operator UI
 npm run build                       # Build for production (repo root)
+npm run build:bull-board            # Build Bull Board runtime entrypoint
 npm run build:docs                  # Build the documentation site
 npm run build:backoffice            # Build the backoffice app
+npm run build:storybook             # Build static Storybook
 npm run start --workspace=apps/web  # Start production server (apps/web)
 cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
 cd apps/web && npm run bull-board    # Launch BullMQ dashboard (apps/web)
@@ -291,7 +295,6 @@ npm run test            # Run all tests
 npm run test:server     # Run utility function tests
 npm run test:storybook  # Component tests (browser environment)
 npm run storybook       # Start component workshop
-npm run build-storybook # Build static Storybook
 npm run start:storybook # Serve built Storybook
 
 # Code Quality

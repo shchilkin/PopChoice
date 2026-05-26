@@ -122,6 +122,11 @@ OPERATOR_AUTH_PASSWORD=...
 OPERATOR_AUTH_REALM=PopChoice Operators
 ```
 
+The Coolify/GHCR Bull Board image compiles the app-local
+`apps/web/scripts/bull-board.ts` entrypoint during the image build and starts it
+with plain `node`, so production does not rely on `tsx` to execute TypeScript at
+runtime.
+
 The Coolify service uses `/healthz` for unauthenticated container health checks;
 all Bull Board UI routes are behind the operator login when credentials are set.
 Operator routes are also rate-limited in-process to slow down repeated Basic
