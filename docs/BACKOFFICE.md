@@ -128,8 +128,8 @@ In Coolify, assign a private/admin domain to `backoffice` with port `3000`,
 just like `bull-board`. During the pet-project phase, operator auth can be
 optional; set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when you want
 the shared login prompt, or set `OPERATOR_AUTH_REQUIRED=1` for fail-closed
-behavior. The backoffice rate limiter counts unsuccessful requests only and can
-be tuned with `OPERATOR_AUTH_RATE_LIMIT_MAX` and
+behavior. The shared Bull Board/backoffice rate limiter counts unsuccessful
+requests only and can be tuned with `OPERATOR_AUTH_RATE_LIMIT_MAX` and
 `OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS`.
 
 ## Preview Policy

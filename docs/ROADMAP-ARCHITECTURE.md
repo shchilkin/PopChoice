@@ -148,6 +148,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Preserve provenance between a PR check, container digest, deployed preview, and `/api/build` metadata through GHCR labels, digest artifacts, runtime image metadata, and Docker-baked fallbacks.
 - [x] Run Coolify from GHCR images via a single `IMAGE_TAG` release bundle instead of compiling PopChoice services on the VPS.
 - [x] Add an optional Coolify deploy webhook path after successful `development` image publishing.
+- Define the staged `local -> development -> production` deployment model in [#556](https://github.com/shchilkin/PopChoice/issues/556), including DNS wildcard usage, Coolify service-domain mapping, development vs production resources, immutable production image tags, and preview cleanup/certificate rate-limit guidance.
 - Keep deployment-time work focused on migrations, health checks, runtime configuration validation, and compatibility checks rather than application compilation.
 - Add a dedicated migration release gate so database migrations are visibly completed before rolling long-running web/worker services.
 - Add release compatibility checks that verify all running PopChoice services report the same commit/image tag.
@@ -292,6 +293,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 15. [x] Improve Grafana Telegram alert formatting in [#525](https://github.com/shchilkin/PopChoice/issues/525) after the first production alert examples.
 16. [x] Reclassify deploy-sensitive app metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so P1 remains reserved for user-facing or core dependency outages.
 17. [x] Plan deploy-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527).
+18. Define the `local -> development -> production` deployment model in [#556](https://github.com/shchilkin/PopChoice/issues/556), then split implementation follow-ups if production promotion, domain layout, or rollback automation grows beyond documentation.
 
 ## Working Checklist
 
