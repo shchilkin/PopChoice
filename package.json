@@ -45,7 +45,7 @@
     "test:e2e:run": "playwright test --config apps/web/playwright.e2e.config.ts",
     "test:e2e:setup": "node scripts/e2e/setup-db.mjs",
     "test:server": "npm run test:server --workspace=apps/web",
-    "test:services": "turbo run test --filter=./services/*",
+    "test:services": "npm run test --workspace=packages/shared && turbo run test --filter=./services/*",
     "test:storybook": "npm run test:storybook --workspace=apps/web",
     "type-check": "npm run build --workspace=packages/shared && npm run type-check --workspace=apps/web && npm run type-check --workspace=apps/backoffice",
     "type-check:docs": "npm run type-check --workspace=apps/docs"

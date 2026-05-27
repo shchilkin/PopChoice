@@ -313,7 +313,7 @@ npm run populate-db          # Populate database with movie data
 npm run catalog:health       # Report catalog metadata coverage and likely duplicates
 npm run analyze-movies       # Analyze movie data for embeddings
 npm run calibrate-similarity # Calibrate vector similarity thresholds
-npm run test:services        # Run service test scripts via Turbo
+npm run test:services        # Run shared package and service test scripts
 ```
 
 For detailed development workflows and project structure, see the **[Development Guide](./docs/DEVELOPMENT.md)**.
