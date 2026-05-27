@@ -167,6 +167,65 @@ function getBackfillReasonForIssue(issueKey: string): CatalogBackfillReason {
   return 'missing_metadata';
 }
 
+function wantsJsonResponse(request: Request): boolean {
+  const accept = request.get('accept') ?? '';
+  const requestedWith = request.get('x-requested-with') ?? '';
+  return accept.includes('application/json') || requestedWith.toLowerCase() === 'fetch';
+}
+
+function catalogRepairMessage(status: CatalogRepairActionResult['status']): string {
+  if (status === 'queued') {
+    return 'Catalog backfill job queued. Workers will process it through the existing rate-limited TMDB path.';
+  }
+
+  return 'Catalog repair queue is unavailable. Check REDIS_URL and the backoffice logs.';
+}
+
+async function performCatalogRepairAction(request: Request): Promise<CatalogRepairActionResult> {
+  if (request.body.action !== 'enqueue_backfill') {
+    throw new Error('Unsupported catalog-health action.');
+  }
+
+  const movieId = parseMovieId(request.body.movie_id);
+  const issueKey = parseCatalogIssueKey(request.body.issue_key);
+  const snapshot = await getCatalogRepairMovieSnapshot(movieId);
+
+  if (!snapshot) {
+    const error = new Error('Movie not found.');
+    (error as Error & { statusCode?: number }).statusCode = 404;
+    throw error;
+  }
+
+  const job = await enqueueCatalogBackfillMovieFromBackoffice(
+    {
+      movieId,
+      reason: getBackfillReasonForIssue(issueKey),
+      language: config.tmdbLanguage,
+    },
+    config.redisUrl,
+  );
+
+  await recordCatalogRepairAction({
+    action: 'enqueue_backfill',
+    actor: parseOperatorActor(request),
+    issueKey,
+    targetType: 'movie',
+    targetId: movieId,
+    note: typeof request.body.note === 'string' ? request.body.note : undefined,
+    previousState: { ...snapshot },
+    result: job
+      ? { status: 'queued', ...job }
+      : { status: 'queue_unavailable', queueName: 'catalog-maintenance' },
+  });
+
+  return {
+    status: job ? 'queued' : 'unavailable',
+    issueKey,
+    movieId,
+    job,
+  };
+}
+
 type BackofficeSection = 'health' | 'reviews';
 
 type BackofficeShellOptions = {
@@ -177,6 +236,14 @@ type BackofficeShellOptions = {
   actions?: string;
   autoRefreshSeconds?: number;
   body: string;
+  scriptHtml?: string;
+};
+
+type CatalogRepairActionResult = {
+  status: 'queued' | 'unavailable';
+  issueKey: string;
+  movieId: string;
+  job: Awaited<ReturnType<typeof enqueueCatalogBackfillMovieFromBackoffice>>;
 };
 
 function renderNav(active: BackofficeSection): string {
@@ -503,6 +570,12 @@ function renderBackofficeStyles(): string {
     .sample-table .id-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
     .sample-table .movie-cell { min-width: 220px; }
     .sample-table .repair-cell { width: 148px; }
+    .sample-table tr.repair-pending td {
+      background: rgba(124, 199, 255, 0.05);
+    }
+    .sample-table tr.repair-queued td {
+      background: rgba(64, 196, 99, 0.06);
+    }
     .data-pill {
       display: inline-flex;
       min-width: 34px;
@@ -588,7 +661,25 @@ function renderBackofficeStyles(): string {
       gap: 10px;
       color: var(--muted);
     }
-    .repair-form { margin: 0; }
+    .repair-form {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+    }
+    .repair-message {
+      min-height: 16px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+    .repair-message.good { color: var(--good); }
+    .repair-message.warn { color: var(--warn); }
+    .repair-placeholder {
+      color: var(--muted);
+      font-weight: 750;
+      text-align: center;
+    }
     .detail-grid {
       display: grid;
       grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
@@ -785,6 +876,7 @@ function renderBackofficeShell(options: BackofficeShellOptions): string {
           ${renderNav(options.active)}
           ${options.body}
         </main>
+        ${options.scriptHtml ?? ''}
       </body>
     </html>`;
 }
@@ -909,7 +1001,7 @@ function renderSampleRows(issueKey: string, samples: CatalogMovieSample[]): stri
           ${samples
             .map(
               (movie) => `
-                <tr>
+                <tr data-repair-row data-issue-key="${escapeAttribute(issueKey)}" data-movie-id="${escapeAttribute(movie.id)}">
                   <td class="id-cell">#${escapeHtml(movie.id)}</td>
                   <td class="movie-cell"><strong>${escapeHtml(movie.name)}</strong></td>
                   <td>${escapeHtml(movie.year)}</td>
@@ -923,11 +1015,12 @@ function renderSampleRows(issueKey: string, samples: CatalogMovieSample[]): stri
                     canRepair
                       ? `
                         <td class="repair-cell">
-                          <form class="repair-form" method="post" action="/catalog-health/actions">
+                          <form class="repair-form" method="post" action="/catalog-health/actions" data-repair-form>
                             <input type="hidden" name="action" value="enqueue_backfill" />
                             <input type="hidden" name="issue_key" value="${escapeAttribute(issueKey)}" />
                             <input type="hidden" name="movie_id" value="${escapeAttribute(movie.id)}" />
-                            <button class="button primary small" type="submit">Queue backfill</button>
+                            <button class="button primary small" type="submit" data-repair-submit>Queue backfill</button>
+                            <span class="repair-message" aria-live="polite" data-repair-message></span>
                           </form>
                         </td>
                       `
@@ -979,6 +1072,88 @@ function renderRepairFlash(repairStatus: string | null): string {
   }
 
   return '';
+}
+
+function renderCatalogRepairEnhancementScript(): string {
+  return `<script>
+    (() => {
+      if (!window.fetch || !window.FormData) return;
+
+      const setMessage = (form, text, tone) => {
+        const message = form.querySelector('[data-repair-message]');
+        if (!message) return;
+        message.textContent = text;
+        message.classList.toggle('good', tone === 'good');
+        message.classList.toggle('warn', tone === 'warn');
+      };
+
+      const setButton = (form, text, disabled) => {
+        const button = form.querySelector('[data-repair-submit]');
+        if (!button) return;
+        button.textContent = text;
+        button.disabled = disabled;
+      };
+
+      const appendEmptyPlaceholder = (body, columnCount) => {
+        if (!body || body.querySelector('[data-repair-row]')) return;
+        const placeholder = document.createElement('tr');
+        placeholder.innerHTML =
+          '<td class="repair-placeholder" colspan="' +
+          columnCount +
+          '">Visible sample queued. Refresh after workers complete to verify catalog health.</td>';
+        body.appendChild(placeholder);
+      };
+
+      document.querySelectorAll('[data-repair-form]').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+
+          const row = form.closest('[data-repair-row]');
+          const originalText = form.querySelector('[data-repair-submit]')?.textContent || 'Queue backfill';
+
+          row?.classList.add('repair-pending');
+          setButton(form, 'Queueing...', true);
+          setMessage(form, 'Queueing...', '');
+
+          try {
+            const response = await fetch(form.action, {
+              method: 'POST',
+              body: new URLSearchParams(new FormData(form)),
+              headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'fetch',
+              },
+            });
+            const payload = await response.json().catch(() => null);
+
+            if (response.ok && payload?.status === 'queued') {
+              row?.classList.remove('repair-pending');
+              row?.classList.add('repair-queued');
+              setButton(form, 'Queued', true);
+              setMessage(form, 'Queued for workers', 'good');
+              if (row) {
+                window.setTimeout(() => {
+                  const body = row.parentElement;
+                  const columnCount = row.cells.length;
+                  row.remove();
+                  appendEmptyPlaceholder(body, columnCount);
+                }, 450);
+              }
+              return;
+            }
+
+            row?.classList.remove('repair-pending');
+            setButton(form, originalText, false);
+            setMessage(form, payload?.message || 'Queue unavailable. Check Redis and logs.', 'warn');
+          } catch (_error) {
+            row?.classList.remove('repair-pending');
+            setButton(form, originalText, false);
+            setMessage(form, 'Request failed. Try again.', 'warn');
+          }
+        });
+      });
+    })();
+  </script>`;
 }
 
 function renderRepairAuditValue(value: unknown): string {
@@ -1110,6 +1285,7 @@ function renderCatalogHealthPage(
         </section>
       </div>
     `,
+    scriptHtml: renderCatalogRepairEnhancementScript(),
   });
 }
 
@@ -1592,44 +1768,34 @@ app.get('/', async (request, response) => {
 
 app.post('/catalog-health/actions', async (request, response) => {
   try {
-    if (request.body.action !== 'enqueue_backfill') {
-      throw new Error('Unsupported catalog-health action.');
-    }
+    const result = await performCatalogRepairAction(request);
 
-    const movieId = parseMovieId(request.body.movie_id);
-    const issueKey = parseCatalogIssueKey(request.body.issue_key);
-    const snapshot = await getCatalogRepairMovieSnapshot(movieId);
-
-    if (!snapshot) {
-      response.status(404).type('html').send(renderErrorPage('Movie not found.'));
+    if (wantsJsonResponse(request)) {
+      response.status(result.status === 'queued' ? 200 : 503).json({
+        ok: result.status === 'queued',
+        status: result.status,
+        message: catalogRepairMessage(result.status),
+        issueKey: result.issueKey,
+        movieId: result.movieId,
+        job: result.job,
+      });
       return;
     }
 
-    const job = await enqueueCatalogBackfillMovieFromBackoffice(
-      {
-        movieId,
-        reason: getBackfillReasonForIssue(issueKey),
-        language: config.tmdbLanguage,
-      },
-      config.redisUrl,
-    );
-
-    await recordCatalogRepairAction({
-      action: 'enqueue_backfill',
-      actor: parseOperatorActor(request),
-      issueKey,
-      targetType: 'movie',
-      targetId: movieId,
-      note: typeof request.body.note === 'string' ? request.body.note : undefined,
-      previousState: { ...snapshot },
-      result: job
-        ? { status: 'queued', ...job }
-        : { status: 'queue_unavailable', queueName: 'catalog-maintenance' },
-    });
-
-    response.redirect(303, job ? '/?repair=queued' : '/?repair=unavailable');
+    response.redirect(303, result.status === 'queued' ? '/?repair=queued' : '/?repair=unavailable');
   } catch (error) {
     logger.error('Failed to apply catalog-health repair action', { err: error });
+    if (wantsJsonResponse(request)) {
+      response.status((error as Error & { statusCode?: number }).statusCode ?? 500).json({
+        ok: false,
+        status: 'failed',
+        message:
+          error instanceof Error && error.message
+            ? error.message
+            : 'Catalog repair action failed. Check backoffice logs for details.',
+      });
+      return;
+    }
     response.redirect(303, '/?repair=failed');
   }
 });
