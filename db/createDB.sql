@@ -184,15 +184,46 @@ CREATE TABLE IF NOT EXISTS tmdb_match_reviews (
     reason IN ('ambiguous_match', 'runtime_mismatch')
   ),
   CONSTRAINT tmdb_match_reviews_status_check CHECK (
-    status IN ('open', 'resolved', 'ignored')
+    status IN ('open', 'resolved', 'ignored', 'deferred')
   )
 );
+
+ALTER TABLE tmdb_match_reviews
+  DROP CONSTRAINT IF EXISTS tmdb_match_reviews_status_check;
+
+ALTER TABLE tmdb_match_reviews
+  ADD CONSTRAINT tmdb_match_reviews_status_check CHECK (
+    status IN ('open', 'resolved', 'ignored', 'deferred')
+  );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tmdb_match_reviews_movie_reason
   ON tmdb_match_reviews (movie_id, reason);
 
 CREATE INDEX IF NOT EXISTS idx_tmdb_match_reviews_status_updated_at
   ON tmdb_match_reviews (status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS tmdb_match_review_audit (
+  id bigserial PRIMARY KEY,
+  review_id bigint NOT NULL REFERENCES tmdb_match_reviews(id) ON DELETE CASCADE,
+  action text NOT NULL,
+  actor text NOT NULL,
+  note text,
+  previous_status text,
+  new_status text NOT NULL,
+  candidate jsonb,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT tmdb_match_review_audit_action_check CHECK (
+    action IN ('apply_candidate', 'reject', 'defer', 'reopen')
+  ),
+  CONSTRAINT tmdb_match_review_audit_status_check CHECK (
+    new_status IN ('open', 'resolved', 'ignored', 'deferred')
+    AND (previous_status IS NULL OR previous_status IN ('open', 'resolved', 'ignored', 'deferred'))
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_tmdb_match_review_audit_review_created_at
+  ON tmdb_match_review_audit (review_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS users (
   id bigserial PRIMARY KEY,

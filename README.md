@@ -224,7 +224,7 @@ renders the same files from `apps/docs`:
 ```bash
 npm run dev:docs     # http://localhost:3003
 npm run build:docs   # production docs build
-npm run dev:backoffice # catalog-health operator UI
+npm run dev:backoffice # catalog-health and TMDB-review operator UI
 ```
 
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
@@ -280,7 +280,7 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 # Development
 npm run dev                         # Start development server (repo root)
 npm run dev:docs                    # Start documentation site at http://localhost:3003
-npm run dev:backoffice              # Start catalog-health operator UI
+npm run dev:backoffice              # Start catalog-health and TMDB-review operator UI
 npm run build                       # Build for production (repo root)
 npm run build:bull-board            # Build Bull Board runtime entrypoint
 npm run build:docs                  # Build the documentation site

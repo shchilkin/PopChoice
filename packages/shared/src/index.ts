@@ -48,3 +48,25 @@ export type {
   DuplicateIdentityGroup,
   DuplicateIdentityReport,
 } from './catalogHealth.js';
+export {
+  applyTMDBMatchReviewAction,
+  ensureTMDBMatchReviewActionSchema,
+  getTMDBMatchReview,
+  isTMDBMatchReviewReason,
+  isTMDBMatchReviewSort,
+  isTMDBMatchReviewStatus,
+  listTMDBMatchReviewAudit,
+  listTMDBMatchReviews,
+} from './tmdbMatchReviews.js';
+export type {
+  ApplyTMDBMatchReviewActionInput,
+  ListTMDBMatchReviewsOptions,
+  TMDBMatchReview,
+  TMDBMatchReviewAction,
+  TMDBMatchReviewActionAudit,
+  TMDBMatchReviewReason,
+  TMDBMatchReviewSort,
+  TMDBMatchReviewStatus,
+  TMDBReviewCandidate,
+  TMDBReviewMovieSnapshot,
+} from './tmdbMatchReviews.js';
