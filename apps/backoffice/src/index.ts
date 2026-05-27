@@ -1,9 +1,17 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
+  applyTMDBMatchReviewAction,
+  ensureTMDBMatchReviewActionSchema,
   getCatalogHealthReport,
+  getTMDBMatchReview,
   initDatabase,
+  isTMDBMatchReviewReason,
+  isTMDBMatchReviewSort,
+  isTMDBMatchReviewStatus,
   logger,
+  listTMDBMatchReviewAudit,
+  listTMDBMatchReviews,
   operatorAuthChallenge,
   readOperatorAuthConfig,
   verifyOperatorBasicAuthHeader,
@@ -14,6 +22,13 @@ import type {
   CatalogMovieSample,
   DuplicateIdentityGroup,
   OperatorAuthConfig,
+  TMDBMatchReview,
+  TMDBMatchReviewAction,
+  TMDBMatchReviewActionAudit,
+  TMDBMatchReviewReason,
+  TMDBMatchReviewSort,
+  TMDBMatchReviewStatus,
+  TMDBReviewCandidate,
 } from '@pop-choice/shared';
 
 const DEFAULT_PORT = 3000;
@@ -42,6 +57,60 @@ function escapeHtml(value: string | number | null | undefined): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function escapeAttribute(value: string | number | null | undefined): string {
+  return escapeHtml(value).replaceAll('`', '&#96;');
+}
+
+function parseOperatorActor(request: Request): string {
+  const header = request.headers.authorization;
+  if (!header?.startsWith('Basic ')) return 'anonymous-operator';
+
+  try {
+    const decoded = Buffer.from(header.slice('Basic '.length), 'base64').toString('utf8');
+    const separatorIndex = decoded.indexOf(':');
+    const username = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : decoded;
+    return username.trim() || 'anonymous-operator';
+  } catch {
+    return 'anonymous-operator';
+  }
+}
+
+function parseTMDBReviewStatus(value: unknown): TMDBMatchReviewStatus | 'all' {
+  if (value === 'all') return 'all';
+  return typeof value === 'string' && isTMDBMatchReviewStatus(value) ? value : 'open';
+}
+
+function parseTMDBReviewReason(value: unknown): TMDBMatchReviewReason | 'all' {
+  if (value === 'all') return 'all';
+  return typeof value === 'string' && isTMDBMatchReviewReason(value) ? value : 'all';
+}
+
+function parseTMDBReviewSort(value: unknown): TMDBMatchReviewSort {
+  return typeof value === 'string' && isTMDBMatchReviewSort(value) ? value : 'highest_risk';
+}
+
+function parseAction(value: unknown): TMDBMatchReviewAction {
+  if (
+    value === 'apply_candidate' ||
+    value === 'reject' ||
+    value === 'defer' ||
+    value === 'reopen'
+  ) {
+    return value;
+  }
+
+  throw new Error(`Unsupported review action "${String(value)}".`);
+}
+
+function renderNav(active: 'health' | 'reviews'): string {
+  return `
+    <nav class="nav" aria-label="Backoffice sections">
+      <a class="${active === 'health' ? 'active' : ''}" href="/">Catalog health</a>
+      <a class="${active === 'reviews' ? 'active' : ''}" href="/tmdb-reviews">TMDB reviews</a>
+    </nav>
+  `;
 }
 
 function createOperatorAuthMiddleware(config: OperatorAuthConfig | null) {
@@ -213,6 +282,25 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
             gap: 12px;
             margin-bottom: 20px;
           }
+          .nav {
+            display: flex;
+            gap: 8px;
+            margin: 0 0 18px;
+          }
+          .nav a {
+            color: var(--muted);
+            text-decoration: none;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 7px 10px;
+            background: #15181d;
+            font-weight: 600;
+          }
+          .nav a.active {
+            color: var(--text);
+            border-color: var(--accent);
+            background: color-mix(in srgb, var(--accent), #15181d 85%);
+          }
           .stat, .panel {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -264,7 +352,7 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
           }
           @media (max-width: 900px) {
             main { padding: 18px; }
-            header, .actions { flex-direction: column; align-items: stretch; }
+            header, .actions, .nav { flex-direction: column; align-items: stretch; }
             .summary { grid-template-columns: 1fr 1fr; }
             table { display: block; overflow-x: auto; white-space: nowrap; }
             .duplicate-group li { grid-template-columns: 1fr; gap: 2px; }
@@ -282,6 +370,7 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
               <a class="button" href="/">Refresh</a>
             </div>
           </header>
+          ${renderNav('health')}
           <section class="summary" aria-label="Catalog health summary">
             <div class="stat"><span class="stat-label">Movies</span><span class="stat-value">${escapeHtml(report.totalMovies)}</span></div>
             <div class="stat"><span class="stat-label">Issue categories</span><span class="stat-value">${escapeHtml(activeIssues)}</span></div>
@@ -296,6 +385,391 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
         </main>
       </body>
     </html>`;
+}
+
+function formatPercent(value: number | null): string {
+  if (value === null) return '-';
+  return `${Math.round(value * 100)}%`;
+}
+
+function renderReason(reason: TMDBMatchReviewReason): string {
+  return reason === 'ambiguous_match' ? 'Ambiguous match' : 'Runtime mismatch';
+}
+
+function renderStatus(status: TMDBMatchReviewStatus): string {
+  const labels: Record<TMDBMatchReviewStatus, string> = {
+    open: 'Open',
+    resolved: 'Resolved',
+    ignored: 'Ignored',
+    deferred: 'Deferred',
+  };
+  return labels[status];
+}
+
+function renderCandidateSummary(candidates: TMDBReviewCandidate[]): string {
+  if (candidates.length === 0) return '<span class="muted">No candidates captured</span>';
+
+  const [best, runnerUp] = candidates;
+  const gap =
+    best?.confidence !== null &&
+    best?.confidence !== undefined &&
+    runnerUp?.confidence !== null &&
+    runnerUp?.confidence !== undefined
+      ? best.confidence - runnerUp.confidence
+      : null;
+
+  return `
+    <div>${escapeHtml(best?.title)} (${escapeHtml(best?.releaseYear)})</div>
+    <div class="muted">${escapeHtml(candidates.length)} candidate(s), best ${escapeHtml(formatPercent(best?.confidence ?? null))}${gap === null ? '' : `, gap ${escapeHtml(formatPercent(gap))}`}</div>
+  `;
+}
+
+function renderReviewRows(reviews: TMDBMatchReview[]): string {
+  if (reviews.length === 0) {
+    return `
+      <tr>
+        <td colspan="8" class="empty">No TMDB review rows match these filters.</td>
+      </tr>
+    `;
+  }
+
+  return reviews
+    .map(
+      (review) => `
+        <tr>
+          <td><a href="/tmdb-reviews/${escapeAttribute(review.id)}">#${escapeHtml(review.id)}</a></td>
+          <td>
+            <strong>${escapeHtml(review.movieName)}</strong>
+            <div class="muted">${escapeHtml(review.movieYear)} · movie ${escapeHtml(review.movieId)}</div>
+          </td>
+          <td><span class="pill">${escapeHtml(renderReason(review.reason))}</span></td>
+          <td><span class="status ${escapeAttribute(review.status)}">${escapeHtml(renderStatus(review.status))}</span></td>
+          <td>${renderCandidateSummary(review.candidates)}</td>
+          <td>${escapeHtml(review.currentMovie?.tmdb_id ?? null)}</td>
+          <td>${escapeHtml(review.updatedAt)}</td>
+          <td><a class="button small" href="/tmdb-reviews/${escapeAttribute(review.id)}">Open</a></td>
+        </tr>
+      `,
+    )
+    .join('');
+}
+
+function renderReviewListPage(
+  reviews: TMDBMatchReview[],
+  filters: {
+    status: TMDBMatchReviewStatus | 'all';
+    reason: TMDBMatchReviewReason | 'all';
+    sort: TMDBMatchReviewSort;
+  },
+): string {
+  return `<!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>TMDB Reviews · PopChoice Backoffice</title>
+        <style>${renderReviewStyles()}</style>
+      </head>
+      <body>
+        <main>
+          <header>
+            <div>
+              <h1>TMDB Match Reviews</h1>
+              <div class="muted">Review ambiguous TMDB candidates and runtime confidence cases before changing catalog data.</div>
+            </div>
+            <div class="actions">
+              <a class="button" href="/tmdb-reviews">Reset</a>
+            </div>
+          </header>
+          ${renderNav('reviews')}
+          <form class="filters" method="get" action="/tmdb-reviews">
+            <label>Status
+              <select name="status">
+                ${renderOption('open', 'Open', filters.status)}
+                ${renderOption('deferred', 'Deferred', filters.status)}
+                ${renderOption('resolved', 'Resolved', filters.status)}
+                ${renderOption('ignored', 'Ignored', filters.status)}
+                ${renderOption('all', 'All', filters.status)}
+              </select>
+            </label>
+            <label>Reason
+              <select name="reason">
+                ${renderOption('all', 'All', filters.reason)}
+                ${renderOption('ambiguous_match', 'Ambiguous match', filters.reason)}
+                ${renderOption('runtime_mismatch', 'Runtime mismatch', filters.reason)}
+              </select>
+            </label>
+            <label>Sort
+              <select name="sort">
+                ${renderOption('highest_risk', 'Highest risk', filters.sort)}
+                ${renderOption('oldest', 'Oldest first', filters.sort)}
+                ${renderOption('newest', 'Newest first', filters.sort)}
+              </select>
+            </label>
+            <button class="button" type="submit">Apply filters</button>
+          </form>
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Review queue</h2>
+              <span class="count">${escapeHtml(reviews.length)}</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Local movie</th>
+                  <th>Reason</th>
+                  <th>Status</th>
+                  <th>Candidates</th>
+                  <th>Current TMDB</th>
+                  <th>Updated</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>${renderReviewRows(reviews)}</tbody>
+            </table>
+          </section>
+        </main>
+      </body>
+    </html>`;
+}
+
+function renderOption(value: string, label: string, selected: string): string {
+  return `<option value="${escapeAttribute(value)}"${selected === value ? ' selected' : ''}>${escapeHtml(label)}</option>`;
+}
+
+function renderCandidateCard(review: TMDBMatchReview, candidate: TMDBReviewCandidate): string {
+  const canApply =
+    candidate.id !== null && (review.status === 'open' || review.status === 'deferred');
+
+  return `
+    <article class="candidate">
+      <div>
+        <h3>${escapeHtml(candidate.title)}</h3>
+        <dl>
+          <div><dt>TMDB</dt><dd>${escapeHtml(candidate.id)}</dd></div>
+          <div><dt>Original</dt><dd>${escapeHtml(candidate.originalTitle)}</dd></div>
+          <div><dt>Year</dt><dd>${escapeHtml(candidate.releaseYear)}</dd></div>
+          <div><dt>Confidence</dt><dd>${escapeHtml(formatPercent(candidate.confidence))}</dd></div>
+        </dl>
+      </div>
+      ${
+        canApply
+          ? `
+            <form class="action-form" method="post" action="/tmdb-reviews/${escapeAttribute(review.id)}/actions">
+              <input type="hidden" name="action" value="apply_candidate" />
+              <input type="hidden" name="candidate_id" value="${escapeAttribute(candidate.id)}" />
+              <label>Decision note
+                <input name="note" maxlength="500" placeholder="Why this candidate is correct" />
+              </label>
+              <button class="button primary" type="submit">Apply candidate</button>
+            </form>
+          `
+          : '<p class="muted">This candidate cannot be applied from the current review state.</p>'
+      }
+    </article>
+  `;
+}
+
+function renderAuditRows(audit: TMDBMatchReviewActionAudit[]): string {
+  if (audit.length === 0) {
+    return '<p class="empty">No decisions have been recorded yet.</p>';
+  }
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Actor</th>
+          <th>Action</th>
+          <th>Status</th>
+          <th>Candidate</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${audit
+          .map(
+            (entry) => `
+              <tr>
+                <td>${escapeHtml(entry.createdAt)}</td>
+                <td>${escapeHtml(entry.actor)}</td>
+                <td>${escapeHtml(entry.action)}</td>
+                <td>${escapeHtml(entry.previousStatus)} → ${escapeHtml(entry.newStatus)}</td>
+                <td>${escapeHtml(entry.candidate?.id ?? null)} ${entry.candidate ? escapeHtml(entry.candidate.title) : ''}</td>
+                <td>${escapeHtml(entry.note)}</td>
+              </tr>
+            `,
+          )
+          .join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderReviewDetailPage(
+  review: TMDBMatchReview,
+  audit: TMDBMatchReviewActionAudit[],
+): string {
+  const candidates =
+    review.candidates.length === 0
+      ? '<p class="empty">No candidate metadata was captured. Reject, defer, or rerun backfill after checking TMDB manually.</p>'
+      : review.candidates.map((candidate) => renderCandidateCard(review, candidate)).join('');
+
+  return `<!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>TMDB Review #${escapeHtml(review.id)} · PopChoice Backoffice</title>
+        <style>${renderReviewStyles()}</style>
+      </head>
+      <body>
+        <main>
+          <header>
+            <div>
+              <h1>TMDB Review #${escapeHtml(review.id)}</h1>
+              <div class="muted">${escapeHtml(renderReason(review.reason))} · ${escapeHtml(renderStatus(review.status))} · updated ${escapeHtml(review.updatedAt)}</div>
+            </div>
+            <div class="actions">
+              <a class="button" href="/tmdb-reviews">Back to queue</a>
+            </div>
+          </header>
+          ${renderNav('reviews')}
+          <section class="detail-grid">
+            <article class="panel">
+              <div class="panel-header"><h2>Local movie</h2></div>
+              <dl class="facts">
+                <div><dt>ID</dt><dd>${escapeHtml(review.movieId)}</dd></div>
+                <div><dt>Name</dt><dd>${escapeHtml(review.currentMovie?.name ?? review.movieName)}</dd></div>
+                <div><dt>Year</dt><dd>${escapeHtml(review.currentMovie?.year ?? review.movieYear)}</dd></div>
+                <div><dt>Runtime</dt><dd>${escapeHtml(review.currentMovie?.duration ?? null)}</dd></div>
+                <div><dt>Age</dt><dd>${escapeHtml(review.currentMovie?.age_rating ?? null)}</dd></div>
+                <div><dt>TMDB</dt><dd>${escapeHtml(review.currentMovie?.tmdb_id ?? null)}</dd></div>
+                <div><dt>Matched at</dt><dd>${escapeHtml(review.currentMovie?.tmdb_matched_at ?? null)}</dd></div>
+              </dl>
+            </article>
+            <article class="panel">
+              <div class="panel-header"><h2>Why it needs review</h2></div>
+              <div class="copy">
+                <p><strong>${escapeHtml(renderReason(review.reason))}</strong></p>
+                <p>${escapeHtml(review.notes ?? 'No notes were recorded by backfill.')}</p>
+                <p class="muted">Actions are audited. Applying a candidate only changes TMDB identity fields and marks the match source as manual; richer metadata still comes from backfill/discovery refreshes.</p>
+              </div>
+            </article>
+          </section>
+          <section class="panel">
+            <div class="panel-header"><h2>Decision actions</h2></div>
+            <div class="decision-actions">
+              ${renderStatusActionForm(review, 'reject', 'Reject / ignore')}
+              ${renderStatusActionForm(review, 'defer', 'Defer')}
+              ${renderStatusActionForm(review, 'reopen', 'Reopen')}
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Candidates</h2>
+              <span class="count">${escapeHtml(review.candidates.length)}</span>
+            </div>
+            <div class="candidates">${candidates}</div>
+          </section>
+          <section class="panel">
+            <div class="panel-header"><h2>Audit history</h2></div>
+            ${renderAuditRows(audit)}
+          </section>
+        </main>
+      </body>
+    </html>`;
+}
+
+function renderStatusActionForm(
+  review: TMDBMatchReview,
+  action: Exclude<TMDBMatchReviewAction, 'apply_candidate'>,
+  label: string,
+): string {
+  const disabled =
+    (action === 'reject' && review.status === 'ignored') ||
+    (action === 'defer' && review.status === 'deferred') ||
+    (action === 'reopen' && review.status === 'open');
+
+  return `
+    <form class="action-form" method="post" action="/tmdb-reviews/${escapeAttribute(review.id)}/actions">
+      <input type="hidden" name="action" value="${escapeAttribute(action)}" />
+      <label>Decision note
+        <input name="note" maxlength="500" placeholder="Optional rationale" ${disabled ? 'disabled' : ''} />
+      </label>
+      <button class="button" type="submit" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
+    </form>
+  `;
+}
+
+function renderReviewStyles(): string {
+  return `
+    :root {
+      color-scheme: dark;
+      --bg: #101214;
+      --surface: #171a1f;
+      --surface-2: #1f242b;
+      --border: #333a44;
+      --text: #f1f4f8;
+      --muted: #a8b0bc;
+      --good: #34c759;
+      --warn: #ffcc00;
+      --bad: #ff453a;
+      --accent: #64d2ff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px; }
+    header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+    h2 { margin: 0; font-size: 16px; letter-spacing: 0; }
+    h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: 0; }
+    a { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .nav, .actions, .decision-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .nav { margin: 0 0 18px; }
+    .nav a, .button { color: var(--text); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; background: var(--surface-2); font-weight: 600; }
+    .nav a { color: var(--muted); background: #15181d; }
+    .nav a.active { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent), #15181d 85%); }
+    .button { cursor: pointer; }
+    .button.primary { border-color: var(--accent); }
+    .button.small { padding: 5px 8px; font-size: 12px; }
+    .button:disabled, input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 18px; }
+    label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    select, input { color: var(--text); background: #15181d; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; min-width: 180px; }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
+    .panel-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+    .count { min-width: 48px; text-align: center; border-radius: 999px; padding: 3px 10px; background: #2d333d; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; background: #15181d; }
+    tr:last-child td { border-bottom: 0; }
+    .empty { margin: 0; padding: 14px; color: var(--muted); }
+    .pill, .status { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; background: #2d333d; font-size: 12px; font-weight: 700; }
+    .status.open { color: var(--warn); }
+    .status.resolved { color: var(--good); }
+    .status.ignored { color: var(--bad); }
+    .status.deferred { color: var(--accent); }
+    .detail-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr); gap: 14px; }
+    .facts, .candidate dl { margin: 0; padding: 14px; display: grid; gap: 8px; }
+    .facts div, .candidate dl div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; }
+    dt { color: var(--muted); font-weight: 700; }
+    dd { margin: 0; overflow-wrap: anywhere; }
+    .copy { padding: 14px; }
+    .candidates { display: grid; gap: 12px; padding: 14px; }
+    .candidate { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(240px, 360px); gap: 14px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+    .action-form { display: grid; gap: 8px; align-content: start; }
+    @media (max-width: 900px) {
+      main { padding: 18px; }
+      header, .filters, .decision-actions, .nav, .candidate { flex-direction: column; align-items: stretch; display: flex; }
+      .detail-grid { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+      .facts div, .candidate dl div { grid-template-columns: 1fr; gap: 2px; }
+    }
+  `;
 }
 
 function renderErrorPage(error: unknown): string {
@@ -350,11 +824,13 @@ if (!databaseUrl) {
 }
 
 initDatabase(databaseUrl);
+await ensureTMDBMatchReviewActionSchema();
 
 const app = express();
 
 app.set('trust proxy', 1);
 app.get('/healthz', (_request, response) => response.status(200).send('ok'));
+app.use(express.urlencoded({ extended: false }));
 app.use(
   rateLimit({
     windowMs: operatorAuthRateLimitWindowSeconds * 1000,
@@ -374,6 +850,69 @@ app.get('/', async (_request, response) => {
   } catch (error) {
     logger.error('Failed to render catalog health report', { err: error });
     response.status(500).type('html').send(renderErrorPage(error));
+  }
+});
+
+app.get('/tmdb-reviews', async (request, response) => {
+  try {
+    const filters = {
+      status: parseTMDBReviewStatus(request.query.status),
+      reason: parseTMDBReviewReason(request.query.reason),
+      sort: parseTMDBReviewSort(request.query.sort),
+    };
+    const reviews = await listTMDBMatchReviews({
+      status: filters.status,
+      reason: filters.reason,
+      sort: filters.sort,
+      limit: 200,
+    });
+
+    response.type('html').send(renderReviewListPage(reviews, filters));
+  } catch (error) {
+    logger.error('Failed to render TMDB match review queue', { err: error });
+    response.status(500).type('html').send(renderErrorPage(error));
+  }
+});
+
+app.get('/tmdb-reviews/:id', async (request, response) => {
+  try {
+    const review = await getTMDBMatchReview(request.params.id);
+    if (!review) {
+      response.status(404).type('html').send(renderErrorPage('TMDB match review not found.'));
+      return;
+    }
+
+    const audit = await listTMDBMatchReviewAudit(review.id);
+    response.type('html').send(renderReviewDetailPage(review, audit));
+  } catch (error) {
+    logger.error('Failed to render TMDB match review detail', { err: error });
+    response.status(500).type('html').send(renderErrorPage(error));
+  }
+});
+
+app.post('/tmdb-reviews/:id/actions', async (request, response) => {
+  try {
+    const action = parseAction(request.body.action);
+    const candidateId =
+      typeof request.body.candidate_id === 'string' && request.body.candidate_id.trim() !== ''
+        ? Number.parseInt(request.body.candidate_id, 10)
+        : undefined;
+
+    await applyTMDBMatchReviewAction({
+      reviewId: request.params.id,
+      action,
+      actor: parseOperatorActor(request),
+      candidateId: Number.isFinite(candidateId) ? candidateId : undefined,
+      note: typeof request.body.note === 'string' ? request.body.note : undefined,
+    });
+
+    response.redirect(303, `/tmdb-reviews/${encodeURIComponent(request.params.id)}`);
+  } catch (error) {
+    logger.error('Failed to apply TMDB match review action', { err: error });
+    response
+      .status(400)
+      .type('html')
+      .send(renderErrorPage('Review action failed. Check backoffice logs for details.'));
   }
 });
 

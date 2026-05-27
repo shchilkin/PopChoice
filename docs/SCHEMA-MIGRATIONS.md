@@ -171,4 +171,5 @@ Useful follow-ups, not current tooling:
 - A lightweight schema version/status command for deployed environments.
 - A migration dry-run job against a copied production backup before risky
   changes.
-- A backoffice workflow for reviewing `tmdb_match_reviews` and catalog health.
+- Broader backoffice workflows for applying catalog-health repairs beyond the
+  audited TMDB match-review actions.

@@ -264,7 +264,7 @@ npm test                 # run vitest tests
 6. Updates the database row with `tmdb_id`, `duration`, `age_rating`, match confidence, and `embedding`.
 7. Upserts normalized cast, director, genre, and keyword rows plus a lightweight `movies.tmdb_metadata` snapshot.
 
-Movies for which TMDB returns no runtime are skipped so the script never replaces a `0` with another `0`. Ambiguous matches are not auto-applied; they stay in `tmdb_match_reviews` for a future admin/back-office review flow.
+Movies for which TMDB returns no runtime are skipped so the script never replaces a `0` with another `0`. Ambiguous matches are not auto-applied by the service; they stay in `tmdb_match_reviews` for the protected backoffice review queue.
 
 ### Environment Variables
 
@@ -471,7 +471,8 @@ The app and root services share the same PostgreSQL schema through `db/init/*.sq
 - **Extension:** `pgvector` (vector similarity search)
 - **Table:** `movies` — stores name, year, age_rating, description, duration, score_rating, TMDB identity, lightweight TMDB metadata snapshots, poster/localized fields, and a 3072-dimension embedding vector
 - **Tables:** `catalog_people`, `catalog_genres`, `catalog_keywords`, `movie_people`, `movie_genres`, and `movie_keywords` — store normalized cast, director, genre, and keyword metadata populated by TMDB discovery/backfill and used by future search. These tables can still be partially populated while older catalog rows wait for a backfill run.
-- **Table:** `tmdb_match_reviews` — stores ambiguous TMDB/local match cases for later manual review
+- **Table:** `tmdb_match_reviews` — stores ambiguous TMDB/local match cases for backoffice manual review
+- **Table:** `tmdb_match_review_audit` — stores audited operator decisions for applying, rejecting, deferring, or reopening TMDB match reviews
 - **Table:** `users` and `password_reset_tokens` — support email/password auth and reset flow
 - **Tables:** `recommendations`, `recommendation_movies`, `recommendation_feedback`, and `user_movie_interactions` — support persisted async recommendations, feedback, sharing, account history, and movie memory
 - **Function:** `match_movies(query_embedding, match_threshold, match_count)` — returns movies ordered by cosine similarity

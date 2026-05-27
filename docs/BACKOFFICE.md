@@ -42,12 +42,23 @@ The first backoffice release should be read-only:
   missing cast/director/genre/keyword coverage. This is implemented as the
   first read-only `apps/backoffice` screen.
 - [#550](https://github.com/shchilkin/PopChoice/issues/550): TMDB match review
-  queue for `tmdb_match_reviews` rows.
+  queue for `tmdb_match_reviews` rows. This is implemented as a protected queue
+  and detail view with status/reason filters, risk sorting, local-vs-candidate
+  comparison, and graceful empty states.
 
-Mutation flows belong later:
+Mutation flows are deliberately narrow:
 
 - [#551](https://github.com/shchilkin/PopChoice/issues/551): review actions and
-  audit history for applying, rejecting, or deferring catalog fixes.
+  audit history for applying, rejecting, or deferring catalog fixes. The first
+  slice supports `apply_candidate`, `reject`, `defer`, and `reopen` for TMDB
+  match reviews. Applying a candidate updates only the movie TMDB identity
+  fields (`tmdb_id`, `tmdb_match_confidence`, `tmdb_match_source`,
+  `tmdb_matched_at`, and `localized_name` only when it is currently empty).
+  Richer metadata still comes from backfill/discovery refreshes.
+- [#559](https://github.com/shchilkin/PopChoice/issues/559): catalog-health
+  repair actions remain a separate follow-up because missing metadata,
+  duplicate identities, and stale TMDB rows should generally enqueue
+  idempotent repair work rather than mutate broad catalog state inline.
 
 Shared operator auth is the login model for public exposure:
 
@@ -92,6 +103,39 @@ Run `npm run copy:env` after editing root `.env`; it copies values into
   operator routes locally;
 - `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
   report shape.
+
+## TMDB Review Workflow
+
+The TMDB review queue lives at:
+
+```text
+/tmdb-reviews
+```
+
+The queue shows `tmdb_match_reviews` rows with:
+
+- local movie identity and current TMDB assignment;
+- review reason (`ambiguous_match` or `runtime_mismatch`);
+- status (`open`, `deferred`, `resolved`, or `ignored`);
+- captured TMDB candidate ids, titles, release years, and confidence scores;
+- newest, oldest, and highest-risk sorting.
+
+The detail page compares the current local row with every captured candidate.
+Malformed or partial candidate JSON is shown defensively instead of breaking the
+page. Operators can:
+
+- apply a selected candidate, which runs in a transaction, checks for duplicate
+  `tmdb_id` ownership, updates the local movie identity fields, marks the review
+  `resolved`, and writes an audit row;
+- reject a row, which marks it `ignored` and writes an audit row;
+- defer a row, which marks it `deferred` and writes an audit row;
+- reopen a row, which returns it to `open` and writes an audit row.
+
+Audit entries are stored in `tmdb_match_review_audit` with actor, action,
+previous status, new status, selected candidate, optional note, and timestamp.
+If a bad manual decision is made, reopen the review, correct the movie row via a
+safe migration/manual SQL change, and rerun the relevant backfill/discovery job
+so richer metadata can be refreshed consistently.
 
 ## Production Deployment
 
