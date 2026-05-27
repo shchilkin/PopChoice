@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import express, { type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
@@ -42,6 +44,17 @@ import {
 } from './catalogMaintenanceQueue.js';
 
 const DEFAULT_REPAIR_AUDIT_LIMIT = 25;
+const ASSET_DIR = fileURLToPath(new URL('../../web/public', import.meta.url));
+const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en', {
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  month: 'short',
+  second: '2-digit',
+  timeZone: 'UTC',
+  timeZoneName: 'short',
+  year: 'numeric',
+});
 
 const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
   'missing_poster_url',
@@ -70,6 +83,20 @@ function escapeHtml(value: string | number | null | undefined): string {
 
 function escapeAttribute(value: string | number | null | undefined): string {
   return escapeHtml(value).replaceAll('`', '&#96;');
+}
+
+function formatBackofficeDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '-';
+  const raw = value instanceof Date ? value.toISOString() : value.trim();
+  let normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  normalized = normalized.replace(/([+-]\d{2})$/, '$1:00');
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(normalized)) {
+    normalized = `${normalized}Z`;
+  }
+  const date = new Date(normalized);
+
+  if (Number.isNaN(date.getTime())) return raw;
+  return DATE_TIME_FORMATTER.format(date);
 }
 
 function parseOperatorActor(request: Request): string {
@@ -262,13 +289,18 @@ function renderBackofficeStyles(): string {
     .brand-mark {
       display: grid;
       place-items: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.72);
+      box-shadow: 0 10px 30px rgba(245, 197, 66, 0.2);
+      overflow: hidden;
+    }
+    .brand-mark img {
       width: 38px;
       height: 38px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--brand), #ff8f3d);
-      color: #141006;
-      font-weight: 900;
-      box-shadow: 0 10px 30px rgba(245, 197, 66, 0.2);
+      display: block;
     }
     .brand-copy { display: grid; gap: 1px; min-width: 0; }
     .brand-name { font-size: 16px; font-weight: 800; line-height: 1.1; }
@@ -337,7 +369,20 @@ function renderBackofficeStyles(): string {
       border-color: color-mix(in srgb, var(--accent), var(--border) 35%);
       background: linear-gradient(180deg, rgba(124, 199, 255, 0.18), var(--surface-2));
     }
-    .button.danger { border-color: color-mix(in srgb, var(--bad), var(--border) 35%); }
+    .button.success {
+      color: #07130b;
+      border-color: color-mix(in srgb, var(--good), #ffffff 18%);
+      background: linear-gradient(180deg, #63df80, #40c463);
+    }
+    .button.danger {
+      border-color: color-mix(in srgb, var(--bad), var(--border) 35%);
+      background: linear-gradient(180deg, rgba(255, 95, 86, 0.16), var(--surface-2));
+    }
+    .button.secondary {
+      border-color: color-mix(in srgb, var(--warn), var(--border) 45%);
+      background: linear-gradient(180deg, rgba(245, 197, 66, 0.16), var(--surface-2));
+    }
+    .button.quiet { color: var(--muted); background: #111419; }
     .button.small { padding: 5px 8px; font-size: 12px; }
     .button:disabled,
     input:disabled {
@@ -471,7 +516,8 @@ function renderBackofficeStyles(): string {
     .data-pill.good { color: var(--good); background: var(--good-soft); }
     .data-pill.warn { color: var(--warn); background: var(--warn-soft); }
     .data-pill.neutral { color: var(--muted); background: var(--surface-3); }
-    .filters {
+    .filters,
+    .review-toolbar {
       display: flex;
       gap: 12px;
       align-items: end;
@@ -481,6 +527,25 @@ function renderBackofficeStyles(): string {
       border: 1px solid var(--border);
       border-radius: 8px;
       background: rgba(21, 24, 29, 0.72);
+    }
+    .review-toolbar {
+      justify-content: space-between;
+      align-items: center;
+    }
+    .toolbar-fields {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+    .toolbar-summary {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
     }
     .pill,
     .status {
@@ -492,10 +557,12 @@ function renderBackofficeStyles(): string {
       font-size: 12px;
       font-weight: 800;
     }
-    .status.open { color: var(--warn); }
-    .status.resolved { color: var(--good); }
-    .status.ignored { color: var(--bad); }
-    .status.deferred { color: var(--accent); }
+    .status.open { color: var(--warn); background: var(--warn-soft); }
+    .status.resolved { color: var(--good); background: var(--good-soft); }
+    .status.ignored { color: var(--bad); background: var(--bad-soft); }
+    .status.deferred { color: var(--accent); background: var(--accent-soft); }
+    .pill.reason-runtime { color: var(--bad); background: var(--bad-soft); }
+    .pill.reason-ambiguous { color: var(--warn); background: var(--warn-soft); }
     .pill.healthy { color: var(--good); background: var(--good-soft); }
     .pill.good { color: var(--good); background: var(--good-soft); }
     .pill.warning { color: var(--warn); background: var(--warn-soft); }
@@ -527,6 +594,43 @@ function renderBackofficeStyles(): string {
       grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
       gap: 14px;
     }
+    .review-table .movie-title {
+      display: grid;
+      gap: 2px;
+    }
+    .review-table .candidate-summary {
+      display: grid;
+      gap: 6px;
+      min-width: 260px;
+    }
+    .candidate-headline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .confidence-meter {
+      width: 100%;
+      max-width: 220px;
+      height: 8px;
+      border-radius: 999px;
+      background: #0f1217;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .confidence-meter span {
+      display: block;
+      height: 100%;
+      width: var(--confidence-width);
+      background: linear-gradient(90deg, var(--bad), var(--warn), var(--good));
+    }
+    .decision-brief {
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.018);
+    }
     .facts,
     .candidate dl {
       margin: 0;
@@ -551,6 +655,48 @@ function renderBackofficeStyles(): string {
       padding: 12px;
       background: rgba(17, 20, 25, 0.7);
     }
+    .candidate.best { border-color: color-mix(in srgb, var(--good), var(--border) 45%); }
+    .candidate.current { border-color: color-mix(in srgb, var(--accent), var(--border) 35%); }
+    .candidate-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .candidate-flags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .candidate-warning {
+      margin: 10px 14px 0;
+      color: var(--warn);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .decision-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 12px;
+      padding: 14px;
+    }
+    .decision-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(17, 20, 25, 0.7);
+    }
+    .decision-card.reject { border-color: color-mix(in srgb, var(--bad), var(--border) 48%); }
+    .decision-card.defer { border-color: color-mix(in srgb, var(--warn), var(--border) 54%); }
+    .decision-card.reopen { border-color: color-mix(in srgb, var(--accent), var(--border) 50%); }
+    .decision-card-header {
+      display: grid;
+      gap: 3px;
+      margin-bottom: 10px;
+    }
+    .decision-title { font-weight: 850; }
     .action-form { display: grid; gap: 8px; align-content: start; }
     .error-panel pre {
       white-space: pre-wrap;
@@ -573,6 +719,7 @@ function renderBackofficeStyles(): string {
       .catalog-status { align-items: flex-start; flex-direction: column; }
       .status-metrics { justify-content: flex-start; }
       .detail-grid { grid-template-columns: 1fr; }
+      .decision-actions { grid-template-columns: 1fr; }
       table { display: block; overflow-x: auto; white-space: nowrap; }
       .duplicate-group li,
       .facts div,
@@ -615,7 +762,9 @@ function renderBackofficeShell(options: BackofficeShellOptions): string {
         <div class="topbar">
           <div class="topbar-inner">
             <a class="brand" href="/" aria-label="PopChoice Backoffice home">
-              <span class="brand-mark">PC</span>
+              <span class="brand-mark" aria-hidden="true">
+                <img src="/assets/popcorn.svg" alt="" />
+              </span>
               <span class="brand-copy">
                 <span class="brand-name">PopChoice</span>
                 <span class="brand-context">Backoffice</span>
@@ -860,7 +1009,7 @@ function renderCatalogRepairAuditRows(audit: CatalogRepairActionAudit[]): string
           .map(
             (entry) => `
               <tr>
-                <td>${escapeHtml(entry.createdAt)}</td>
+                <td>${escapeHtml(formatBackofficeDateTime(entry.createdAt))}</td>
                 <td>${escapeHtml(entry.actor)}</td>
                 <td>${escapeHtml(entry.issueKey)}</td>
                 <td>${escapeHtml(entry.targetType)}:${escapeHtml(entry.targetId)}</td>
@@ -936,7 +1085,7 @@ function renderCatalogHealthPage(
     active: 'health',
     title: 'Catalog Health',
     eyebrow: 'Catalog operations',
-    descriptionHtml: `Generated ${escapeHtml(report.generatedAt)}. Refreshes every 60 seconds.`,
+    descriptionHtml: `Generated ${escapeHtml(formatBackofficeDateTime(report.generatedAt))}. Refreshes every 60 seconds.`,
     actions: '<a class="button" href="/">Refresh</a>',
     autoRefreshSeconds: 60,
     body: `
@@ -969,8 +1118,18 @@ function formatPercent(value: number | null): string {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatConfidenceWidth(value: number | null): string {
+  if (value === null) return '0%';
+  return `${Math.min(Math.max(Math.round(value * 100), 0), 100)}%`;
+}
+
 function renderReason(reason: TMDBMatchReviewReason): string {
   return reason === 'ambiguous_match' ? 'Ambiguous match' : 'Runtime mismatch';
+}
+
+function renderReasonBadge(reason: TMDBMatchReviewReason): string {
+  const className = reason === 'runtime_mismatch' ? 'reason-runtime' : 'reason-ambiguous';
+  return `<span class="pill ${className}">${escapeHtml(renderReason(reason))}</span>`;
 }
 
 function renderStatus(status: TMDBMatchReviewStatus): string {
@@ -981,6 +1140,37 @@ function renderStatus(status: TMDBMatchReviewStatus): string {
     deferred: 'Deferred',
   };
   return labels[status];
+}
+
+function renderStatusBadge(status: TMDBMatchReviewStatus): string {
+  return `<span class="status ${escapeAttribute(status)}">${escapeHtml(renderStatus(status))}</span>`;
+}
+
+function renderConfidenceMeter(confidence: number | null): string {
+  return `
+    <div class="confidence-meter" aria-label="Confidence ${escapeAttribute(formatPercent(confidence))}">
+      <span style="--confidence-width: ${escapeAttribute(formatConfidenceWidth(confidence))}"></span>
+    </div>
+  `;
+}
+
+function renderCurrentTMDBValue(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '<span class="data-pill neutral">-</span>';
+  return `<span class="data-pill good">${escapeHtml(value)}</span>`;
+}
+
+function renderReviewFilterSummary(filters: {
+  status: TMDBMatchReviewStatus | 'all';
+  reason: TMDBMatchReviewReason | 'all';
+  sort: TMDBMatchReviewSort;
+}): string {
+  return `
+    <div class="toolbar-summary" aria-label="Active filters">
+      <span class="pill">${escapeHtml(filters.status === 'all' ? 'All statuses' : renderStatus(filters.status))}</span>
+      <span class="pill">${escapeHtml(filters.reason === 'all' ? 'All reasons' : renderReason(filters.reason))}</span>
+      <span class="pill">${escapeHtml(filters.sort.replaceAll('_', ' '))}</span>
+    </div>
+  `;
 }
 
 function renderCandidateSummary(candidates: TMDBReviewCandidate[]): string {
@@ -996,8 +1186,14 @@ function renderCandidateSummary(candidates: TMDBReviewCandidate[]): string {
       : null;
 
   return `
-    <div>${escapeHtml(best?.title)} (${escapeHtml(best?.releaseYear)})</div>
-    <div class="muted">${escapeHtml(candidates.length)} candidate(s), best ${escapeHtml(formatPercent(best?.confidence ?? null))}${gap === null ? '' : `, gap ${escapeHtml(formatPercent(gap))}`}</div>
+    <div class="candidate-summary">
+      <div class="candidate-headline">
+        <strong>${escapeHtml(best?.title)} (${escapeHtml(best?.releaseYear)})</strong>
+        <span class="pill">${escapeHtml(formatPercent(best?.confidence ?? null))}</span>
+      </div>
+      ${renderConfidenceMeter(best?.confidence ?? null)}
+      <div class="muted">${escapeHtml(candidates.length)} candidate(s)${gap === null ? '' : `, gap ${escapeHtml(formatPercent(gap))}`}</div>
+    </div>
   `;
 }
 
@@ -1016,14 +1212,16 @@ function renderReviewRows(reviews: TMDBMatchReview[]): string {
         <tr>
           <td><a href="/tmdb-reviews/${escapeAttribute(review.id)}">#${escapeHtml(review.id)}</a></td>
           <td>
-            <strong>${escapeHtml(review.movieName)}</strong>
-            <div class="muted">${escapeHtml(review.movieYear)} · movie ${escapeHtml(review.movieId)}</div>
+            <div class="movie-title">
+              <strong>${escapeHtml(review.movieName)}</strong>
+              <span class="muted">${escapeHtml(review.movieYear)} · movie ${escapeHtml(review.movieId)}</span>
+            </div>
           </td>
-          <td><span class="pill">${escapeHtml(renderReason(review.reason))}</span></td>
-          <td><span class="status ${escapeAttribute(review.status)}">${escapeHtml(renderStatus(review.status))}</span></td>
+          <td>${renderReasonBadge(review.reason)}</td>
+          <td>${renderStatusBadge(review.status)}</td>
           <td>${renderCandidateSummary(review.candidates)}</td>
-          <td>${escapeHtml(review.currentMovie?.tmdb_id ?? null)}</td>
-          <td>${escapeHtml(review.updatedAt)}</td>
+          <td>${renderCurrentTMDBValue(review.currentMovie?.tmdb_id)}</td>
+          <td>${escapeHtml(formatBackofficeDateTime(review.updatedAt))}</td>
           <td><a class="button small" href="/tmdb-reviews/${escapeAttribute(review.id)}">Open</a></td>
         </tr>
       `,
@@ -1047,38 +1245,41 @@ function renderReviewListPage(
       'Review ambiguous TMDB candidates and runtime confidence cases before changing catalog data.',
     actions: '<a class="button" href="/tmdb-reviews">Reset</a>',
     body: `
-      <form class="filters" method="get" action="/tmdb-reviews">
-        <label>Status
-          <select name="status">
-            ${renderOption('open', 'Open', filters.status)}
-            ${renderOption('deferred', 'Deferred', filters.status)}
-            ${renderOption('resolved', 'Resolved', filters.status)}
-            ${renderOption('ignored', 'Ignored', filters.status)}
-            ${renderOption('all', 'All', filters.status)}
-          </select>
-        </label>
-        <label>Reason
-          <select name="reason">
-            ${renderOption('all', 'All', filters.reason)}
-            ${renderOption('ambiguous_match', 'Ambiguous match', filters.reason)}
-            ${renderOption('runtime_mismatch', 'Runtime mismatch', filters.reason)}
-          </select>
-        </label>
-        <label>Sort
-          <select name="sort">
-            ${renderOption('highest_risk', 'Highest risk', filters.sort)}
-            ${renderOption('oldest', 'Oldest first', filters.sort)}
-            ${renderOption('newest', 'Newest first', filters.sort)}
-          </select>
-        </label>
-        <button class="button" type="submit">Apply filters</button>
+      <form class="review-toolbar" method="get" action="/tmdb-reviews">
+        <div class="toolbar-fields">
+          <label>Status
+            <select name="status">
+              ${renderOption('open', 'Open', filters.status)}
+              ${renderOption('deferred', 'Deferred', filters.status)}
+              ${renderOption('resolved', 'Resolved', filters.status)}
+              ${renderOption('ignored', 'Ignored', filters.status)}
+              ${renderOption('all', 'All', filters.status)}
+            </select>
+          </label>
+          <label>Reason
+            <select name="reason">
+              ${renderOption('all', 'All', filters.reason)}
+              ${renderOption('ambiguous_match', 'Ambiguous match', filters.reason)}
+              ${renderOption('runtime_mismatch', 'Runtime mismatch', filters.reason)}
+            </select>
+          </label>
+          <label>Sort
+            <select name="sort">
+              ${renderOption('highest_risk', 'Highest risk', filters.sort)}
+              ${renderOption('oldest', 'Oldest first', filters.sort)}
+              ${renderOption('newest', 'Newest first', filters.sort)}
+            </select>
+          </label>
+          <button class="button primary" type="submit">Apply filters</button>
+        </div>
+        ${renderReviewFilterSummary(filters)}
       </form>
       <section class="panel">
         <div class="panel-header">
           <h2>Review queue</h2>
           <span class="count">${escapeHtml(reviews.length)}</span>
         </div>
-        <table>
+        <table class="review-table">
           <thead>
             <tr>
               <th>ID</th>
@@ -1102,31 +1303,61 @@ function renderOption(value: string, label: string, selected: string): string {
   return `<option value="${escapeAttribute(value)}"${selected === value ? ' selected' : ''}>${escapeHtml(label)}</option>`;
 }
 
-function renderCandidateCard(review: TMDBMatchReview, candidate: TMDBReviewCandidate): string {
+function getCandidateWarning(
+  review: TMDBMatchReview,
+  candidate: TMDBReviewCandidate,
+): string | null {
+  if (candidate.id === null) return 'Candidate has no TMDB id and cannot be applied.';
+  if (candidate.confidence !== null && candidate.confidence < 0.7) {
+    return 'Low confidence candidate. Verify title, year, and runtime before applying.';
+  }
+  if (candidate.releaseYear !== null && candidate.releaseYear !== review.movieYear) {
+    return `Release year differs from local movie year ${review.movieYear}.`;
+  }
+  return null;
+}
+
+function renderCandidateCard(
+  review: TMDBMatchReview,
+  candidate: TMDBReviewCandidate,
+  index: number,
+): string {
   const canApply =
     candidate.id !== null && (review.status === 'open' || review.status === 'deferred');
+  const isBest = index === 0;
+  const isCurrent = candidate.id !== null && candidate.id === review.currentMovie?.tmdb_id;
+  const warning = getCandidateWarning(review, candidate);
 
   return `
-    <article class="candidate">
+    <article class="candidate ${isBest ? 'best' : ''} ${isCurrent ? 'current' : ''}">
       <div>
-        <h3>${escapeHtml(candidate.title)}</h3>
+        <div class="candidate-title">
+          <h3>${escapeHtml(candidate.title)}</h3>
+          <div class="candidate-flags">
+            ${isBest ? '<span class="pill good">Best candidate</span>' : ''}
+            ${isCurrent ? '<span class="pill repairable">Current TMDB</span>' : ''}
+            ${warning ? '<span class="pill warning">Needs check</span>' : ''}
+          </div>
+        </div>
         <dl>
           <div><dt>TMDB</dt><dd>${escapeHtml(candidate.id)}</dd></div>
           <div><dt>Original</dt><dd>${escapeHtml(candidate.originalTitle)}</dd></div>
           <div><dt>Year</dt><dd>${escapeHtml(candidate.releaseYear)}</dd></div>
           <div><dt>Confidence</dt><dd>${escapeHtml(formatPercent(candidate.confidence))}</dd></div>
         </dl>
+        ${renderConfidenceMeter(candidate.confidence)}
+        ${warning ? `<p class="candidate-warning">${escapeHtml(warning)}</p>` : ''}
       </div>
       ${
         canApply
           ? `
-            <form class="action-form" method="post" action="/tmdb-reviews/${escapeAttribute(review.id)}/actions">
+            <form class="action-form apply-action" method="post" action="/tmdb-reviews/${escapeAttribute(review.id)}/actions">
               <input type="hidden" name="action" value="apply_candidate" />
               <input type="hidden" name="candidate_id" value="${escapeAttribute(candidate.id)}" />
               <label>Decision note
                 <input name="note" maxlength="500" placeholder="Why this candidate is correct" />
               </label>
-              <button class="button primary" type="submit">Apply candidate</button>
+              <button class="button success" type="submit">Apply candidate</button>
             </form>
           `
           : '<p class="muted">This candidate cannot be applied from the current review state.</p>'
@@ -1157,10 +1388,10 @@ function renderAuditRows(audit: TMDBMatchReviewActionAudit[]): string {
           .map(
             (entry) => `
               <tr>
-                <td>${escapeHtml(entry.createdAt)}</td>
+                <td>${escapeHtml(formatBackofficeDateTime(entry.createdAt))}</td>
                 <td>${escapeHtml(entry.actor)}</td>
-                <td>${escapeHtml(entry.action)}</td>
-                <td>${escapeHtml(entry.previousStatus)} → ${escapeHtml(entry.newStatus)}</td>
+                <td>${escapeHtml(entry.action.replaceAll('_', ' '))}</td>
+                <td>${entry.previousStatus ? renderStatusBadge(entry.previousStatus) : '<span class="data-pill neutral">-</span>'} ${renderStatusBadge(entry.newStatus)}</td>
                 <td>${escapeHtml(entry.candidate?.id ?? null)} ${entry.candidate ? escapeHtml(entry.candidate.title) : ''}</td>
                 <td>${escapeHtml(entry.note)}</td>
               </tr>
@@ -1179,13 +1410,21 @@ function renderReviewDetailPage(
   const candidates =
     review.candidates.length === 0
       ? '<p class="empty">No candidate metadata was captured. Reject, defer, or rerun backfill after checking TMDB manually.</p>'
-      : review.candidates.map((candidate) => renderCandidateCard(review, candidate)).join('');
+      : review.candidates
+          .map((candidate, index) => renderCandidateCard(review, candidate, index))
+          .join('');
 
   return renderBackofficeShell({
     active: 'reviews',
     title: `TMDB Review #${escapeHtml(review.id)}`,
     eyebrow: 'Catalog decision',
-    descriptionHtml: `${escapeHtml(renderReason(review.reason))} · ${escapeHtml(renderStatus(review.status))} · updated ${escapeHtml(review.updatedAt)}`,
+    descriptionHtml: `
+      <div class="toolbar-summary">
+        ${renderReasonBadge(review.reason)}
+        ${renderStatusBadge(review.status)}
+        <span>Updated ${escapeHtml(formatBackofficeDateTime(review.updatedAt))}</span>
+      </div>
+    `,
     actions: '<a class="button" href="/tmdb-reviews">Back to queue</a>',
     body: `
       <section class="detail-grid">
@@ -1197,9 +1436,14 @@ function renderReviewDetailPage(
             <div><dt>Year</dt><dd>${escapeHtml(review.currentMovie?.year ?? review.movieYear)}</dd></div>
             <div><dt>Runtime</dt><dd>${escapeHtml(review.currentMovie?.duration ?? null)}</dd></div>
             <div><dt>Age</dt><dd>${escapeHtml(review.currentMovie?.age_rating ?? null)}</dd></div>
-            <div><dt>TMDB</dt><dd>${escapeHtml(review.currentMovie?.tmdb_id ?? null)}</dd></div>
-            <div><dt>Matched at</dt><dd>${escapeHtml(review.currentMovie?.tmdb_matched_at ?? null)}</dd></div>
+            <div><dt>TMDB</dt><dd>${renderCurrentTMDBValue(review.currentMovie?.tmdb_id)}</dd></div>
+            <div><dt>Matched at</dt><dd>${escapeHtml(formatBackofficeDateTime(review.currentMovie?.tmdb_matched_at))}</dd></div>
           </dl>
+          <div class="decision-brief">
+            <span class="small-note">Current match confidence</span>
+            <strong>${escapeHtml(formatPercent(review.currentMovie?.tmdb_match_confidence ?? null))}</strong>
+            ${renderConfidenceMeter(review.currentMovie?.tmdb_match_confidence ?? null)}
+          </div>
         </article>
         <article class="panel">
           <div class="panel-header"><h2>Why it needs review</h2></div>
@@ -1242,15 +1486,46 @@ function renderStatusActionForm(
     (action === 'reject' && review.status === 'ignored') ||
     (action === 'defer' && review.status === 'deferred') ||
     (action === 'reopen' && review.status === 'open');
+  const details: Record<
+    Exclude<TMDBMatchReviewAction, 'apply_candidate'>,
+    {
+      className: string;
+      description: string;
+      buttonClass: string;
+    }
+  > = {
+    reject: {
+      buttonClass: 'danger',
+      className: 'reject',
+      description: 'Mark this review as ignored when candidates are wrong or not useful.',
+    },
+    defer: {
+      buttonClass: 'secondary',
+      className: 'defer',
+      description: 'Keep it out of the active queue until more catalog context exists.',
+    },
+    reopen: {
+      buttonClass: 'quiet',
+      className: 'reopen',
+      description: 'Move a deferred or ignored review back into active operator work.',
+    },
+  };
+  const detail = details[action];
 
   return `
-    <form class="action-form" method="post" action="/tmdb-reviews/${escapeAttribute(review.id)}/actions">
-      <input type="hidden" name="action" value="${escapeAttribute(action)}" />
-      <label>Decision note
-        <input name="note" maxlength="500" placeholder="Optional rationale" ${disabled ? 'disabled' : ''} />
-      </label>
-      <button class="button" type="submit" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
-    </form>
+    <article class="decision-card ${escapeAttribute(detail.className)}">
+      <div class="decision-card-header">
+        <span class="decision-title">${escapeHtml(label)}</span>
+        <span class="small-note">${escapeHtml(detail.description)}</span>
+      </div>
+      <form class="action-form" method="post" action="/tmdb-reviews/${escapeAttribute(review.id)}/actions">
+        <input type="hidden" name="action" value="${escapeAttribute(action)}" />
+        <label>Decision note
+          <input name="note" maxlength="500" placeholder="Optional rationale" ${disabled ? 'disabled' : ''} />
+        </label>
+        <button class="button ${escapeAttribute(detail.buttonClass)}" type="submit" ${disabled ? 'disabled' : ''}>${escapeHtml(label)}</button>
+      </form>
+    </article>
   `;
 }
 
@@ -1283,6 +1558,7 @@ const app = express();
 
 app.set('trust proxy', 1);
 app.get('/healthz', (_request, response) => response.status(200).send('ok'));
+app.use('/assets', express.static(ASSET_DIR, { immutable: true, maxAge: '1h' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(
   rateLimit({
