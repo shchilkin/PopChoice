@@ -140,13 +140,411 @@ function getBackfillReasonForIssue(issueKey: string): CatalogBackfillReason {
   return 'missing_metadata';
 }
 
-function renderNav(active: 'health' | 'reviews'): string {
+type BackofficeSection = 'health' | 'reviews';
+
+type BackofficeShellOptions = {
+  active: BackofficeSection;
+  title: string;
+  eyebrow: string;
+  descriptionHtml?: string;
+  actions?: string;
+  autoRefreshSeconds?: number;
+  body: string;
+};
+
+function renderNav(active: BackofficeSection): string {
   return `
-    <nav class="nav" aria-label="Backoffice sections">
+    <nav class="section-nav" aria-label="Backoffice sections">
       <a class="${active === 'health' ? 'active' : ''}" href="/">Catalog health</a>
       <a class="${active === 'reviews' ? 'active' : ''}" href="/tmdb-reviews">TMDB reviews</a>
     </nav>
   `;
+}
+
+function renderBackofficeStyles(): string {
+  return `
+    :root {
+      color-scheme: dark;
+      --bg: #0d0e10;
+      --bg-radial: radial-gradient(circle at top left, rgba(245, 197, 66, 0.14), transparent 30rem);
+      --surface: #15181d;
+      --surface-2: #1d2229;
+      --surface-3: #252b35;
+      --border: #323944;
+      --border-strong: #454f5f;
+      --text: #f4f6f8;
+      --muted: #aab2bf;
+      --subtle: #7e8794;
+      --good: #40c463;
+      --warn: #f5c542;
+      --bad: #ff5f56;
+      --accent: #7cc7ff;
+      --focus: #f5c542;
+      --brand: #f5c542;
+      --brand-soft: rgba(245, 197, 66, 0.16);
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg-radial), var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    a { color: var(--accent); }
+    a:hover { color: var(--text); }
+    a:focus-visible,
+    button:focus-visible,
+    select:focus-visible,
+    input:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    h1, h2, h3, p { letter-spacing: 0; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 42px); line-height: 1.06; }
+    h2 { margin: 0; font-size: 16px; }
+    h3 { margin: 0 0 8px; font-size: 15px; }
+    main { max-width: 1440px; margin: 0 auto; padding: 28px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 700; background: #12151a; }
+    tr:last-child td { border-bottom: 0; }
+    select,
+    input {
+      min-width: 180px;
+      color: var(--text);
+      background: #111419;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+    }
+    label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    dt { color: var(--muted); font-weight: 700; }
+    dd { margin: 0; overflow-wrap: anywhere; }
+    .topbar {
+      border-bottom: 1px solid var(--border);
+      background: rgba(13, 14, 16, 0.86);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      text-decoration: none;
+      min-width: 0;
+    }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--brand), #ff8f3d);
+      color: #141006;
+      font-weight: 900;
+      box-shadow: 0 10px 30px rgba(245, 197, 66, 0.2);
+    }
+    .brand-copy { display: grid; gap: 1px; min-width: 0; }
+    .brand-name { font-size: 16px; font-weight: 800; line-height: 1.1; }
+    .brand-context { color: var(--muted); font-size: 12px; font-weight: 700; }
+    .operator-badge {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 18px;
+    }
+    .page-kicker {
+      margin: 0 0 8px;
+      color: var(--brand);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .page-description { margin-top: 8px; color: var(--muted); max-width: 820px; }
+    .muted { color: var(--muted); }
+    .small-note { color: var(--subtle); font-size: 12px; }
+    .section-nav,
+    .actions,
+    .decision-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .section-nav { margin: 0 0 18px; }
+    .section-nav a,
+    .button {
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 7px 10px;
+      background: var(--surface-2);
+      font-weight: 800;
+    }
+    .section-nav a {
+      color: var(--muted);
+      background: #12151a;
+    }
+    .section-nav a.active {
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--brand), var(--border) 35%);
+      background: var(--brand-soft);
+    }
+    .button { cursor: pointer; }
+    .button:hover { border-color: var(--border-strong); background: var(--surface-3); }
+    .button.primary { border-color: color-mix(in srgb, var(--accent), var(--border) 35%); }
+    .button.danger { border-color: color-mix(in srgb, var(--bad), var(--border) 35%); }
+    .button.small { padding: 5px 8px; font-size: 12px; }
+    .button:disabled,
+    input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat,
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .stat { padding: 14px 16px; }
+    .stat-label { display: block; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .stat-value { display: block; font-size: 30px; font-weight: 850; margin-top: 4px; }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .panel { overflow: hidden; margin-bottom: 14px; }
+    .panel.needs-work { border-color: color-mix(in srgb, var(--warn), var(--border) 55%); }
+    .panel.healthy { border-color: color-mix(in srgb, var(--good), var(--border) 68%); }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .count {
+      min-width: 48px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 3px 10px;
+      background: var(--surface-3);
+      font-weight: 850;
+    }
+    .empty { margin: 0; padding: 14px; color: var(--muted); }
+    .notice {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      background: var(--surface);
+      font-weight: 700;
+    }
+    .notice.good { border-color: color-mix(in srgb, var(--good), var(--border) 45%); }
+    .notice.warn { border-color: color-mix(in srgb, var(--warn), var(--border) 45%); }
+    .filters {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(21, 24, 29, 0.72);
+    }
+    .pill,
+    .status {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: var(--surface-3);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .status.open { color: var(--warn); }
+    .status.resolved { color: var(--good); }
+    .status.ignored { color: var(--bad); }
+    .status.deferred { color: var(--accent); }
+    .duplicate-group { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .duplicate-group:last-child { border-bottom: 0; }
+    .duplicate-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--accent);
+    }
+    .duplicate-group ul {
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 4px;
+    }
+    .duplicate-group li {
+      display: grid;
+      grid-template-columns: 80px minmax(180px, 1fr) 120px;
+      gap: 10px;
+      color: var(--muted);
+    }
+    .repair-form { margin: 0; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+      gap: 14px;
+    }
+    .facts,
+    .candidate dl {
+      margin: 0;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+    .facts div,
+    .candidate dl div {
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 12px;
+    }
+    .copy { padding: 14px; }
+    .candidates { display: grid; gap: 12px; padding: 14px; }
+    .candidate {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(240px, 360px);
+      gap: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(17, 20, 25, 0.7);
+    }
+    .action-form { display: grid; gap: 8px; align-content: start; }
+    .error-panel pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      margin: 0;
+      padding: 14px;
+      color: var(--text);
+      background: #101318;
+    }
+    @media (max-width: 900px) {
+      main { padding: 18px; }
+      .topbar-inner { padding: 12px 18px; align-items: flex-start; }
+      .page-header,
+      .candidate {
+        flex-direction: column;
+        align-items: stretch;
+        display: flex;
+      }
+      .summary { grid-template-columns: 1fr 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+      .duplicate-group li,
+      .facts div,
+      .candidate dl div {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+    }
+    @media (max-width: 560px) {
+      .summary { grid-template-columns: 1fr; }
+      .topbar-inner,
+      .filters,
+      .section-nav,
+      .actions,
+      .decision-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .operator-badge { width: fit-content; }
+    }
+  `;
+}
+
+function renderBackofficeShell(options: BackofficeShellOptions): string {
+  const refresh =
+    options.autoRefreshSeconds === undefined
+      ? ''
+      : `<meta http-equiv="refresh" content="${escapeAttribute(options.autoRefreshSeconds)}" />`;
+
+  return `<!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        ${refresh}
+        <title>${escapeHtml(options.title)} · PopChoice Backoffice</title>
+        <style>${renderBackofficeStyles()}</style>
+      </head>
+      <body>
+        <div class="topbar">
+          <div class="topbar-inner">
+            <a class="brand" href="/" aria-label="PopChoice Backoffice home">
+              <span class="brand-mark">PC</span>
+              <span class="brand-copy">
+                <span class="brand-name">PopChoice</span>
+                <span class="brand-context">Backoffice</span>
+              </span>
+            </a>
+            <span class="operator-badge">Operator console</span>
+          </div>
+        </div>
+        <main>
+          <header class="page-header">
+            <div>
+              <p class="page-kicker">${escapeHtml(options.eyebrow)}</p>
+              <h1>${escapeHtml(options.title)}</h1>
+              ${options.descriptionHtml ? `<div class="page-description">${options.descriptionHtml}</div>` : ''}
+            </div>
+            ${options.actions ? `<div class="actions">${options.actions}</div>` : ''}
+          </header>
+          ${renderNav(options.active)}
+          ${options.body}
+        </main>
+      </body>
+    </html>`;
 }
 
 function createOperatorAuthMiddleware(config: OperatorAuthConfig | null) {
@@ -350,177 +748,35 @@ function renderCatalogHealthPage(
   const duplicateGroups =
     report.duplicateTmdbIds.totalGroups + report.duplicateNormalizedTitleYears.totalGroups;
 
-  return `<!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta http-equiv="refresh" content="60" />
-        <title>PopChoice Backoffice</title>
-        <style>
-          :root {
-            color-scheme: dark;
-            --bg: #101214;
-            --surface: #171a1f;
-            --surface-2: #1f242b;
-            --border: #333a44;
-            --text: #f1f4f8;
-            --muted: #a8b0bc;
-            --good: #34c759;
-            --warn: #ffcc00;
-            --bad: #ff453a;
-            --accent: #64d2ff;
-          }
-          * { box-sizing: border-box; }
-          body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--text);
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            line-height: 1.5;
-          }
-          main { max-width: 1440px; margin: 0 auto; padding: 28px; }
-          header {
-            display: flex;
-            justify-content: space-between;
-            gap: 24px;
-            align-items: flex-start;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-          }
-          h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
-          h2 { margin: 0; font-size: 16px; letter-spacing: 0; }
-          .muted { color: var(--muted); }
-          .summary {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(150px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-          }
-          .nav {
-            display: flex;
-            gap: 8px;
-            margin: 0 0 18px;
-          }
-          .nav a {
-            color: var(--muted);
-            text-decoration: none;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 7px 10px;
-            background: #15181d;
-            font-weight: 600;
-          }
-          .nav a.active {
-            color: var(--text);
-            border-color: var(--accent);
-            background: color-mix(in srgb, var(--accent), #15181d 85%);
-          }
-          .stat, .panel {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-          }
-          .stat { padding: 14px 16px; }
-          .stat-label { display: block; color: var(--muted); font-size: 13px; }
-          .stat-value { display: block; font-size: 28px; font-weight: 700; margin-top: 4px; }
-          .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-          .panel { overflow: hidden; }
-          .panel.needs-work { border-color: color-mix(in srgb, var(--warn), var(--border) 60%); }
-          .panel.healthy { border-color: color-mix(in srgb, var(--good), var(--border) 70%); }
-          .panel-header {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: center;
-            padding: 12px 14px;
-            background: var(--surface-2);
-            border-bottom: 1px solid var(--border);
-          }
-          .count {
-            min-width: 48px;
-            text-align: center;
-            border-radius: 999px;
-            padding: 3px 10px;
-            background: #2d333d;
-            font-weight: 700;
-          }
-          table { width: 100%; border-collapse: collapse; font-size: 13px; }
-          th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-          th { color: var(--muted); font-weight: 600; background: #15181d; }
-          tr:last-child td { border-bottom: 0; }
-          .empty { margin: 0; padding: 14px; color: var(--muted); }
-          .duplicate-group { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-          .duplicate-group:last-child { border-bottom: 0; }
-          .duplicate-heading { display: flex; justify-content: space-between; gap: 12px; color: var(--accent); }
-          .duplicate-group ul { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
-          .duplicate-group li { display: grid; grid-template-columns: 80px minmax(180px, 1fr) 120px; gap: 10px; color: var(--muted); }
-          .actions { display: flex; gap: 10px; align-items: center; }
-          .button {
-            color: var(--text);
-            text-decoration: none;
-            border: 1px solid var(--border);
-            background: var(--surface-2);
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-weight: 600;
-          }
-          .button.small { padding: 5px 8px; font-size: 12px; }
-          .repair-form { margin: 0; }
-          .notice {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px 14px;
-            margin-bottom: 18px;
-            background: var(--surface);
-            font-weight: 600;
-          }
-          .notice.good { border-color: color-mix(in srgb, var(--good), var(--border) 45%); }
-          .notice.warn { border-color: color-mix(in srgb, var(--warn), var(--border) 45%); }
-          @media (max-width: 900px) {
-            main { padding: 18px; }
-            header, .actions, .nav { flex-direction: column; align-items: stretch; }
-            .summary { grid-template-columns: 1fr 1fr; }
-            table { display: block; overflow-x: auto; white-space: nowrap; }
-            .duplicate-group li { grid-template-columns: 1fr; gap: 2px; }
-          }
-        </style>
-      </head>
-      <body>
-        <main>
-          <header>
-            <div>
-              <h1>PopChoice Catalog Health</h1>
-              <div class="muted">Generated ${escapeHtml(report.generatedAt)}. Refreshes every 60 seconds.</div>
-            </div>
-            <div class="actions">
-              <a class="button" href="/">Refresh</a>
-            </div>
-          </header>
-          ${renderNav('health')}
-          ${renderRepairFlash(repairStatus)}
-          <section class="summary" aria-label="Catalog health summary">
-            <div class="stat"><span class="stat-label">Movies</span><span class="stat-value">${escapeHtml(report.totalMovies)}</span></div>
-            <div class="stat"><span class="stat-label">Issue categories</span><span class="stat-value">${escapeHtml(activeIssues)}</span></div>
-            <div class="stat"><span class="stat-label">Duplicate groups</span><span class="stat-value">${escapeHtml(duplicateGroups)}</span></div>
-            <div class="stat"><span class="stat-label">Stale threshold</span><span class="stat-value">${escapeHtml(report.staleAfterDays)}d</span></div>
-          </section>
-          <div class="grid">
-            ${report.issues.map(renderIssue).join('')}
-            ${renderDuplicateReport('Duplicate TMDB ids', report.duplicateTmdbIds)}
-            ${renderDuplicateReport('Duplicate normalized title/year groups', report.duplicateNormalizedTitleYears)}
-            <section class="panel">
-              <div class="panel-header">
-                <h2>Recent repair actions</h2>
-                <span class="count">${escapeHtml(audit.length)}</span>
-              </div>
-              ${renderCatalogRepairAuditRows(audit)}
-            </section>
+  return renderBackofficeShell({
+    active: 'health',
+    title: 'Catalog Health',
+    eyebrow: 'Catalog operations',
+    descriptionHtml: `Generated ${escapeHtml(report.generatedAt)}. Refreshes every 60 seconds.`,
+    actions: '<a class="button" href="/">Refresh</a>',
+    autoRefreshSeconds: 60,
+    body: `
+      ${renderRepairFlash(repairStatus)}
+      <section class="summary" aria-label="Catalog health summary">
+        <div class="stat"><span class="stat-label">Movies</span><span class="stat-value">${escapeHtml(report.totalMovies)}</span></div>
+        <div class="stat"><span class="stat-label">Issue categories</span><span class="stat-value">${escapeHtml(activeIssues)}</span></div>
+        <div class="stat"><span class="stat-label">Duplicate groups</span><span class="stat-value">${escapeHtml(duplicateGroups)}</span></div>
+        <div class="stat"><span class="stat-label">Stale threshold</span><span class="stat-value">${escapeHtml(report.staleAfterDays)}d</span></div>
+      </section>
+      <div class="grid">
+        ${report.issues.map(renderIssue).join('')}
+        ${renderDuplicateReport('Duplicate TMDB ids', report.duplicateTmdbIds)}
+        ${renderDuplicateReport('Duplicate normalized title/year groups', report.duplicateNormalizedTitleYears)}
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Recent repair actions</h2>
+            <span class="count">${escapeHtml(audit.length)}</span>
           </div>
-        </main>
-      </body>
-    </html>`;
+          ${renderCatalogRepairAuditRows(audit)}
+        </section>
+      </div>
+    `,
+  });
 }
 
 function formatPercent(value: number | null): string {
@@ -598,76 +854,63 @@ function renderReviewListPage(
     sort: TMDBMatchReviewSort;
   },
 ): string {
-  return `<!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>TMDB Reviews · PopChoice Backoffice</title>
-        <style>${renderReviewStyles()}</style>
-      </head>
-      <body>
-        <main>
-          <header>
-            <div>
-              <h1>TMDB Match Reviews</h1>
-              <div class="muted">Review ambiguous TMDB candidates and runtime confidence cases before changing catalog data.</div>
-            </div>
-            <div class="actions">
-              <a class="button" href="/tmdb-reviews">Reset</a>
-            </div>
-          </header>
-          ${renderNav('reviews')}
-          <form class="filters" method="get" action="/tmdb-reviews">
-            <label>Status
-              <select name="status">
-                ${renderOption('open', 'Open', filters.status)}
-                ${renderOption('deferred', 'Deferred', filters.status)}
-                ${renderOption('resolved', 'Resolved', filters.status)}
-                ${renderOption('ignored', 'Ignored', filters.status)}
-                ${renderOption('all', 'All', filters.status)}
-              </select>
-            </label>
-            <label>Reason
-              <select name="reason">
-                ${renderOption('all', 'All', filters.reason)}
-                ${renderOption('ambiguous_match', 'Ambiguous match', filters.reason)}
-                ${renderOption('runtime_mismatch', 'Runtime mismatch', filters.reason)}
-              </select>
-            </label>
-            <label>Sort
-              <select name="sort">
-                ${renderOption('highest_risk', 'Highest risk', filters.sort)}
-                ${renderOption('oldest', 'Oldest first', filters.sort)}
-                ${renderOption('newest', 'Newest first', filters.sort)}
-              </select>
-            </label>
-            <button class="button" type="submit">Apply filters</button>
-          </form>
-          <section class="panel">
-            <div class="panel-header">
-              <h2>Review queue</h2>
-              <span class="count">${escapeHtml(reviews.length)}</span>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Local movie</th>
-                  <th>Reason</th>
-                  <th>Status</th>
-                  <th>Candidates</th>
-                  <th>Current TMDB</th>
-                  <th>Updated</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>${renderReviewRows(reviews)}</tbody>
-            </table>
-          </section>
-        </main>
-      </body>
-    </html>`;
+  return renderBackofficeShell({
+    active: 'reviews',
+    title: 'TMDB Match Reviews',
+    eyebrow: 'Catalog decisions',
+    descriptionHtml:
+      'Review ambiguous TMDB candidates and runtime confidence cases before changing catalog data.',
+    actions: '<a class="button" href="/tmdb-reviews">Reset</a>',
+    body: `
+      <form class="filters" method="get" action="/tmdb-reviews">
+        <label>Status
+          <select name="status">
+            ${renderOption('open', 'Open', filters.status)}
+            ${renderOption('deferred', 'Deferred', filters.status)}
+            ${renderOption('resolved', 'Resolved', filters.status)}
+            ${renderOption('ignored', 'Ignored', filters.status)}
+            ${renderOption('all', 'All', filters.status)}
+          </select>
+        </label>
+        <label>Reason
+          <select name="reason">
+            ${renderOption('all', 'All', filters.reason)}
+            ${renderOption('ambiguous_match', 'Ambiguous match', filters.reason)}
+            ${renderOption('runtime_mismatch', 'Runtime mismatch', filters.reason)}
+          </select>
+        </label>
+        <label>Sort
+          <select name="sort">
+            ${renderOption('highest_risk', 'Highest risk', filters.sort)}
+            ${renderOption('oldest', 'Oldest first', filters.sort)}
+            ${renderOption('newest', 'Newest first', filters.sort)}
+          </select>
+        </label>
+        <button class="button" type="submit">Apply filters</button>
+      </form>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Review queue</h2>
+          <span class="count">${escapeHtml(reviews.length)}</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Local movie</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Candidates</th>
+              <th>Current TMDB</th>
+              <th>Updated</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${renderReviewRows(reviews)}</tbody>
+        </table>
+      </section>
+    `,
+  });
 }
 
 function renderOption(value: string, label: string, selected: string): string {
@@ -753,70 +996,56 @@ function renderReviewDetailPage(
       ? '<p class="empty">No candidate metadata was captured. Reject, defer, or rerun backfill after checking TMDB manually.</p>'
       : review.candidates.map((candidate) => renderCandidateCard(review, candidate)).join('');
 
-  return `<!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>TMDB Review #${escapeHtml(review.id)} · PopChoice Backoffice</title>
-        <style>${renderReviewStyles()}</style>
-      </head>
-      <body>
-        <main>
-          <header>
-            <div>
-              <h1>TMDB Review #${escapeHtml(review.id)}</h1>
-              <div class="muted">${escapeHtml(renderReason(review.reason))} · ${escapeHtml(renderStatus(review.status))} · updated ${escapeHtml(review.updatedAt)}</div>
-            </div>
-            <div class="actions">
-              <a class="button" href="/tmdb-reviews">Back to queue</a>
-            </div>
-          </header>
-          ${renderNav('reviews')}
-          <section class="detail-grid">
-            <article class="panel">
-              <div class="panel-header"><h2>Local movie</h2></div>
-              <dl class="facts">
-                <div><dt>ID</dt><dd>${escapeHtml(review.movieId)}</dd></div>
-                <div><dt>Name</dt><dd>${escapeHtml(review.currentMovie?.name ?? review.movieName)}</dd></div>
-                <div><dt>Year</dt><dd>${escapeHtml(review.currentMovie?.year ?? review.movieYear)}</dd></div>
-                <div><dt>Runtime</dt><dd>${escapeHtml(review.currentMovie?.duration ?? null)}</dd></div>
-                <div><dt>Age</dt><dd>${escapeHtml(review.currentMovie?.age_rating ?? null)}</dd></div>
-                <div><dt>TMDB</dt><dd>${escapeHtml(review.currentMovie?.tmdb_id ?? null)}</dd></div>
-                <div><dt>Matched at</dt><dd>${escapeHtml(review.currentMovie?.tmdb_matched_at ?? null)}</dd></div>
-              </dl>
-            </article>
-            <article class="panel">
-              <div class="panel-header"><h2>Why it needs review</h2></div>
-              <div class="copy">
-                <p><strong>${escapeHtml(renderReason(review.reason))}</strong></p>
-                <p>${escapeHtml(review.notes ?? 'No notes were recorded by backfill.')}</p>
-                <p class="muted">Actions are audited. Applying a candidate only changes TMDB identity fields and marks the match source as manual; richer metadata still comes from backfill/discovery refreshes.</p>
-              </div>
-            </article>
-          </section>
-          <section class="panel">
-            <div class="panel-header"><h2>Decision actions</h2></div>
-            <div class="decision-actions">
-              ${renderStatusActionForm(review, 'reject', 'Reject / ignore')}
-              ${renderStatusActionForm(review, 'defer', 'Defer')}
-              ${renderStatusActionForm(review, 'reopen', 'Reopen')}
-            </div>
-          </section>
-          <section class="panel">
-            <div class="panel-header">
-              <h2>Candidates</h2>
-              <span class="count">${escapeHtml(review.candidates.length)}</span>
-            </div>
-            <div class="candidates">${candidates}</div>
-          </section>
-          <section class="panel">
-            <div class="panel-header"><h2>Audit history</h2></div>
-            ${renderAuditRows(audit)}
-          </section>
-        </main>
-      </body>
-    </html>`;
+  return renderBackofficeShell({
+    active: 'reviews',
+    title: `TMDB Review #${escapeHtml(review.id)}`,
+    eyebrow: 'Catalog decision',
+    descriptionHtml: `${escapeHtml(renderReason(review.reason))} · ${escapeHtml(renderStatus(review.status))} · updated ${escapeHtml(review.updatedAt)}`,
+    actions: '<a class="button" href="/tmdb-reviews">Back to queue</a>',
+    body: `
+      <section class="detail-grid">
+        <article class="panel">
+          <div class="panel-header"><h2>Local movie</h2></div>
+          <dl class="facts">
+            <div><dt>ID</dt><dd>${escapeHtml(review.movieId)}</dd></div>
+            <div><dt>Name</dt><dd>${escapeHtml(review.currentMovie?.name ?? review.movieName)}</dd></div>
+            <div><dt>Year</dt><dd>${escapeHtml(review.currentMovie?.year ?? review.movieYear)}</dd></div>
+            <div><dt>Runtime</dt><dd>${escapeHtml(review.currentMovie?.duration ?? null)}</dd></div>
+            <div><dt>Age</dt><dd>${escapeHtml(review.currentMovie?.age_rating ?? null)}</dd></div>
+            <div><dt>TMDB</dt><dd>${escapeHtml(review.currentMovie?.tmdb_id ?? null)}</dd></div>
+            <div><dt>Matched at</dt><dd>${escapeHtml(review.currentMovie?.tmdb_matched_at ?? null)}</dd></div>
+          </dl>
+        </article>
+        <article class="panel">
+          <div class="panel-header"><h2>Why it needs review</h2></div>
+          <div class="copy">
+            <p><strong>${escapeHtml(renderReason(review.reason))}</strong></p>
+            <p>${escapeHtml(review.notes ?? 'No notes were recorded by backfill.')}</p>
+            <p class="muted">Actions are audited. Applying a candidate only changes TMDB identity fields and marks the match source as manual; richer metadata still comes from backfill/discovery refreshes.</p>
+          </div>
+        </article>
+      </section>
+      <section class="panel">
+        <div class="panel-header"><h2>Decision actions</h2></div>
+        <div class="decision-actions">
+          ${renderStatusActionForm(review, 'reject', 'Reject / ignore')}
+          ${renderStatusActionForm(review, 'defer', 'Defer')}
+          ${renderStatusActionForm(review, 'reopen', 'Reopen')}
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Candidates</h2>
+          <span class="count">${escapeHtml(review.candidates.length)}</span>
+        </div>
+        <div class="candidates">${candidates}</div>
+      </section>
+      <section class="panel">
+        <div class="panel-header"><h2>Audit history</h2></div>
+        ${renderAuditRows(audit)}
+      </section>
+    `,
+  });
 }
 
 function renderStatusActionForm(
@@ -840,99 +1069,23 @@ function renderStatusActionForm(
   `;
 }
 
-function renderReviewStyles(): string {
-  return `
-    :root {
-      color-scheme: dark;
-      --bg: #101214;
-      --surface: #171a1f;
-      --surface-2: #1f242b;
-      --border: #333a44;
-      --text: #f1f4f8;
-      --muted: #a8b0bc;
-      --good: #34c759;
-      --warn: #ffcc00;
-      --bad: #ff453a;
-      --accent: #64d2ff;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
-    main { max-width: 1440px; margin: 0 auto; padding: 28px; }
-    header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
-    h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
-    h2 { margin: 0; font-size: 16px; letter-spacing: 0; }
-    h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: 0; }
-    a { color: var(--accent); }
-    .muted { color: var(--muted); }
-    .nav, .actions, .decision-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .nav { margin: 0 0 18px; }
-    .nav a, .button { color: var(--text); text-decoration: none; border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; background: var(--surface-2); font-weight: 600; }
-    .nav a { color: var(--muted); background: #15181d; }
-    .nav a.active { color: var(--text); border-color: var(--accent); background: color-mix(in srgb, var(--accent), #15181d 85%); }
-    .button { cursor: pointer; }
-    .button.primary { border-color: var(--accent); }
-    .button.small { padding: 5px 8px; font-size: 12px; }
-    .button:disabled, input:disabled { opacity: 0.5; cursor: not-allowed; }
-    .filters { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 18px; }
-    label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
-    select, input { color: var(--text); background: #15181d; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; min-width: 180px; }
-    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
-    .panel-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
-    .count { min-width: 48px; text-align: center; border-radius: 999px; padding: 3px 10px; background: #2d333d; font-weight: 700; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; background: #15181d; }
-    tr:last-child td { border-bottom: 0; }
-    .empty { margin: 0; padding: 14px; color: var(--muted); }
-    .pill, .status { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 8px; background: #2d333d; font-size: 12px; font-weight: 700; }
-    .status.open { color: var(--warn); }
-    .status.resolved { color: var(--good); }
-    .status.ignored { color: var(--bad); }
-    .status.deferred { color: var(--accent); }
-    .detail-grid { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr); gap: 14px; }
-    .facts, .candidate dl { margin: 0; padding: 14px; display: grid; gap: 8px; }
-    .facts div, .candidate dl div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; }
-    dt { color: var(--muted); font-weight: 700; }
-    dd { margin: 0; overflow-wrap: anywhere; }
-    .copy { padding: 14px; }
-    .candidates { display: grid; gap: 12px; padding: 14px; }
-    .candidate { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(240px, 360px); gap: 14px; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-    .action-form { display: grid; gap: 8px; align-content: start; }
-    @media (max-width: 900px) {
-      main { padding: 18px; }
-      header, .filters, .decision-actions, .nav, .candidate { flex-direction: column; align-items: stretch; display: flex; }
-      .detail-grid { grid-template-columns: 1fr; }
-      table { display: block; overflow-x: auto; white-space: nowrap; }
-      .facts div, .candidate dl div { grid-template-columns: 1fr; gap: 2px; }
-    }
-  `;
-}
-
 function renderErrorPage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
-  return `<!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>PopChoice Backoffice Error</title>
-        <style>
-          body { margin: 0; background: #101214; color: #f1f4f8; font-family: ui-sans-serif, system-ui, sans-serif; }
-          main { max-width: 880px; margin: 0 auto; padding: 32px; }
-          pre { white-space: pre-wrap; background: #171a1f; border: 1px solid #333a44; border-radius: 8px; padding: 16px; }
-          a { color: #64d2ff; }
-        </style>
-      </head>
-      <body>
-        <main>
-          <h1>Catalog health unavailable</h1>
-          <p>The backoffice service is running, but the report could not be loaded.</p>
-          <pre>${escapeHtml(message)}</pre>
-          <p><a href="/">Retry</a></p>
-        </main>
-      </body>
-    </html>`;
+  return renderBackofficeShell({
+    active: 'health',
+    title: 'Backoffice unavailable',
+    eyebrow: 'Operator error',
+    descriptionHtml:
+      'The backoffice service is running, but the requested report could not be loaded.',
+    actions: '<a class="button" href="/">Retry</a>',
+    body: `
+      <section class="panel error-panel">
+        <div class="panel-header"><h2>Error detail</h2></div>
+        <pre>${escapeHtml(message)}</pre>
+      </section>
+    `,
+  });
 }
 
 const config = readBackofficeRuntimeConfig();
