@@ -137,12 +137,17 @@ APP_IMAGE_PREFIX=ghcr.io/<owner>/<repo>
 IMAGE_TAG=development
 ```
 
-For simple continuous deployment, keep `IMAGE_TAG=development` in Coolify and
-let the optional deploy webhook run after the image matrix succeeds. For a
-stricter promotion flow, set `IMAGE_TAG=sha-<12-char-github-sha>` and redeploy
-that exact release bundle. Every PopChoice service must use the same
-`IMAGE_TAG`; mixing `web`, `workers`, `bull-board`, `storybook`, `docs`, and
-service images from different commits is not a supported deployment shape.
+For simple continuous deployment to the shared `development` Coolify resource,
+keep `IMAGE_TAG=development` and let the optional deploy webhook run after the
+image matrix succeeds. Treat this as staging, not production promotion.
+
+For production, promote an immutable image set: copy the
+`sha-<12-char-github-sha>` tag from a healthy workflow run, set the production
+Coolify resource `IMAGE_TAG` to that exact tag, and redeploy manually. Rollback
+uses the same mechanism with the previous known-good sha tag. Every PopChoice
+service must use the same `IMAGE_TAG`; mixing `web`, `workers`, `bull-board`,
+`storybook`, `docs`, and service images from different commits is not a
+supported deployment shape.
 
 Set the repository secrets `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` to
 enable redeploys after pushes to `development`. `COOLIFY_TOKEN` must be a
@@ -161,9 +166,10 @@ The deploy job also supports deploy-aware observability hooks:
 - Set `GRAFANA_URL` and `GRAFANA_SERVICE_ACCOUNT_TOKEN` to create a short
   Grafana silence for alerts labeled `noise_profile=deploy-sensitive` before
   the Coolify webhook runs.
-- Set `POPCHOICE_PRODUCTION_BASE_URL` to poll public `/api/health` and
-  `/api/build` after the webhook. The job fails if production does not recover
-  within the retry budget.
+- Set `POPCHOICE_DEPLOY_VERIFY_BASE_URL` to poll public `/api/health` and
+  `/api/build` after the webhook. The job fails if the deployed resource does
+  not recover within the retry budget. `POPCHOICE_PRODUCTION_BASE_URL` remains
+  supported as a backwards-compatible fallback.
 
 If these optional secrets are absent, the workflow keeps the older behavior:
 publish images and trigger Coolify without creating silences or performing

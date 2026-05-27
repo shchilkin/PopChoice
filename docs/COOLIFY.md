@@ -43,6 +43,52 @@ Coolify treats Docker Compose as the source of truth for services, environment
 variables, and storage. The compose file declares named volumes for PostgreSQL
 and Redis so data survives redeploys.
 
+## Environment model
+
+Use three long-lived environments instead of relying on many always-on PR
+previews:
+
+| Environment   | Purpose                                      | Source branch / tag                                                | Data model                        | Typical domains                                                                |
+| ------------- | -------------------------------------------- | ------------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------ |
+| `local`       | Fast iteration on a developer machine        | feature branches                                                   | Local Docker PostgreSQL and Redis | `http://localhost:3000`, `http://localhost:3003`, `http://localhost:4000`      |
+| `development` | Shared staging for merged `development` work | Moving `development` GHCR image tag                                | Shared staging volumes            | `dev.pop-choice.example`, `docs-dev.pop-choice.example`, admin-only tool hosts |
+| `production`  | Stable user-facing deployment                | Immutable `sha-<12-char-github-sha>` tag or a promoted release tag | Production volumes with backups   | `pop-choice.example`, `docs.pop-choice.example`, private/admin tool hosts      |
+
+In this model, `development` is the place to test merged work on the VPS.
+`production` should be promoted deliberately from a known image set after
+development is healthy. PR previews are still useful for risky branch testing,
+but they should be temporary and cleaned up quickly.
+
+Recommended domain layout:
+
+- Public app: `pop-choice.example` in production, `dev.pop-choice.example` in
+  development.
+- Docs: `docs.pop-choice.example` in production,
+  `docs-dev.pop-choice.example` in development.
+- Backoffice and Bull Board: use separate admin-only domains such as
+  `backoffice.pop-choice.example` and `bullboard.pop-choice.example`, protected
+  with operator auth. Avoid exposing these before credentials are configured.
+- Grafana/observability: keep on a separate admin domain such as
+  `grafana.pop-choice.example`, with its own auth and backup plan.
+- PR previews: if enabled, use one preview hostname per PR/service only while
+  actively testing that PR.
+
+For DNS, a wildcard such as `*.pop-choice.example` can reduce manual record
+creation for service domains, but it does not automatically solve every
+certificate case. A single-label wildcard certificate for
+`*.preview.pop-choice.example` covers `540.preview.pop-choice.example`; it does
+not cover `540.web.preview.pop-choice.example` or other extra nested labels.
+Keep preview URL templates to one dynamic label before the wildcard suffix, or
+use generated Coolify/sslip domains for previews to avoid burning through
+registered-domain certificate limits.
+
+Avoid enabling preview deployments for every PR by default while the project is
+using a single registered domain. Too many one-off preview hostnames can hit the
+Let's Encrypt limit of 50 certificates per registered domain per 7 days, which
+can then block production domains such as Grafana from receiving a trusted
+certificate. If previews are enabled temporarily, delete them after testing and
+watch Coolify/Traefik ACME logs for rate-limit errors.
+
 The compose file is intentionally runtime-only for PopChoice services. It pulls
 prebuilt images using:
 
@@ -330,15 +376,15 @@ PopChoice app resource.
 
 ## Automatic redeploys
 
-For a simple continuous deployment path:
+For a simple continuous deployment path to the shared `development` resource:
 
 1. Set `IMAGE_TAG=development` on the Coolify Compose resource.
-2. Add the repository secret `COOLIFY_DEPLOY_WEBHOOK` with the production
+2. Add the repository secret `COOLIFY_DEPLOY_WEBHOOK` with the development
    Coolify deploy webhook URL.
 3. Add the repository secret `COOLIFY_TOKEN` with a Coolify API token that has
    deploy permission.
-4. Optional but recommended: add `POPCHOICE_PRODUCTION_BASE_URL`, for example
-   `https://pop-choice.shchilkin.dev`, so GitHub Actions can verify
+4. Optional but recommended: add `POPCHOICE_DEPLOY_VERIFY_BASE_URL`, for example
+   `https://dev.pop-choice.example`, so GitHub Actions can verify
    `/api/health` and `/api/build` after the webhook runs.
 5. Optional if Grafana is reachable from GitHub Actions: add `GRAFANA_URL` and
    `GRAFANA_SERVICE_ACCOUNT_TOKEN` so the deploy job can create a short silence
@@ -355,19 +401,25 @@ Normal redeploys may briefly stop or replace the web container before
 Prometheus can scrape `web:3000` again. That alert is now a P2
 deploy-sensitive visibility signal. When Grafana secrets are present, the
 workflow creates a short silence for `noise_profile=deploy-sensitive` before
-the webhook. When `POPCHOICE_PRODUCTION_BASE_URL` is present, the workflow then
-polls public `/api/health` and `/api/build` and fails if production does not
-recover in time.
+the webhook. When `POPCHOICE_DEPLOY_VERIFY_BASE_URL` is present, the workflow
+then polls public `/api/health` and `/api/build` and fails if the deployed
+resource does not recover in time. The older `POPCHOICE_PRODUCTION_BASE_URL`
+secret is still accepted as a backwards-compatible fallback, but new setup
+should use the neutral deploy-verification name because the webhook normally
+targets development.
 
 To smoke-test the same path without a new merge, manually run the
 `Container Images` workflow on the `development` branch. Manual runs rebuild and
 republish the same image set, update the `development` image tag, then call the
 Coolify deploy webhook after the matrix succeeds.
 
-For stricter release promotion, keep automatic deployment disabled, copy the
-`sha-<12-char-github-sha>` tag from the workflow run, set `IMAGE_TAG` to that
-exact tag in Coolify, and redeploy manually. That gives better rollback and
-auditability at the cost of one manual promotion step.
+For production release promotion, keep automatic deployment disabled on the
+production Coolify resource. Copy the `sha-<12-char-github-sha>` tag from the
+healthy workflow run, set production `IMAGE_TAG` to that exact tag, and redeploy
+manually. That makes rollback simple: set `IMAGE_TAG` back to the previous
+known-good sha tag and redeploy the same resource. Do not promote production
+from a branch build that has not already passed the image workflow and the
+development smoke checklist.
 
 Do not point Coolify at source builds for production while also using GHCR
 images. Choose one deployment source of truth; the recommended production path

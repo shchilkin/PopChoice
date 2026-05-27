@@ -5,7 +5,7 @@ grafana_url="${GRAFANA_URL:-}"
 grafana_token="${GRAFANA_SERVICE_ACCOUNT_TOKEN:-${GRAFANA_TOKEN:-}}"
 duration_minutes="${DEPLOY_SILENCE_MINUTES:-15}"
 created_by="${DEPLOY_SILENCE_CREATED_BY:-github-actions}"
-comment="${DEPLOY_SILENCE_COMMENT:-PopChoice production deploy window}"
+comment="${DEPLOY_SILENCE_COMMENT:-PopChoice deploy window}"
 
 if [[ -z "$grafana_url" || -z "$grafana_token" ]]; then
   echo "GRAFANA_URL and GRAFANA_SERVICE_ACCOUNT_TOKEN are not set; skipping deploy silence."
