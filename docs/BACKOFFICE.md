@@ -45,6 +45,10 @@ The first backoffice release should be read-only:
   queue for `tmdb_match_reviews` rows. This is implemented as a protected queue
   and detail view with status/reason filters, risk sorting, local-vs-candidate
   comparison, and graceful empty states.
+- [#566](https://github.com/shchilkin/PopChoice/issues/566): TMDB review queue
+  decision UX polish. The queue and detail pages use branded toolbar controls,
+  consistent status/reason badges, candidate confidence bars, warning signals,
+  and distinct apply/reject/defer/reopen action hierarchy.
 
 Mutation flows are deliberately narrow:
 
@@ -141,6 +145,8 @@ The queue shows `tmdb_match_reviews` rows with:
 - status (`open`, `deferred`, `resolved`, or `ignored`);
 - captured TMDB candidate ids, titles, release years, and confidence scores;
 - newest, oldest, and highest-risk sorting.
+- readable UTC timestamps for generated reports, queue updates, match dates, and
+  audit history.
 
 The detail page compares the current local row with every captured candidate.
 Malformed or partial candidate JSON is shown defensively instead of breaking the

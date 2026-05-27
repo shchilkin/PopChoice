@@ -10,6 +10,7 @@ COPY package.json package-lock.json ./
 COPY apps/backoffice/package.json ./apps/backoffice/
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/web/package.json ./apps/web/
+COPY apps/web/public/popcorn.svg ./apps/web/public/popcorn.svg
 COPY packages/shared/package.json ./packages/shared/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
@@ -69,6 +70,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-a
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/backoffice/dist ./apps/backoffice/dist
+COPY --from=builder /app/apps/web/public/popcorn.svg ./apps/web/public/popcorn.svg
 
 EXPOSE 3000
 CMD ["npm", "run", "start", "--workspace=apps/backoffice"]
