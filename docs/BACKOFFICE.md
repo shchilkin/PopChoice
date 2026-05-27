@@ -34,12 +34,12 @@ own its own UI, API boundaries, process command, health check, and deployment
 configuration.
 
 The first implementation used Express with server-rendered HTML because it was
-the fastest way to validate the operator model. Future interactive work should
-migrate the same dedicated `apps/backoffice` boundary to a Next.js app in
-[#596](https://github.com/shchilkin/PopChoice/issues/596). The goal is to reuse
-PopChoice React components, styles, layouts, route-handler patterns, and table
-state before pagination, virtualization, and bulk repair workflows make the
-hand-written HTML path expensive.
+the fastest way to validate the operator model. The dedicated boundary now runs
+as a Next.js app from [#596](https://github.com/shchilkin/PopChoice/issues/596),
+while keeping the same external routes, container port, health check, and
+Coolify service. New interactive operator workflows should use React/Next route
+handlers and shared PopChoice UI conventions instead of adding hand-written
+HTML pages.
 
 ## Initial Scope
 
@@ -115,7 +115,9 @@ npm run start --workspace=apps/backoffice
 ```
 
 Run `npm run copy:env` after editing root `.env`; it copies values into
-`apps/backoffice/.env` for the local dev script. The app needs:
+`apps/backoffice/.env` for the local dev script. Local dev defaults to port
+`3004`; use `PORT=4030 npm run dev:backoffice` when you want a specific port.
+The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
 - `REDIS_URL` for catalog-health repair actions because they enqueue
@@ -239,6 +241,18 @@ backoffice:
   image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/backoffice:${IMAGE_TAG:-development}
   pull_policy: always
   restart: unless-stopped
+  command:
+    [
+      'npm',
+      'run',
+      'start',
+      '--workspace=apps/backoffice',
+      '--',
+      '--hostname',
+      '0.0.0.0',
+      '--port',
+      '3000',
+    ]
   environment:
     NODE_ENV: production
     DATABASE_URL: postgresql://${POSTGRES_USER:-popchoice}:${POSTGRES_PASSWORD}@${SERVICE_NAME_DB:-db}:5432/${POSTGRES_DB:-popchoice}

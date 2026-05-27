@@ -102,6 +102,12 @@ const VALID_STATUSES: readonly TMDBMatchReviewStatus[] = [
 const VALID_REASONS: readonly TMDBMatchReviewReason[] = ['ambiguous_match', 'runtime_mismatch'];
 const VALID_SORTS: readonly TMDBMatchReviewSort[] = ['newest', 'oldest', 'highest_risk'];
 
+function reviewActionError(message: string, statusCode = 400): Error & { statusCode: number } {
+  const error = new Error(message) as Error & { statusCode: number };
+  error.statusCode = statusCode;
+  return error;
+}
+
 export function isTMDBMatchReviewStatus(value: string): value is TMDBMatchReviewStatus {
   return VALID_STATUSES.includes(value as TMDBMatchReviewStatus);
 }
@@ -353,7 +359,13 @@ export async function applyTMDBMatchReviewAction(
       [input.reviewId],
     );
     const review = reviewResult.rows[0] ? normalizeReview(reviewResult.rows[0]) : null;
-    if (!review) throw new Error(`TMDB match review ${input.reviewId} was not found.`);
+    if (!review) {
+      throw reviewActionError(`TMDB match review ${input.reviewId} was not found.`, 404);
+    }
+
+    if (review.status === 'resolved') {
+      throw reviewActionError(`TMDB match review ${review.id} is already resolved.`, 409);
+    }
 
     let newStatus: TMDBMatchReviewStatus;
     let candidate: TMDBReviewCandidate | null = null;
@@ -366,12 +378,14 @@ export async function applyTMDBMatchReviewAction(
 
     if (input.action === 'apply_candidate') {
       if (!input.candidateId) {
-        throw new Error('Applying a TMDB review requires a candidate id.');
+        throw reviewActionError('Applying a TMDB review requires a candidate id.');
       }
 
       candidate = review.candidates.find((item) => item.id === input.candidateId) ?? null;
       if (!candidate || candidate.id === null) {
-        throw new Error(`Candidate ${input.candidateId} was not found on review ${review.id}.`);
+        throw reviewActionError(
+          `Candidate ${input.candidateId} was not found on review ${review.id}.`,
+        );
       }
 
       const duplicateResult = await client.query<{ id: string; name: string; year: number }>(
@@ -384,8 +398,9 @@ export async function applyTMDBMatchReviewAction(
       );
       const duplicate = duplicateResult.rows[0];
       if (duplicate) {
-        throw new Error(
+        throw reviewActionError(
           `TMDB id ${candidate.id} is already assigned to ${duplicate.name} (${duplicate.year}) [movie ${duplicate.id}].`,
+          409,
         );
       }
 

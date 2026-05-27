@@ -21,6 +21,8 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --no-audit --fund
 COPY packages/shared/src ./packages/shared/src
 COPY packages/shared/tsconfig.json ./packages/shared/
 COPY apps/backoffice/src ./apps/backoffice/src
+COPY apps/backoffice/public ./apps/backoffice/public
+COPY apps/backoffice/next.config.mjs ./apps/backoffice/
 COPY apps/backoffice/tsconfig.json ./apps/backoffice/
 RUN npm run build --workspace=packages/shared && npm run build --workspace=apps/backoffice
 
@@ -43,6 +45,7 @@ ARG VERCEL_GIT_COMMIT_SHA
 ARG VERCEL_GIT_COMMIT_REF
 
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV BUILD_APP_COMMIT_SHA=$APP_COMMIT_SHA
 ENV BUILD_APP_GIT_BRANCH=$APP_GIT_BRANCH
 ENV BUILD_APP_PR_NUMBER=$APP_PR_NUMBER
@@ -69,8 +72,11 @@ COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-audit --fund=false
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/apps/backoffice/dist ./apps/backoffice/dist
-COPY --from=builder /app/apps/web/public/popcorn.svg ./apps/web/public/popcorn.svg
+COPY --from=builder /app/apps/backoffice/.next ./apps/backoffice/.next
+COPY --from=builder /app/apps/backoffice/next.config.mjs ./apps/backoffice/next.config.mjs
+COPY --from=builder /app/apps/backoffice/public ./apps/backoffice/public
+RUN chown -R node:node /app
 
 EXPOSE 3000
-CMD ["npm", "run", "start", "--workspace=apps/backoffice"]
+USER node
+CMD ["npm", "run", "start", "--workspace=apps/backoffice", "--", "--hostname", "0.0.0.0", "--port", "3000"]

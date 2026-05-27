@@ -73,6 +73,43 @@ Recommended domain layout:
 - PR previews: if enabled, use one preview hostname per PR/service only while
   actively testing that PR.
 
+## Service Links
+
+Keep the long-lived operator and review surfaces on stable, memorable domains.
+The current PopChoice convention is:
+
+| Surface    | Production URL                                                                     | Local URL                               | Coolify service         | Auth notes                                                                 |
+| ---------- | ---------------------------------------------------------------------------------- | --------------------------------------- | ----------------------- | -------------------------------------------------------------------------- |
+| App        | [pop-choice.shchilkin.dev](https://pop-choice.shchilkin.dev)                       | [localhost:3000](http://localhost:3000) | `web`                   | Public user-facing app.                                                    |
+| Docs       | [docs.pop-choice.shchilkin.dev](https://docs.pop-choice.shchilkin.dev)             | [localhost:3003](http://localhost:3003) | `docs`                  | Public project documentation unless intentionally kept private.            |
+| Bull Board | [bullboard.pop-choice.shchilkin.dev](https://bullboard.pop-choice.shchilkin.dev)   | [localhost:4000](http://localhost:4000) | `bull-board`            | Operator-only. Protect with `OPERATOR_AUTH_USERNAME` and password.         |
+| Storybook  | [storybook.pop-choice.shchilkin.dev](https://storybook.pop-choice.shchilkin.dev)   | [localhost:6006](http://localhost:6006) | `storybook`             | Design-review surface. Keep private/admin-only if unreleased UI is shown.  |
+| Backoffice | [backoffice.pop-choice.shchilkin.dev](https://backoffice.pop-choice.shchilkin.dev) | [localhost:3004](http://localhost:3004) | `backoffice`            | Operator-only. Uses the same shared operator auth variables as Bull Board. |
+| Grafana    | [grafana.pop-choice.shchilkin.dev](https://grafana.pop-choice.shchilkin.dev)       | Observability stack-specific            | `observability-grafana` | Admin-only. Use Grafana auth and avoid exposing unauthenticated metrics.   |
+
+For a different domain, keep the same service names and replace
+`pop-choice.shchilkin.dev` with the environment-specific base domain. In
+Coolify, assign the public domain to the service and include the container port
+in the domain field when required by Coolify routing:
+
+| Service      | Container port |
+| ------------ | -------------- |
+| `web`        | `3000`         |
+| `docs`       | `3000`         |
+| `backoffice` | `3000`         |
+| `bull-board` | `3000`         |
+| `storybook`  | `80`           |
+
+Local commands for the same surfaces:
+
+```bash
+npm run dev                       # web at http://localhost:3000
+npm run dev:docs                  # docs at http://localhost:3003
+npm run dev:backoffice            # backoffice at http://localhost:3004
+npm run dev --workspace=apps/bull-board # Bull Board at http://localhost:4000
+npm run storybook                 # Storybook at http://localhost:6006
+```
+
 For DNS, a wildcard such as `*.pop-choice.example` can reduce manual record
 creation for service domains, but it does not automatically solve every
 certificate case. A single-label wildcard certificate for
