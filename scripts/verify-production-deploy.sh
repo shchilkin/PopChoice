@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-base_url="${1:-${POPCHOICE_PRODUCTION_BASE_URL:-}}"
+base_url="${1:-${POPCHOICE_DEPLOY_VERIFY_BASE_URL:-${POPCHOICE_PRODUCTION_BASE_URL:-}}}"
 expected_sha="${EXPECTED_SOURCE_COMMIT:-${GITHUB_SHA:-}}"
 attempts="${POST_DEPLOY_VERIFY_ATTEMPTS:-30}"
 delay_seconds="${POST_DEPLOY_VERIFY_DELAY_SECONDS:-10}"
 
 if [[ -z "$base_url" ]]; then
-  echo "POPCHOICE_PRODUCTION_BASE_URL is not set; skipping post-deploy verification."
+  echo "POPCHOICE_DEPLOY_VERIFY_BASE_URL is not set; skipping post-deploy verification."
   exit 0
 fi
 
@@ -35,7 +35,7 @@ for attempt in $(seq 1 "$attempts"); do
 
   if [[ "$health_status" == "200" && "$build_status" == "200" ]]; then
     if [[ -z "$expected_sha" ]] || grep -q "$expected_sha" "$build_body"; then
-      echo "Production health and build metadata verified."
+      echo "Deployment health and build metadata verified."
       exit 0
     fi
 
@@ -49,7 +49,7 @@ for attempt in $(seq 1 "$attempts"); do
   fi
 done
 
-echo "Production deploy verification did not recover in time."
+echo "Deployment verification did not recover in time."
 echo "Last /api/health response:"
 cat "$health_body" 2>/dev/null || true
 echo
