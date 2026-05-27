@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@pop-choice/shared": "*",
+    "bullmq": "^5.77.3",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.5.2"
+    "express-rate-limit": "^8.5.2",
+    "ioredis": "^5.10.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

@@ -225,6 +225,28 @@ CREATE TABLE IF NOT EXISTS tmdb_match_review_audit (
 CREATE INDEX IF NOT EXISTS idx_tmdb_match_review_audit_review_created_at
   ON tmdb_match_review_audit (review_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS catalog_repair_audit (
+  id bigserial PRIMARY KEY,
+  action text NOT NULL,
+  actor text NOT NULL,
+  issue_key text NOT NULL,
+  target_type text NOT NULL,
+  target_id text NOT NULL,
+  note text,
+  previous_state jsonb NOT NULL DEFAULT '{}'::jsonb,
+  result jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT catalog_repair_audit_action_check CHECK (
+    action IN ('enqueue_backfill')
+  )
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_target_created_at
+  ON catalog_repair_audit (target_type, target_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_issue_created_at
+  ON catalog_repair_audit (issue_key, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS users (
   id bigserial PRIMARY KEY,
   email text NOT NULL,

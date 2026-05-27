@@ -56,9 +56,11 @@ Mutation flows are deliberately narrow:
   `tmdb_matched_at`, and `localized_name` only when it is currently empty).
   Richer metadata still comes from backfill/discovery refreshes.
 - [#559](https://github.com/shchilkin/PopChoice/issues/559): catalog-health
-  repair actions remain a separate follow-up because missing metadata,
-  duplicate identities, and stale TMDB rows should generally enqueue
-  idempotent repair work rather than mutate broad catalog state inline.
+  repair actions are implemented as audited, queued repairs. The first slice
+  adds a per-sample `Queue backfill` action on repairable catalog-health issues.
+  It writes a `backfill-movie` job into the `catalog-maintenance` queue and
+  records actor, issue key, movie snapshot, queue/job result, optional note, and
+  timestamp in `catalog_repair_audit`.
 
 Shared operator auth is the login model for public exposure:
 
@@ -95,14 +97,34 @@ npm run start --workspace=apps/backoffice
 ```
 
 Run `npm run copy:env` after editing root `.env`; it copies values into
-`apps/backoffice/.env` for the local dev script. The app needs at least:
+`apps/backoffice/.env` for the local dev script. The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
-- `REDIS_URL` only when a screen needs queue state or job actions;
+- `REDIS_URL` for catalog-health repair actions because they enqueue
+  `catalog-maintenance` jobs rather than mutating catalog rows inline;
 - `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
   operator routes locally;
 - `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
   report shape.
+
+## Catalog Repair Workflow
+
+The catalog-health home page shows sample rows for missing metadata and stale
+TMDB coverage. Repairable rows have a `Queue backfill` button. This is
+intentionally conservative:
+
+- the button queues the same `backfill-movie` job that workers already process
+  through the `catalog-maintenance` queue;
+- duplicate identity groups remain read-only because they can require manual
+  merge decisions;
+- backoffice stores the movie snapshot and queue result in
+  `catalog_repair_audit`, which gives operators a recovery trail without
+  editing the catalog directly from the HTML form.
+
+If a queued repair does not resolve the row, use Bull Board to inspect the job,
+check worker logs, and rerun the backfill or TMDB review flow manually. Prefer a
+manual migration only when the issue is an identity conflict rather than missing
+or stale metadata.
 
 ## TMDB Review Workflow
 
