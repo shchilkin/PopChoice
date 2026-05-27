@@ -112,5 +112,5 @@ When adding new roadmap work:
 
 - Next.js uses `apps/web/src/proxy.ts` for the CSRF cookie path. Older docs or comments may still say middleware.
 - CI skips heavy jobs for docs-only PRs but still reports `PR Validation`.
-- Root `npm run test:services` uses Turbo across `services/*` packages that define a `test` script. Use `npm run build:services` for a service compile pass.
+- Root `npm run test:services` runs `packages/shared` tests, then uses Turbo across `services/*` packages that define a `test` script. Use `npm run build:services` for a service compile pass.
 - Coolify preview databases can preserve old volumes. New schema-dependent code may need migrations or preview recreation before it works.

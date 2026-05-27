@@ -109,27 +109,27 @@ describe('tmdb match review actions', () => {
     const auditCall = clientMock.query.mock.calls.find(([sql]: [unknown]) =>
       String(sql).includes('INSERT INTO tmdb_match_review_audit'),
     );
-    expect(auditCall?.[1]).toEqual([
+    expect(auditCall?.[1]?.slice(0, 6)).toEqual([
       '7',
       'apply_candidate',
       'operator@example.test',
       'Confirmed manually.',
       'open',
       'resolved',
-      JSON.stringify({
-        id: 593,
-        title: 'Solaris',
-        releaseYear: 1972,
-        confidence: 0.94,
-      }),
-      JSON.stringify({
-        movieId: '42',
-        movieName: 'Solaris',
-        movieYear: 1972,
-        previousMovie: reviewRow().current_movie,
-        appliedCandidateId: 593,
-      }),
     ]);
+    expect(JSON.parse(auditCall?.[1]?.[6])).toEqual({
+      id: 593,
+      title: 'Solaris',
+      releaseYear: 1972,
+      confidence: 0.94,
+    });
+    expect(JSON.parse(auditCall?.[1]?.[7])).toEqual({
+      movieId: '42',
+      movieName: 'Solaris',
+      movieYear: 1972,
+      previousMovie: reviewRow().current_movie,
+      appliedCandidateId: 593,
+    });
   });
 
   it('rejects duplicate TMDB ownership and rolls back', async () => {
