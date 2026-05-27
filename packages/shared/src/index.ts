@@ -39,6 +39,8 @@ export {
   verifyOperatorBasicAuthHeader,
 } from './operatorAuth.js';
 export type { OperatorAuthConfig } from './operatorAuth.js';
+export { readBackofficeRuntimeConfig, readBullBoardRuntimeConfig } from './runtimeConfig.js';
+export type { BackofficeRuntimeConfig, BullBoardRuntimeConfig } from './runtimeConfig.js';
 export { formatCatalogHealthReport, getCatalogHealthReport } from './catalogHealth.js';
 export type {
   CatalogHealthIssue,

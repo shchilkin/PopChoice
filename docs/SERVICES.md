@@ -132,6 +132,11 @@ all Bull Board UI routes are behind the operator login when credentials are set.
 Operator routes are also rate-limited in-process to slow down repeated Basic
 Auth attempts.
 
+The dedicated `apps/bull-board` entrypoint reads a plain Zod runtime config from
+`@pop-choice/shared`. `REDIS_URL` must be present and use `redis://` or
+`rediss://`; `PORT`, `BULL_BOARD_PORT`, and operator-auth rate-limit values are
+validated as positive integers before the server starts.
+
 ### Backoffice
 
 Backoffice/catalog-health UI lives in the dedicated `apps/backoffice/` workspace
@@ -139,6 +144,10 @@ app and deploys as a separate Coolify service like `apps/bull-board`. The first
 screen is a protected catalog-health overview. It now also exposes narrow
 operator actions for TMDB review decisions and per-movie catalog-health repair
 jobs without putting admin UI inside `apps/web`.
+
+Backoffice also uses the shared plain Zod runtime config. It validates
+`DATABASE_URL`, optional `REDIS_URL`, catalog-health tuning values, TMDB
+language, and the shared operator-auth settings before opening the HTTP port.
 
 See [Backoffice Plan](/docs/BACKOFFICE) and
 [#493](https://github.com/shchilkin/PopChoice/issues/493).

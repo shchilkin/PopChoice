@@ -17,7 +17,7 @@ import {
   listTMDBMatchReviews,
   operatorAuthChallenge,
   recordCatalogRepairAction,
-  readOperatorAuthConfig,
+  readBackofficeRuntimeConfig,
   verifyOperatorBasicAuthHeader,
 } from '@pop-choice/shared';
 import type {
@@ -41,11 +41,6 @@ import {
   type CatalogBackfillReason,
 } from './catalogMaintenanceQueue.js';
 
-const DEFAULT_PORT = 3000;
-const DEFAULT_SAMPLE_LIMIT = 5;
-const DEFAULT_STALE_AFTER_DAYS = 180;
-const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
-const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
 const DEFAULT_REPAIR_AUDIT_LIMIT = 25;
 
 const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
@@ -61,17 +56,6 @@ const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
   'missing_genre_metadata',
   'missing_keyword_metadata',
 ]);
-
-function parsePositiveInteger(value: string | undefined, fallback: number): number {
-  if (!value || value.trim() === '') return fallback;
-
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error(`Expected a positive integer, received "${value}".`);
-  }
-
-  return parsed;
-}
 
 function escapeHtml(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '-';
@@ -951,31 +935,9 @@ function renderErrorPage(error: unknown): string {
     </html>`;
 }
 
-const port = parsePositiveInteger(process.env.PORT, DEFAULT_PORT);
-const sampleLimit = parsePositiveInteger(
-  process.env.CATALOG_HEALTH_SAMPLE_LIMIT,
-  DEFAULT_SAMPLE_LIMIT,
-);
-const staleAfterDays = parsePositiveInteger(
-  process.env.CATALOG_HEALTH_STALE_DAYS,
-  DEFAULT_STALE_AFTER_DAYS,
-);
-const operatorAuthRateLimitWindowSeconds = parsePositiveInteger(
-  process.env.OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS,
-  DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS,
-);
-const operatorAuthRateLimitMax = parsePositiveInteger(
-  process.env.OPERATOR_AUTH_RATE_LIMIT_MAX,
-  DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX,
-);
-const operatorAuthConfig = readOperatorAuthConfig();
-const databaseUrl = process.env.DATABASE_URL;
+const config = readBackofficeRuntimeConfig();
 
-if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required for the backoffice catalog-health report.');
-}
-
-initDatabase(databaseUrl);
+initDatabase(config.databaseUrl);
 await ensureCatalogRepairActionSchema();
 await ensureTMDBMatchReviewActionSchema();
 
@@ -986,20 +948,23 @@ app.get('/healthz', (_request, response) => response.status(200).send('ok'));
 app.use(express.urlencoded({ extended: false }));
 app.use(
   rateLimit({
-    windowMs: operatorAuthRateLimitWindowSeconds * 1000,
-    limit: operatorAuthRateLimitMax,
+    windowMs: config.operatorAuthRateLimitWindowSeconds * 1000,
+    limit: config.operatorAuthRateLimitMax,
     standardHeaders: 'draft-8',
     legacyHeaders: false,
     skipSuccessfulRequests: true,
     message: 'Too many backoffice requests, please try again later.',
   }),
 );
-app.use(createOperatorAuthMiddleware(operatorAuthConfig));
+app.use(createOperatorAuthMiddleware(config.operatorAuth));
 
 app.get('/', async (request, response) => {
   try {
     const [report, audit] = await Promise.all([
-      getCatalogHealthReport({ sampleLimit, staleAfterDays }),
+      getCatalogHealthReport({
+        sampleLimit: config.catalogHealthSampleLimit,
+        staleAfterDays: config.catalogHealthStaleDays,
+      }),
       listCatalogRepairAudit(DEFAULT_REPAIR_AUDIT_LIMIT),
     ]);
     const repairStatus =
@@ -1026,11 +991,14 @@ app.post('/catalog-health/actions', async (request, response) => {
       return;
     }
 
-    const job = await enqueueCatalogBackfillMovieFromBackoffice({
-      movieId,
-      reason: getBackfillReasonForIssue(issueKey),
-      language: process.env.TMDB_LANGUAGE,
-    });
+    const job = await enqueueCatalogBackfillMovieFromBackoffice(
+      {
+        movieId,
+        reason: getBackfillReasonForIssue(issueKey),
+        language: config.tmdbLanguage,
+      },
+      config.redisUrl,
+    );
 
     await recordCatalogRepairAction({
       action: 'enqueue_backfill',
@@ -1115,6 +1083,10 @@ app.post('/tmdb-reviews/:id/actions', async (request, response) => {
   }
 });
 
-app.listen(port, '0.0.0.0', () => {
-  logger.info('Backoffice listening', { port, sampleLimit, staleAfterDays });
+app.listen(config.port, '0.0.0.0', () => {
+  logger.info('Backoffice listening', {
+    catalogHealthSampleLimit: config.catalogHealthSampleLimit,
+    catalogHealthStaleDays: config.catalogHealthStaleDays,
+    port: config.port,
+  });
 });

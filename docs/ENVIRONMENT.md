@@ -22,6 +22,13 @@ Redis credentials, session secrets, HMAC secrets, Resend tokens, Telegram bot
 tokens, and Grafana passwords in a local secret store or deployment secret
 manager. `NEXT_PUBLIC_*` values and build metadata are public by design.
 
+Runtime entrypoints should validate environment variables with process-specific
+plain Zod schemas in `packages/shared/src/runtimeConfig.ts`. This avoids a
+single global config object while still making misconfigured operator services
+fail early with actionable startup errors. The first rollout covers
+`apps/backoffice` and `apps/bull-board`; new services should add their own
+reader instead of parsing `process.env` inline.
+
 ## Runtime App
 
 These variables are used by `apps/web`, workers, Bull Board, and shared runtime
@@ -31,7 +38,7 @@ helpers.
 | ----------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`                          | Web, workers, seed/discovery/backfill           | Required for realistic local/prod recommendations and embeddings; not required for deterministic CI evals/e2e          | None                                                                | Secret. Used for embeddings and recommendation text generation.                                             |
 | `DATABASE_URL`                            | Web, workers, services, migrations, backoffice  | Required for app DB behavior; CI/e2e may use `E2E_DATABASE_URL` instead                                                | Local setup generates it                                            | Secret if it contains credentials. PostgreSQL must support pgvector.                                        |
-| `REDIS_URL`                               | Web, workers, BullMQ, Bull Board, rate limiting | Optional local; required for queued recommendation flow in prod; e2e maps from `E2E_REDIS_URL`                         | Queue features disable or use limited inline fallback when missing  | Secret if it contains credentials. Backoffice only needs it for future queue state screens.                 |
+| `REDIS_URL`                               | Web, workers, BullMQ, Bull Board, rate limiting | Optional local; required for queued recommendation flow in prod; e2e maps from `E2E_REDIS_URL`                         | Queue features disable or use limited inline fallback when missing  | Secret if it contains credentials. Backoffice needs it for queued catalog repair actions.                   |
 | `TMDB_API_KEY`                            | Web, workers, services                          | Optional for local UI; required for TMDB enrichment, discovery, backfill, more picks, and production catalog freshness | None                                                                | Secret. Must be a TMDB v4 read access token for service/backfill flows.                                     |
 | `NEXT_PUBLIC_TMDB_API_KEY`                | Browser                                         | Optional                                                                                                               | None                                                                | Public. Enables client-side poster enrichment only; do not put privileged secrets here.                     |
 | `NEXT_PUBLIC_BASE_URL`                    | Web, auth, password reset, build info           | Optional local; required behind reverse proxy/prod                                                                     | Falls back to request origin or platform domain where supported     | Public. Use the browser-facing origin without a trailing slash.                                             |

@@ -179,7 +179,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Add request body size limits for externally facing routes before expensive parsing, moderation, embedding, or recommendation work begins.
 - Add retry/backoff and circuit-breaker behavior for expensive external dependencies where retrying is safe.
 - Sanitize client-facing error responses so internal exception details, upstream payloads, and infrastructure hints stay out of API responses.
-- Validate required environment variables on application startup for web, workers, and root services so misconfigured deployments fail early.
+- Validate required environment variables on application startup for web, workers, and root services so misconfigured deployments fail early. First slice: `apps/backoffice` and `apps/bull-board` now use process-specific plain Zod runtime configs from `@pop-choice/shared`; continue the same pattern for web, workers, and standalone catalog services.
 - Clarify idempotency and retry behavior for recommendation creation, worker retries, more-picks jobs, and failed queue recovery.
 - [x] Add a shared operator login model for operational apps in
       [#548](https://github.com/shchilkin/PopChoice/issues/548). `apps/bull-board`
