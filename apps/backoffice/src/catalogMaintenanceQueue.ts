@@ -43,10 +43,11 @@ function normalizeLanguage(language?: string): string {
   return (language ?? DEFAULT_TMDB_LANGUAGE).trim() || DEFAULT_TMDB_LANGUAGE;
 }
 
-function getCatalogMaintenanceQueue(): Queue<CatalogBackfillMovieJobData> | null {
+function getCatalogMaintenanceQueue(
+  redisUrl: string | undefined,
+): Queue<CatalogBackfillMovieJobData> | null {
   if (catalogMaintenanceQueue) return catalogMaintenanceQueue;
 
-  const redisUrl = process.env.REDIS_URL;
   if (!redisUrl) return null;
 
   redisConnection = new Redis(redisUrl, { maxRetriesPerRequest: null });
@@ -66,8 +67,9 @@ export function getCatalogBackfillMovieJobId(movieId: string | number): string {
 
 export async function enqueueCatalogBackfillMovieFromBackoffice(
   input: EnqueueCatalogBackfillMovieInput,
+  redisUrl = process.env.REDIS_URL,
 ): Promise<EnqueueCatalogBackfillMovieResult | null> {
-  const queue = getCatalogMaintenanceQueue();
+  const queue = getCatalogMaintenanceQueue(redisUrl);
   if (!queue) return null;
 
   const language = normalizeLanguage(input.language);
