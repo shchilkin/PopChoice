@@ -33,6 +33,14 @@ It can use the same database and Redis network as the app stack, but it should
 own its own UI, API boundaries, process command, health check, and deployment
 configuration.
 
+The first implementation used Express with server-rendered HTML because it was
+the fastest way to validate the operator model. Future interactive work should
+migrate the same dedicated `apps/backoffice` boundary to a Next.js app in
+[#596](https://github.com/shchilkin/PopChoice/issues/596). The goal is to reuse
+PopChoice React components, styles, layouts, route-handler patterns, and table
+state before pagination, virtualization, and bulk repair workflows make the
+hand-written HTML path expensive.
+
 ## Initial Scope
 
 The first backoffice release should be read-only:
@@ -85,7 +93,8 @@ Shared operator auth is the login model for public exposure:
 Use shared boundaries deliberately:
 
 - `apps/backoffice` owns operator pages, forms, tables, route handlers, and UI
-  state.
+  state. Its long-term framework direction is a dedicated Next.js app, not an
+  Express HTML renderer and not routes inside `apps/web`.
 - `packages/shared` is the preferred home for cross-app database/query helpers
   once both backoffice and services need the same behavior.
 - `services/movie-backfill` keeps the CLI entrypoint for `catalog:health`, but
