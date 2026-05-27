@@ -165,6 +165,52 @@ If a bad manual decision is made, reopen the review, correct the movie row via a
 safe migration/manual SQL change, and rerun the relevant backfill/discovery job
 so richer metadata can be refreshed consistently.
 
+## Visual QA Checklist
+
+Backoffice UI changes should include a short visual QA pass before review. Use
+the deployed admin domain when validating a deployment fix, or run locally with:
+
+```bash
+PORT=4030 npm run dev:backoffice
+```
+
+Capture or inspect the same pages at desktop and narrow widths:
+
+- desktop: 1440 by 1000;
+- narrow/mobile: 390 by 900.
+
+Cover these operator states:
+
+- catalog health home at `/`, including populated issue cards, table rows,
+  empty/healthy states when available, and the `?repair=queued`,
+  `?repair=unavailable`, and `?repair=failed` notices;
+- TMDB review queue at `/tmdb-reviews`, including open, deferred, resolved, and
+  ignored status filters when data exists;
+- TMDB review detail pages for at least one open or deferred review, including
+  apply, reject, defer, reopen, and note-entry states where practical;
+- future movie/detail repair pages when they are added under the backoffice
+  epic.
+
+Check that:
+
+- the PopChoice brand icon loads and the page does not duplicate the document
+  title;
+- generated, updated, matched, and audit timestamps are readable UTC strings;
+- pages do not create unintended horizontal viewport scroll. Wide data tables
+  may scroll inside their table container only;
+- long movie titles, TMDB ids, reason/status labels, notes, and error messages
+  wrap without covering neighboring controls;
+- buttons, links, selects, text inputs, and radios have visible focus states;
+- hover states and status badges do not shift the layout;
+- destructive, deferral, reopen, and primary apply actions remain visually
+  distinct;
+- disabled or unavailable actions explain why the operator cannot proceed.
+
+When a PR changes backoffice layout, branding, forms, tables, or action states,
+attach representative screenshots to the PR notes instead of committing one-off
+screenshots. At minimum include catalog health, review queue, and review detail
+screenshots for both widths.
+
 ## Production Deployment
 
 `coolify.compose.yml` includes a `backoffice` service beside `bull-board`:
