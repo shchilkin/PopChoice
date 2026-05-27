@@ -176,9 +176,13 @@ function renderBackofficeStyles(): string {
       --muted: #aab2bf;
       --subtle: #7e8794;
       --good: #40c463;
+      --good-soft: rgba(64, 196, 99, 0.15);
       --warn: #f5c542;
+      --warn-soft: rgba(245, 197, 66, 0.15);
       --bad: #ff5f56;
+      --bad-soft: rgba(255, 95, 86, 0.15);
       --accent: #7cc7ff;
+      --accent-soft: rgba(124, 199, 255, 0.14);
       --focus: #f5c542;
       --brand: #f5c542;
       --brand-soft: rgba(245, 197, 66, 0.16);
@@ -217,6 +221,7 @@ function renderBackofficeStyles(): string {
     }
     th { color: var(--muted); font-weight: 700; background: #12151a; }
     tr:last-child td { border-bottom: 0; }
+    tbody tr:hover td { background: rgba(255, 255, 255, 0.018); }
     select,
     input {
       min-width: 180px;
@@ -328,7 +333,10 @@ function renderBackofficeStyles(): string {
     }
     .button { cursor: pointer; }
     .button:hover { border-color: var(--border-strong); background: var(--surface-3); }
-    .button.primary { border-color: color-mix(in srgb, var(--accent), var(--border) 35%); }
+    .button.primary {
+      border-color: color-mix(in srgb, var(--accent), var(--border) 35%);
+      background: linear-gradient(180deg, rgba(124, 199, 255, 0.18), var(--surface-2));
+    }
     .button.danger { border-color: color-mix(in srgb, var(--bad), var(--border) 35%); }
     .button.small { padding: 5px 8px; font-size: 12px; }
     .button:disabled,
@@ -350,12 +358,22 @@ function renderBackofficeStyles(): string {
       box-shadow: var(--shadow);
     }
     .stat { padding: 14px 16px; }
+    .stat.warning { border-color: color-mix(in srgb, var(--warn), var(--border) 50%); }
+    .stat.healthy { border-color: color-mix(in srgb, var(--good), var(--border) 65%); }
+    .stat-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
     .stat-label { display: block; color: var(--muted); font-size: 13px; font-weight: 700; }
     .stat-value { display: block; font-size: 30px; font-weight: 850; margin-top: 4px; }
+    .stat-meta { color: var(--subtle); font-size: 12px; font-weight: 700; margin-top: 2px; }
     .grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
     .panel { overflow: hidden; margin-bottom: 14px; }
     .panel.needs-work { border-color: color-mix(in srgb, var(--warn), var(--border) 55%); }
     .panel.healthy { border-color: color-mix(in srgb, var(--good), var(--border) 68%); }
+    .panel.repairable { border-color: color-mix(in srgb, var(--accent), var(--border) 45%); }
     .panel-header {
       display: flex;
       justify-content: space-between;
@@ -373,6 +391,9 @@ function renderBackofficeStyles(): string {
       background: var(--surface-3);
       font-weight: 850;
     }
+    .count.warning { color: var(--warn); background: var(--warn-soft); }
+    .count.healthy { color: var(--good); background: var(--good-soft); }
+    .count.repairable { color: var(--accent); background: var(--accent-soft); }
     .empty { margin: 0; padding: 14px; color: var(--muted); }
     .notice {
       border: 1px solid var(--border);
@@ -384,6 +405,72 @@ function renderBackofficeStyles(): string {
     }
     .notice.good { border-color: color-mix(in srgb, var(--good), var(--border) 45%); }
     .notice.warn { border-color: color-mix(in srgb, var(--warn), var(--border) 45%); }
+    .catalog-status {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 14px;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+      box-shadow: var(--shadow);
+    }
+    .catalog-status.needs-work { border-color: color-mix(in srgb, var(--warn), var(--border) 50%); }
+    .catalog-status.healthy { border-color: color-mix(in srgb, var(--good), var(--border) 62%); }
+    .status-heading {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 3px;
+      font-weight: 850;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--warn);
+      box-shadow: 0 0 0 4px var(--warn-soft);
+    }
+    .catalog-status.healthy .status-dot {
+      background: var(--good);
+      box-shadow: 0 0 0 4px var(--good-soft);
+    }
+    .status-copy { margin: 0; color: var(--muted); }
+    .status-metrics {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .issue-title { display: grid; gap: 3px; }
+    .issue-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .issue-hint { color: var(--muted); font-size: 12px; font-weight: 650; }
+    .table-scroll { overflow-x: auto; }
+    .sample-table { min-width: 1020px; }
+    .sample-table .id-cell { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .sample-table .movie-cell { min-width: 220px; }
+    .sample-table .repair-cell { width: 148px; }
+    .data-pill {
+      display: inline-flex;
+      min-width: 34px;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 1px 7px;
+      font-size: 12px;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+    .data-pill.good { color: var(--good); background: var(--good-soft); }
+    .data-pill.warn { color: var(--warn); background: var(--warn-soft); }
+    .data-pill.neutral { color: var(--muted); background: var(--surface-3); }
     .filters {
       display: flex;
       gap: 12px;
@@ -409,6 +496,10 @@ function renderBackofficeStyles(): string {
     .status.resolved { color: var(--good); }
     .status.ignored { color: var(--bad); }
     .status.deferred { color: var(--accent); }
+    .pill.healthy { color: var(--good); background: var(--good-soft); }
+    .pill.good { color: var(--good); background: var(--good-soft); }
+    .pill.warning { color: var(--warn); background: var(--warn-soft); }
+    .pill.repairable { color: var(--accent); background: var(--accent-soft); }
     .duplicate-group { padding: 12px 14px; border-bottom: 1px solid var(--border); }
     .duplicate-group:last-child { border-bottom: 0; }
     .duplicate-heading {
@@ -479,6 +570,8 @@ function renderBackofficeStyles(): string {
         display: flex;
       }
       .summary { grid-template-columns: 1fr 1fr; }
+      .catalog-status { align-items: flex-start; flex-direction: column; }
+      .status-metrics { justify-content: flex-start; }
       .detail-grid { grid-template-columns: 1fr; }
       table { display: block; overflow-x: auto; white-space: nowrap; }
       .duplicate-group li,
@@ -566,6 +659,79 @@ function createOperatorAuthMiddleware(config: OperatorAuthConfig | null) {
   };
 }
 
+function renderBooleanDataPill(value: boolean): string {
+  return `<span class="data-pill ${value ? 'good' : 'warn'}">${value ? 'yes' : 'no'}</span>`;
+}
+
+function renderOptionalCatalogValue(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return '<span class="data-pill neutral">-</span>';
+  }
+
+  return escapeHtml(value);
+}
+
+function getCatalogIssueHint(issueKey: string): string {
+  const hints: Record<string, string> = {
+    missing_poster_url: 'Poster coverage affects result cards and catalog browsing.',
+    missing_localized_name: 'Localized names improve non-English operator and user views.',
+    missing_tmdb_id: 'Identity gaps block richer TMDB refreshes and joins.',
+    missing_runtime: 'Runtime gaps make fit and pacing recommendations weaker.',
+    missing_age_rating: 'Age-rating gaps reduce safety and household filtering quality.',
+    missing_tmdb_matched_at: 'Matched rows need timestamps for stale-data decisions.',
+    stale_tmdb_metadata: 'Refresh candidates through the rate-limited TMDB path.',
+    missing_cast_metadata: 'Cast gaps limit actor-aware recommendation features.',
+    missing_director_metadata: 'Director gaps limit creator-aware recommendation features.',
+    missing_genre_metadata: 'Genre gaps weaken discovery and future filters.',
+    missing_keyword_metadata: 'Keyword gaps reduce nuance for ranking and search.',
+  };
+
+  return hints[issueKey] ?? 'Review affected catalog records.';
+}
+
+function renderCountPill(count: number, state: 'healthy' | 'warning' | 'repairable'): string {
+  return `<span class="count ${state}">${escapeHtml(count)}</span>`;
+}
+
+function renderCatalogStat(
+  label: string,
+  value: string | number,
+  meta: string,
+  state: 'healthy' | 'warning' | 'neutral' = 'neutral',
+): string {
+  return `
+    <div class="stat ${state}">
+      <div class="stat-top">
+        <span class="stat-label">${escapeHtml(label)}</span>
+      </div>
+      <span class="stat-value">${escapeHtml(value)}</span>
+      <div class="stat-meta">${escapeHtml(meta)}</div>
+    </div>
+  `;
+}
+
+function renderCatalogStatusStrip(activeIssues: number, duplicateGroups: number): string {
+  const isHealthy = activeIssues === 0 && duplicateGroups === 0;
+
+  return `
+    <section class="catalog-status ${isHealthy ? 'healthy' : 'needs-work'}" aria-label="Catalog health status">
+      <div>
+        <div class="status-heading">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>${isHealthy ? 'Catalog is clear' : 'Catalog needs operator attention'}</span>
+        </div>
+        <p class="status-copy">
+          ${isHealthy ? 'No active issue categories or duplicate groups are currently reported.' : 'Work the highest-count repairable panels first, then review duplicates before manual merges.'}
+        </p>
+      </div>
+      <div class="status-metrics" aria-label="Open catalog signals">
+        <span class="pill ${activeIssues > 0 ? 'warning' : 'good'}">${escapeHtml(activeIssues)} active issue categories</span>
+        <span class="pill ${duplicateGroups > 0 ? 'warning' : 'good'}">${escapeHtml(duplicateGroups)} duplicate groups</span>
+      </div>
+    </section>
+  `;
+}
+
 function renderSampleRows(issueKey: string, samples: CatalogMovieSample[]): string {
   if (samples.length === 0) {
     return '<p class="empty">No sample records returned.</p>';
@@ -574,66 +740,76 @@ function renderSampleRows(issueKey: string, samples: CatalogMovieSample[]): stri
   const canRepair = REPAIRABLE_CATALOG_ISSUE_KEYS.has(issueKey);
 
   return `
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Movie</th>
-          <th>Year</th>
-          <th>TMDB</th>
-          <th>Poster</th>
-          <th>Localized</th>
-          <th>Runtime</th>
-          <th>Age</th>
-          <th>Matched</th>
-          ${canRepair ? '<th>Repair</th>' : ''}
-        </tr>
-      </thead>
-      <tbody>
-        ${samples
-          .map(
-            (movie) => `
-              <tr>
-                <td>${escapeHtml(movie.id)}</td>
-                <td>${escapeHtml(movie.name)}</td>
-                <td>${escapeHtml(movie.year)}</td>
-                <td>${escapeHtml(movie.tmdb_id)}</td>
-                <td>${movie.poster_url ? 'yes' : 'no'}</td>
-                <td>${escapeHtml(movie.localized_name)}</td>
-                <td>${escapeHtml(movie.duration)}</td>
-                <td>${escapeHtml(movie.age_rating)}</td>
-                <td>${escapeHtml(movie.tmdb_matched_at)}</td>
-                ${
-                  canRepair
-                    ? `
-                      <td>
-                        <form class="repair-form" method="post" action="/catalog-health/actions">
-                          <input type="hidden" name="action" value="enqueue_backfill" />
-                          <input type="hidden" name="issue_key" value="${escapeAttribute(issueKey)}" />
-                          <input type="hidden" name="movie_id" value="${escapeAttribute(movie.id)}" />
-                          <button class="button small" type="submit">Queue backfill</button>
-                        </form>
-                      </td>
-                    `
-                    : ''
-                }
-              </tr>
-            `,
-          )
-          .join('')}
-      </tbody>
-    </table>
+    <div class="table-scroll">
+      <table class="sample-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Movie</th>
+            <th>Year</th>
+            <th>TMDB</th>
+            <th>Poster</th>
+            <th>Localized</th>
+            <th>Runtime</th>
+            <th>Age</th>
+            <th>Matched</th>
+            ${canRepair ? '<th>Repair</th>' : ''}
+          </tr>
+        </thead>
+        <tbody>
+          ${samples
+            .map(
+              (movie) => `
+                <tr>
+                  <td class="id-cell">#${escapeHtml(movie.id)}</td>
+                  <td class="movie-cell"><strong>${escapeHtml(movie.name)}</strong></td>
+                  <td>${escapeHtml(movie.year)}</td>
+                  <td>${renderOptionalCatalogValue(movie.tmdb_id)}</td>
+                  <td>${renderBooleanDataPill(Boolean(movie.poster_url))}</td>
+                  <td>${renderOptionalCatalogValue(movie.localized_name)}</td>
+                  <td>${movie.duration > 0 ? escapeHtml(movie.duration) : '<span class="data-pill warn">0</span>'}</td>
+                  <td>${renderOptionalCatalogValue(movie.age_rating)}</td>
+                  <td>${renderOptionalCatalogValue(movie.tmdb_matched_at)}</td>
+                  ${
+                    canRepair
+                      ? `
+                        <td class="repair-cell">
+                          <form class="repair-form" method="post" action="/catalog-health/actions">
+                            <input type="hidden" name="action" value="enqueue_backfill" />
+                            <input type="hidden" name="issue_key" value="${escapeAttribute(issueKey)}" />
+                            <input type="hidden" name="movie_id" value="${escapeAttribute(movie.id)}" />
+                            <button class="button primary small" type="submit">Queue backfill</button>
+                          </form>
+                        </td>
+                      `
+                      : ''
+                  }
+                </tr>
+              `,
+            )
+            .join('')}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
 function renderIssue(issue: CatalogHealthIssue): string {
   const severity = issue.count > 0 ? 'needs-work' : 'healthy';
+  const canRepair = REPAIRABLE_CATALOG_ISSUE_KEYS.has(issue.key);
+  const state = issue.count === 0 ? 'healthy' : canRepair ? 'repairable' : 'warning';
 
   return `
-    <section class="panel ${severity}">
+    <section class="panel issue-panel ${severity} ${canRepair && issue.count > 0 ? 'repairable' : ''}">
       <div class="panel-header">
-        <h2>${escapeHtml(issue.label)}</h2>
-        <span class="count">${escapeHtml(issue.count)}</span>
+        <div class="issue-title">
+          <div class="issue-title-row">
+            <h2>${escapeHtml(issue.label)}</h2>
+            <span class="pill ${state}">${issue.count === 0 ? 'Healthy' : canRepair ? 'Repairable' : 'Review'}</span>
+          </div>
+          <div class="issue-hint">${escapeHtml(getCatalogIssueHint(issue.key))}</div>
+        </div>
+        ${renderCountPill(issue.count, state)}
       </div>
       ${issue.count === 0 ? '<p class="empty">No affected movies.</p>' : renderSampleRows(issue.key, issue.samples)}
     </section>
@@ -724,11 +900,19 @@ function renderDuplicateGroup(group: DuplicateIdentityGroup): string {
 }
 
 function renderDuplicateReport(title: string, report: CatalogHealthReport['duplicateTmdbIds']) {
+  const state = report.totalGroups > 0 ? 'warning' : 'healthy';
+
   return `
-    <section class="panel ${report.totalGroups > 0 ? 'needs-work' : 'healthy'}">
+    <section class="panel duplicate-panel ${report.totalGroups > 0 ? 'needs-work' : 'healthy'}">
       <div class="panel-header">
-        <h2>${escapeHtml(title)}</h2>
-        <span class="count">${escapeHtml(report.totalGroups)}</span>
+        <div class="issue-title">
+          <div class="issue-title-row">
+            <h2>${escapeHtml(title)}</h2>
+            <span class="pill ${state}">${report.totalGroups > 0 ? 'Review' : 'Healthy'}</span>
+          </div>
+          <div class="issue-hint">Potential identity collisions that should be reviewed before merge automation.</div>
+        </div>
+        ${renderCountPill(report.totalGroups, state)}
       </div>
       ${
         report.groups.length === 0
@@ -757,11 +941,12 @@ function renderCatalogHealthPage(
     autoRefreshSeconds: 60,
     body: `
       ${renderRepairFlash(repairStatus)}
+      ${renderCatalogStatusStrip(activeIssues, duplicateGroups)}
       <section class="summary" aria-label="Catalog health summary">
-        <div class="stat"><span class="stat-label">Movies</span><span class="stat-value">${escapeHtml(report.totalMovies)}</span></div>
-        <div class="stat"><span class="stat-label">Issue categories</span><span class="stat-value">${escapeHtml(activeIssues)}</span></div>
-        <div class="stat"><span class="stat-label">Duplicate groups</span><span class="stat-value">${escapeHtml(duplicateGroups)}</span></div>
-        <div class="stat"><span class="stat-label">Stale threshold</span><span class="stat-value">${escapeHtml(report.staleAfterDays)}d</span></div>
+        ${renderCatalogStat('Movies', report.totalMovies, 'Catalog rows tracked', 'neutral')}
+        ${renderCatalogStat('Issue categories', activeIssues, activeIssues === 0 ? 'No active categories' : 'Categories with affected rows', activeIssues === 0 ? 'healthy' : 'warning')}
+        ${renderCatalogStat('Duplicate groups', duplicateGroups, duplicateGroups === 0 ? 'No duplicate groups' : 'Groups awaiting review', duplicateGroups === 0 ? 'healthy' : 'warning')}
+        ${renderCatalogStat('Stale threshold', `${report.staleAfterDays}d`, 'TMDB metadata refresh window', 'neutral')}
       </section>
       <div class="grid">
         ${report.issues.map(renderIssue).join('')}
