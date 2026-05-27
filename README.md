@@ -243,6 +243,7 @@ npm run dev:backoffice # catalog-health and TMDB-review operator UI
 ```text
 apps/
 ├── docs/               # Fumadocs documentation site rendering docs/
+├── backoffice/         # Operator catalog-health, TMDB review, and repair UI
 ├── web/
 │   └── src/
 │       ├── app/           # Next.js app routes, pages, and HTTP boundaries

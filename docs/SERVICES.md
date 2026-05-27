@@ -136,9 +136,9 @@ Auth attempts.
 
 Backoffice/catalog-health UI lives in the dedicated `apps/backoffice/` workspace
 app and deploys as a separate Coolify service like `apps/bull-board`. The first
-screen is a protected, read-only catalog-health overview. Later screens should
-add TMDB match review queues and manual repair actions without putting admin UI
-inside `apps/web`.
+screen is a protected catalog-health overview. It now also exposes narrow
+operator actions for TMDB review decisions and per-movie catalog-health repair
+jobs without putting admin UI inside `apps/web`.
 
 See [Backoffice Plan](/docs/BACKOFFICE) and
 [#493](https://github.com/shchilkin/PopChoice/issues/493).
@@ -313,14 +313,22 @@ The same data is available in the dedicated backoffice app:
 npm run dev:backoffice
 ```
 
+Repairable catalog-health sample rows can enqueue a per-movie
+`catalog-maintenance` `backfill-movie` job from backoffice. Those actions require
+`REDIS_URL`, reuse the same worker/backoff/rate-limit path as normal backfill,
+and are audited in `catalog_repair_audit` with actor, target movie, issue key,
+movie snapshot, and queued job result. Duplicate identity findings stay
+read-only until an operator can make a conservative merge decision.
+
 Useful options:
 
-| Variable                      | Default | Description                                             |
-| ----------------------------- | ------- | ------------------------------------------------------- |
-| `DATABASE_URL`                | —       | PostgreSQL connection string; loaded from root `.env`   |
-| `CATALOG_HEALTH_FORMAT`       | `text`  | `text` for readable logs, `json` for machine parsing    |
-| `CATALOG_HEALTH_SAMPLE_LIMIT` | `5`     | Sample rows or duplicate groups to show per issue       |
-| `CATALOG_HEALTH_STALE_DAYS`   | `180`   | Age threshold for stale TMDB metadata, in calendar days |
+| Variable                      | Default | Description                                              |
+| ----------------------------- | ------- | -------------------------------------------------------- |
+| `DATABASE_URL`                | —       | PostgreSQL connection string; loaded from root `.env`    |
+| `REDIS_URL`                   | —       | Required by backoffice repair actions and BullMQ workers |
+| `CATALOG_HEALTH_FORMAT`       | `text`  | `text` for readable logs, `json` for machine parsing     |
+| `CATALOG_HEALTH_SAMPLE_LIMIT` | `5`     | Sample rows or duplicate groups to show per issue        |
+| `CATALOG_HEALTH_STALE_DAYS`   | `180`   | Age threshold for stale TMDB metadata, in calendar days  |
 
 Example:
 

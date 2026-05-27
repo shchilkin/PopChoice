@@ -2,7 +2,9 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import rateLimit from 'express-rate-limit';
 import {
   applyTMDBMatchReviewAction,
+  ensureCatalogRepairActionSchema,
   ensureTMDBMatchReviewActionSchema,
+  getCatalogRepairMovieSnapshot,
   getCatalogHealthReport,
   getTMDBMatchReview,
   initDatabase,
@@ -10,13 +12,16 @@ import {
   isTMDBMatchReviewSort,
   isTMDBMatchReviewStatus,
   logger,
+  listCatalogRepairAudit,
   listTMDBMatchReviewAudit,
   listTMDBMatchReviews,
   operatorAuthChallenge,
+  recordCatalogRepairAction,
   readOperatorAuthConfig,
   verifyOperatorBasicAuthHeader,
 } from '@pop-choice/shared';
 import type {
+  CatalogRepairActionAudit,
   CatalogHealthIssue,
   CatalogHealthReport,
   CatalogMovieSample,
@@ -31,11 +36,31 @@ import type {
   TMDBReviewCandidate,
 } from '@pop-choice/shared';
 
+import {
+  enqueueCatalogBackfillMovieFromBackoffice,
+  type CatalogBackfillReason,
+} from './catalogMaintenanceQueue.js';
+
 const DEFAULT_PORT = 3000;
 const DEFAULT_SAMPLE_LIMIT = 5;
 const DEFAULT_STALE_AFTER_DAYS = 180;
 const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS = 15 * 60;
 const DEFAULT_OPERATOR_AUTH_RATE_LIMIT_MAX = 30;
+const DEFAULT_REPAIR_AUDIT_LIMIT = 25;
+
+const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
+  'missing_poster_url',
+  'missing_localized_name',
+  'missing_tmdb_id',
+  'missing_runtime',
+  'missing_age_rating',
+  'missing_tmdb_matched_at',
+  'stale_tmdb_metadata',
+  'missing_cast_metadata',
+  'missing_director_metadata',
+  'missing_genre_metadata',
+  'missing_keyword_metadata',
+]);
 
 function parsePositiveInteger(value: string | undefined, fallback: number): number {
   if (!value || value.trim() === '') return fallback;
@@ -104,6 +129,33 @@ function parseAction(value: unknown): TMDBMatchReviewAction {
   throw new Error(`Unsupported review action "${String(value)}".`);
 }
 
+function parseMovieId(value: unknown): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error('Movie id is required.');
+  }
+
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error('Movie id must be numeric.');
+  }
+
+  return trimmed;
+}
+
+function parseCatalogIssueKey(value: unknown): string {
+  if (typeof value !== 'string' || !REPAIRABLE_CATALOG_ISSUE_KEYS.has(value)) {
+    throw new Error('Unsupported catalog-health repair issue.');
+  }
+
+  return value;
+}
+
+function getBackfillReasonForIssue(issueKey: string): CatalogBackfillReason {
+  if (issueKey === 'missing_tmdb_id') return 'missing_tmdb_id';
+  if (issueKey === 'stale_tmdb_metadata') return 'manual_refresh';
+  return 'missing_metadata';
+}
+
 function renderNav(active: 'health' | 'reviews'): string {
   return `
     <nav class="nav" aria-label="Backoffice sections">
@@ -132,10 +184,12 @@ function createOperatorAuthMiddleware(config: OperatorAuthConfig | null) {
   };
 }
 
-function renderSampleRows(samples: CatalogMovieSample[]): string {
+function renderSampleRows(issueKey: string, samples: CatalogMovieSample[]): string {
   if (samples.length === 0) {
     return '<p class="empty">No sample records returned.</p>';
   }
+
+  const canRepair = REPAIRABLE_CATALOG_ISSUE_KEYS.has(issueKey);
 
   return `
     <table>
@@ -150,6 +204,7 @@ function renderSampleRows(samples: CatalogMovieSample[]): string {
           <th>Runtime</th>
           <th>Age</th>
           <th>Matched</th>
+          ${canRepair ? '<th>Repair</th>' : ''}
         </tr>
       </thead>
       <tbody>
@@ -166,6 +221,20 @@ function renderSampleRows(samples: CatalogMovieSample[]): string {
                 <td>${escapeHtml(movie.duration)}</td>
                 <td>${escapeHtml(movie.age_rating)}</td>
                 <td>${escapeHtml(movie.tmdb_matched_at)}</td>
+                ${
+                  canRepair
+                    ? `
+                      <td>
+                        <form class="repair-form" method="post" action="/catalog-health/actions">
+                          <input type="hidden" name="action" value="enqueue_backfill" />
+                          <input type="hidden" name="issue_key" value="${escapeAttribute(issueKey)}" />
+                          <input type="hidden" name="movie_id" value="${escapeAttribute(movie.id)}" />
+                          <button class="button small" type="submit">Queue backfill</button>
+                        </form>
+                      </td>
+                    `
+                    : ''
+                }
               </tr>
             `,
           )
@@ -184,8 +253,67 @@ function renderIssue(issue: CatalogHealthIssue): string {
         <h2>${escapeHtml(issue.label)}</h2>
         <span class="count">${escapeHtml(issue.count)}</span>
       </div>
-      ${issue.count === 0 ? '<p class="empty">No affected movies.</p>' : renderSampleRows(issue.samples)}
+      ${issue.count === 0 ? '<p class="empty">No affected movies.</p>' : renderSampleRows(issue.key, issue.samples)}
     </section>
+  `;
+}
+
+function renderRepairFlash(repairStatus: string | null): string {
+  if (repairStatus === 'queued') {
+    return '<div class="notice good">Catalog backfill job queued. Workers will process it through the existing rate-limited TMDB path.</div>';
+  }
+
+  if (repairStatus === 'unavailable') {
+    return '<div class="notice warn">Catalog repair queue is unavailable. Check REDIS_URL and the backoffice logs.</div>';
+  }
+
+  if (repairStatus === 'failed') {
+    return '<div class="notice warn">Catalog repair action failed. Check backoffice logs for details.</div>';
+  }
+
+  return '';
+}
+
+function renderRepairAuditValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '-';
+  if (typeof value === 'string' || typeof value === 'number') return escapeHtml(value);
+  return escapeHtml(JSON.stringify(value));
+}
+
+function renderCatalogRepairAuditRows(audit: CatalogRepairActionAudit[]): string {
+  if (audit.length === 0) {
+    return '<p class="empty">No catalog repair actions have been recorded yet.</p>';
+  }
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>Actor</th>
+          <th>Issue</th>
+          <th>Target</th>
+          <th>Action</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${audit
+          .map(
+            (entry) => `
+              <tr>
+                <td>${escapeHtml(entry.createdAt)}</td>
+                <td>${escapeHtml(entry.actor)}</td>
+                <td>${escapeHtml(entry.issueKey)}</td>
+                <td>${escapeHtml(entry.targetType)}:${escapeHtml(entry.targetId)}</td>
+                <td>${escapeHtml(entry.action)}</td>
+                <td>${renderRepairAuditValue(entry.result.jobId ?? entry.result.status ?? entry.result)}</td>
+              </tr>
+            `,
+          )
+          .join('')}
+      </tbody>
+    </table>
   `;
 }
 
@@ -229,7 +357,11 @@ function renderDuplicateReport(title: string, report: CatalogHealthReport['dupli
   `;
 }
 
-function renderCatalogHealthPage(report: CatalogHealthReport): string {
+function renderCatalogHealthPage(
+  report: CatalogHealthReport,
+  audit: CatalogRepairActionAudit[],
+  repairStatus: string | null,
+): string {
   const activeIssues = report.issues.filter((issue) => issue.count > 0).length;
   const duplicateGroups =
     report.duplicateTmdbIds.totalGroups + report.duplicateNormalizedTitleYears.totalGroups;
@@ -350,6 +482,18 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
             padding: 8px 12px;
             font-weight: 600;
           }
+          .button.small { padding: 5px 8px; font-size: 12px; }
+          .repair-form { margin: 0; }
+          .notice {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+            background: var(--surface);
+            font-weight: 600;
+          }
+          .notice.good { border-color: color-mix(in srgb, var(--good), var(--border) 45%); }
+          .notice.warn { border-color: color-mix(in srgb, var(--warn), var(--border) 45%); }
           @media (max-width: 900px) {
             main { padding: 18px; }
             header, .actions, .nav { flex-direction: column; align-items: stretch; }
@@ -371,6 +515,7 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
             </div>
           </header>
           ${renderNav('health')}
+          ${renderRepairFlash(repairStatus)}
           <section class="summary" aria-label="Catalog health summary">
             <div class="stat"><span class="stat-label">Movies</span><span class="stat-value">${escapeHtml(report.totalMovies)}</span></div>
             <div class="stat"><span class="stat-label">Issue categories</span><span class="stat-value">${escapeHtml(activeIssues)}</span></div>
@@ -381,6 +526,13 @@ function renderCatalogHealthPage(report: CatalogHealthReport): string {
             ${report.issues.map(renderIssue).join('')}
             ${renderDuplicateReport('Duplicate TMDB ids', report.duplicateTmdbIds)}
             ${renderDuplicateReport('Duplicate normalized title/year groups', report.duplicateNormalizedTitleYears)}
+            <section class="panel">
+              <div class="panel-header">
+                <h2>Recent repair actions</h2>
+                <span class="count">${escapeHtml(audit.length)}</span>
+              </div>
+              ${renderCatalogRepairAuditRows(audit)}
+            </section>
           </div>
         </main>
       </body>
@@ -824,6 +976,7 @@ if (!databaseUrl) {
 }
 
 initDatabase(databaseUrl);
+await ensureCatalogRepairActionSchema();
 await ensureTMDBMatchReviewActionSchema();
 
 const app = express();
@@ -843,13 +996,59 @@ app.use(
 );
 app.use(createOperatorAuthMiddleware(operatorAuthConfig));
 
-app.get('/', async (_request, response) => {
+app.get('/', async (request, response) => {
   try {
-    const report = await getCatalogHealthReport({ sampleLimit, staleAfterDays });
-    response.type('html').send(renderCatalogHealthPage(report));
+    const [report, audit] = await Promise.all([
+      getCatalogHealthReport({ sampleLimit, staleAfterDays }),
+      listCatalogRepairAudit(DEFAULT_REPAIR_AUDIT_LIMIT),
+    ]);
+    const repairStatus =
+      typeof request.query.repair === 'string' ? request.query.repair.trim() : null;
+    response.type('html').send(renderCatalogHealthPage(report, audit, repairStatus));
   } catch (error) {
     logger.error('Failed to render catalog health report', { err: error });
     response.status(500).type('html').send(renderErrorPage(error));
+  }
+});
+
+app.post('/catalog-health/actions', async (request, response) => {
+  try {
+    if (request.body.action !== 'enqueue_backfill') {
+      throw new Error('Unsupported catalog-health action.');
+    }
+
+    const movieId = parseMovieId(request.body.movie_id);
+    const issueKey = parseCatalogIssueKey(request.body.issue_key);
+    const snapshot = await getCatalogRepairMovieSnapshot(movieId);
+
+    if (!snapshot) {
+      response.status(404).type('html').send(renderErrorPage('Movie not found.'));
+      return;
+    }
+
+    const job = await enqueueCatalogBackfillMovieFromBackoffice({
+      movieId,
+      reason: getBackfillReasonForIssue(issueKey),
+      language: process.env.TMDB_LANGUAGE,
+    });
+
+    await recordCatalogRepairAction({
+      action: 'enqueue_backfill',
+      actor: parseOperatorActor(request),
+      issueKey,
+      targetType: 'movie',
+      targetId: movieId,
+      note: typeof request.body.note === 'string' ? request.body.note : undefined,
+      previousState: { ...snapshot },
+      result: job
+        ? { status: 'queued', ...job }
+        : { status: 'queue_unavailable', queueName: 'catalog-maintenance' },
+    });
+
+    response.redirect(303, job ? '/?repair=queued' : '/?repair=unavailable');
+  } catch (error) {
+    logger.error('Failed to apply catalog-health repair action', { err: error });
+    response.redirect(303, '/?repair=failed');
   }
 });
 

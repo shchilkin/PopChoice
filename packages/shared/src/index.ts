@@ -49,6 +49,18 @@ export type {
   DuplicateIdentityReport,
 } from './catalogHealth.js';
 export {
+  ensureCatalogRepairActionSchema,
+  getCatalogRepairMovieSnapshot,
+  listCatalogRepairAudit,
+  recordCatalogRepairAction,
+} from './catalogRepairActions.js';
+export type {
+  CatalogRepairAction,
+  CatalogRepairActionAudit,
+  CatalogRepairMovieSnapshot,
+  RecordCatalogRepairActionInput,
+} from './catalogRepairActions.js';
+export {
   applyTMDBMatchReviewAction,
   ensureTMDBMatchReviewActionSchema,
   getTMDBMatchReview,
