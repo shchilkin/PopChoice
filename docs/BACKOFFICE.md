@@ -65,6 +65,11 @@ Mutation flows are deliberately narrow:
   It writes a `backfill-movie` job into the `catalog-maintenance` queue and
   records actor, issue key, movie snapshot, queue/job result, optional note, and
   timestamp in `catalog_repair_audit`.
+- [#592](https://github.com/shchilkin/PopChoice/issues/592): repair actions are
+  progressively enhanced. Operators get pending, queued, unavailable, and error
+  states without a full page reload, successful enqueue attempts disable the
+  clicked action, and the queued sample row is removed from the visible table.
+  The non-JavaScript form redirect flow remains available.
 
 Shared operator auth is the login model for public exposure:
 
@@ -129,6 +134,11 @@ If a queued repair does not resolve the row, use Bull Board to inspect the job,
 check worker logs, and rerun the backfill or TMDB review flow manually. Prefer a
 manual migration only when the issue is an identity conflict rather than missing
 or stale metadata.
+
+The live UI treats enqueue success as "work accepted", not "catalog fixed". It
+removes the clicked sample row to keep the operator surface responsive, but the
+issue count still comes from the next catalog-health report after workers update
+the database.
 
 ## TMDB Review Workflow
 
