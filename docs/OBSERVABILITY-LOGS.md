@@ -142,7 +142,7 @@ Recommendation stage updates or failures:
 One BullMQ job id:
 
 ```text
-{stack="popchoice", service="workers"} | jobId="tmdb-seed:550:en-US"
+{stack="popchoice", service="workers"} | jobId="tmdb-seed-550-en-US"
 ```
 
 Queue-related worker logs, depending on which field exists in the log line:

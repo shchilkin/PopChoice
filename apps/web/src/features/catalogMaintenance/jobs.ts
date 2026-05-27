@@ -20,8 +20,12 @@ function normalizeLanguage(language?: string): string {
   return (language ?? DEFAULT_TMDB_LANGUAGE).trim() || DEFAULT_TMDB_LANGUAGE;
 }
 
+function toBullMQJobIdPart(value: string | number): string {
+  return String(value).replace(/[^a-zA-Z0-9_.-]/g, '-');
+}
+
 export function getCatalogSeedTMDBMovieJobId(tmdbId: number, language?: string): string {
-  return `tmdb-seed:${tmdbId}:${normalizeLanguage(language)}`;
+  return `tmdb-seed-${tmdbId}-${toBullMQJobIdPart(normalizeLanguage(language))}`;
 }
 
 export function getCatalogDiscoverTMDBSourcePageJobId(
@@ -29,11 +33,13 @@ export function getCatalogDiscoverTMDBSourcePageJobId(
   page: number,
   language?: string,
 ): string {
-  return `tmdb-discover:${source}:${page}:${normalizeLanguage(language)}`;
+  return `tmdb-discover-${toBullMQJobIdPart(source)}-${page}-${toBullMQJobIdPart(
+    normalizeLanguage(language),
+  )}`;
 }
 
 export function getCatalogBackfillMovieJobId(movieId: string | number): string {
-  return `backfill:${movieId}`;
+  return `backfill-${toBullMQJobIdPart(movieId)}`;
 }
 
 export async function enqueueCatalogSeedTMDBMovie(

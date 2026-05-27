@@ -43,6 +43,10 @@ function normalizeLanguage(language?: string): string {
   return (language ?? DEFAULT_TMDB_LANGUAGE).trim() || DEFAULT_TMDB_LANGUAGE;
 }
 
+function toBullMQJobIdPart(value: string | number): string {
+  return String(value).replace(/[^a-zA-Z0-9_.-]/g, '-');
+}
+
 function getCatalogMaintenanceQueue(
   redisUrl: string | undefined,
 ): Queue<CatalogBackfillMovieJobData> | null {
@@ -62,7 +66,7 @@ function getCatalogMaintenanceQueue(
 }
 
 export function getCatalogBackfillMovieJobId(movieId: string | number): string {
-  return `backfill:${movieId}`;
+  return `backfill-${toBullMQJobIdPart(movieId)}`;
 }
 
 export async function enqueueCatalogBackfillMovieFromBackoffice(

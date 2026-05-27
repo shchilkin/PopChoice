@@ -192,7 +192,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - [x] Move TMDB discovery and backfill into rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before increasing catalog expansion volume:
   - Add a dedicated catalog-maintenance queue for discovery pages, movie detail enrichment, metadata refresh, and per-movie backfill jobs.
   - Enforce one shared TMDB request budget across discovery, backfill, and worker-driven enrichment, with configurable concurrency and `429` backoff.
-  - Use deterministic `jobId` values such as `tmdb-details:{tmdbId}:{language}` and `backfill:{movieId}` so retries and duplicate triggers do not fan out duplicate TMDB calls.
+  - Use deterministic BullMQ-safe `jobId` values such as `tmdb-details-{tmdbId}-{language}` and `backfill-{movieId}` so retries and duplicate triggers do not fan out duplicate TMDB calls.
   - Keep the existing one-shot services as enqueue/maintenance entrypoints while workers own API pacing, retries, observability, and Bull Board visibility.
 - Add catalog metadata prerequisites for richer search:
   - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471) schema/model for cast, directors, genres, and keywords.

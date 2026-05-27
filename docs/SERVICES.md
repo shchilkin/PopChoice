@@ -92,7 +92,10 @@ Or via Docker Compose (workers.Dockerfile).
 - `seed-tmdb-movie` jobs that fetch details, generate or reuse embeddings, insert new cached catalog rows, and upsert normalized cast/director/genre/keyword metadata.
 - `backfill-movie` jobs that refresh an existing movie row by TMDB id or conservative title/year match.
 
-Jobs use deterministic ids such as `tmdb-discover:popular:1:en-US`, `tmdb-seed:550:en-US`, and `backfill:123`, so repeated triggers dedupe at the queue layer. The worker also applies one BullMQ limiter to the queue and pauses when TMDB returns `429`.
+Jobs use deterministic BullMQ-safe ids such as `tmdb-discover-popular-1-en-US`,
+`tmdb-seed-550-en-US`, and `backfill-123`, so repeated triggers dedupe at the
+queue layer. The worker also applies one BullMQ limiter to the queue and pauses
+when TMDB returns `429`.
 
 Maintenance entrypoints enqueue work and let workers own pacing/retries:
 
