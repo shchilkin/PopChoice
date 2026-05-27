@@ -30,7 +30,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | `pr.yml`                             | `storybook-tests`                | Playwright browser install + Storybook component tests                          |
 | `pr.yml`                             | `e2e-tests`                      | Playwright smoke tests against isolated PostgreSQL + Redis services             |
 | `pr.yml`                             | `build`                          | Next.js production build verification                                           |
-| `pr.yml`                             | `services-ci`                    | Turbo test pass for `services/*`                                                |
+| `pr.yml`                             | `services-ci`                    | Shared package tests plus Turbo test pass for `services/*`                      |
 | `pr.yml`                             | `dependency-review`              | Blocks PRs introducing vulnerable dependencies                                  |
 | `pr.yml`                             | `pr-validation`                  | Stable required check that always runs on every PR                              |
 | `container-images.yml`               | `build-images`                   | Builds and publishes GHCR production images with provenance                     |
@@ -83,7 +83,7 @@ The `build` job sets `NEXT_FONT_GOOGLE_DISABLE=1` to prevent flaky failures caus
 
 ### Services CI
 
-The `services-ci` job in `pr.yml` runs `npm run test:services`, which delegates to Turbo for root `services/*` packages that define a `test` script. Services without a `test` script are skipped by that command; use `npm run build:services` locally when you specifically need a compile pass across service workspaces.
+The `services-ci` job in `pr.yml` runs `npm run test:services`, which first runs `packages/shared` tests and then delegates to Turbo for root `services/*` packages that define a `test` script. Services without a `test` script are skipped by that command; use `npm run build:services` locally when you specifically need a compile pass across service workspaces.
 
 ### Movie Discovery CI
 

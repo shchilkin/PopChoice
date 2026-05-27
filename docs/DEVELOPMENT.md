@@ -20,6 +20,7 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 
 - `npm run test` - Run all tests using Vitest
 - `npm run test:server` - Run utility function tests (Node.js environment)
+- `npm run test:services` - Run shared package and service tests
 - `npm run test:storybook` - Run Storybook component tests (browser environment)
 
 ### Code Quality
