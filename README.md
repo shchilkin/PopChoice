@@ -234,6 +234,7 @@ npm run dev:backoffice # catalog-health and TMDB-review operator UI
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
+- **[Coolify Deployment](./docs/COOLIFY.md#service-links)** — Runtime service links for the app, docs, Bull Board, Storybook, Backoffice, and Grafana
 - **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** — Practical phased direction for cleaner boundaries and future monorepo evolution
 - **[Recommendation Roadmap](./docs/RECOMMENDATION-ROADMAP.md)** — Staged plan for improving quiz accuracy, adding taste swipe mode, and moving toward TMDB-first discovery
 - **[Design Guidelines](./docs/design-guidelines.md)** — UI/UX design guidelines

@@ -183,7 +183,18 @@ services:
     image: ${APP_IMAGE_PREFIX:-ghcr.io/shchilkin/popchoice}/backoffice:${IMAGE_TAG:-development}
     pull_policy: always
     restart: unless-stopped
-    command: ['npm', 'run', 'start', '--workspace=apps/backoffice']
+    command:
+      [
+        'npm',
+        'run',
+        'start',
+        '--workspace=apps/backoffice',
+        '--',
+        '--hostname',
+        '0.0.0.0',
+        '--port',
+        '3000',
+      ]
     environment:
       <<: *app-env
       PORT: 3000

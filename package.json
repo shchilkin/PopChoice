@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
-    "build:backoffice": "npm run build --workspace=apps/backoffice",
+    "build:backoffice": "npm run build --workspace=packages/shared && npm run build --workspace=apps/backoffice",
     "build:bull-board": "npm run build --workspace=packages/shared && npm run build:bull-board --workspace=apps/web",
     "build:docs": "npm run build --workspace=apps/docs",
     "build:services": "turbo run build --filter=./services/*",

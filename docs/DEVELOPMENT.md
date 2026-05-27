@@ -36,7 +36,7 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 
 - `npm run dev` - Start development server
 - `npm run dev:docs` - Start the Fumadocs documentation site on `http://localhost:3003`
-- `npm run dev:backoffice` - Start the operator catalog-health UI on `http://localhost:3000`
+- `npm run dev:backoffice` - Start the operator backoffice UI on `http://localhost:3004` by default; override with `PORT=4030 npm run dev:backoffice`
 - `npm run build` - Build production application
 - `npm run build:docs` - Build the Fumadocs documentation site
 - `npm run build:backoffice` - Build the operator backoffice app
