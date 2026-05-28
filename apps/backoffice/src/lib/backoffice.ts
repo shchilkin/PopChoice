@@ -26,6 +26,9 @@ import {
 } from '../catalogMaintenanceQueue';
 
 export const DEFAULT_REPAIR_AUDIT_LIMIT = 25;
+export const DEFAULT_CATALOG_ISSUE_PAGE_SIZE = 25;
+export const MAX_CATALOG_ISSUE_PAGE_NUMBER = 4_001;
+export const MAX_REPAIR_AUDIT_PAGE_NUMBER = 4_001;
 export const DEFAULT_REVIEW_PAGE_SIZE = 25;
 export const MAX_REVIEW_PAGE_SIZE = 100;
 export const DEFAULT_BULK_REPAIR_LIMIT = 25;

@@ -62,11 +62,13 @@ export {
   ensureCatalogRepairActionSchema,
   getCatalogRepairMovieSnapshot,
   listCatalogRepairAudit,
+  listCatalogRepairAuditPage,
   recordCatalogRepairAction,
 } from './catalogRepairActions.js';
 export type {
   CatalogRepairAction,
   CatalogRepairActionAudit,
+  CatalogRepairActionAuditPage,
   CatalogRepairMovieSnapshot,
   RecordCatalogRepairActionInput,
 } from './catalogRepairActions.js';

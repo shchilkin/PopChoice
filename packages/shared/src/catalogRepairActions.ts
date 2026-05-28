@@ -30,6 +30,13 @@ export interface CatalogRepairActionAudit {
   createdAt: string;
 }
 
+export interface CatalogRepairActionAuditPage {
+  audit: CatalogRepairActionAudit[];
+  totalCount: number;
+  limit: number;
+  offset: number;
+}
+
 export interface RecordCatalogRepairActionInput {
   action: CatalogRepairAction;
   actor: string;
@@ -96,6 +103,19 @@ function normalizeAudit(row: CatalogRepairActionAuditRow): CatalogRepairActionAu
     result: toRecord(row.result),
     createdAt: row.created_at,
   };
+}
+
+function toNumber(value: number | string | null | undefined): number {
+  if (value === null || value === undefined) return 0;
+  return Number(value);
+}
+
+function clampAuditLimit(limit: number): number {
+  return Number.isSafeInteger(limit) && limit > 0 ? Math.min(limit, 100) : 25;
+}
+
+function clampAuditOffset(offset: number): number {
+  return Number.isSafeInteger(offset) && offset > 0 ? Math.min(offset, 100_000) : 0;
 }
 
 export async function ensureCatalogRepairActionSchema(): Promise<void> {
@@ -199,23 +219,48 @@ export async function recordCatalogRepairAction(
 }
 
 export async function listCatalogRepairAudit(limit = 25): Promise<CatalogRepairActionAudit[]> {
-  const result = await getPool().query<CatalogRepairActionAuditRow>(
-    `SELECT
-        id::text,
-        action,
-        actor,
-        issue_key,
-        target_type,
-        target_id,
-        note,
-        previous_state,
-        result,
-        created_at::text
-       FROM catalog_repair_audit
-      ORDER BY created_at DESC, id DESC
-      LIMIT $1`,
-    [limit],
-  );
+  const page = await listCatalogRepairAuditPage({ limit, offset: 0 });
+  return page.audit;
+}
 
-  return result.rows.map(normalizeAudit);
+export async function listCatalogRepairAuditPage({
+  limit = 25,
+  offset = 0,
+}: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<CatalogRepairActionAuditPage> {
+  const boundedLimit = clampAuditLimit(limit);
+  const boundedOffset = clampAuditOffset(offset);
+  const [countResult, auditResult] = await Promise.all([
+    getPool().query<{ count: number | string }>(
+      `SELECT COUNT(*)::int AS count
+         FROM catalog_repair_audit`,
+    ),
+    getPool().query<CatalogRepairActionAuditRow>(
+      `SELECT
+          id::text,
+          action,
+          actor,
+          issue_key,
+          target_type,
+          target_id,
+          note,
+          previous_state,
+          result,
+          created_at::text
+         FROM catalog_repair_audit
+        ORDER BY created_at DESC, id DESC
+        LIMIT $1
+        OFFSET $2`,
+      [boundedLimit, boundedOffset],
+    ),
+  ]);
+
+  return {
+    audit: auditResult.rows.map(normalizeAudit),
+    totalCount: toNumber(countResult.rows[0]?.count),
+    limit: boundedLimit,
+    offset: boundedOffset,
+  };
 }

@@ -137,8 +137,10 @@ The app needs:
 ## Catalog Repair Workflow
 
 The catalog-health home page shows sample rows for missing metadata and stale
-TMDB coverage. Repairable rows have a `Queue backfill` button, and repairable
-issue panels can queue a bounded "next batch" of affected movies. This is
+TMDB coverage. Each issue panel can also browse affected rows with server-side
+pagination, preserving the selected issue, page, page size, and table anchor in
+the URL. Repairable rows have a `Queue backfill` button, and repairable issue
+panels can queue a bounded "next batch" of affected movies. This is
 intentionally conservative:
 
 - one-off and bulk buttons queue the same `backfill-movie` job that workers
@@ -154,7 +156,9 @@ intentionally conservative:
   merge decisions;
 - backoffice stores one-off movie snapshots and bulk queue summaries in
   `catalog_repair_audit`, which gives operators a recovery trail without
-  editing the catalog directly from the HTML form.
+  editing the catalog directly from the HTML form;
+- the recent repair audit is paginated so large repair histories do not render
+  as one long operator table.
 
 If a queued repair does not resolve the row, use Bull Board to inspect the job,
 check worker logs, and rerun the backfill or TMDB review flow manually. Prefer a
@@ -221,7 +225,9 @@ Cover these operator states:
 
 - catalog health home at `/`, including populated issue cards, table rows,
   empty/healthy states when available, and the `?repair=queued`,
-  `?repair=unavailable`, and `?repair=failed` notices;
+  `?repair=unavailable`, and `?repair=failed` notices. Also check paginated
+  catalog issue rows with `?issue=missing_poster_url&issuePage=2` and repair
+  audit pages with `?auditPage=2`;
 - TMDB review queue at `/tmdb-reviews`, including open, deferred, resolved, and
   ignored status filters when data exists, plus paginated states such as
   `?page=2` and narrow table scrolling;
