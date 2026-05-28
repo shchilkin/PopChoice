@@ -247,7 +247,6 @@ knowledge_base:
     enabled: true
     filePatterns:
       - 'AGENTS.md'
-      - '.github/copilot-instructions.md'
       - 'docs/BOUNDARIES.md'
       - 'docs/MAINTAINABILITY-CHECKLIST.md'
       - 'docs/DOCUMENTATION-GOVERNANCE.md'
