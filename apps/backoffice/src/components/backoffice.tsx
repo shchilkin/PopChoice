@@ -1,7 +1,9 @@
 import type {
   CatalogHealthIssue,
+  CatalogHealthIssueMoviePage,
   CatalogHealthReport,
   CatalogMovieSample,
+  CatalogRepairActionAuditPage,
   CatalogRepairActionAudit,
   DuplicateIdentityGroup,
   TMDBMatchReview,
@@ -17,6 +19,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { CatalogRepairEnhancement } from './catalogRepairEnhancement';
 import {
   DEFAULT_BULK_REPAIR_LIMIT,
+  DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   formatBackofficeDateTime,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../lib/backoffice';
@@ -124,6 +127,88 @@ function CountPill({
   return <span className={state ? `count ${state}` : 'count'}>{count}</span>;
 }
 
+function buildCatalogIssuePageHref({
+  issueKey,
+  page,
+  pageSize,
+}: {
+  issueKey: string;
+  page: number;
+  pageSize: number;
+}) {
+  const params = new URLSearchParams();
+  params.set('issue', issueKey);
+  params.set('issuePage', String(page));
+  params.set('issuePageSize', String(pageSize));
+  return `/?${params.toString()}#issue-${encodeURIComponent(issueKey)}`;
+}
+
+function buildRepairAuditPageHref({ page, pageSize }: { page: number; pageSize: number }) {
+  const params = new URLSearchParams();
+  params.set('auditPage', String(page));
+  params.set('auditPageSize', String(pageSize));
+  return `/?${params.toString()}#repair-audit`;
+}
+
+function SimplePaginationControls({
+  ariaLabel,
+  emptyLabel,
+  itemLabel,
+  limit,
+  offset,
+  totalCount,
+  hrefForPage,
+}: {
+  ariaLabel: string;
+  emptyLabel: string;
+  itemLabel: string;
+  limit: number;
+  offset: number;
+  totalCount: number;
+  hrefForPage: (page: number) => string;
+}) {
+  const totalPages = Math.max(Math.ceil(totalCount / limit), 1);
+  const currentPage = Math.floor(offset / limit) + 1;
+  const firstItem =
+    totalCount === 0 || currentPage > totalPages ? 0 : (currentPage - 1) * limit + 1;
+  const lastItem = currentPage > totalPages ? 0 : Math.min(currentPage * limit, totalCount);
+
+  return (
+    <nav className="pagination" aria-label={ariaLabel}>
+      <span className="pagination-summary">
+        {totalCount === 0
+          ? emptyLabel
+          : currentPage > totalPages
+            ? `Page ${currentPage} is past ${totalCount} ${itemLabel}`
+            : `Showing ${firstItem}-${lastItem} of ${totalCount} ${itemLabel}`}
+      </span>
+      <div className="pagination-actions">
+        {currentPage > 1 ? (
+          <a className="button small" href={hrefForPage(currentPage - 1)}>
+            Previous
+          </a>
+        ) : (
+          <span className="button small disabled" aria-disabled="true">
+            Previous
+          </span>
+        )}
+        <span className="pagination-page">
+          Page {currentPage} / {totalPages}
+        </span>
+        {currentPage < totalPages ? (
+          <a className="button small" href={hrefForPage(currentPage + 1)}>
+            Next
+          </a>
+        ) : (
+          <span className="button small disabled" aria-disabled="true">
+            Next
+          </span>
+        )}
+      </div>
+    </nav>
+  );
+}
+
 function CatalogStat({
   label,
   value,
@@ -183,8 +268,16 @@ function CatalogStatusStrip({
   );
 }
 
-function SampleRows({ issueKey, samples }: { issueKey: string; samples: CatalogMovieSample[] }) {
-  if (samples.length === 0) return <p className="empty">No sample records returned.</p>;
+function SampleRows({
+  emptyLabel = 'No sample records returned.',
+  issueKey,
+  samples,
+}: {
+  emptyLabel?: string;
+  issueKey: string;
+  samples: CatalogMovieSample[];
+}) {
+  if (samples.length === 0) return <p className="empty">{emptyLabel}</p>;
 
   const canRepair = REPAIRABLE_CATALOG_ISSUE_KEYS.has(issueKey);
 
@@ -279,13 +372,22 @@ function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
   );
 }
 
-function CatalogIssuePanel({ issue }: { issue: CatalogHealthIssue }) {
+function CatalogIssuePanel({
+  issue,
+  issuePage,
+}: {
+  issue: CatalogHealthIssue;
+  issuePage: CatalogHealthIssueMoviePage | null;
+}) {
   const severity = issue.count > 0 ? 'needs-work' : 'healthy';
   const canRepair = REPAIRABLE_CATALOG_ISSUE_KEYS.has(issue.key);
   const state = issue.count === 0 ? 'healthy' : canRepair ? 'repairable' : 'warning';
+  const activePage = issuePage?.issueKey === issue.key ? issuePage : null;
+  const rows = activePage ? activePage.movies : issue.samples;
 
   return (
     <section
+      id={`issue-${issue.key}`}
       className={`panel issue-panel ${severity} ${canRepair && issue.count > 0 ? 'repairable' : ''}`}
     >
       <div className="panel-header">
@@ -300,13 +402,78 @@ function CatalogIssuePanel({ issue }: { issue: CatalogHealthIssue }) {
         </div>
         <div className="panel-actions">
           <CountPill count={issue.count} state={state} />
+          {issue.count > 0 ? (
+            <a
+              className={`button small ${activePage ? 'quiet' : ''}`}
+              href={buildCatalogIssuePageHref({
+                issueKey: issue.key,
+                page: 1,
+                pageSize: activePage?.limit ?? DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
+              })}
+            >
+              {activePage ? 'Browsing rows' : 'Browse rows'}
+            </a>
+          ) : null}
           {canRepair && issue.count > 0 ? <BulkRepairForm issue={issue} /> : null}
         </div>
       </div>
       {issue.count === 0 ? (
         <p className="empty">No affected movies.</p>
       ) : (
-        <SampleRows issueKey={issue.key} samples={issue.samples} />
+        <>
+          {activePage ? (
+            <SimplePaginationControls
+              ariaLabel={`${issue.label} affected movie pagination`}
+              emptyLabel="No affected movies"
+              itemLabel="affected movies"
+              limit={activePage.limit}
+              offset={activePage.offset}
+              totalCount={activePage.totalCount}
+              hrefForPage={(page) =>
+                buildCatalogIssuePageHref({
+                  issueKey: issue.key,
+                  page,
+                  pageSize: activePage.limit,
+                })
+              }
+            />
+          ) : null}
+          <SampleRows
+            issueKey={issue.key}
+            samples={rows}
+            emptyLabel={activePage ? 'No affected movies on this page.' : undefined}
+          />
+          {activePage ? (
+            <SimplePaginationControls
+              ariaLabel={`${issue.label} affected movie pagination bottom`}
+              emptyLabel="No affected movies"
+              itemLabel="affected movies"
+              limit={activePage.limit}
+              offset={activePage.offset}
+              totalCount={activePage.totalCount}
+              hrefForPage={(page) =>
+                buildCatalogIssuePageHref({
+                  issueKey: issue.key,
+                  page,
+                  pageSize: activePage.limit,
+                })
+              }
+            />
+          ) : issue.count > issue.samples.length ? (
+            <div className="panel-footer">
+              <a
+                className="button small"
+                href={buildCatalogIssuePageHref({
+                  issueKey: issue.key,
+                  page: 1,
+                  pageSize: DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
+                })}
+              >
+                Browse all {issue.count} rows
+              </a>
+            </div>
+          ) : null}
+        </>
       )}
     </section>
   );
@@ -456,12 +623,14 @@ function DuplicateReport({
 }
 
 export function CatalogHealthPage({
+  auditPage,
+  issueMoviePage,
   report,
-  audit,
   repairStatus,
 }: {
   report: CatalogHealthReport;
-  audit: CatalogRepairActionAudit[];
+  auditPage: CatalogRepairActionAuditPage;
+  issueMoviePage: CatalogHealthIssueMoviePage | null;
   repairStatus: string | null;
 }) {
   const activeIssues = report.issues.filter((issue) => issue.count > 0).length;
@@ -507,19 +676,37 @@ export function CatalogHealthPage({
       </section>
       <div className="grid">
         {report.issues.map((issue) => (
-          <CatalogIssuePanel key={issue.key} issue={issue} />
+          <CatalogIssuePanel key={issue.key} issue={issue} issuePage={issueMoviePage} />
         ))}
         <DuplicateReport title="Duplicate TMDB ids" report={report.duplicateTmdbIds} />
         <DuplicateReport
           title="Duplicate normalized title/year groups"
           report={report.duplicateNormalizedTitleYears}
         />
-        <section className="panel">
+        <section className="panel" id="repair-audit">
           <div className="panel-header">
             <h2>Recent repair actions</h2>
-            <span className="count">{audit.length}</span>
+            <span className="count">{auditPage.totalCount}</span>
           </div>
-          <RepairAuditRows audit={audit} />
+          <SimplePaginationControls
+            ariaLabel="Catalog repair audit pagination"
+            emptyLabel="No catalog repair actions"
+            itemLabel="repair actions"
+            limit={auditPage.limit}
+            offset={auditPage.offset}
+            totalCount={auditPage.totalCount}
+            hrefForPage={(page) => buildRepairAuditPageHref({ page, pageSize: auditPage.limit })}
+          />
+          <RepairAuditRows audit={auditPage.audit} />
+          <SimplePaginationControls
+            ariaLabel="Catalog repair audit pagination bottom"
+            emptyLabel="No catalog repair actions"
+            itemLabel="repair actions"
+            limit={auditPage.limit}
+            offset={auditPage.offset}
+            totalCount={auditPage.totalCount}
+            hrefForPage={(page) => buildRepairAuditPageHref({ page, pageSize: auditPage.limit })}
+          />
         </section>
       </div>
       <CatalogRepairEnhancement />
