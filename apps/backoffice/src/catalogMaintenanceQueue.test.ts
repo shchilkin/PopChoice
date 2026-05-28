@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   enqueueCatalogBackfillMovieFromBackoffice,
   getCatalogBackfillMovieJobId,
+  getCatalogMaintenanceQueueSnapshot,
 } from './catalogMaintenanceQueue';
 
 describe('catalog maintenance queue helpers', () => {
@@ -17,5 +18,22 @@ describe('catalog maintenance queue helpers', () => {
         undefined,
       ),
     ).resolves.toBeNull();
+  });
+
+  it('reports an unavailable queue snapshot when Redis is unavailable', async () => {
+    await expect(getCatalogMaintenanceQueueSnapshot(undefined)).resolves.toMatchObject({
+      available: false,
+      counts: {
+        active: 0,
+        completed: 0,
+        delayed: 0,
+        failed: 0,
+        prioritized: 0,
+        waiting: 0,
+        waitingChildren: 0,
+      },
+      openJobs: 0,
+      queueName: 'catalog-maintenance',
+    });
   });
 });

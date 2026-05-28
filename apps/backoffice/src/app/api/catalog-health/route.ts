@@ -5,9 +5,9 @@ import {
   listCatalogRepairAuditPage,
   MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE,
 } from '@pop-choice/shared';
+import { NextResponse } from 'next/server';
 
-import { BackofficeErrorPage, CatalogHealthPage } from '../components/backoffice';
-import { getCatalogMaintenanceQueueSnapshot } from '../catalogMaintenanceQueue';
+import { getCatalogMaintenanceQueueSnapshot } from '../../../catalogMaintenanceQueue';
 import {
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   DEFAULT_REPAIR_AUDIT_LIMIT,
@@ -16,41 +16,31 @@ import {
   MAX_CATALOG_ISSUE_PAGE_NUMBER,
   MAX_REPAIR_AUDIT_PAGE_NUMBER,
   parsePositiveIntParam,
-} from '../lib/backoffice';
-import { toCatalogHealthLiveData } from '../lib/catalogHealthLive';
+} from '../../../lib/backoffice';
+import { toCatalogHealthLiveData } from '../../../lib/catalogHealthLive';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-type HomePageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-};
-
-function getParamValue(value: string | string[] | undefined): string | null {
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value ?? null;
-}
-
-export default async function HomePage({ searchParams }: HomePageProps) {
+export async function GET(request: Request) {
   try {
     const config = await ensureBackofficeReady();
-    const params = (await searchParams) ?? {};
-    const repairStatus = getParamValue(params.repair)?.trim() ?? null;
-    const selectedIssueKey = getParamValue(params.issue)?.trim() ?? null;
+    const params = new URL(request.url).searchParams;
+    const selectedIssueKey = params.get('issue')?.trim() ?? null;
     const issuePageSize = parsePositiveIntParam(
-      getParamValue(params.issuePageSize),
+      params.get('issuePageSize'),
       DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
       { max: MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE },
     );
-    const issuePageNumber = parsePositiveIntParam(getParamValue(params.issuePage), 1, {
+    const issuePageNumber = parsePositiveIntParam(params.get('issuePage'), 1, {
       max: MAX_CATALOG_ISSUE_PAGE_NUMBER,
     });
     const auditPageSize = parsePositiveIntParam(
-      getParamValue(params.auditPageSize),
+      params.get('auditPageSize'),
       DEFAULT_REPAIR_AUDIT_LIMIT,
       { max: 100 },
     );
-    const auditPageNumber = parsePositiveIntParam(getParamValue(params.auditPage), 1, {
+    const auditPageNumber = parsePositiveIntParam(params.get('auditPage'), 1, {
       max: MAX_REPAIR_AUDIT_PAGE_NUMBER,
     });
 
@@ -74,23 +64,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       getCatalogMaintenanceQueueSnapshot(config.redisUrl),
     ]);
 
-    return (
-      <CatalogHealthPage
-        report={report}
-        auditPage={auditPage}
-        initialLiveData={toCatalogHealthLiveData({
-          auditPage,
-          issueMoviePage,
-          queueSnapshot,
-          report,
-        })}
-        issueMoviePage={issueMoviePage}
-        queueSnapshot={queueSnapshot}
-        repairStatus={repairStatus}
-      />
+    return NextResponse.json(
+      toCatalogHealthLiveData({ auditPage, issueMoviePage, queueSnapshot, report }),
+      {
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      },
     );
   } catch (error) {
-    logBackofficeError('Failed to render catalog health report', error);
-    return <BackofficeErrorPage error={error} />;
+    logBackofficeError('Failed to read live catalog health state', error);
+    return NextResponse.json({ error: 'Failed to read catalog health state.' }, { status: 500 });
   }
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 
+import { BackofficeQueryProvider } from '../components/queryProvider';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -12,7 +14,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <BackofficeQueryProvider>{children}</BackofficeQueryProvider>
+      </body>
     </html>
   );
 }

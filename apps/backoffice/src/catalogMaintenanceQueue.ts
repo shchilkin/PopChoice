@@ -30,6 +30,22 @@ export interface EnqueueCatalogBackfillMovieResult {
   status: 'queued' | 'deduped';
 }
 
+export interface CatalogMaintenanceQueueSnapshot {
+  queueName: string;
+  available: boolean;
+  counts: {
+    active: number;
+    completed: number;
+    delayed: number;
+    failed: number;
+    prioritized: number;
+    waiting: number;
+    waitingChildren: number;
+  };
+  openJobs: number;
+  updatedAt: string;
+}
+
 type CatalogBackfillMovieJobData = {
   version: 1;
   movieId: string | number;
@@ -76,6 +92,63 @@ function getCatalogMaintenanceQueue(
 
 export function getCatalogBackfillMovieJobId(movieId: string | number): string {
   return `backfill-${toBullMQJobIdPart(movieId)}`;
+}
+
+export async function getCatalogMaintenanceQueueSnapshot(
+  redisUrl = process.env.REDIS_URL,
+): Promise<CatalogMaintenanceQueueSnapshot> {
+  const emptyCounts: CatalogMaintenanceQueueSnapshot['counts'] = {
+    active: 0,
+    completed: 0,
+    delayed: 0,
+    failed: 0,
+    prioritized: 0,
+    waiting: 0,
+    waitingChildren: 0,
+  };
+  const queue = getCatalogMaintenanceQueue(redisUrl);
+
+  if (!queue) {
+    return {
+      queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+      available: false,
+      counts: emptyCounts,
+      openJobs: 0,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  const counts = await queue.getJobCounts(
+    'active',
+    'completed',
+    'delayed',
+    'failed',
+    'prioritized',
+    'waiting',
+    'waiting-children',
+  );
+  const normalizedCounts: CatalogMaintenanceQueueSnapshot['counts'] = {
+    active: counts.active ?? 0,
+    completed: counts.completed ?? 0,
+    delayed: counts.delayed ?? 0,
+    failed: counts.failed ?? 0,
+    prioritized: counts.prioritized ?? 0,
+    waiting: counts.waiting ?? 0,
+    waitingChildren: counts['waiting-children'] ?? 0,
+  };
+
+  return {
+    queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+    available: true,
+    counts: normalizedCounts,
+    openJobs:
+      normalizedCounts.active +
+      normalizedCounts.delayed +
+      normalizedCounts.prioritized +
+      normalizedCounts.waiting +
+      normalizedCounts.waitingChildren,
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 export async function enqueueCatalogBackfillMovieFromBackoffice(

@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 
+import { requestCatalogHealthRefresh } from './catalogHealthRefreshEvent';
+
 type RepairTone = '' | 'good' | 'warn';
 
 function setMessage(form: HTMLFormElement, text: string, tone: RepairTone): void {
@@ -19,6 +21,52 @@ function setButton(form: HTMLFormElement, text: string, disabled: boolean): void
 
   button.textContent = text;
   button.disabled = disabled;
+}
+
+function removeInlineConfirmation(form: HTMLFormElement): void {
+  form.querySelector('[data-inline-confirmation]')?.remove();
+}
+
+function showInlineConfirmation(form: HTMLFormElement, message: string): void {
+  const existing = form.querySelector<HTMLElement>('[data-inline-confirmation]');
+  if (existing) {
+    existing.querySelector<HTMLButtonElement>('[data-confirm-submit]')?.focus();
+    return;
+  }
+
+  const confirmation = document.createElement('div');
+  confirmation.className = 'inline-confirmation';
+  confirmation.dataset.inlineConfirmation = 'true';
+
+  const copy = document.createElement('p');
+  copy.textContent = message;
+
+  const actions = document.createElement('div');
+  actions.className = 'inline-confirmation-actions';
+
+  const confirm = document.createElement('button');
+  confirm.className = 'button success small';
+  confirm.dataset.confirmSubmit = 'true';
+  confirm.type = 'submit';
+  confirm.textContent = 'Confirm batch';
+  confirm.addEventListener('click', () => {
+    form.dataset.confirmed = 'true';
+  });
+
+  const cancel = document.createElement('button');
+  cancel.className = 'button quiet small';
+  cancel.type = 'button';
+  cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', () => {
+    delete form.dataset.confirmed;
+    removeInlineConfirmation(form);
+    setMessage(form, 'Batch action cancelled.', '');
+  });
+
+  actions.append(confirm, cancel);
+  confirmation.append(copy, actions);
+  form.appendChild(confirmation);
+  confirm.focus();
 }
 
 function appendEmptyPlaceholder(body: HTMLElement | null, columnCount: number): void {
@@ -67,7 +115,13 @@ export function CatalogRepairEnhancement() {
         event.preventDefault();
 
         const confirmMessage = form.dataset.confirmMessage;
-        if (confirmMessage && !window.confirm(confirmMessage)) return;
+        if (confirmMessage && form.dataset.confirmed !== 'true') {
+          showInlineConfirmation(form, confirmMessage);
+          setMessage(form, 'Confirm this batch in-place to continue.', 'warn');
+          return;
+        }
+        delete form.dataset.confirmed;
+        removeInlineConfirmation(form);
 
         const row = form.closest<HTMLTableRowElement>('[data-repair-row]');
         const originalText =
@@ -96,6 +150,7 @@ export function CatalogRepairEnhancement() {
           } | null;
 
           if (response.ok && payload?.status === 'queued') {
+            requestCatalogHealthRefresh();
             row?.classList.remove('repair-pending');
             row?.classList.add('repair-queued');
             setButton(form, 'Queued', true);
@@ -118,6 +173,7 @@ export function CatalogRepairEnhancement() {
           }
 
           if (response.ok && payload?.status === 'partial') {
+            requestCatalogHealthRefresh();
             const bulkSummary = payload.summary;
             row?.classList.remove('repair-pending');
             setButton(form, originalText, false);
