@@ -43,14 +43,15 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
       limit: pageSize,
       offset: (page - 1) * pageSize,
     });
+    const normalizedPage = Math.floor(reviewPage.offset / reviewPage.limit) + 1;
 
     return (
       <ReviewListPage
         reviews={reviewPage.reviews}
         filters={filters}
         pagination={{
-          page,
-          pageSize,
+          page: normalizedPage,
+          pageSize: reviewPage.limit,
           totalCount: reviewPage.totalCount,
         }}
       />
