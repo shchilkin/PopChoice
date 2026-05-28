@@ -72,6 +72,7 @@ export {
   listTMDBMatchReviewAudit,
   listTMDBMatchReviewPage,
   listTMDBMatchReviews,
+  MAX_TMDB_MATCH_REVIEW_OFFSET,
 } from './tmdbMatchReviews.js';
 export type {
   ApplyTMDBMatchReviewActionInput,

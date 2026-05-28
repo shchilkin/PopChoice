@@ -1,4 +1,7 @@
-import { listTMDBMatchReviewPage } from '@pop-choice/shared';
+import {
+  listTMDBMatchReviewPage,
+  MAX_TMDB_MATCH_REVIEW_OFFSET,
+} from '@pop-choice/shared/tmdbMatchReviews';
 
 import { BackofficeErrorPage, ReviewListPage } from '../../components/backoffice';
 import {
@@ -32,10 +35,11 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
       reason: parseTMDBReviewReason(firstParam(params.reason)),
       sort: parseTMDBReviewSort(firstParam(params.sort)),
     };
-    const page = parsePositiveIntParam(firstParam(params.page), 1, { max: 10_000 });
     const pageSize = parsePositiveIntParam(firstParam(params.pageSize), DEFAULT_REVIEW_PAGE_SIZE, {
       max: MAX_REVIEW_PAGE_SIZE,
     });
+    const maxPage = Math.floor(MAX_TMDB_MATCH_REVIEW_OFFSET / pageSize) + 1;
+    const page = parsePositiveIntParam(firstParam(params.page), 1, { max: maxPage });
     const reviewPage = await listTMDBMatchReviewPage({
       status: filters.status,
       reason: filters.reason,

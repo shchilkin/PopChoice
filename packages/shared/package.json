@@ -7,6 +7,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./tmdbMatchReviews": {
+      "types": "./dist/tmdbMatchReviews.d.ts",
+      "default": "./dist/tmdbMatchReviews.js"
     }
   },
   "scripts": {

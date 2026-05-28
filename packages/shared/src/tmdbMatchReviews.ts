@@ -5,6 +5,8 @@ export type TMDBMatchReviewStatus = 'open' | 'resolved' | 'ignored' | 'deferred'
 export type TMDBMatchReviewSort = 'newest' | 'oldest' | 'highest_risk';
 export type TMDBMatchReviewAction = 'apply_candidate' | 'reject' | 'defer' | 'reopen';
 
+export const MAX_TMDB_MATCH_REVIEW_OFFSET = 100_000;
+
 export interface TMDBReviewCandidate {
   id: number | null;
   title: string;
@@ -288,7 +290,7 @@ export async function listTMDBMatchReviewPage(
   const reason = options.reason ?? 'all';
   const sort = options.sort ?? 'highest_risk';
   const limit = Math.min(Math.max(options.limit ?? 100, 1), 500);
-  const offset = Math.min(Math.max(options.offset ?? 0, 0), 100_000);
+  const offset = Math.min(Math.max(options.offset ?? 0, 0), MAX_TMDB_MATCH_REVIEW_OFFSET);
   const where: string[] = [];
   const params: unknown[] = [];
 
