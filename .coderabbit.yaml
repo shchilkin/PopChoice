@@ -1,0 +1,280 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: 'en-US'
+tone_instructions: 'Be concise, practical, and risk-focused. Prefer one precise actionable comment over several speculative or style-only comments.'
+early_access: false
+
+reviews:
+  profile: 'assertive'
+  request_changes_workflow: false
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  review_status: true
+  review_details: false
+  commit_status: true
+  fail_commit_status: false
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: false
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_labels: true
+  auto_apply_labels: false
+  suggested_reviewers: false
+  auto_assign_reviewers: false
+  in_progress_fortune: false
+  poem: false
+  enable_prompt_for_ai_agents: true
+
+  labeling_instructions:
+    - label: 'app:web'
+      instructions: 'Changes under apps/web or user-facing recommendation flows.'
+    - label: 'app:backoffice'
+      instructions: 'Changes under apps/backoffice or operator-only catalog/admin workflows.'
+    - label: 'app:docs'
+      instructions: 'Changes under apps/docs, docs/, or documentation navigation/content.'
+    - label: 'area:ai'
+      instructions: 'Recommendation prompts, embeddings, OpenAI/TMDB integration, ranking, evals, or recommendation result shape.'
+    - label: 'area:data'
+      instructions: 'Database schema, migrations, catalog seed/discovery/backfill, pgvector, Redis, BullMQ, or data integrity.'
+    - label: 'area:ops'
+      instructions: 'CI/CD, Docker, Coolify, observability, deployment, auth/rate-limit, or production runtime configuration.'
+
+  path_filters:
+    - '!**/node_modules/**'
+    - '!**/.next/**'
+    - '!**/.turbo/**'
+    - '!**/.vercel/**'
+    - '!**/dist/**'
+    - '!**/build/**'
+    - '!**/coverage/**'
+    - '!**/playwright-report/**'
+    - '!**/test-results/**'
+    - '!**/storybook-static/**'
+    - '!**/.DS_Store'
+
+  path_instructions:
+    - path: '**/*'
+      instructions: |
+        Review PopChoice as a production-leaning pet project: prioritize correctness, security, data loss, deployment regressions, missing validation, missing tests, and observability gaps.
+        Avoid comments that are only stylistic, speculative, or already enforced by formatting/linting unless they hide a real bug.
+        Prefer citing the smallest affected line range and state the user impact.
+        If a change affects setup, scripts, architecture, services, CI, deployment, or environment variables, check whether README/docs/ROADMAP updates are needed.
+        Do not require live OpenAI/TMDB evals by default; deterministic checks are the normal gate unless the PR explicitly opts into live-provider validation.
+
+    - path: 'apps/web/src/app/**'
+      instructions: |
+        Treat files here as Next.js route/page boundaries. Check that handlers parse and validate input, enforce auth/rate limits where needed, call feature/lib modules for orchestration, and map responses cleanly.
+        Flag new cross-route business logic, recommendation orchestration, or external API workflows added directly under routes when they should move toward apps/web/src/features, apps/web/src/lib, or apps/web/src/integrations.
+        Remember this repo uses apps/web/src/proxy.ts for CSRF/proxy behavior, not legacy middleware.
+
+    - path: 'apps/web/src/features/recommendation/**'
+      instructions: |
+        Recommendation changes are high impact. Check candidate filtering, ranking, movie-memory feedback, persistence shape, deterministic fixtures, and compatibility with POST /api/recommendations polling/feedback/more-picks.
+        If prompts, embeddings, OpenAI/TMDB integration, ranking, result shape, movie-memory signals, or eval fixtures change, ask for npm run eval:recommendations results or a clear reason it was not run.
+        Do not suggest live evals as a merge blocker unless the PR explicitly changes live-provider behavior and the author asked for live validation.
+
+    - path: 'apps/web/src/clients/**'
+      instructions: |
+        Enforce the documented boundaries: clients configure SDKs/connections, integrations wrap external APIs, lib owns app-local infrastructure helpers, and utils stay pure or near-pure.
+        Flag hidden network/database side effects in utils, broad barrel imports across ownership boundaries, missing timeouts/retries around external APIs, and secret leakage in logs or client bundles.
+
+    - path: 'apps/web/src/integrations/**'
+      instructions: |
+        Enforce the documented boundaries: clients configure SDKs/connections, integrations wrap external APIs, lib owns app-local infrastructure helpers, and utils stay pure or near-pure.
+        Flag hidden network/database side effects in utils, broad barrel imports across ownership boundaries, missing timeouts/retries around external APIs, and secret leakage in logs or client bundles.
+
+    - path: 'apps/web/src/lib/**'
+      instructions: |
+        Enforce the documented boundaries: clients configure SDKs/connections, integrations wrap external APIs, lib owns app-local infrastructure helpers, and utils stay pure or near-pure.
+        Flag hidden network/database side effects in utils, broad barrel imports across ownership boundaries, missing timeouts/retries around external APIs, and secret leakage in logs or client bundles.
+
+    - path: 'apps/web/src/utils/**'
+      instructions: |
+        Enforce the documented boundaries: clients configure SDKs/connections, integrations wrap external APIs, lib owns app-local infrastructure helpers, and utils stay pure or near-pure.
+        Flag hidden network/database side effects in utils, broad barrel imports across ownership boundaries, missing timeouts/retries around external APIs, and secret leakage in logs or client bundles.
+
+    - path: 'apps/backoffice/**'
+      instructions: |
+        Backoffice is operator tooling, deployed separately from apps/web. Review for auth-aware access, rate limits, server-side validation, clear error states, responsive tables, pagination/virtualization for large catalog data, and no accidental user-facing coupling.
+        For interactive UI changes, look for stale UI after mutations, optimistic update hazards, inaccessible controls, text overflow, and missing loading/empty/error states.
+
+    - path: 'apps/bull-board/**'
+      instructions: |
+        Bull Board is operational tooling. Check that queue access remains protected in production, Redis configuration is explicit, and queue names/ports align with docker-compose/Coolify docs.
+
+    - path: 'apps/docs/**'
+      instructions: |
+        Docs app changes should preserve Fumadocs navigation, avoid duplicated page titles, keep links to docs/backoffice/bull-board/storybook accurate, and build with npm run build:docs.
+
+    - path: 'db/init/**'
+      instructions: |
+        Database migrations must be idempotent and safe for long-lived local, preview, and production databases.
+        Prefer CREATE TABLE IF NOT EXISTS, ALTER TABLE ... ADD COLUMN IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, and additive changes.
+        Check that related schema helpers, seed/discovery/backfill code, docs, and tests are updated when schema changes affect runtime behavior.
+
+    - path: 'services/**'
+      instructions: |
+        Services are independently runnable background/offline processes. Check env validation, graceful failure, idempotency, retry/rate-limit behavior for TMDB/OpenAI, and alignment with each service README.
+        Catalog discovery/backfill should avoid unbounded provider/API load and should make partial or stale metadata visible rather than breaking user-facing flows.
+
+    - path: 'packages/shared/**'
+      instructions: |
+        Shared package changes affect apps and services. Check public API compatibility, Node 24/npm workspace compatibility, side effects, and whether services/web/backoffice consumers still build.
+
+    - path: '.github/workflows/**'
+      instructions: |
+        CI targets development. Docs-only PRs intentionally skip heavy jobs but must still pass Docs Build and PR Validation.
+        Check Node 24 setup, npm ci caching, deterministic recommendation evals, e2e service teardown, artifact uploads, least-privilege permissions, and whether new checks are reflected in docs.
+
+    - path: 'Dockerfile*'
+      instructions: |
+        Deployment/runtime changes should be explicit about ports, networks, healthchecks, secrets, volumes, and Coolify behavior.
+        Flag production secrets in build args, missing runtime env docs, fragile shell scripts, and changes that can break local -> development -> production promotion.
+
+    - path: 'docker-compose*.yml'
+      instructions: |
+        Deployment/runtime changes should be explicit about ports, networks, healthchecks, secrets, volumes, and Coolify behavior.
+        Flag production secrets in build args, missing runtime env docs, fragile shell scripts, and changes that can break local -> development -> production promotion.
+
+    - path: 'compose*.yml'
+      instructions: |
+        Deployment/runtime changes should be explicit about ports, networks, healthchecks, secrets, volumes, and Coolify behavior.
+        Flag production secrets in build args, missing runtime env docs, fragile shell scripts, and changes that can break local -> development -> production promotion.
+
+    - path: 'coolify*.yml'
+      instructions: |
+        Deployment/runtime changes should be explicit about ports, networks, healthchecks, secrets, volumes, and Coolify behavior.
+        Flag production secrets in build args, missing runtime env docs, fragile shell scripts, and changes that can break local -> development -> production promotion.
+
+    - path: 'scripts/**'
+      instructions: |
+        Deployment/runtime changes should be explicit about ports, networks, healthchecks, secrets, volumes, and Coolify behavior.
+        Flag production secrets in build args, missing runtime env docs, fragile shell scripts, and changes that can break local -> development -> production promotion.
+
+    - path: 'docs/**'
+      instructions: |
+        For docs-only changes, focus on correctness, broken links, obsolete commands, missing env details, and roadmap/issue hygiene rather than prose preferences.
+        Roadmap entries for actionable new work should link to GitHub issues; broad work should be an epic with smaller implementation issues.
+
+    - path: 'package.json'
+      instructions: |
+        Dependency changes should preserve npm 11 workspaces, Node 24 compatibility, lockfile consistency, CI scripts, and production image/build behavior.
+        Flag new dependencies that duplicate existing stack choices or pull large/runtime-sensitive packages without clear need.
+
+    - path: 'package-lock.json'
+      instructions: |
+        Dependency changes should preserve npm 11 workspaces, Node 24 compatibility, lockfile consistency, CI scripts, and production image/build behavior.
+        Flag new dependencies that duplicate existing stack choices or pull large/runtime-sensitive packages without clear need.
+
+    - path: '**/package.json'
+      instructions: |
+        Dependency changes should preserve npm 11 workspaces, Node 24 compatibility, lockfile consistency, CI scripts, and production image/build behavior.
+        Flag new dependencies that duplicate existing stack choices or pull large/runtime-sensitive packages without clear need.
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 5
+    drafts: false
+    base_branches:
+      - 'development'
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: true
+    simplify:
+      enabled: false
+
+  pre_merge_checks:
+    title:
+      mode: 'warning'
+      requirements: 'Use a concise imperative or descriptive title that names the changed area, for example: backoffice: paginate catalog health repairs.'
+    description:
+      mode: 'warning'
+    issue_assessment:
+      mode: 'warning'
+    custom_checks:
+      - name: 'AI eval evidence'
+        mode: 'warning'
+        instructions: |
+          If the PR changes recommendation prompts, OpenAI/TMDB integration, embeddings, candidate filtering/ranking, movie-memory feedback, recommendation result shape, or eval fixtures, the PR description or comments should include npm run eval:recommendations results or an explicit reason it was not run.
+      - name: 'Migration safety'
+        mode: 'warning'
+        instructions: |
+          If the PR changes db/init, schema helpers, catalog persistence, or migration scripts, migrations must be idempotent/additive and safe for long-lived local, development, and production databases.
+      - name: 'Docs and roadmap hygiene'
+        mode: 'warning'
+        instructions: |
+          If the PR changes setup, scripts, architecture, services, CI, deployment, environment variables, or adds roadmap work, it should update README.md, relevant docs, and docs/ROADMAP-ARCHITECTURE.md when appropriate. Actionable new roadmap work should link to GitHub issues.
+
+  tools:
+    github-checks:
+      enabled: true
+      timeout_ms: 900000
+    actionlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    eslint:
+      enabled: true
+    hadolint:
+      enabled: true
+    checkov:
+      enabled: true
+    trufflehog:
+      enabled: true
+    markdownlint:
+      enabled: false
+    languagetool:
+      enabled: false
+    ruff:
+      enabled: false
+    biome:
+      enabled: false
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - 'AGENTS.md'
+      - 'docs/BOUNDARIES.md'
+      - 'docs/MAINTAINABILITY-CHECKLIST.md'
+      - 'docs/DOCUMENTATION-GOVERNANCE.md'
+      - 'docs/SCHEMA-MIGRATIONS.md'
+      - 'docs/CI-CD.md'
+      - 'docs/ENVIRONMENT.md'
+  learnings:
+    scope: 'local'
+  issues:
+    scope: 'local'
+
+issue_enrichment:
+  auto_enrich:
+    enabled: true
+  planning:
+    enabled: true
+  auto_planning:
+    enabled: false
+  labeling:
+    auto_apply_labels: false
+    labeling_instructions:
+      - label: 'feature'
+        instructions: 'New user-facing, operator, service, or platform capability.'
+      - label: 'bug'
+        instructions: 'Incorrect behavior, regression, broken deployment, failing worker, or data inconsistency.'
+      - label: 'docs'
+        instructions: 'Documentation-only issue or documentation gap.'
+      - label: 'observability'
+        instructions: 'Metrics, logs, traces, alerting, Grafana, Prometheus, Loki, Tempo, or uptime monitoring.'
+      - label: 'ai'
+        instructions: 'Recommendation quality, prompts, embeddings, evals, or provider integration.'
