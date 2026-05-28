@@ -638,6 +638,36 @@ input:disabled {
   font-weight: 750;
   text-align: center;
 }
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+.panel > .pagination:first-of-type {
+  border-top: 0;
+  border-bottom: 1px solid var(--border);
+}
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.pagination-page {
+  color: var(--text);
+  white-space: nowrap;
+}
+.button.disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .detail-grid {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);

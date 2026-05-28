@@ -545,6 +545,91 @@ function ReviewFilterSummary({
   );
 }
 
+function buildReviewPageHref({
+  filters,
+  page,
+  pageSize,
+}: {
+  filters: {
+    status: TMDBMatchReviewStatus | 'all';
+    reason: TMDBMatchReviewReason | 'all';
+    sort: TMDBMatchReviewSort;
+  };
+  page: number;
+  pageSize: number;
+}) {
+  const params = new URLSearchParams();
+  params.set('status', filters.status);
+  params.set('reason', filters.reason);
+  params.set('sort', filters.sort);
+  params.set('page', String(page));
+  params.set('pageSize', String(pageSize));
+  return `/tmdb-reviews?${params.toString()}`;
+}
+
+function PaginationControls({
+  filters,
+  page,
+  pageSize,
+  totalCount,
+}: {
+  filters: {
+    status: TMDBMatchReviewStatus | 'all';
+    reason: TMDBMatchReviewReason | 'all';
+    sort: TMDBMatchReviewSort;
+  };
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}) {
+  const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
+  const currentPage = Math.max(page, 1);
+  const firstItem =
+    totalCount === 0 || currentPage > totalPages ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItem = currentPage > totalPages ? 0 : Math.min(currentPage * pageSize, totalCount);
+
+  return (
+    <nav className="pagination" aria-label="Review queue pagination">
+      <span className="pagination-summary">
+        {totalCount === 0
+          ? 'No reviews'
+          : currentPage > totalPages
+            ? `Page ${currentPage} is past ${totalCount} matching reviews`
+            : `Showing ${firstItem}-${lastItem} of ${totalCount} reviews`}
+      </span>
+      <div className="pagination-actions">
+        {currentPage > 1 ? (
+          <a
+            className="button small"
+            href={buildReviewPageHref({ filters, page: currentPage - 1, pageSize })}
+          >
+            Previous
+          </a>
+        ) : (
+          <span className="button small disabled" aria-disabled="true">
+            Previous
+          </span>
+        )}
+        <span className="pagination-page">
+          Page {currentPage} / {totalPages}
+        </span>
+        {currentPage < totalPages ? (
+          <a
+            className="button small"
+            href={buildReviewPageHref({ filters, page: currentPage + 1, pageSize })}
+          >
+            Next
+          </a>
+        ) : (
+          <span className="button small disabled" aria-disabled="true">
+            Next
+          </span>
+        )}
+      </div>
+    </nav>
+  );
+}
+
 function CandidateSummary({ candidates }: { candidates: TMDBReviewCandidate[] }) {
   if (candidates.length === 0) return <span className="muted">No candidates captured</span>;
 
@@ -629,12 +714,18 @@ function ReviewRows({ reviews }: { reviews: TMDBMatchReview[] }) {
 export function ReviewListPage({
   reviews,
   filters,
+  pagination,
 }: {
   reviews: TMDBMatchReview[];
   filters: {
     status: TMDBMatchReviewStatus | 'all';
     reason: TMDBMatchReviewReason | 'all';
     sort: TMDBMatchReviewSort;
+  };
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalCount: number;
   };
 }) {
   return (
@@ -651,6 +742,8 @@ export function ReviewListPage({
     >
       <form className="review-toolbar" method="get" action="/tmdb-reviews">
         <div className="toolbar-fields">
+          <input type="hidden" name="page" value="1" />
+          <input type="hidden" name="pageSize" value={pagination.pageSize} />
           <label>
             Status
             <select name="status" defaultValue={filters.status}>
@@ -686,25 +779,29 @@ export function ReviewListPage({
       <section className="panel">
         <div className="panel-header">
           <h2>Review queue</h2>
-          <span className="count">{reviews.length}</span>
+          <span className="count">{pagination.totalCount}</span>
         </div>
-        <table className="review-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Local movie</th>
-              <th>Reason</th>
-              <th>Status</th>
-              <th>Candidates</th>
-              <th>Current TMDB</th>
-              <th>Updated</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            <ReviewRows reviews={reviews} />
-          </tbody>
-        </table>
+        <PaginationControls filters={filters} {...pagination} />
+        <div className="table-scroll">
+          <table className="review-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Local movie</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Candidates</th>
+                <th>Current TMDB</th>
+                <th>Updated</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              <ReviewRows reviews={reviews} />
+            </tbody>
+          </table>
+        </div>
+        <PaginationControls filters={filters} {...pagination} />
       </section>
     </BackofficeShell>
   );

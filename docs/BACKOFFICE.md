@@ -165,7 +165,9 @@ The queue shows `tmdb_match_reviews` rows with:
 - review reason (`ambiguous_match` or `runtime_mismatch`);
 - status (`open`, `deferred`, `resolved`, or `ignored`);
 - captured TMDB candidate ids, titles, release years, and confidence scores;
-- newest, oldest, and highest-risk sorting.
+- newest, oldest, and highest-risk sorting;
+- server-side pagination that preserves status, reason, sort, page, and page
+  size in the URL so large queues do not render all rows at once;
 - readable UTC timestamps for generated reports, queue updates, match dates, and
   audit history.
 
@@ -206,7 +208,8 @@ Cover these operator states:
   empty/healthy states when available, and the `?repair=queued`,
   `?repair=unavailable`, and `?repair=failed` notices;
 - TMDB review queue at `/tmdb-reviews`, including open, deferred, resolved, and
-  ignored status filters when data exists;
+  ignored status filters when data exists, plus paginated states such as
+  `?page=2` and narrow table scrolling;
 - TMDB review detail pages for at least one open or deferred review, including
   apply, reject, defer, reopen, and note-entry states where practical;
 - future movie/detail repair pages when they are added under the backoffice

@@ -1,9 +1,15 @@
-import { listTMDBMatchReviews } from '@pop-choice/shared';
+import {
+  listTMDBMatchReviewPage,
+  MAX_TMDB_MATCH_REVIEW_OFFSET,
+} from '@pop-choice/shared/tmdbMatchReviews';
 
 import { BackofficeErrorPage, ReviewListPage } from '../../components/backoffice';
 import {
+  DEFAULT_REVIEW_PAGE_SIZE,
   ensureBackofficeReady,
   logBackofficeError,
+  MAX_REVIEW_PAGE_SIZE,
+  parsePositiveIntParam,
   parseTMDBReviewReason,
   parseTMDBReviewSort,
   parseTMDBReviewStatus,
@@ -29,14 +35,31 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
       reason: parseTMDBReviewReason(firstParam(params.reason)),
       sort: parseTMDBReviewSort(firstParam(params.sort)),
     };
-    const reviews = await listTMDBMatchReviews({
+    const pageSize = parsePositiveIntParam(firstParam(params.pageSize), DEFAULT_REVIEW_PAGE_SIZE, {
+      max: MAX_REVIEW_PAGE_SIZE,
+    });
+    const maxPage = Math.floor(MAX_TMDB_MATCH_REVIEW_OFFSET / pageSize) + 1;
+    const page = parsePositiveIntParam(firstParam(params.page), 1, { max: maxPage });
+    const reviewPage = await listTMDBMatchReviewPage({
       status: filters.status,
       reason: filters.reason,
       sort: filters.sort,
-      limit: 200,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
     });
+    const normalizedPage = Math.floor(reviewPage.offset / reviewPage.limit) + 1;
 
-    return <ReviewListPage reviews={reviews} filters={filters} />;
+    return (
+      <ReviewListPage
+        reviews={reviewPage.reviews}
+        filters={filters}
+        pagination={{
+          page: normalizedPage,
+          pageSize: reviewPage.limit,
+          totalCount: reviewPage.totalCount,
+        }}
+      />
+    );
   } catch (error) {
     logBackofficeError('Failed to render TMDB match review queue', error);
     return <BackofficeErrorPage error={error} />;

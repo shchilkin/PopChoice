@@ -70,7 +70,9 @@ export {
   isTMDBMatchReviewSort,
   isTMDBMatchReviewStatus,
   listTMDBMatchReviewAudit,
+  listTMDBMatchReviewPage,
   listTMDBMatchReviews,
+  MAX_TMDB_MATCH_REVIEW_OFFSET,
 } from './tmdbMatchReviews.js';
 export type {
   ApplyTMDBMatchReviewActionInput,
@@ -81,6 +83,7 @@ export type {
   TMDBMatchReviewReason,
   TMDBMatchReviewSort,
   TMDBMatchReviewStatus,
+  TMDBMatchReviewPage,
   TMDBReviewCandidate,
   TMDBReviewMovieSnapshot,
 } from './tmdbMatchReviews.js';

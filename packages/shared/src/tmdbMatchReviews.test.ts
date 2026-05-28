@@ -2,7 +2,11 @@ import pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeDatabase, initDatabase } from './db.js';
-import { applyTMDBMatchReviewAction } from './tmdbMatchReviews.js';
+import {
+  applyTMDBMatchReviewAction,
+  listTMDBMatchReviewPage,
+  MAX_TMDB_MATCH_REVIEW_OFFSET,
+} from './tmdbMatchReviews.js';
 
 vi.mock('pg', () => {
   const mClient = {
@@ -217,5 +221,66 @@ describe('tmdb match review actions', () => {
         String(sql).includes('INSERT INTO tmdb_match_review_audit'),
       ),
     ).toBe(false);
+  });
+
+  it('lists review pages with total count', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({ rows: [{ total_count: 37 }] })
+      .mockResolvedValueOnce({ rows: [reviewRow()] });
+
+    const page = await listTMDBMatchReviewPage({
+      status: 'deferred',
+      reason: 'runtime_mismatch',
+      sort: 'oldest',
+      limit: 25,
+      offset: 50,
+    });
+
+    expect(page.totalCount).toBe(37);
+    expect(page.limit).toBe(25);
+    expect(page.offset).toBe(50);
+    expect(page.reviews).toHaveLength(1);
+    expect(poolMock.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('COUNT(*)::int AS total_count'),
+      ['deferred', 'runtime_mismatch'],
+    );
+    expect(poolMock.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('LIMIT $3\n      OFFSET $4'),
+      ['deferred', 'runtime_mismatch', 25, 50],
+    );
+  });
+
+  it('clamps out-of-range review page limits and offsets', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({ rows: [{ total_count: 37 }] })
+      .mockResolvedValueOnce({ rows: [reviewRow()] })
+      .mockResolvedValueOnce({ rows: [{ total_count: 37 }] })
+      .mockResolvedValueOnce({ rows: [reviewRow()] });
+
+    const cappedHigh = await listTMDBMatchReviewPage({
+      limit: 999,
+      offset: MAX_TMDB_MATCH_REVIEW_OFFSET + 1,
+    });
+    const cappedLow = await listTMDBMatchReviewPage({
+      limit: -10,
+      offset: -1,
+    });
+
+    expect(cappedHigh.limit).toBe(500);
+    expect(cappedHigh.offset).toBe(MAX_TMDB_MATCH_REVIEW_OFFSET);
+    expect(cappedLow.limit).toBe(1);
+    expect(cappedLow.offset).toBe(0);
+    expect(poolMock.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('LIMIT $2\n      OFFSET $3'),
+      ['open', 500, MAX_TMDB_MATCH_REVIEW_OFFSET],
+    );
+    expect(poolMock.query).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('LIMIT $2\n      OFFSET $3'),
+      ['open', 1, 0],
+    );
   });
 });
