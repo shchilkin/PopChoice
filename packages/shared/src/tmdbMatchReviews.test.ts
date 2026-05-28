@@ -2,7 +2,7 @@ import pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeDatabase, initDatabase } from './db.js';
-import { applyTMDBMatchReviewAction } from './tmdbMatchReviews.js';
+import { applyTMDBMatchReviewAction, listTMDBMatchReviewPage } from './tmdbMatchReviews.js';
 
 vi.mock('pg', () => {
   const mClient = {
@@ -217,5 +217,34 @@ describe('tmdb match review actions', () => {
         String(sql).includes('INSERT INTO tmdb_match_review_audit'),
       ),
     ).toBe(false);
+  });
+
+  it('lists review pages with total count and bounded offset', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({ rows: [{ total_count: 37 }] })
+      .mockResolvedValueOnce({ rows: [reviewRow()] });
+
+    const page = await listTMDBMatchReviewPage({
+      status: 'deferred',
+      reason: 'runtime_mismatch',
+      sort: 'oldest',
+      limit: 25,
+      offset: 50,
+    });
+
+    expect(page.totalCount).toBe(37);
+    expect(page.limit).toBe(25);
+    expect(page.offset).toBe(50);
+    expect(page.reviews).toHaveLength(1);
+    expect(poolMock.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('COUNT(*)::int AS total_count'),
+      ['deferred', 'runtime_mismatch'],
+    );
+    expect(poolMock.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('LIMIT $3\n      OFFSET $4'),
+      ['deferred', 'runtime_mismatch', 25, 50],
+    );
   });
 });

@@ -25,6 +25,8 @@ import {
 } from '../catalogMaintenanceQueue';
 
 export const DEFAULT_REPAIR_AUDIT_LIMIT = 25;
+export const DEFAULT_REVIEW_PAGE_SIZE = 25;
+export const MAX_REVIEW_PAGE_SIZE = 100;
 
 export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
   'missing_poster_url',
@@ -140,6 +142,17 @@ export function parseTMDBReviewReason(value: string | null): TMDBMatchReviewReas
 
 export function parseTMDBReviewSort(value: string | null): TMDBMatchReviewSort {
   return value && isTMDBMatchReviewSort(value) ? value : 'highest_risk';
+}
+
+export function parsePositiveIntParam(
+  value: string | null,
+  fallback: number,
+  { max }: { max: number },
+): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
+  return Math.min(parsed, max);
 }
 
 export function parseAction(value: FormDataEntryValue | null): TMDBMatchReviewAction {

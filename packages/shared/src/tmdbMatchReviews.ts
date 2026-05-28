@@ -58,6 +58,14 @@ export interface ListTMDBMatchReviewsOptions {
   reason?: TMDBMatchReviewReason | 'all';
   sort?: TMDBMatchReviewSort;
   limit?: number;
+  offset?: number;
+}
+
+export interface TMDBMatchReviewPage {
+  reviews: TMDBMatchReview[];
+  totalCount: number;
+  limit: number;
+  offset: number;
 }
 
 export interface ApplyTMDBMatchReviewActionInput {
@@ -269,10 +277,18 @@ export async function ensureTMDBMatchReviewActionSchema(): Promise<void> {
 export async function listTMDBMatchReviews(
   options: ListTMDBMatchReviewsOptions = {},
 ): Promise<TMDBMatchReview[]> {
+  const page = await listTMDBMatchReviewPage(options);
+  return page.reviews;
+}
+
+export async function listTMDBMatchReviewPage(
+  options: ListTMDBMatchReviewsOptions = {},
+): Promise<TMDBMatchReviewPage> {
   const status = options.status ?? 'open';
   const reason = options.reason ?? 'all';
   const sort = options.sort ?? 'highest_risk';
   const limit = Math.min(Math.max(options.limit ?? 100, 1), 500);
+  const offset = Math.min(Math.max(options.offset ?? 0, 0), 100_000);
   const where: string[] = [];
   const params: unknown[] = [];
 
@@ -296,16 +312,30 @@ export async function listTMDBMatchReviews(
            reviews.updated_at ASC,
            reviews.id ASC`;
 
-  params.push(limit);
-  const result = await getPool().query<TMDBMatchReviewRow>(
-    `${buildReviewSelectClause()}
-      ${where.length > 0 ? `WHERE ${where.join(' AND ')}` : ''}
-      ORDER BY ${orderBy}
-      LIMIT $${params.length}`,
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+  const countResult = await getPool().query<{ total_count: number | string }>(
+    `SELECT COUNT(*)::int AS total_count
+       FROM tmdb_match_reviews reviews
+      ${whereClause}`,
     params,
   );
 
-  return result.rows.map(normalizeReview);
+  const pageParams = [...params, limit, offset];
+  const result = await getPool().query<TMDBMatchReviewRow>(
+    `${buildReviewSelectClause()}
+      ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT $${pageParams.length - 1}
+      OFFSET $${pageParams.length}`,
+    pageParams,
+  );
+
+  return {
+    reviews: result.rows.map(normalizeReview),
+    totalCount: Number(countResult.rows[0]?.total_count ?? 0),
+    limit,
+    offset,
+  };
 }
 
 export async function getTMDBMatchReview(reviewId: string): Promise<TMDBMatchReview | null> {

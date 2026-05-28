@@ -70,6 +70,7 @@ export {
   isTMDBMatchReviewSort,
   isTMDBMatchReviewStatus,
   listTMDBMatchReviewAudit,
+  listTMDBMatchReviewPage,
   listTMDBMatchReviews,
 } from './tmdbMatchReviews.js';
 export type {
@@ -81,6 +82,7 @@ export type {
   TMDBMatchReviewReason,
   TMDBMatchReviewSort,
   TMDBMatchReviewStatus,
+  TMDBMatchReviewPage,
   TMDBReviewCandidate,
   TMDBReviewMovieSnapshot,
 } from './tmdbMatchReviews.js';
