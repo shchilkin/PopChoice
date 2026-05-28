@@ -16,7 +16,10 @@ import type {
 } from '@pop-choice/shared';
 import type { CSSProperties, ReactNode } from 'react';
 
+import type { CatalogMaintenanceQueueSnapshot } from '../catalogMaintenanceQueue';
+import { CatalogHealthLiveRefresh } from './catalogHealthLiveRefresh';
 import { CatalogRepairEnhancement } from './catalogRepairEnhancement';
+import type { CatalogHealthLiveData } from '../lib/catalogHealthLive';
 import {
   DEFAULT_BULK_REPAIR_LIMIT,
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
@@ -32,7 +35,6 @@ type ShellProps = {
   eyebrow: string;
   description?: ReactNode;
   actions?: ReactNode;
-  autoRefreshSeconds?: number;
   children: ReactNode;
 };
 
@@ -42,14 +44,10 @@ export function BackofficeShell({
   eyebrow,
   description,
   actions,
-  autoRefreshSeconds,
   children,
 }: ShellProps) {
   return (
     <>
-      {autoRefreshSeconds ? (
-        <meta httpEquiv="refresh" content={String(autoRefreshSeconds)} />
-      ) : null}
       <div className="topbar">
         <div className="topbar-inner">
           <a className="brand" href="/" aria-label="PopChoice Backoffice home">
@@ -234,9 +232,11 @@ function CatalogStat({
 function CatalogStatusStrip({
   activeIssues,
   duplicateGroups,
+  queueSnapshot,
 }: {
   activeIssues: number;
   duplicateGroups: number;
+  queueSnapshot: CatalogMaintenanceQueueSnapshot;
 }) {
   const isHealthy = activeIssues === 0 && duplicateGroups === 0;
 
@@ -262,6 +262,48 @@ function CatalogStatusStrip({
         </span>
         <span className={`pill ${duplicateGroups > 0 ? 'warning' : 'good'}`}>
           {duplicateGroups} duplicate groups
+        </span>
+        <span className={`pill ${queueSnapshot.available ? 'good' : 'warning'}`}>
+          {queueSnapshot.available
+            ? `${queueSnapshot.openJobs} catalog queue open`
+            : 'Catalog queue unavailable'}
+        </span>
+      </div>
+    </section>
+  );
+}
+
+function CatalogQueueStatus({ snapshot }: { snapshot: CatalogMaintenanceQueueSnapshot }) {
+  const state = !snapshot.available ? 'warning' : snapshot.openJobs > 0 ? 'neutral' : 'healthy';
+
+  return (
+    <section className="queue-status" aria-label="Catalog maintenance queue status">
+      <div>
+        <div className="queue-status-title">
+          <span className={`queue-dot ${state}`} aria-hidden="true" />
+          <span>Catalog maintenance queue</span>
+        </div>
+        <p>
+          {snapshot.available
+            ? `Synced from BullMQ at ${formatBackofficeDateTime(snapshot.updatedAt)}.`
+            : 'REDIS_URL is unavailable, so backoffice cannot read BullMQ state.'}
+        </p>
+      </div>
+      <div className="queue-counts">
+        <span>
+          <strong>{snapshot.counts.waiting}</strong> waiting
+        </span>
+        <span>
+          <strong>{snapshot.counts.active}</strong> active
+        </span>
+        <span>
+          <strong>{snapshot.counts.delayed + snapshot.counts.prioritized}</strong> scheduled
+        </span>
+        <span>
+          <strong>{snapshot.counts.failed}</strong> failed
+        </span>
+        <span>
+          <strong>{snapshot.counts.completed}</strong> completed
         </span>
       </div>
     </section>
@@ -624,13 +666,17 @@ function DuplicateReport({
 
 export function CatalogHealthPage({
   auditPage,
+  initialLiveData,
   issueMoviePage,
+  queueSnapshot,
   report,
   repairStatus,
 }: {
   report: CatalogHealthReport;
   auditPage: CatalogRepairActionAuditPage;
+  initialLiveData: CatalogHealthLiveData;
   issueMoviePage: CatalogHealthIssueMoviePage | null;
+  queueSnapshot: CatalogMaintenanceQueueSnapshot;
   repairStatus: string | null;
 }) {
   const activeIssues = report.issues.filter((issue) => issue.count > 0).length;
@@ -643,17 +689,25 @@ export function CatalogHealthPage({
       title="Catalog Health"
       eyebrow="Catalog operations"
       description={
-        <>Generated {formatBackofficeDateTime(report.generatedAt)}. Refreshes every 60 seconds.</>
+        <>
+          Generated {formatBackofficeDateTime(report.generatedAt)}. Live refresh is enabled without
+          a full page reload.
+        </>
       }
       actions={
         <a className="button" href="/">
           Refresh
         </a>
       }
-      autoRefreshSeconds={60}
     >
       <RepairFlash repairStatus={repairStatus} />
-      <CatalogStatusStrip activeIssues={activeIssues} duplicateGroups={duplicateGroups} />
+      <CatalogHealthLiveRefresh initialData={initialLiveData} intervalSeconds={12} />
+      <CatalogStatusStrip
+        activeIssues={activeIssues}
+        duplicateGroups={duplicateGroups}
+        queueSnapshot={queueSnapshot}
+      />
+      <CatalogQueueStatus snapshot={queueSnapshot} />
       <section className="summary" aria-label="Catalog health summary">
         <CatalogStat label="Movies" value={report.totalMovies} meta="Catalog rows tracked" />
         <CatalogStat

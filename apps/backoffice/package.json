@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@pop-choice/shared": "*",
+    "@tanstack/react-query": "^5.100.14",
     "bullmq": "^5.77.3",
     "ioredis": "^5.10.1",
     "next": "^16.2.6",
