@@ -27,6 +27,7 @@ export interface EnqueueCatalogBackfillMovieResult {
   jobName: string;
   jobId: string;
   language: string;
+  status: 'queued' | 'deduped';
 }
 
 type CatalogBackfillMovieJobData = {
@@ -38,6 +39,14 @@ type CatalogBackfillMovieJobData = {
 
 let redisConnection: Redis | null = null;
 let catalogMaintenanceQueue: Queue<CatalogBackfillMovieJobData> | null = null;
+
+const ACTIVE_DEDUPE_STATES = new Set([
+  'active',
+  'delayed',
+  'prioritized',
+  'waiting',
+  'waiting-children',
+]);
 
 function normalizeLanguage(language?: string): string {
   return (language ?? DEFAULT_TMDB_LANGUAGE).trim() || DEFAULT_TMDB_LANGUAGE;
@@ -78,6 +87,23 @@ export async function enqueueCatalogBackfillMovieFromBackoffice(
 
   const language = normalizeLanguage(input.language);
   const jobId = getCatalogBackfillMovieJobId(input.movieId);
+  const existingJob = await queue.getJob(jobId);
+
+  if (existingJob) {
+    const state = await existingJob.getState();
+    if (ACTIVE_DEDUPE_STATES.has(state)) {
+      return {
+        queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+        jobName: CATALOG_BACKFILL_MOVIE_JOB_NAME,
+        jobId: String(existingJob.id ?? jobId),
+        language,
+        status: 'deduped',
+      };
+    }
+
+    await existingJob.remove();
+  }
+
   const job = await queue.add(
     CATALOG_BACKFILL_MOVIE_JOB_NAME,
     {
@@ -97,5 +123,6 @@ export async function enqueueCatalogBackfillMovieFromBackoffice(
     jobName: CATALOG_BACKFILL_MOVIE_JOB_NAME,
     jobId: String(job.id ?? jobId),
     language,
+    status: 'queued',
   };
 }

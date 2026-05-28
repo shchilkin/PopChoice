@@ -15,7 +15,11 @@ import type {
 import type { CSSProperties, ReactNode } from 'react';
 
 import { CatalogRepairEnhancement } from './catalogRepairEnhancement';
-import { formatBackofficeDateTime, REPAIRABLE_CATALOG_ISSUE_KEYS } from '../lib/backoffice';
+import {
+  DEFAULT_BULK_REPAIR_LIMIT,
+  formatBackofficeDateTime,
+  REPAIRABLE_CATALOG_ISSUE_KEYS,
+} from '../lib/backoffice';
 
 type Section = 'health' | 'reviews';
 
@@ -253,6 +257,28 @@ function SampleRows({ issueKey, samples }: { issueKey: string; samples: CatalogM
   );
 }
 
+function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
+  const batchLimit = Math.min(issue.count, DEFAULT_BULK_REPAIR_LIMIT);
+
+  return (
+    <form
+      className="bulk-repair-form"
+      method="post"
+      action="/catalog-health/actions"
+      data-bulk-repair-form
+      data-confirm-message={`Queue up to ${batchLimit} repair jobs for ${issue.label}? Workers will keep the existing TMDB/OpenAI pacing.`}
+    >
+      <input type="hidden" name="action" value="bulk_enqueue_backfill" />
+      <input type="hidden" name="issue_key" value={issue.key} />
+      <input type="hidden" name="batch_limit" value={batchLimit} />
+      <button className="button secondary small" type="submit" data-repair-submit>
+        Queue next {batchLimit}
+      </button>
+      <span className="repair-message" aria-live="polite" data-repair-message />
+    </form>
+  );
+}
+
 function CatalogIssuePanel({ issue }: { issue: CatalogHealthIssue }) {
   const severity = issue.count > 0 ? 'needs-work' : 'healthy';
   const canRepair = REPAIRABLE_CATALOG_ISSUE_KEYS.has(issue.key);
@@ -272,7 +298,10 @@ function CatalogIssuePanel({ issue }: { issue: CatalogHealthIssue }) {
           </div>
           <div className="issue-hint">{catalogIssueHint(issue.key)}</div>
         </div>
-        <CountPill count={issue.count} state={state} />
+        <div className="panel-actions">
+          <CountPill count={issue.count} state={state} />
+          {canRepair && issue.count > 0 ? <BulkRepairForm issue={issue} /> : null}
+        </div>
       </div>
       {issue.count === 0 ? (
         <p className="empty">No affected movies.</p>
@@ -293,12 +322,33 @@ function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
     );
   }
 
+  if (repairStatus === 'bulk-queued') {
+    return (
+      <div className="notice good">
+        Catalog repair batch queued. Workers will process jobs through the existing rate-limited
+        TMDB path.
+      </div>
+    );
+  }
+
+  if (repairStatus === 'bulk-partial') {
+    return (
+      <div className="notice warn">
+        Catalog repair batch partially queued. Check the recent repair audit before retrying.
+      </div>
+    );
+  }
+
   if (repairStatus === 'unavailable') {
     return (
       <div className="notice warn">
         Catalog repair queue is unavailable. Check REDIS_URL and the backoffice logs.
       </div>
     );
+  }
+
+  if (repairStatus === 'empty') {
+    return <div className="notice warn">No affected movies are currently available to queue.</div>;
   }
 
   if (repairStatus === 'failed') {

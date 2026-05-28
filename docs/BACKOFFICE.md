@@ -78,6 +78,13 @@ Mutation flows are deliberately narrow:
   states without a full page reload, successful enqueue attempts disable the
   clicked action, and the queued sample row is removed from the visible table.
   The non-JavaScript form redirect flow remains available.
+- [#593](https://github.com/shchilkin/PopChoice/issues/593): repairable
+  catalog-health panels can queue a bounded batch of `backfill-movie` jobs from
+  the current issue group. Bulk enqueueing preserves the same
+  `catalog-maintenance` worker pacing, uses deterministic job ids for dedupe,
+  confirms the operator intent in the enhanced UI, reports partial enqueue
+  results explicitly, and records a grouped `bulk_enqueue_backfill` audit
+  summary with queued, deduped, unavailable, and failed counts.
 
 Shared operator auth is the login model for public exposure:
 
@@ -130,14 +137,22 @@ The app needs:
 ## Catalog Repair Workflow
 
 The catalog-health home page shows sample rows for missing metadata and stale
-TMDB coverage. Repairable rows have a `Queue backfill` button. This is
+TMDB coverage. Repairable rows have a `Queue backfill` button, and repairable
+issue panels can queue a bounded "next batch" of affected movies. This is
 intentionally conservative:
 
-- the button queues the same `backfill-movie` job that workers already process
-  through the `catalog-maintenance` queue;
+- one-off and bulk buttons queue the same `backfill-movie` job that workers
+  already process through the `catalog-maintenance` queue;
+- bulk actions are capped, start from the first affected rows for the issue
+  group, and rely on existing worker-side TMDB/OpenAI pacing rather than
+  bypassing rate limits;
+- deterministic `backfill-<movieId>` job ids let the action report deduped jobs
+  instead of enqueueing duplicate in-flight work; completed and failed retained
+  jobs are removed before retrying so stale BullMQ history does not block future
+  repairs;
 - duplicate identity groups remain read-only because they can require manual
   merge decisions;
-- backoffice stores the movie snapshot and queue result in
+- backoffice stores one-off movie snapshots and bulk queue summaries in
   `catalog_repair_audit`, which gives operators a recovery trail without
   editing the catalog directly from the HTML form.
 

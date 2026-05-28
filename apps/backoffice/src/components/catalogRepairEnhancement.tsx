@@ -50,11 +50,16 @@ export function CatalogRepairEnhancement() {
 
     const cleanups: Array<() => void> = [];
     const timeouts: number[] = [];
-    const forms = document.querySelectorAll<HTMLFormElement>('[data-repair-form]');
+    const forms = document.querySelectorAll<HTMLFormElement>(
+      '[data-repair-form], [data-bulk-repair-form]',
+    );
 
     forms.forEach((form) => {
       const submit = async (event: SubmitEvent) => {
         event.preventDefault();
+
+        const confirmMessage = form.dataset.confirmMessage;
+        if (confirmMessage && !window.confirm(confirmMessage)) return;
 
         const row = form.closest<HTMLTableRowElement>('[data-repair-row]');
         const originalText =
@@ -72,14 +77,25 @@ export function CatalogRepairEnhancement() {
           });
           const payload = (await response.json().catch(() => null)) as {
             message?: string;
+            mode?: string;
             status?: string;
+            summary?: {
+              queued?: number;
+              deduped?: number;
+              failed?: number;
+              unavailable?: number;
+            };
           } | null;
 
           if (response.ok && payload?.status === 'queued') {
             row?.classList.remove('repair-pending');
             row?.classList.add('repair-queued');
             setButton(form, 'Queued', true);
-            setMessage(form, 'Queued for workers', 'good');
+            const bulkSummary = payload.mode === 'bulk' ? payload.summary : null;
+            const bulkMessage = bulkSummary
+              ? `Queued ${bulkSummary.queued ?? 0}, deduped ${bulkSummary.deduped ?? 0}`
+              : 'Queued for workers';
+            setMessage(form, bulkMessage, 'good');
 
             if (row) {
               const timeoutId = window.setTimeout(() => {
@@ -90,6 +106,18 @@ export function CatalogRepairEnhancement() {
               }, 450);
               timeouts.push(timeoutId);
             }
+            return;
+          }
+
+          if (response.ok && payload?.status === 'partial') {
+            const bulkSummary = payload.summary;
+            row?.classList.remove('repair-pending');
+            setButton(form, originalText, false);
+            setMessage(
+              form,
+              `Partial: queued ${bulkSummary?.queued ?? 0}, deduped ${bulkSummary?.deduped ?? 0}, failed ${bulkSummary?.failed ?? 0}, unavailable ${bulkSummary?.unavailable ?? 0}`,
+              'warn',
+            );
             return;
           }
 

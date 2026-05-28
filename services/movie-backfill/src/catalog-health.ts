@@ -1,6 +1,12 @@
-export { formatCatalogHealthReport, getCatalogHealthReport } from '@pop-choice/shared';
+export {
+  formatCatalogHealthReport,
+  getCatalogHealthReport,
+  isCatalogHealthIssueKey,
+  listCatalogHealthIssueMoviePage,
+} from '@pop-choice/shared';
 export type {
   CatalogHealthIssue,
+  CatalogHealthIssueMoviePage,
   CatalogHealthOptions,
   CatalogHealthReport,
   CatalogMovieSample,
