@@ -36,18 +36,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           ok: result.status === 'queued',
+          mode: result.mode,
           status: result.status,
           message: catalogRepairMessage(result.status),
           issueKey: result.issueKey,
-          movieId: result.movieId,
-          job: result.job,
+          ...(result.mode === 'single'
+            ? { movieId: result.movieId, job: result.job }
+            : { summary: result.summary }),
         },
-        { status: result.status === 'queued' ? 200 : 503 },
+        {
+          status:
+            result.status === 'unavailable'
+              ? 503
+              : result.status === 'failed'
+                ? 500
+                : result.status === 'partial'
+                  ? 207
+                  : 200,
+        },
       );
     }
 
     return NextResponse.redirect(
-      new URL(result.status === 'queued' ? '/?repair=queued' : '/?repair=unavailable', request.url),
+      new URL(
+        result.status === 'queued'
+          ? `/?repair=${result.mode === 'bulk' ? 'bulk-queued' : 'queued'}`
+          : result.status === 'partial'
+            ? '/?repair=bulk-partial'
+            : result.status === 'empty'
+              ? '/?repair=empty'
+              : result.status === 'failed'
+                ? '/?repair=failed'
+                : '/?repair=unavailable',
+        request.url,
+      ),
       303,
     );
   } catch (error) {

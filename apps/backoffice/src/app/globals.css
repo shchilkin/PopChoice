@@ -363,6 +363,13 @@ input:disabled {
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
+.panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .count {
   min-width: 48px;
   text-align: center;
@@ -618,6 +625,13 @@ input:disabled {
 .repair-form {
   display: grid;
   gap: 6px;
+  margin: 0;
+}
+.bulk-repair-form {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   margin: 0;
 }
 .repair-message {

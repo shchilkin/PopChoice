@@ -44,6 +44,15 @@ export interface CatalogHealthReport {
   duplicateNormalizedTitleYears: DuplicateIdentityReport;
 }
 
+export interface CatalogHealthIssueMoviePage {
+  issueKey: string;
+  label: string;
+  totalCount: number;
+  limit: number;
+  offset: number;
+  movies: CatalogMovieSample[];
+}
+
 interface SummaryRow {
   total_movies: number;
   missing_poster_url: number;
@@ -131,6 +140,9 @@ const ISSUE_DEFINITIONS: IssueDefinition[] = [
   },
 ];
 
+export const MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE = 100;
+export const MAX_CATALOG_HEALTH_ISSUE_OFFSET = 100_000;
+
 function toNumber(value: number | string | null | undefined): number {
   if (value === null || value === undefined) return 0;
   return Number(value);
@@ -147,6 +159,80 @@ function normalizeSample(row: CatalogMovieSample): CatalogMovieSample {
     duration: Number(row.duration),
     age_rating: row.age_rating,
     tmdb_matched_at: row.tmdb_matched_at,
+  };
+}
+
+function clampLimit(limit: number): number {
+  return Number.isSafeInteger(limit) && limit > 0
+    ? Math.min(limit, MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE)
+    : MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE;
+}
+
+function clampOffset(offset: number): number {
+  return Number.isSafeInteger(offset) && offset > 0
+    ? Math.min(offset, MAX_CATALOG_HEALTH_ISSUE_OFFSET)
+    : 0;
+}
+
+function getIssueDefinition(issueKey: string): IssueDefinition | null {
+  return ISSUE_DEFINITIONS.find((issue) => issue.key === issueKey) ?? null;
+}
+
+export function isCatalogHealthIssueKey(issueKey: string): boolean {
+  return getIssueDefinition(issueKey) !== null;
+}
+
+export async function listCatalogHealthIssueMoviePage({
+  issueKey,
+  limit,
+  offset,
+  staleAfterDays,
+}: {
+  issueKey: string;
+  limit: number;
+  offset: number;
+  staleAfterDays: number;
+}): Promise<CatalogHealthIssueMoviePage> {
+  const issue = getIssueDefinition(issueKey);
+  if (!issue) {
+    throw new Error(`Unsupported catalog-health issue "${issueKey}".`);
+  }
+
+  const boundedLimit = clampLimit(limit);
+  const boundedOffset = clampOffset(offset);
+  const countParams = issue.key === 'stale_tmdb_metadata' ? [staleAfterDays] : [];
+  const pageParams =
+    issue.key === 'stale_tmdb_metadata'
+      ? [staleAfterDays, boundedLimit, boundedOffset]
+      : [boundedLimit, boundedOffset];
+  const limitParam = issue.key === 'stale_tmdb_metadata' ? '$2' : '$1';
+  const offsetParam = issue.key === 'stale_tmdb_metadata' ? '$3' : '$2';
+
+  const [countResult, pageResult] = await Promise.all([
+    getPool().query<{ count: number | string }>(
+      `SELECT COUNT(*)::int AS count
+         FROM movies
+        WHERE ${issue.where}`,
+      countParams,
+    ),
+    getPool().query<CatalogMovieSample>(
+      `SELECT id::text, name, year, tmdb_id, poster_url, localized_name, duration, age_rating, tmdb_matched_at::text
+         FROM movies
+        WHERE ${issue.where}
+        ORDER BY id
+        LIMIT ${limitParam}
+        OFFSET ${offsetParam}`,
+      pageParams,
+    ),
+  ]);
+
+  return {
+    issueKey,
+    label: issue.label,
+    totalCount: toNumber(countResult.rows[0]?.count),
+    limit: boundedLimit,
+    offset: boundedOffset,
+    movies: pageResult.rows.map(normalizeSample),
   };
 }
 

@@ -1,6 +1,6 @@
 import { getPool } from './db.js';
 
-export type CatalogRepairAction = 'enqueue_backfill';
+export type CatalogRepairAction = 'enqueue_backfill' | 'bulk_enqueue_backfill';
 
 export interface CatalogRepairMovieSnapshot {
   id: string;
@@ -112,9 +112,17 @@ export async function ensureCatalogRepairActionSchema(): Promise<void> {
       result jsonb NOT NULL DEFAULT '{}'::jsonb,
       created_at timestamptz NOT NULL DEFAULT now(),
       CONSTRAINT catalog_repair_audit_action_check CHECK (
-        action IN ('enqueue_backfill')
+        action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
       )
     );
+
+    ALTER TABLE catalog_repair_audit
+      DROP CONSTRAINT IF EXISTS catalog_repair_audit_action_check;
+
+    ALTER TABLE catalog_repair_audit
+      ADD CONSTRAINT catalog_repair_audit_action_check CHECK (
+        action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
+      );
 
     CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_target_created_at
       ON catalog_repair_audit (target_type, target_id, created_at DESC);
