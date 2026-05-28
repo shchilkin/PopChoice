@@ -44,6 +44,14 @@ function formBody(form: HTMLFormElement): URLSearchParams {
   return body;
 }
 
+export function formActionUrl(
+  form: Pick<HTMLFormElement, 'getAttribute'>,
+  baseUrl = window.location.href,
+): string {
+  const action = form.getAttribute('action');
+  return new URL(action || baseUrl, baseUrl).toString();
+}
+
 export function CatalogRepairEnhancement() {
   useEffect(() => {
     if (!window.fetch || !window.FormData) return undefined;
@@ -70,7 +78,7 @@ export function CatalogRepairEnhancement() {
         setMessage(form, 'Queueing...', '');
 
         try {
-          const response = await fetch(form.action, {
+          const response = await fetch(formActionUrl(form), {
             body: formBody(form),
             headers: { Accept: 'application/json', 'X-Requested-With': 'fetch' },
             method: 'POST',
