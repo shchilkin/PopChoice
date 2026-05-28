@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./catalogHealth": {
+      "types": "./dist/catalogHealth.d.ts",
+      "default": "./dist/catalogHealth.js"
+    },
     "./tmdbMatchReviews": {
       "types": "./dist/tmdbMatchReviews.d.ts",
       "default": "./dist/tmdbMatchReviews.js"

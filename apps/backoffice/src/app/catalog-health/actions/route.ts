@@ -44,7 +44,16 @@ export async function POST(request: NextRequest) {
             ? { movieId: result.movieId, job: result.job }
             : { summary: result.summary }),
         },
-        { status: result.status === 'unavailable' ? 503 : result.status === 'partial' ? 207 : 200 },
+        {
+          status:
+            result.status === 'unavailable'
+              ? 503
+              : result.status === 'failed'
+                ? 500
+                : result.status === 'partial'
+                  ? 207
+                  : 200,
+        },
       );
     }
 
@@ -56,7 +65,9 @@ export async function POST(request: NextRequest) {
             ? '/?repair=bulk-partial'
             : result.status === 'empty'
               ? '/?repair=empty'
-              : '/?repair=unavailable',
+              : result.status === 'failed'
+                ? '/?repair=failed'
+                : '/?repair=unavailable',
         request.url,
       ),
       303,

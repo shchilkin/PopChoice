@@ -3,7 +3,7 @@ export {
   getCatalogHealthReport,
   isCatalogHealthIssueKey,
   listCatalogHealthIssueMoviePage,
-} from '@pop-choice/shared';
+} from '@pop-choice/shared/catalogHealth';
 export type {
   CatalogHealthIssue,
   CatalogHealthIssueMoviePage,
@@ -12,4 +12,4 @@ export type {
   CatalogMovieSample,
   DuplicateIdentityGroup,
   DuplicateIdentityReport,
-} from '@pop-choice/shared';
+} from '@pop-choice/shared/catalogHealth';

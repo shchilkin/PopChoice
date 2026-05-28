@@ -230,6 +230,9 @@ export function catalogRepairMessage(status: CatalogRepairActionResult['status']
   if (status === 'partial') {
     return 'Catalog repair batch partially queued. Review the queued, deduped, unavailable, and failed counts.';
   }
+  if (status === 'failed') {
+    return 'Catalog repair jobs failed to enqueue. Check backoffice logs before retrying.';
+  }
 
   return 'Catalog repair queue is unavailable. Check REDIS_URL and the backoffice logs.';
 }
@@ -244,7 +247,7 @@ export type CatalogRepairActionResult =
     }
   | {
       mode: 'bulk';
-      status: 'queued' | 'partial' | 'unavailable' | 'empty';
+      status: 'queued' | 'partial' | 'failed' | 'unavailable' | 'empty';
       issueKey: string;
       summary: CatalogBulkRepairSummary;
     };
@@ -352,7 +355,9 @@ async function performBulkCatalogRepairAction(
           ? 'partial'
           : summary.queued + summary.deduped > 0
             ? 'queued'
-            : 'unavailable',
+            : summary.failed > 0
+              ? 'failed'
+              : 'unavailable',
     issueKey,
     summary,
   };
