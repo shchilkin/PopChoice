@@ -657,6 +657,32 @@ input:disabled {
   color: var(--accent);
   background: var(--accent-soft);
 }
+.repair-status {
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.repair-completed,
+.repair-completed_resolved,
+.repair-queued,
+.repair-deduped {
+  color: var(--good);
+  background: var(--good-soft);
+}
+.repair-completed_unresolved,
+.repair-enqueueing,
+.repair-processing,
+.repair-pending,
+.repair-partial,
+.repair-empty {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.repair-failed,
+.repair-enqueue_failed,
+.repair-unavailable {
+  color: var(--bad);
+  background: var(--bad-soft);
+}
 .pill.reason-runtime {
   color: var(--bad);
   background: var(--bad-soft);
@@ -760,6 +786,30 @@ input:disabled {
   color: var(--muted);
   font-weight: 750;
   text-align: center;
+}
+.repair-batch-table {
+  min-width: 980px;
+}
+.repair-counts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+.repair-counts span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: #111419;
+  white-space: nowrap;
+}
+.batch-summary {
+  margin-top: 0;
+}
+.loading-panel {
+  min-height: 150px;
 }
 .pagination {
   display: flex;
