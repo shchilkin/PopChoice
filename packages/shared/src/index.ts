@@ -42,6 +42,7 @@ export type { OperatorAuthConfig } from './operatorAuth.js';
 export { readBackofficeRuntimeConfig, readBullBoardRuntimeConfig } from './runtimeConfig.js';
 export type { BackofficeRuntimeConfig, BullBoardRuntimeConfig } from './runtimeConfig.js';
 export {
+  CATALOG_HEALTH_ISSUE_DEFINITIONS,
   formatCatalogHealthReport,
   getCatalogHealthReport,
   isCatalogHealthIssueResolvedForMovie,
@@ -51,6 +52,7 @@ export {
   MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE,
 } from './catalogHealth.js';
 export type {
+  CatalogHealthIssueDefinition,
   CatalogHealthIssueMoviePage,
   CatalogHealthIssue,
   CatalogHealthOptions,
@@ -105,6 +107,19 @@ export {
   listTMDBMatchReviews,
   MAX_TMDB_MATCH_REVIEW_OFFSET,
 } from './tmdbMatchReviews.js';
+export { getCatalogMovieDetail } from './catalogMovieDetail.js';
+export type {
+  CatalogMovieDetail,
+  CatalogMovieDetailDuplicateContext,
+  CatalogMovieDetailHealthFlag,
+  CatalogMovieDetailMovie,
+  CatalogMovieDetailOptions,
+  CatalogMovieDetailPeer,
+  CatalogMovieDetailPersonCredit,
+  CatalogMovieDetailResult,
+  CatalogMovieDetailTaxonomyItem,
+  CatalogMovieDetailTMDBReview,
+} from './catalogMovieDetail.js';
 export type {
   ApplyTMDBMatchReviewActionInput,
   ListTMDBMatchReviewsOptions,

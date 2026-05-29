@@ -68,73 +68,74 @@ interface SummaryRow {
   missing_keyword_metadata: number;
 }
 
-interface IssueDefinition {
+export interface CatalogHealthIssueDefinition {
   key: keyof Omit<SummaryRow, 'total_movies'>;
   label: string;
-  where: string;
+  where: (staleAfterDaysParam: string) => string;
 }
 
-const ISSUE_DEFINITIONS: IssueDefinition[] = [
+export const CATALOG_HEALTH_ISSUE_DEFINITIONS: CatalogHealthIssueDefinition[] = [
   {
     key: 'missing_poster_url',
     label: 'Missing poster_url',
-    where: "poster_url IS NULL OR btrim(poster_url) = ''",
+    where: () => "poster_url IS NULL OR btrim(poster_url) = ''",
   },
   {
     key: 'missing_localized_name',
     label: 'Missing localized_name',
-    where: "localized_name IS NULL OR btrim(localized_name) = ''",
+    where: () => "localized_name IS NULL OR btrim(localized_name) = ''",
   },
   {
     key: 'missing_tmdb_id',
     label: 'Missing tmdb_id',
-    where: 'tmdb_id IS NULL',
+    where: () => 'tmdb_id IS NULL',
   },
   {
     key: 'missing_runtime',
     label: 'Missing runtime',
-    where: 'duration <= 0',
+    where: () => 'duration <= 0',
   },
   {
     key: 'missing_age_rating',
     label: 'Missing age_rating',
-    where: "age_rating IS NULL OR btrim(age_rating) = ''",
+    where: () => "age_rating IS NULL OR btrim(age_rating) = ''",
   },
   {
     key: 'missing_tmdb_matched_at',
     label: 'TMDB-backed rows missing tmdb_matched_at',
-    where: 'tmdb_id IS NOT NULL AND tmdb_matched_at IS NULL',
+    where: () => 'tmdb_id IS NOT NULL AND tmdb_matched_at IS NULL',
   },
   {
     key: 'stale_tmdb_metadata',
     label: 'Stale TMDB metadata',
-    where: "tmdb_id IS NOT NULL AND tmdb_matched_at < now() - ($1::int * interval '1 day')",
+    where: (staleAfterDaysParam) =>
+      `tmdb_id IS NOT NULL AND tmdb_matched_at < now() - (${staleAfterDaysParam}::int * interval '1 day')`,
   },
   {
     key: 'missing_cast_metadata',
     label: 'Missing cast metadata',
-    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'cast'
     )`,
   },
   {
     key: 'missing_director_metadata',
     label: 'Missing director metadata',
-    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'director'
     )`,
   },
   {
     key: 'missing_genre_metadata',
     label: 'Missing genre metadata',
-    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM movie_genres WHERE movie_genres.movie_id = movies.id
     )`,
   },
   {
     key: 'missing_keyword_metadata',
     label: 'Missing keyword metadata',
-    where: `tmdb_id IS NOT NULL AND NOT EXISTS (
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
       SELECT 1 FROM movie_keywords WHERE movie_keywords.movie_id = movies.id
     )`,
   },
@@ -174,8 +175,8 @@ function clampOffset(offset: number): number {
     : 0;
 }
 
-function getIssueDefinition(issueKey: string): IssueDefinition | null {
-  return ISSUE_DEFINITIONS.find((issue) => issue.key === issueKey) ?? null;
+function getIssueDefinition(issueKey: string): CatalogHealthIssueDefinition | null {
+  return CATALOG_HEALTH_ISSUE_DEFINITIONS.find((issue) => issue.key === issueKey) ?? null;
 }
 
 export function isCatalogHealthIssueKey(issueKey: string): boolean {
@@ -203,7 +204,7 @@ export async function isCatalogHealthIssueResolvedForMovie({
        SELECT 1
          FROM movies
         WHERE id = ${movieIdParam}
-          AND (${issue.where})
+          AND (${issue.where('$1')})
      ) AS issue_exists`,
     params,
   );
@@ -241,13 +242,13 @@ export async function listCatalogHealthIssueMoviePage({
     getPool().query<{ count: number | string }>(
       `SELECT COUNT(*)::int AS count
          FROM movies
-        WHERE ${issue.where}`,
+        WHERE ${issue.where('$1')}`,
       countParams,
     ),
     getPool().query<CatalogMovieSample>(
       `SELECT id::text, name, year, tmdb_id, poster_url, localized_name, duration, age_rating, tmdb_matched_at::text
          FROM movies
-        WHERE ${issue.where}
+        WHERE ${issue.where('$1')}
         ORDER BY id
         LIMIT ${limitParam}
         OFFSET ${offsetParam}`,
@@ -281,7 +282,7 @@ function parseMovies(
 }
 
 async function getIssueSamples(
-  issue: IssueDefinition,
+  issue: CatalogHealthIssueDefinition,
   options: CatalogHealthOptions,
 ): Promise<CatalogMovieSample[]> {
   const params =
@@ -292,7 +293,7 @@ async function getIssueSamples(
   const result = await getPool().query<CatalogMovieSample>(
     `SELECT id::text, name, year, tmdb_id, poster_url, localized_name, duration, age_rating, tmdb_matched_at::text
        FROM movies
-      WHERE ${issue.where}
+      WHERE ${issue.where('$1')}
       ORDER BY id
       LIMIT ${limitParam}`,
     params,
@@ -467,7 +468,7 @@ export async function getCatalogHealthReport(
 ): Promise<CatalogHealthReport> {
   const summary = await getSummary(options.staleAfterDays);
   const issues = await Promise.all(
-    ISSUE_DEFINITIONS.map(async (issue) => {
+    CATALOG_HEALTH_ISSUE_DEFINITIONS.map(async (issue) => {
       const count = summary[issue.key];
       return {
         key: issue.key,
