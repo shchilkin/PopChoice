@@ -12,6 +12,10 @@
       "types": "./dist/catalogHealth.d.ts",
       "default": "./dist/catalogHealth.js"
     },
+    "./catalogMovieDetail": {
+      "types": "./dist/catalogMovieDetail.d.ts",
+      "default": "./dist/catalogMovieDetail.js"
+    },
     "./tmdbMatchReviews": {
       "types": "./dist/tmdbMatchReviews.d.ts",
       "default": "./dist/tmdbMatchReviews.js"
