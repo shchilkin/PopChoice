@@ -1258,7 +1258,10 @@ function formatDuration(minutes: number): string {
 }
 
 function formatTMDBMetadataValue(value: unknown): string {
-  if (typeof value === 'string' && value.trim() !== '') return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed === '' ? '-' : trimmed;
+  }
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return '-';
 }
@@ -1431,7 +1434,7 @@ function PeopleTable({
           </tr>
         </thead>
         <tbody>
-          {people.slice(0, 12).map((person) => (
+          {people.map((person) => (
             <tr key={person.id}>
               <td>
                 <strong>{person.name}</strong>
