@@ -182,6 +182,35 @@ export function isCatalogHealthIssueKey(issueKey: string): boolean {
   return getIssueDefinition(issueKey) !== null;
 }
 
+export async function isCatalogHealthIssueResolvedForMovie({
+  issueKey,
+  movieId,
+  staleAfterDays,
+}: {
+  issueKey: string;
+  movieId: string | number;
+  staleAfterDays: number;
+}): Promise<boolean> {
+  const issue = getIssueDefinition(issueKey);
+  if (!issue) {
+    throw new Error(`Unsupported catalog-health issue "${issueKey}".`);
+  }
+
+  const params = issue.key === 'stale_tmdb_metadata' ? [staleAfterDays, movieId] : [movieId];
+  const movieIdParam = issue.key === 'stale_tmdb_metadata' ? '$2' : '$1';
+  const result = await getPool().query<{ issue_exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM movies
+        WHERE id = ${movieIdParam}
+          AND (${issue.where})
+     ) AS issue_exists`,
+    params,
+  );
+
+  return !Boolean(result.rows[0]?.issue_exists);
+}
+
 export async function listCatalogHealthIssueMoviePage({
   issueKey,
   limit,

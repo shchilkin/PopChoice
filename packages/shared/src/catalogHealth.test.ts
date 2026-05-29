@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeDatabase, initDatabase } from './db.js';
 import {
+  isCatalogHealthIssueResolvedForMovie,
   isCatalogHealthIssueKey,
   listCatalogHealthIssueMoviePage,
   MAX_CATALOG_HEALTH_ISSUE_OFFSET,
@@ -94,6 +95,39 @@ describe('catalog health issue movie pages', () => {
     expect(String(poolMock.query.mock.calls[1][0])).toContain('OFFSET $3');
   });
 
+  it('re-checks whether one movie still matches the original issue predicate', async () => {
+    poolMock.query.mockResolvedValueOnce({ rows: [{ issue_exists: false }] });
+
+    await expect(
+      isCatalogHealthIssueResolvedForMovie({
+        issueKey: 'missing_poster_url',
+        movieId: '334',
+        staleAfterDays: 180,
+      }),
+    ).resolves.toBe(true);
+
+    expect(String(poolMock.query.mock.calls[0][0])).toContain('WHERE id = $1');
+    expect(String(poolMock.query.mock.calls[0][0])).toContain(
+      "poster_url IS NULL OR btrim(poster_url) = ''",
+    );
+    expect(poolMock.query.mock.calls[0][1]).toEqual(['334']);
+  });
+
+  it('keeps stale metadata threshold parameterized when re-checking one movie', async () => {
+    poolMock.query.mockResolvedValueOnce({ rows: [{ issue_exists: true }] });
+
+    await expect(
+      isCatalogHealthIssueResolvedForMovie({
+        issueKey: 'stale_tmdb_metadata',
+        movieId: '334',
+        staleAfterDays: 90,
+      }),
+    ).resolves.toBe(false);
+
+    expect(String(poolMock.query.mock.calls[0][0])).toContain('WHERE id = $2');
+    expect(poolMock.query.mock.calls[0][1]).toEqual([90, '334']);
+  });
+
   it('rejects unknown issue keys before building SQL', async () => {
     expect(isCatalogHealthIssueKey('missing_poster_url')).toBe(true);
     expect(isCatalogHealthIssueKey('drop table movies')).toBe(false);
@@ -107,5 +141,13 @@ describe('catalog health issue movie pages', () => {
       }),
     ).rejects.toThrow('Unsupported catalog-health issue');
     expect(poolMock.query).not.toHaveBeenCalled();
+
+    await expect(
+      isCatalogHealthIssueResolvedForMovie({
+        issueKey: 'drop table movies',
+        movieId: '334',
+        staleAfterDays: 90,
+      }),
+    ).rejects.toThrow('Unsupported catalog-health issue');
   });
 });

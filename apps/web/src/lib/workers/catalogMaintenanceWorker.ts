@@ -1,10 +1,12 @@
 import {
+  catalogRepairCompletionStatusForResolution,
   createEmbeddings,
   ensureCatalogRepairActionSchema,
   ensureCatalogMetadataSchema,
   getPool,
   initDatabase,
   insertMovies,
+  isCatalogHealthIssueResolvedForMovie,
   refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemStatus,
   upsertMovieCatalogMetadata,
@@ -39,7 +41,11 @@ import type {
   CatalogMaintenanceJobName,
   CatalogSeedTMDBMovieJobData,
 } from '@/lib/jobQueue';
-import type { MovieRecord } from '@pop-choice/shared';
+import type {
+  CatalogRepairBatchItem,
+  CatalogRepairItemStatus,
+  MovieRecord,
+} from '@pop-choice/shared';
 import type { Job } from 'bullmq';
 
 type CatalogWorker = Worker<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>;
@@ -65,6 +71,7 @@ const DEFAULT_TMDB_WINDOW_MS = 10_000;
 const DEFAULT_TMDB_429_BACKOFF_MS = 30_000;
 const DEFAULT_MIN_VOTE_COUNT = 500;
 const DEFAULT_MIN_VOTE_AVERAGE = 6.5;
+const DEFAULT_CATALOG_HEALTH_STALE_DAYS = 180;
 
 let databaseInitialized = false;
 let schemaReadyPromise: Promise<void> | null = null;
@@ -99,14 +106,22 @@ async function ensureCatalogSchema(): Promise<void> {
 
 async function updateRepairBatchItem(
   job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
-  status: 'processing' | 'completed' | 'failed' | 'skipped',
+  status: Extract<
+    CatalogRepairItemStatus,
+    | 'processing'
+    | 'completed'
+    | 'completed_resolved'
+    | 'completed_unresolved'
+    | 'failed'
+    | 'skipped'
+  >,
   options: { errorMessage?: string; result?: Record<string, unknown> } = {},
-): Promise<void> {
+): Promise<CatalogRepairBatchItem | null> {
   const repairBatchItemId =
     job?.data && 'repairBatchItemId' in job.data ? job.data.repairBatchItemId : undefined;
-  if (!repairBatchItemId) return;
+  if (!repairBatchItemId) return null;
 
-  await updateCatalogRepairBatchItemStatus({
+  const item = await updateCatalogRepairBatchItemStatus({
     itemId: repairBatchItemId,
     status,
     errorMessage: options.errorMessage,
@@ -123,6 +138,40 @@ async function updateRepairBatchItem(
   if (repairBatchId) {
     await refreshCatalogRepairBatchCounts(repairBatchId);
   }
+
+  return item;
+}
+
+async function completeRepairBatchItemAfterBackfill({
+  job,
+  repairItem,
+  result,
+}: {
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>;
+  repairItem: CatalogRepairBatchItem | null;
+  result: Record<string, unknown>;
+}): Promise<void> {
+  if (!repairItem) {
+    await updateRepairBatchItem(job, 'completed', { result });
+    return;
+  }
+
+  const issueResolved = await isCatalogHealthIssueResolvedForMovie({
+    issueKey: repairItem.issueKey,
+    movieId: repairItem.movieId,
+    staleAfterDays: parsePositiveIntEnv(
+      'CATALOG_HEALTH_STALE_DAYS',
+      DEFAULT_CATALOG_HEALTH_STALE_DAYS,
+    ),
+  });
+
+  await updateRepairBatchItem(job, catalogRepairCompletionStatusForResolution(issueResolved), {
+    result: {
+      ...result,
+      issueKey: repairItem.issueKey,
+      issueResolved,
+    },
+  });
 }
 
 async function handleRateLimit(
@@ -335,7 +384,7 @@ async function loadBackfillMovie(movieId: string | number): Promise<BackfillMovi
 
 async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Promise<void> {
   await ensureCatalogSchema();
-  await updateRepairBatchItem(
+  const repairItem = await updateRepairBatchItem(
     job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
     'processing',
   );
@@ -346,13 +395,11 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
   const movie = await loadBackfillMovie(job.data.movieId);
   if (!movie) {
     logger.warn({ jobId: job.id, movieId: job.data.movieId }, 'Catalog backfill movie not found');
-    await updateRepairBatchItem(
-      job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-      'skipped',
-      {
-        result: { reason: 'movie_not_found', movieId: String(job.data.movieId) },
-      },
-    );
+    await completeRepairBatchItemAfterBackfill({
+      job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+      repairItem,
+      result: { reason: 'movie_not_found', movieId: String(job.data.movieId) },
+    });
     return;
   }
 
@@ -370,31 +417,27 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
       },
       'Catalog backfill skipped movie without confident TMDB match',
     );
-    await updateRepairBatchItem(
-      job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-      'skipped',
-      {
-        result: {
-          reason: 'tmdb_match_not_confident',
-          movieId: movie.id,
-          matchStatus: match.status,
-          candidateCount: match.candidates.length,
-        },
+    await completeRepairBatchItemAfterBackfill({
+      job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+      repairItem,
+      result: {
+        reason: 'tmdb_match_not_confident',
+        movieId: movie.id,
+        matchStatus: match.status,
+        candidateCount: match.candidates.length,
       },
-    );
+    });
     return;
   }
 
   const details = await fetchMovieDetails(apiKey, match.tmdbId, job.data.language);
   if (!details) {
     logger.warn({ jobId: job.id, tmdbId: match.tmdbId }, 'Catalog backfill found no details');
-    await updateRepairBatchItem(
-      job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-      'skipped',
-      {
-        result: { reason: 'tmdb_details_missing', movieId: movie.id, tmdbId: match.tmdbId },
-      },
-    );
+    await completeRepairBatchItemAfterBackfill({
+      job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+      repairItem,
+      result: { reason: 'tmdb_details_missing', movieId: movie.id, tmdbId: match.tmdbId },
+    });
     return;
   }
 
@@ -451,13 +494,11 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
     { jobId: job.id, movieId: movie.id, tmdbId: match.tmdbId },
     'Catalog backfill completed',
   );
-  await updateRepairBatchItem(
-    job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-    'completed',
-    {
-      result: { movieId: movie.id, tmdbId: match.tmdbId },
-    },
-  );
+  await completeRepairBatchItemAfterBackfill({
+    job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+    repairItem,
+    result: { movieId: movie.id, tmdbId: match.tmdbId },
+  });
 }
 
 export function createCatalogMaintenanceWorker(): CatalogWorker | null {

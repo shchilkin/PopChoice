@@ -44,6 +44,7 @@ export type { BackofficeRuntimeConfig, BullBoardRuntimeConfig } from './runtimeC
 export {
   formatCatalogHealthReport,
   getCatalogHealthReport,
+  isCatalogHealthIssueResolvedForMovie,
   isCatalogHealthIssueKey,
   listCatalogHealthIssueMoviePage,
   MAX_CATALOG_HEALTH_ISSUE_OFFSET,
@@ -60,6 +61,7 @@ export type {
 } from './catalogHealth.js';
 export {
   CATALOG_REPAIR_BATCH_SCHEMA_SQL,
+  catalogRepairCompletionStatusForResolution,
   createCatalogRepairBatch,
   createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
