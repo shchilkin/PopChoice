@@ -193,11 +193,50 @@ export async function ensureTMDBMatchReviewSchema(): Promise<void> {
           'enqueue_failed',
           'processing',
           'completed',
+          'completed_resolved',
+          'completed_unresolved',
           'failed',
           'skipped'
         )
       )
     );
+
+    ALTER TABLE catalog_repair_batches
+      DROP CONSTRAINT IF EXISTS catalog_repair_batches_status_check;
+
+    ALTER TABLE catalog_repair_batches
+      ADD CONSTRAINT catalog_repair_batches_status_check CHECK (
+        status IN (
+          'enqueueing',
+          'queued',
+          'processing',
+          'partial',
+          'failed',
+          'unavailable',
+          'empty',
+          'completed'
+        )
+      );
+
+    ALTER TABLE catalog_repair_batch_items
+      DROP CONSTRAINT IF EXISTS catalog_repair_batch_items_status_check;
+
+    ALTER TABLE catalog_repair_batch_items
+      ADD CONSTRAINT catalog_repair_batch_items_status_check CHECK (
+        status IN (
+          'pending',
+          'queued',
+          'deduped',
+          'unavailable',
+          'enqueue_failed',
+          'processing',
+          'completed',
+          'completed_resolved',
+          'completed_unresolved',
+          'failed',
+          'skipped'
+        )
+      );
 
     ALTER TABLE catalog_repair_audit
       ADD COLUMN IF NOT EXISTS repair_batch_id bigint REFERENCES catalog_repair_batches(id) ON DELETE SET NULL;

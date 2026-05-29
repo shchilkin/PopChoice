@@ -3,12 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeDatabase, initDatabase } from './db.js';
 import {
+  catalogRepairCompletionStatusForResolution,
   createCatalogRepairBatch,
   createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
   listCatalogRepairAuditPage,
   refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemEnqueueResult,
+  updateCatalogRepairBatchItemStatus,
 } from './catalogRepairActions.js';
 
 vi.mock('pg', () => {
@@ -91,6 +93,9 @@ describe('catalog repair audit pages', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS catalog_repair_batch_items');
     expect(sql).toContain('repair_batch_id bigint REFERENCES catalog_repair_batches');
     expect(sql).toContain("'enqueue_failed'");
+    expect(sql).toContain("'completed_resolved'");
+    expect(sql).toContain("'completed_unresolved'");
+    expect(sql).toContain('DROP CONSTRAINT IF EXISTS catalog_repair_batch_items_status_check');
     expect(sql).toContain('idx_catalog_repair_batch_items_job_id');
   });
 
@@ -255,5 +260,110 @@ describe('catalog repair audit pages', () => {
       failedCount: 1,
     });
     expect(poolMock.query.mock.calls[0][1]).toEqual(['7']);
+    expect(String(poolMock.query.mock.calls[0][0])).toContain(
+      "status IN ('completed', 'completed_resolved')",
+    );
+    expect(String(poolMock.query.mock.calls[0][0])).toContain("status = 'completed_unresolved'");
+    expect(String(poolMock.query.mock.calls[0][0])).toContain("'completedUnresolved'");
+    expect(String(poolMock.query.mock.calls[0][0])).toContain(
+      'WHEN completed_count = attempted_count THEN',
+    );
+  });
+
+  it('records resolved and unresolved terminal item statuses', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: '11',
+            batch_id: '7',
+            movie_id: '334',
+            issue_key: 'missing_poster_url',
+            status: 'completed_resolved',
+            queue_name: 'catalog-maintenance',
+            job_name: 'backfill-movie',
+            job_id: 'backfill-334',
+            language: 'en-US',
+            reason: 'missing_metadata',
+            error_message: null,
+            movie_snapshot: { id: '334' },
+            result: { issueResolved: true },
+            created_at: '2026-05-28 09:00:01+00',
+            updated_at: '2026-05-28 09:00:02+00',
+            completed_at: '2026-05-28 09:00:02+00',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: '12',
+            batch_id: '7',
+            movie_id: '335',
+            issue_key: 'missing_localized_name',
+            status: 'completed_unresolved',
+            queue_name: 'catalog-maintenance',
+            job_name: 'backfill-movie',
+            job_id: 'backfill-335',
+            language: 'en-US',
+            reason: 'missing_metadata',
+            error_message: null,
+            movie_snapshot: { id: '335' },
+            result: { issueResolved: false },
+            created_at: '2026-05-28 09:00:01+00',
+            updated_at: '2026-05-28 09:00:02+00',
+            completed_at: '2026-05-28 09:00:02+00',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: '13',
+            batch_id: '7',
+            movie_id: '336',
+            issue_key: 'missing_tmdb_id',
+            status: 'failed',
+            queue_name: 'catalog-maintenance',
+            job_name: 'backfill-movie',
+            job_id: 'backfill-336',
+            language: 'en-US',
+            reason: 'missing_tmdb_id',
+            error_message: 'TMDB unavailable',
+            movie_snapshot: { id: '336' },
+            result: { reason: 'worker_failed' },
+            created_at: '2026-05-28 09:00:01+00',
+            updated_at: '2026-05-28 09:00:02+00',
+            completed_at: '2026-05-28 09:00:02+00',
+          },
+        ],
+      });
+
+    const resolved = await updateCatalogRepairBatchItemStatus({
+      itemId: '11',
+      status: catalogRepairCompletionStatusForResolution(true),
+      result: { issueResolved: true },
+    });
+    const unresolved = await updateCatalogRepairBatchItemStatus({
+      itemId: '12',
+      status: catalogRepairCompletionStatusForResolution(false),
+      result: { issueResolved: false },
+    });
+    const failed = await updateCatalogRepairBatchItemStatus({
+      itemId: '13',
+      status: 'failed',
+      errorMessage: 'TMDB unavailable',
+      result: { reason: 'worker_failed' },
+    });
+
+    expect(resolved).toMatchObject({ id: '11', status: 'completed_resolved' });
+    expect(unresolved).toMatchObject({ id: '12', status: 'completed_unresolved' });
+    expect(failed).toMatchObject({ id: '13', status: 'failed', errorMessage: 'TMDB unavailable' });
+    expect(poolMock.query.mock.calls[0][1][1]).toBe('completed_resolved');
+    expect(poolMock.query.mock.calls[1][1][1]).toBe('completed_unresolved');
+    expect(poolMock.query.mock.calls[2][1][1]).toBe('failed');
+    expect(String(poolMock.query.mock.calls[0][0])).toContain("'completed_resolved'");
+    expect(String(poolMock.query.mock.calls[0][0])).toContain("'completed_unresolved'");
+    expect(String(poolMock.query.mock.calls[0][0])).toContain("'failed'");
   });
 });

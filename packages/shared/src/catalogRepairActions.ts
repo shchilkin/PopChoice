@@ -18,6 +18,8 @@ export type CatalogRepairItemStatus =
   | 'enqueue_failed'
   | 'processing'
   | 'completed'
+  | 'completed_resolved'
+  | 'completed_unresolved'
   | 'failed'
   | 'skipped';
 
@@ -150,9 +152,23 @@ export interface UpdateCatalogRepairBatchItemEnqueueInput {
 
 export interface UpdateCatalogRepairBatchItemStatusInput {
   itemId: string | number;
-  status: Extract<CatalogRepairItemStatus, 'processing' | 'completed' | 'failed' | 'skipped'>;
+  status: Extract<
+    CatalogRepairItemStatus,
+    | 'processing'
+    | 'completed'
+    | 'completed_resolved'
+    | 'completed_unresolved'
+    | 'failed'
+    | 'skipped'
+  >;
   errorMessage?: string;
   result?: Record<string, unknown>;
+}
+
+export function catalogRepairCompletionStatusForResolution(
+  resolved: boolean,
+): Extract<CatalogRepairItemStatus, 'completed_resolved' | 'completed_unresolved'> {
+  return resolved ? 'completed_resolved' : 'completed_unresolved';
 }
 
 export interface CatalogRepairBatchPage {
@@ -410,14 +426,53 @@ export const CATALOG_REPAIR_BATCH_SCHEMA_SQL = `
         'queued',
         'deduped',
         'unavailable',
+          'enqueue_failed',
+          'processing',
+          'completed',
+          'completed_resolved',
+          'completed_unresolved',
+          'failed',
+          'skipped'
+        )
+      )
+    );
+
+  ALTER TABLE catalog_repair_batches
+    DROP CONSTRAINT IF EXISTS catalog_repair_batches_status_check;
+
+  ALTER TABLE catalog_repair_batches
+    ADD CONSTRAINT catalog_repair_batches_status_check CHECK (
+      status IN (
+        'enqueueing',
+        'queued',
+        'processing',
+        'partial',
+        'failed',
+        'unavailable',
+        'empty',
+        'completed'
+      )
+    );
+
+  ALTER TABLE catalog_repair_batch_items
+    DROP CONSTRAINT IF EXISTS catalog_repair_batch_items_status_check;
+
+  ALTER TABLE catalog_repair_batch_items
+    ADD CONSTRAINT catalog_repair_batch_items_status_check CHECK (
+      status IN (
+        'pending',
+        'queued',
+        'deduped',
+        'unavailable',
         'enqueue_failed',
         'processing',
         'completed',
+        'completed_resolved',
+        'completed_unresolved',
         'failed',
         'skipped'
       )
-    )
-  );
+    );
 
   ALTER TABLE catalog_repair_audit
     ADD COLUMN IF NOT EXISTS repair_batch_id bigint REFERENCES catalog_repair_batches(id) ON DELETE SET NULL;
@@ -670,7 +725,13 @@ export async function updateCatalogRepairBatchItemStatus(
             result = COALESCE($4::jsonb, result),
             updated_at = now(),
             completed_at = CASE
-              WHEN $2 IN ('completed', 'failed', 'skipped') THEN COALESCE(completed_at, now())
+              WHEN $2 IN (
+                'completed',
+                'completed_resolved',
+                'completed_unresolved',
+                'failed',
+                'skipped'
+              ) THEN COALESCE(completed_at, now())
               ELSE completed_at
             END
       WHERE id = $1
@@ -713,7 +774,8 @@ export async function refreshCatalogRepairBatchCounts(
          COUNT(*) FILTER (WHERE status = 'deduped')::int AS deduped_count,
          COUNT(*) FILTER (WHERE status = 'unavailable')::int AS unavailable_count,
          COUNT(*) FILTER (WHERE status IN ('enqueue_failed', 'failed'))::int AS failed_count,
-         COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_count,
+         COUNT(*) FILTER (WHERE status IN ('completed', 'completed_resolved'))::int AS completed_count,
+         COUNT(*) FILTER (WHERE status = 'completed_unresolved')::int AS unresolved_count,
          COUNT(*) FILTER (WHERE status = 'skipped')::int AS skipped_count,
          COUNT(*) FILTER (WHERE status = 'processing')::int AS processing_count
        FROM catalog_repair_batch_items
@@ -724,12 +786,16 @@ export async function refreshCatalogRepairBatchCounts(
          *,
          CASE
            WHEN attempted_count = 0 THEN 'empty'
-           WHEN completed_count + skipped_count = attempted_count THEN 'completed'
+           WHEN completed_count = attempted_count THEN 'completed'
            WHEN failed_count = attempted_count THEN 'failed'
            WHEN unavailable_count = attempted_count THEN 'unavailable'
-           WHEN completed_count + skipped_count + failed_count + unavailable_count = attempted_count
+           WHEN completed_count
+             + unresolved_count
+             + skipped_count
+             + failed_count
+             + unavailable_count = attempted_count
              THEN 'partial'
-           WHEN failed_count + unavailable_count > 0 THEN 'partial'
+           WHEN failed_count + unavailable_count + unresolved_count + skipped_count > 0 THEN 'partial'
            WHEN processing_count > 0 THEN 'processing'
            WHEN queued_count + deduped_count > 0 THEN 'queued'
            ELSE 'enqueueing'
@@ -752,6 +818,7 @@ export async function refreshCatalogRepairBatchCounts(
               'unavailable', next_values.unavailable_count,
               'failed', next_values.failed_count,
               'completed', next_values.completed_count,
+              'completedUnresolved', next_values.unresolved_count,
               'skipped', next_values.skipped_count
             ),
             updated_at = now(),
@@ -760,6 +827,7 @@ export async function refreshCatalogRepairBatchCounts(
                 OR (
                   next_values.next_status = 'partial'
                   AND next_values.completed_count
+                    + next_values.unresolved_count
                     + next_values.skipped_count
                     + next_values.failed_count
                     + next_values.unavailable_count = next_values.attempted_count
