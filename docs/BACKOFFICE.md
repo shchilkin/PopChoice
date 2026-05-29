@@ -85,6 +85,12 @@ Mutation flows are deliberately narrow:
   confirms the operator intent in the enhanced UI, reports partial enqueue
   results explicitly, and records a grouped `bulk_enqueue_backfill` audit
   summary with queued, deduped, unavailable, and failed counts.
+- [#572](https://github.com/shchilkin/PopChoice/issues/572): bulk repair
+  attempts now create durable `catalog_repair_batches` and
+  `catalog_repair_batch_items` rows before enqueueing BullMQ jobs. The audit row
+  stays immutable and links back to the batch, while the batch/item tables are
+  the Postgres source of truth for enqueue and worker progress after BullMQ
+  history is trimmed.
 
 Shared operator auth is the login model for public exposure:
 
@@ -154,9 +160,13 @@ intentionally conservative:
   repairs;
 - duplicate identity groups remain read-only because they can require manual
   merge decisions;
-- backoffice stores one-off movie snapshots and bulk queue summaries in
-  `catalog_repair_audit`, which gives operators a recovery trail without
-  editing the catalog directly from the HTML form;
+- backoffice stores immutable audit rows in `catalog_repair_audit` and durable
+  bulk progress in `catalog_repair_batches` plus `catalog_repair_batch_items`,
+  which gives operators a recovery trail without depending on retained BullMQ
+  jobs;
+- workers advance durable item status from `queued`/`deduped` to `processing`,
+  `completed`, `skipped`, or final `failed` when a repair job carries
+  `repairBatchId` and `repairBatchItemId`;
 - the recent repair audit is paginated so large repair histories do not render
   as one long operator table.
 

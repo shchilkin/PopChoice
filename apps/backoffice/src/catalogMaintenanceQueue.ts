@@ -20,6 +20,8 @@ export interface EnqueueCatalogBackfillMovieInput {
   movieId: string | number;
   reason: CatalogBackfillReason;
   language?: string;
+  repairBatchId?: string | number;
+  repairBatchItemId?: string | number;
 }
 
 export interface EnqueueCatalogBackfillMovieResult {
@@ -51,6 +53,8 @@ type CatalogBackfillMovieJobData = {
   movieId: string | number;
   reason?: CatalogBackfillReason;
   language?: string;
+  repairBatchId?: string | number;
+  repairBatchItemId?: string | number;
 };
 
 let redisConnection: Redis | null = null;
@@ -184,6 +188,8 @@ export async function enqueueCatalogBackfillMovieFromBackoffice(
       movieId: input.movieId,
       reason: input.reason,
       language,
+      repairBatchId: input.repairBatchId,
+      repairBatchItemId: input.repairBatchItemId,
     },
     {
       ...CATALOG_MAINTENANCE_JOB_OPTIONS,

@@ -599,7 +599,9 @@ function RepairAuditRows({ audit }: { audit: CatalogRepairActionAudit[] }) {
             </td>
             <td>{entry.action}</td>
             <td>
-              {String(entry.result.jobId ?? entry.result.status ?? JSON.stringify(entry.result))}
+              {entry.repairBatchId
+                ? `batch:${entry.repairBatchId}`
+                : String(entry.result.jobId ?? entry.result.status ?? JSON.stringify(entry.result))}
             </td>
           </tr>
         ))}

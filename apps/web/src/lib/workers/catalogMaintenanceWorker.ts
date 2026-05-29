@@ -1,9 +1,12 @@
 import {
   createEmbeddings,
+  ensureCatalogRepairActionSchema,
   ensureCatalogMetadataSchema,
   getPool,
   initDatabase,
   insertMovies,
+  refreshCatalogRepairBatchCounts,
+  updateCatalogRepairBatchItemStatus,
   upsertMovieCatalogMetadata,
 } from '@pop-choice/shared';
 import { Worker } from 'bullmq';
@@ -87,8 +90,39 @@ function ensureDatabase(): void {
 
 async function ensureCatalogSchema(): Promise<void> {
   ensureDatabase();
-  schemaReadyPromise ??= ensureCatalogMetadataSchema();
+  schemaReadyPromise ??= Promise.all([
+    ensureCatalogMetadataSchema(),
+    ensureCatalogRepairActionSchema(),
+  ]).then(() => undefined);
   await schemaReadyPromise;
+}
+
+async function updateRepairBatchItem(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+  status: 'processing' | 'completed' | 'failed' | 'skipped',
+  options: { errorMessage?: string; result?: Record<string, unknown> } = {},
+): Promise<void> {
+  const repairBatchItemId =
+    job?.data && 'repairBatchItemId' in job.data ? job.data.repairBatchItemId : undefined;
+  if (!repairBatchItemId) return;
+
+  await updateCatalogRepairBatchItemStatus({
+    itemId: repairBatchItemId,
+    status,
+    errorMessage: options.errorMessage,
+    result: {
+      jobId: String(job?.id ?? 'unknown'),
+      jobName: job?.name ?? 'unknown',
+      attemptsMade: job?.attemptsMade ?? 0,
+      ...options.result,
+    },
+  });
+
+  const repairBatchId =
+    job?.data && 'repairBatchId' in job.data ? job.data.repairBatchId : undefined;
+  if (repairBatchId) {
+    await refreshCatalogRepairBatchCounts(repairBatchId);
+  }
 }
 
 async function handleRateLimit(
@@ -301,6 +335,10 @@ async function loadBackfillMovie(movieId: string | number): Promise<BackfillMovi
 
 async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Promise<void> {
   await ensureCatalogSchema();
+  await updateRepairBatchItem(
+    job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+    'processing',
+  );
 
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) throw new Error('TMDB_API_KEY is required for catalog backfill jobs');
@@ -308,6 +346,13 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
   const movie = await loadBackfillMovie(job.data.movieId);
   if (!movie) {
     logger.warn({ jobId: job.id, movieId: job.data.movieId }, 'Catalog backfill movie not found');
+    await updateRepairBatchItem(
+      job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+      'skipped',
+      {
+        result: { reason: 'movie_not_found', movieId: String(job.data.movieId) },
+      },
+    );
     return;
   }
 
@@ -325,12 +370,31 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
       },
       'Catalog backfill skipped movie without confident TMDB match',
     );
+    await updateRepairBatchItem(
+      job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+      'skipped',
+      {
+        result: {
+          reason: 'tmdb_match_not_confident',
+          movieId: movie.id,
+          matchStatus: match.status,
+          candidateCount: match.candidates.length,
+        },
+      },
+    );
     return;
   }
 
   const details = await fetchMovieDetails(apiKey, match.tmdbId, job.data.language);
   if (!details) {
     logger.warn({ jobId: job.id, tmdbId: match.tmdbId }, 'Catalog backfill found no details');
+    await updateRepairBatchItem(
+      job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+      'skipped',
+      {
+        result: { reason: 'tmdb_details_missing', movieId: movie.id, tmdbId: match.tmdbId },
+      },
+    );
     return;
   }
 
@@ -386,6 +450,13 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
   logger.info(
     { jobId: job.id, movieId: movie.id, tmdbId: match.tmdbId },
     'Catalog backfill completed',
+  );
+  await updateRepairBatchItem(
+    job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+    'completed',
+    {
+      result: { movieId: movie.id, tmdbId: match.tmdbId },
+    },
   );
 }
 
@@ -466,12 +537,24 @@ export function createCatalogMaintenanceWorker(): CatalogWorker | null {
 
   worker.on('failed', (job, err) => {
     const attemptsMade = job?.attemptsMade ?? 0;
+    const finalFailure = attemptsMade >= MAX_CATALOG_ATTEMPTS;
     recordQueueJobEvent({
       queue: CATALOG_MAINTENANCE_QUEUE_NAME,
       job: job?.name ?? 'unknown',
       event: 'failed',
-      final: attemptsMade >= MAX_CATALOG_ATTEMPTS,
+      final: finalFailure,
     });
+    if (finalFailure) {
+      void updateRepairBatchItem(job, 'failed', {
+        errorMessage: err instanceof Error ? err.message : String(err),
+        result: { reason: 'worker_failed' },
+      }).catch((statusError) => {
+        logger.error(
+          { err: statusError, jobId: job?.id, jobName: job?.name },
+          'Failed to persist catalog repair batch item failure',
+        );
+      });
+    }
     logger.error(
       {
         err,

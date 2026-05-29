@@ -57,13 +57,14 @@ forward-fix plan in the PR and create a follow-up issue before merging.
 When schema changes touch shared tables, update every relevant owner in the same
 PR unless there is a deliberate staged rollout.
 
-| Change type                 | Required files                                                                     |
-| --------------------------- | ---------------------------------------------------------------------------------- |
-| Core movie/catalog tables   | `db/init/01_schema.sql`, `db/createDB.sql`, `packages/shared/src/db.ts`            |
-| Vector search function      | `db/init/02_match_movies.sql`, `db/match_movies.sql`, `packages/shared/src/db.ts`  |
-| Recommendation persistence  | `db/init/03_recommendations.sql`, `db/recommendations.sql`, app repositories/tests |
-| Password reset/auth storage | `db/init/04_password_reset_tokens.sql`, `db/createDB.sql`, auth repositories/tests |
-| Service-written metadata    | Shared schema helper plus the owning service tests and docs                        |
+| Change type                 | Required files                                                                                                                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Core movie/catalog tables   | `db/init/01_schema.sql`, `db/createDB.sql`, `packages/shared/src/db.ts`                                                                                                                    |
+| Vector search function      | `db/init/02_match_movies.sql`, `db/match_movies.sql`, `packages/shared/src/db.ts`                                                                                                          |
+| Recommendation persistence  | `db/init/03_recommendations.sql`, `db/recommendations.sql`, app repositories/tests                                                                                                         |
+| Password reset/auth storage | `db/init/04_password_reset_tokens.sql`, `db/createDB.sql`, auth repositories/tests                                                                                                         |
+| Backoffice repair batches   | `db/init/01_schema.sql`, `db/createDB.sql`, `packages/shared/src/db.ts`, `packages/shared/src/catalogRepairActions.ts`, `services/movie-backfill/src/database.ts`, backoffice/shared tests |
+| Service-written metadata    | Shared schema helper plus the owning service tests and docs                                                                                                                                |
 
 Do not rely only on service `ensureSchema()` for production. The canonical
 migration path is still `db/init/*.sql`; helpers are a compatibility layer for

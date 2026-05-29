@@ -83,6 +83,8 @@ export type CatalogBackfillMovieJobData = {
   movieId: string | number;
   reason?: 'missing_tmdb_id' | 'missing_metadata' | 'manual_refresh';
   language?: string;
+  repairBatchId?: string | number;
+  repairBatchItemId?: string | number;
   trace?: TraceCarrier;
 };
 
