@@ -73,7 +73,7 @@ The main remaining risks are:
 
 ### Issues Still Present
 
-- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP).
+- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with explicit Solo/Duo/Group audience modes, Fast/Normal effort modes, a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
 - Account settings/profile/provider identity remain intentionally thin.
 
@@ -204,7 +204,8 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] Add responsive backoffice repair actions in [#592](https://github.com/shchilkin/PopChoice/issues/592), including pending/success/error states, duplicate-click protection, and live row updates after successful queued repair. The first slice keeps progressive-enhanced HTML with JSON responses for enhanced requests; a heavier client data layer is deferred until pagination, virtualization, or bulk repair flows need it.
 - [x] Migrate the dedicated backoffice app to Next.js in [#596](https://github.com/shchilkin/PopChoice/issues/596) before adding larger interactive operator workflows. The `apps/backoffice` deployment boundary, routes, health check, and Coolify port stay the same, while catalog health, TMDB reviews, and repair actions now run through React/App Router pages and route handlers.
 - [x] Add large backoffice table pagination in [#591](https://github.com/shchilkin/PopChoice/issues/591): TMDB review queue pagination landed in [#600](https://github.com/shchilkin/PopChoice/issues/600), and the follow-up slice adds catalog-health issue row browsing plus paginated catalog repair audit history.
-- [x] Add safe bulk catalog repair enqueueing in [#593](https://github.com/shchilkin/PopChoice/issues/593), with bounded batches, deduped `catalog-maintenance` jobs, grouped audit summaries, and worker-side TMDB/OpenAI pacing preserved. Durable repair batch status remains tracked separately in [#572](https://github.com/shchilkin/PopChoice/issues/572)-[#575](https://github.com/shchilkin/PopChoice/issues/575).
+- [x] Add safe bulk catalog repair enqueueing in [#593](https://github.com/shchilkin/PopChoice/issues/593), with bounded batches, deduped `catalog-maintenance` jobs, grouped audit summaries, and worker-side TMDB/OpenAI pacing preserved.
+- [x] Add durable repair batch/item storage in [#572](https://github.com/shchilkin/PopChoice/issues/572), so bulk repairs write `catalog_repair_batches` and `catalog_repair_batch_items` before enqueueing BullMQ jobs, and workers persist basic processing/completed/skipped/final-failed status. Follow-up issue re-checking and operator views stay in [#574](https://github.com/shchilkin/PopChoice/issues/574)-[#575](https://github.com/shchilkin/PopChoice/issues/575).
 - Periodically refresh TMDB-backed metadata for older records without destabilizing existing recommendation history.
 - Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.
 - Define migration/versioning expectations for schema changes in [#494](https://github.com/shchilkin/PopChoice/issues/494), including production migration safety, rollback notes, and seed/backfill coordination.
@@ -230,6 +231,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [x] [#475](https://github.com/shchilkin/PopChoice/issues/475): cover auth, catalog, quiz, recommendation, and feedback smoke flows through product-level e2e tests.
 - [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add an AI recommendation eval harness with deterministic fixtures by default and optional live model/provider runs.
 - [x] [#490](https://github.com/shchilkin/PopChoice/issues/490): add a scheduled or manually triggered real-data recommendation eval workflow with seeded database data and real catalog retrieval.
+- Add [#606](https://github.com/shchilkin/PopChoice/issues/606) deterministic recommendation scenarios for Solo/Fast, Solo/Normal, Duo/Fast, Duo/Normal, Group/Fast, and Group/Normal so the next recommendation UX/backend changes can be judged against meaningful-pick behavior, not only response shape.
 - Keep Storybook/component tests separate from full product e2e tests so UI component regressions and app-flow regressions fail with clear ownership.
 - Keep AI evals separate from normal e2e smoke tests because recommendation quality gates need fixture scoring, model controls, and optional API cost.
 
@@ -249,6 +251,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 - Pivot recommendation retrieval toward TMDB-backed catalog coverage instead of relying primarily on the embedded/course-sized movie database.
 - Keep the local `movies` table as a cache/index of known titles, embeddings, localized names, poster URLs, and TMDB ids rather than the full source of truth.
+- Plan [#607](https://github.com/shchilkin/PopChoice/issues/607) before switching defaults from local-vector-first plus TMDB fallback to TMDB-first broad candidate generation plus local cache, enrichment, memory, and reranking.
 - Backfill TMDB ids for existing local movies using exact title/year matches first, then persist ambiguous or low-confidence matches for manual review.
 - Add cast, director, genre, and keyword metadata as first-class catalog data before implementing actor/director/genre search.
 - [x] Move TMDB discovery, backfill, and metadata refresh into shared rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before growing catalog volume. The worker enforces one configurable TMDB request budget across catalog-maintenance jobs, honors `429` with backoff, dedupes jobs by stable `tmdbId`/`movieId` keys, and exposes queue depth/failures in Bull Board.
@@ -266,8 +269,11 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 
 ### Recommendation Experience Track
 
+- Define Recommendation V2 in [#610](https://github.com/shchilkin/PopChoice/issues/610) around two explicit product axes: audience mode (Solo, Duo, Group) and effort mode (Fast, Normal).
 - Treat quiz answers, swipe reactions, account memory, and result feedback as inputs into a shared taste-signal model.
 - Rework the guided quiz around "what do you want tonight?" instead of relying on a favorite movie, broad genre labels, and optional actor input.
+- Build [#609](https://github.com/shchilkin/PopChoice/issues/609) as the Fast Pick guided flow with minimal intent, hard avoids, and discovery appetite.
+- Build [#608](https://github.com/shchilkin/PopChoice/issues/608) as the Normal mode flow with richer positive/negative signals, optional reference movies, and first-class Duo compromise handling.
 - Add an alternate taste-swipe mode for users who have watched many films and prefer to react to concrete movie cards instead of answering abstract questions.
 - Move toward TMDB-first candidate generation: use TMDB for broad discovery and keep the local database as a cache/enrichment/reranking layer rather than the whole movie universe.
 - Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.

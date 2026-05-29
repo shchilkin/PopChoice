@@ -336,6 +336,107 @@ export async function ensureSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_issue_created_at
       ON catalog_repair_audit (issue_key, created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS catalog_repair_batches (
+      id bigserial PRIMARY KEY,
+      action text NOT NULL,
+      actor text NOT NULL,
+      issue_key text NOT NULL,
+      target_type text NOT NULL,
+      target_id text NOT NULL,
+      status text NOT NULL DEFAULT 'enqueueing',
+      requested_limit integer NOT NULL DEFAULT 0,
+      total_candidates integer NOT NULL DEFAULT 0,
+      attempted_count integer NOT NULL DEFAULT 0,
+      queued_count integer NOT NULL DEFAULT 0,
+      deduped_count integer NOT NULL DEFAULT 0,
+      unavailable_count integer NOT NULL DEFAULT 0,
+      failed_count integer NOT NULL DEFAULT 0,
+      completed_count integer NOT NULL DEFAULT 0,
+      skipped_count integer NOT NULL DEFAULT 0,
+      note text,
+      previous_state jsonb NOT NULL DEFAULT '{}'::jsonb,
+      result jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz,
+      CONSTRAINT catalog_repair_batches_action_check CHECK (
+        action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
+      ),
+      CONSTRAINT catalog_repair_batches_status_check CHECK (
+        status IN (
+          'enqueueing',
+          'queued',
+          'processing',
+          'partial',
+          'failed',
+          'unavailable',
+          'empty',
+          'completed'
+        )
+      )
+    );
+
+    CREATE TABLE IF NOT EXISTS catalog_repair_batch_items (
+      id bigserial PRIMARY KEY,
+      batch_id bigint NOT NULL REFERENCES catalog_repair_batches(id) ON DELETE CASCADE,
+      movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE RESTRICT,
+      issue_key text NOT NULL,
+      status text NOT NULL DEFAULT 'pending',
+      queue_name text,
+      job_name text,
+      job_id text,
+      language text,
+      reason text,
+      error_message text,
+      movie_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+      result jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      completed_at timestamptz,
+      CONSTRAINT catalog_repair_batch_items_status_check CHECK (
+        status IN (
+          'pending',
+          'queued',
+          'deduped',
+          'unavailable',
+          'enqueue_failed',
+          'processing',
+          'completed',
+          'failed',
+          'skipped'
+        )
+      )
+    );
+
+    ALTER TABLE catalog_repair_audit
+      ADD COLUMN IF NOT EXISTS repair_batch_id bigint REFERENCES catalog_repair_batches(id) ON DELETE SET NULL;
+
+    ALTER TABLE catalog_repair_audit
+      ADD COLUMN IF NOT EXISTS repair_batch_item_id bigint REFERENCES catalog_repair_batch_items(id) ON DELETE SET NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_batches_created_at
+      ON catalog_repair_batches (created_at DESC, id DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_batches_issue_created_at
+      ON catalog_repair_batches (issue_key, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_batches_status_updated_at
+      ON catalog_repair_batches (status, updated_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_batch_items_batch_status
+      ON catalog_repair_batch_items (batch_id, status, id);
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_batch_items_movie_created_at
+      ON catalog_repair_batch_items (movie_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_batch_items_job_id
+      ON catalog_repair_batch_items (job_id)
+      WHERE job_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_batch_created_at
+      ON catalog_repair_audit (repair_batch_id, created_at DESC)
+      WHERE repair_batch_id IS NOT NULL;
   `);
 
   await getPool().query(`

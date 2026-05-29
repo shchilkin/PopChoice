@@ -332,6 +332,13 @@ and are audited in `catalog_repair_audit` with actor, target movie, issue key,
 movie snapshot, and queued job result. Duplicate identity findings stay
 read-only until an operator can make a conservative merge decision.
 
+Bulk repair actions also create durable `catalog_repair_batches` and
+`catalog_repair_batch_items` rows before writing BullMQ jobs. Item enqueue
+statuses start as `pending` and move to `queued`, `deduped`, `unavailable`, or
+`enqueue_failed`; workers then move repair jobs through `processing`,
+`completed`, `skipped`, or final `failed`. Use these tables for operator history
+instead of relying on retained BullMQ jobs.
+
 Useful options:
 
 | Variable                      | Default | Description                                              |

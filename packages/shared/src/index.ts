@@ -59,18 +59,37 @@ export type {
   DuplicateIdentityReport,
 } from './catalogHealth.js';
 export {
+  CATALOG_REPAIR_BATCH_SCHEMA_SQL,
+  createCatalogRepairBatch,
+  createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
+  getCatalogRepairBatchDetail,
   getCatalogRepairMovieSnapshot,
+  listCatalogRepairBatchPage,
   listCatalogRepairAudit,
   listCatalogRepairAuditPage,
   recordCatalogRepairAction,
+  refreshCatalogRepairBatchCounts,
+  updateCatalogRepairBatchItemEnqueueResult,
+  updateCatalogRepairBatchItemStatus,
 } from './catalogRepairActions.js';
 export type {
   CatalogRepairAction,
   CatalogRepairActionAudit,
   CatalogRepairActionAuditPage,
+  CatalogRepairBatch,
+  CatalogRepairBatchDetail,
+  CatalogRepairBatchItem,
+  CatalogRepairBatchItemPage,
+  CatalogRepairBatchPage,
+  CatalogRepairBatchStatus,
+  CatalogRepairItemStatus,
   CatalogRepairMovieSnapshot,
+  CreateCatalogRepairBatchInput,
+  CreateCatalogRepairBatchItemInput,
   RecordCatalogRepairActionInput,
+  UpdateCatalogRepairBatchItemEnqueueInput,
+  UpdateCatalogRepairBatchItemStatusInput,
 } from './catalogRepairActions.js';
 export {
   applyTMDBMatchReviewAction,
