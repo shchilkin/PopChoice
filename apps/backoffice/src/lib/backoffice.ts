@@ -37,6 +37,10 @@ export const DEFAULT_REVIEW_PAGE_SIZE = 25;
 export const MAX_REVIEW_PAGE_SIZE = 100;
 export const DEFAULT_BULK_REPAIR_LIMIT = 25;
 export const MAX_BULK_REPAIR_LIMIT = 100;
+export const DEFAULT_REPAIR_BATCH_PAGE_SIZE = 25;
+export const DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE = 100;
+export const MAX_REPAIR_BATCH_PAGE_SIZE = 100;
+export const MAX_REPAIR_BATCH_PAGE_NUMBER = 4_001;
 
 export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
   'missing_poster_url',
@@ -163,6 +167,57 @@ export function parsePositiveIntParam(
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < 1) return fallback;
   return Math.min(parsed, max);
+}
+
+export function firstSearchParam(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+export function parseRepairBatchListParams(params: Record<string, string | string[] | undefined>): {
+  page: number;
+  pageSize: number;
+  limit: number;
+  offset: number;
+} {
+  const pageSize = parsePositiveIntParam(
+    firstSearchParam(params.pageSize),
+    DEFAULT_REPAIR_BATCH_PAGE_SIZE,
+    { max: MAX_REPAIR_BATCH_PAGE_SIZE },
+  );
+  const page = parsePositiveIntParam(firstSearchParam(params.page), 1, {
+    max: MAX_REPAIR_BATCH_PAGE_NUMBER,
+  });
+
+  return {
+    page,
+    pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
+}
+
+export function parseRepairBatchItemParams(params: Record<string, string | string[] | undefined>): {
+  page: number;
+  pageSize: number;
+  limit: number;
+  offset: number;
+} {
+  const pageSize = parsePositiveIntParam(
+    firstSearchParam(params.itemPageSize),
+    DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE,
+    { max: MAX_REPAIR_BATCH_PAGE_SIZE },
+  );
+  const page = parsePositiveIntParam(firstSearchParam(params.itemPage), 1, {
+    max: MAX_REPAIR_BATCH_PAGE_NUMBER,
+  });
+
+  return {
+    page,
+    pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
 }
 
 export function parseAction(value: FormDataEntryValue | null): TMDBMatchReviewAction {
