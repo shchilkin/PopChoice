@@ -91,6 +91,13 @@ Mutation flows are deliberately narrow:
   stays immutable and links back to the batch, while the batch/item tables are
   the Postgres source of truth for enqueue and worker progress after BullMQ
   history is trimmed.
+- [#574](https://github.com/shchilkin/PopChoice/issues/574): completed repair
+  jobs re-check the original catalog-health predicate before finalizing durable
+  item status. This separates "the worker finished" from "the catalog issue is
+  resolved" in batch history.
+- [#575](https://github.com/shchilkin/PopChoice/issues/575): durable repair
+  batches are browsable from the backoffice at `/repair-batches`, with a detail
+  view for per-movie item status, queue metadata, and worker errors.
 
 Shared operator auth is the login model for public exposure:
 
@@ -165,8 +172,11 @@ intentionally conservative:
   which gives operators a recovery trail without depending on retained BullMQ
   jobs;
 - workers advance durable item status from `queued`/`deduped` to `processing`,
-  `completed`, `skipped`, or final `failed` when a repair job carries
-  `repairBatchId` and `repairBatchItemId`;
+  `completed_resolved`, `completed_unresolved`, `skipped`, or final `failed`
+  when a repair job carries `repairBatchId` and `repairBatchItemId`;
+- the repair batch history page at `/repair-batches` shows recent durable batch
+  attempts and links to per-item details, so operators do not need to infer
+  batch state from Bull Board history alone;
 - the recent repair audit is paginated so large repair histories do not render
   as one long operator table.
 
