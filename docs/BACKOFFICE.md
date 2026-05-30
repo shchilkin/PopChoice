@@ -253,8 +253,10 @@ Cover these operator states:
   `?page=2` and narrow table scrolling;
 - TMDB review detail pages for at least one open or deferred review, including
   apply, reject, defer, reopen, and note-entry states where practical;
-- future movie/detail repair pages when they are added under the backoffice
-  epic.
+- catalog movie detail pages at `/movies/[id]`, including identity header,
+  poster/placeholder states, active and resolved health flags, local/TMDB
+  metadata, people/taxonomy tables, duplicate context, related reviews, repair
+  audit rows, and the branded missing-movie 404.
 
 Check that:
 
