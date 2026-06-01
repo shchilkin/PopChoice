@@ -85,6 +85,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           report,
         })}
         issueMoviePage={issueMoviePage}
+        bullBoardUrl={config.bullBoardUrl}
         queueSnapshot={queueSnapshot}
         repairStatus={repairStatus}
       />

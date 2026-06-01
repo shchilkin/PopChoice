@@ -98,6 +98,10 @@ Mutation flows are deliberately narrow:
 - [#575](https://github.com/shchilkin/PopChoice/issues/575): durable repair
   batches are browsable from the backoffice at `/repair-batches`, with a detail
   view for per-movie item status, queue metadata, and worker errors.
+- Catalog-health operators can jump from backoffice to Bull Board when
+  `BULL_BOARD_URL` is configured, queue the next repair batch, queue all affected
+  rows up to the safety cap, or manually enqueue a single movie when automatic
+  grouping misses a case.
 
 Shared operator auth is the login model for public exposure:
 
@@ -310,6 +314,7 @@ backoffice:
     OPERATOR_AUTH_REALM: ${OPERATOR_AUTH_REALM:-PopChoice Operators}
     OPERATOR_AUTH_RATE_LIMIT_MAX: ${OPERATOR_AUTH_RATE_LIMIT_MAX:-30}
     OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS: ${OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS:-900}
+    BULL_BOARD_URL: ${BULL_BOARD_URL:-}
     CATALOG_HEALTH_SAMPLE_LIMIT: ${CATALOG_HEALTH_SAMPLE_LIMIT:-5}
     CATALOG_HEALTH_STALE_DAYS: ${CATALOG_HEALTH_STALE_DAYS:-180}
   depends_on:
@@ -327,7 +332,9 @@ optional; set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when you wan
 the shared login prompt, or set `OPERATOR_AUTH_REQUIRED=1` for fail-closed
 behavior. The shared Bull Board/backoffice rate limiter counts unsuccessful
 requests only and can be tuned with `OPERATOR_AUTH_RATE_LIMIT_MAX` and
-`OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS`.
+`OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS`. Set `BULL_BOARD_URL` to the Bull
+Board operator domain when you want the backoffice queue panel to open the live
+queue dashboard directly.
 
 ## Preview Policy
 

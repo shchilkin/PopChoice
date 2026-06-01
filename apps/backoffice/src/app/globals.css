@@ -473,11 +473,20 @@ input:disabled {
 }
 .queue-status {
   align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 .queue-status p {
   margin: 2px 0 0;
   color: var(--subtle);
   font-weight: 700;
+}
+.queue-status-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  width: 100%;
 }
 .queue-status-title {
   display: flex;
@@ -499,6 +508,12 @@ input:disabled {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+.queue-status-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .queue-counts span {
   display: inline-flex;
   gap: 4px;
@@ -511,6 +526,28 @@ input:disabled {
 }
 .queue-counts strong {
   color: var(--text);
+}
+.manual-repair {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.manual-repair summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--accent);
+}
+.manual-repair-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 10px;
+}
+.manual-repair-form input,
+.manual-repair-form select {
+  width: 100%;
+  min-width: 0;
 }
 .status-heading {
   display: flex;
@@ -738,12 +775,22 @@ input:disabled {
   gap: 6px;
   margin: 0;
 }
+.bulk-repair-actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .bulk-repair-form {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
   margin: 0;
+}
+.bulk-repair-form .repair-message {
+  max-width: 180px;
 }
 .repair-message {
   min-height: 16px;
@@ -786,6 +833,93 @@ input:disabled {
   color: var(--muted);
   font-weight: 750;
   text-align: center;
+}
+.repair-audit-table {
+  table-layout: fixed;
+}
+.repair-audit-table th:nth-child(1),
+.repair-audit-table td:nth-child(1) {
+  width: 140px;
+}
+.repair-audit-table th:nth-child(2),
+.repair-audit-table td:nth-child(2) {
+  width: 90px;
+}
+.repair-audit-table th:nth-child(3),
+.repair-audit-table td:nth-child(3) {
+  width: 210px;
+}
+.repair-audit-table th:nth-child(4),
+.repair-audit-table td:nth-child(4) {
+  width: 190px;
+}
+.repair-audit-table th:nth-child(5),
+.repair-audit-table td:nth-child(5) {
+  width: 170px;
+}
+.repair-issue-label,
+.repair-result-primary {
+  display: block;
+  color: var(--text);
+  font-weight: 850;
+}
+.repair-issue-key {
+  display: block;
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.repair-result {
+  display: grid;
+  gap: 8px;
+  min-width: 280px;
+}
+.repair-result-headline,
+.repair-result-chips {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.repair-result-chips span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: baseline;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  background: #111419;
+  font-size: 11px;
+  font-weight: 750;
+}
+.repair-result-chips span.warn {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn), var(--border) 55%);
+}
+.repair-result-chips strong {
+  color: var(--text);
+}
+.repair-result-raw {
+  color: var(--subtle);
+  font-size: 11px;
+}
+.repair-result-raw summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.repair-result-raw pre {
+  max-height: 180px;
+  margin: 6px 0 0;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #0f1217;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .repair-batch-table {
   min-width: 980px;
@@ -1145,7 +1279,16 @@ input:disabled {
     align-items: flex-start;
     flex-direction: column;
   }
+  .queue-status-main,
+  .manual-repair-form {
+    align-items: stretch;
+    flex-direction: column;
+    display: flex;
+  }
   .queue-counts {
+    justify-content: flex-start;
+  }
+  .queue-status-actions {
     justify-content: flex-start;
   }
   .status-metrics {
@@ -1187,6 +1330,7 @@ input:disabled {
   .section-nav,
   .actions,
   .decision-actions,
+  .bulk-repair-actions,
   .bulk-repair-form {
     align-items: stretch;
     flex-direction: column;
