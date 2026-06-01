@@ -16,6 +16,16 @@ describe('backoffice runtime config', () => {
     expect(config.bullBoardUrl).toBe('https://bullboard.pop-choice.example');
   });
 
+  it('defaults missing or empty Bull Board URLs to undefined', () => {
+    expect(readBackofficeRuntimeConfig(baseBackofficeEnv).bullBoardUrl).toBeUndefined();
+    expect(
+      readBackofficeRuntimeConfig({
+        ...baseBackofficeEnv,
+        BULL_BOARD_URL: '',
+      }).bullBoardUrl,
+    ).toBeUndefined();
+  });
+
   it('rejects non-http Bull Board URLs', () => {
     expect(() =>
       readBackofficeRuntimeConfig({

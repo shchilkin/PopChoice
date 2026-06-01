@@ -411,7 +411,7 @@ function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
         </button>
         <span className="repair-message" aria-live="polite" data-repair-message />
       </form>
-      {issue.count > batchLimit ? (
+      {allLimit > batchLimit ? (
         <form
           className="bulk-repair-form"
           method="post"
