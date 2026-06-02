@@ -14,14 +14,6 @@ export const CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL = `
     )
   );
 
-  ALTER TABLE catalog_duplicate_merge_audit
-    DROP CONSTRAINT IF EXISTS catalog_duplicate_merge_audit_action_check;
-
-  ALTER TABLE catalog_duplicate_merge_audit
-    ADD CONSTRAINT catalog_duplicate_merge_audit_action_check CHECK (
-      action IN ('merge_movies')
-    );
-
   CREATE INDEX IF NOT EXISTS idx_catalog_duplicate_merge_audit_canonical_created_at
     ON catalog_duplicate_merge_audit (canonical_movie_id, created_at DESC);
 

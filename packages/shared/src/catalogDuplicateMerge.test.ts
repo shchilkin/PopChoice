@@ -46,6 +46,10 @@ describe('catalog duplicate merge dry-run', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS catalog_duplicate_merge_audit');
     expect(sql).toContain("action IN ('merge_movies')");
     expect(sql).toContain('idx_catalog_duplicate_merge_audit_canonical_created_at');
+    expect(sql).not.toContain(
+      'DROP CONSTRAINT IF EXISTS catalog_duplicate_merge_audit_action_check',
+    );
+    expect(sql).not.toContain('ADD CONSTRAINT catalog_duplicate_merge_audit_action_check');
   });
 
   it('returns snapshots, affected row counts, user-memory conflicts, and warnings without mutation', async () => {
@@ -234,11 +238,106 @@ describe('catalog duplicate merge dry-run', () => {
     ]);
     expect(poolMock.query.mock.calls[2][1]).toEqual([
       ['tmdb:949', 'title:heat:1995'],
+      ['tmdb:949', 'title:heat duplicate:1995'],
+      ['949'],
       ['949'],
       ['tmdb:949', 'title:heat:1995', 'title:heat duplicate:1995'],
       ['949'],
       20,
     ]);
+  });
+
+  it('preserves loser-side user-memory rows when movies share a TMDB id', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: '10',
+            name: 'Heat',
+            year: 1995,
+            tmdb_id: 949,
+            poster_url: null,
+            localized_name: null,
+            duration: 170,
+            age_rating: 'R',
+            tmdb_match_confidence: null,
+            tmdb_match_source: null,
+            tmdb_matched_at: null,
+            tmdb_metadata_refreshed_at: null,
+          },
+          {
+            id: '12',
+            name: 'Heat Duplicate',
+            year: 1995,
+            tmdb_id: 949,
+            poster_url: null,
+            localized_name: null,
+            duration: 170,
+            age_rating: 'R',
+            tmdb_match_confidence: null,
+            tmdb_match_source: null,
+            tmdb_matched_at: null,
+            tmdb_metadata_refreshed_at: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            recommendation_movies: 0,
+            movie_people: 0,
+            movie_genres: 0,
+            movie_keywords: 0,
+            tmdb_match_reviews: 0,
+            user_movie_interactions: 2,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            user_id: '7',
+            canonical_count: 1,
+            loser_count: 1,
+            total_conflicts: 1,
+            interactions: [
+              {
+                side: 'canonical',
+                movieKey: 'title:heat:1995',
+                kind: 'liked',
+                tmdbId: 949,
+                movieName: 'Heat',
+                movieYear: 1995,
+                updatedAt: '2026-05-28 10:00:00+00',
+              },
+              {
+                side: 'loser',
+                movieKey: 'title:heat duplicate:1995',
+                kind: 'watched',
+                tmdbId: 949,
+                movieName: 'Heat Duplicate',
+                movieYear: 1995,
+                updatedAt: '2026-05-27 10:00:00+00',
+              },
+            ],
+          },
+        ],
+      });
+
+    const dryRun = await getCatalogDuplicateMergeDryRun({
+      canonicalMovieId: '10',
+      loserMovieIds: ['12'],
+    });
+
+    expect(dryRun.userMemoryConflicts.samples[0]?.interactions).toEqual([
+      expect.objectContaining({ side: 'canonical', movieKey: 'title:heat:1995' }),
+      expect.objectContaining({ side: 'loser', movieKey: 'title:heat duplicate:1995' }),
+    ]);
+    const conflictSql = String(poolMock.query.mock.calls[2][0]);
+    expect(conflictSql).toContain('WHEN movie_key = ANY($1::text[])');
+    expect(conflictSql).toContain('WHEN movie_key = ANY($2::text[])');
+    expect(conflictSql).toContain('AND NOT (tmdb_id = ANY($4::bigint[]))');
+    expect(conflictSql).toContain('AND NOT (tmdb_id = ANY($3::bigint[]))');
   });
 
   it('marks mismatched selections as manual review and warns on multiple TMDB ids', async () => {

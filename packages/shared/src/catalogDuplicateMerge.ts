@@ -330,6 +330,7 @@ export async function getCatalogDuplicateMergeDryRun({
   const loserMovies = movies.slice(1);
   const allIdentityKeys = buildMovieMemoryKeys(movies);
   const canonicalIdentityKeys = buildMovieMemoryKeys([canonical]);
+  const loserIdentityKeys = buildMovieMemoryKeys(loserMovies);
   const allTmdbIds = uniqueStrings(
     movies
       .map((movie) => movie.tmdb_id)
@@ -338,6 +339,12 @@ export async function getCatalogDuplicateMergeDryRun({
   );
   const canonicalTmdbIds = uniqueStrings(
     [canonical.tmdb_id].filter((tmdbId): tmdbId is number => tmdbId !== null).map(String),
+  );
+  const loserTmdbIds = uniqueStrings(
+    loserMovies
+      .map((movie) => movie.tmdb_id)
+      .filter((tmdbId): tmdbId is number => tmdbId !== null)
+      .map(String),
   );
   const boundedConflictLimit =
     Number.isSafeInteger(conflictSampleLimit) && conflictSampleLimit > 0
@@ -372,13 +379,22 @@ export async function getCatalogDuplicateMergeDryRun({
            updated_at::text,
            CASE
              WHEN movie_key = ANY($1::text[])
-               OR (tmdb_id IS NOT NULL AND tmdb_id = ANY($2::bigint[]))
              THEN 'canonical'
+             WHEN movie_key = ANY($2::text[])
+             THEN 'loser'
+             WHEN tmdb_id IS NOT NULL
+               AND tmdb_id = ANY($3::bigint[])
+               AND NOT (tmdb_id = ANY($4::bigint[]))
+             THEN 'canonical'
+             WHEN tmdb_id IS NOT NULL
+               AND tmdb_id = ANY($4::bigint[])
+               AND NOT (tmdb_id = ANY($3::bigint[]))
+             THEN 'loser'
              ELSE 'loser'
            END AS side
          FROM user_movie_interactions
-         WHERE movie_key = ANY($3::text[])
-            OR (tmdb_id IS NOT NULL AND tmdb_id = ANY($4::bigint[]))
+         WHERE movie_key = ANY($5::text[])
+            OR (tmdb_id IS NOT NULL AND tmdb_id = ANY($6::bigint[]))
        ),
        conflict_users AS (
          SELECT
@@ -411,8 +427,16 @@ export async function getCatalogDuplicateMergeDryRun({
        JOIN matching_interactions mi ON mi.user_id = cu.user_id
        GROUP BY cu.user_id, cu.canonical_count, cu.loser_count
        ORDER BY cu.user_id
-       LIMIT $5`,
-      [canonicalIdentityKeys, canonicalTmdbIds, allIdentityKeys, allTmdbIds, boundedConflictLimit],
+       LIMIT $7`,
+      [
+        canonicalIdentityKeys,
+        loserIdentityKeys,
+        canonicalTmdbIds,
+        loserTmdbIds,
+        allIdentityKeys,
+        allTmdbIds,
+        boundedConflictLimit,
+      ],
     ),
   ]);
 
