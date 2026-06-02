@@ -6,10 +6,27 @@ import {
   DEFAULT_REPAIR_BATCH_PAGE_SIZE,
   MAX_QUEUE_JOB_PAGE_SIZE,
   MAX_REPAIR_BATCH_PAGE_SIZE,
+  parseBackofficeReturnPath,
   parseCatalogMaintenanceQueueParams,
   parseRepairBatchItemParams,
   parseRepairBatchListParams,
 } from './backoffice';
+
+describe('backoffice action return paths', () => {
+  it('keeps safe relative return paths with query and hash', () => {
+    expect(parseBackofficeReturnPath('/movies/42?tab=repair#audit')).toBe(
+      '/movies/42?tab=repair#audit',
+    );
+  });
+
+  it('falls back for external, protocol-relative, or missing return paths', () => {
+    expect(parseBackofficeReturnPath('https://evil.example/movies/42')).toBe('/');
+    expect(parseBackofficeReturnPath('//evil.example/movies/42')).toBe('/');
+    expect(parseBackofficeReturnPath('\\//evil.example/movies/42')).toBe('/');
+    expect(parseBackofficeReturnPath('\\/evil.example/movies/42')).toBe('/');
+    expect(parseBackofficeReturnPath(null)).toBe('/');
+  });
+});
 
 describe('repair batch query params', () => {
   it('defaults list pagination for recent repair batches', () => {

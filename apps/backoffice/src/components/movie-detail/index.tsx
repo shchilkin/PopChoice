@@ -1,11 +1,16 @@
 import type {
   CatalogMovieDetail,
+  CatalogMovieDetailHealthFlag,
   CatalogMovieDetailPersonCredit,
   CatalogMovieDetailTaxonomyItem,
   CatalogMovieDetailTMDBReview,
 } from '@pop-choice/shared';
 
-import { formatBackofficeDateTime } from '../../lib/backoffice';
+import {
+  catalogRepairMessage,
+  formatBackofficeDateTime,
+  REPAIRABLE_CATALOG_ISSUE_KEYS,
+} from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairAuditRows } from '../catalog-health';
 import { ReasonBadge, StatusBadge } from '../tmdb-reviews/reviewPresentation';
@@ -384,7 +389,115 @@ function MetadataOverviewPanel({ detail }: { detail: CatalogMovieDetail }) {
   );
 }
 
-export function CatalogMovieDetailPage({ detail }: { detail: CatalogMovieDetail }) {
+type CatalogRepairFlashStatus = Parameters<typeof catalogRepairMessage>[0];
+
+function normalizeRepairFlashStatus(repairStatus: string | null): CatalogRepairFlashStatus | null {
+  if (!repairStatus) return null;
+
+  if (repairStatus === 'bulk-queued') return 'queued';
+  if (repairStatus === 'bulk-orchestration-queued') return 'orchestration_queued';
+  if (repairStatus === 'bulk-partial') return 'partial';
+
+  if (
+    repairStatus === 'queued' ||
+    repairStatus === 'unavailable' ||
+    repairStatus === 'failed' ||
+    repairStatus === 'empty' ||
+    repairStatus === 'partial' ||
+    repairStatus === 'orchestration_queued'
+  ) {
+    return repairStatus;
+  }
+
+  return null;
+}
+
+function repairFlashMessage(repairStatus: string | null): string | null {
+  const mappedStatus = normalizeRepairFlashStatus(repairStatus);
+  return mappedStatus ? catalogRepairMessage(mappedStatus) : null;
+}
+
+function repairFlashTone(repairStatus: string | null): 'accepted' | 'warn' {
+  const mappedStatus = normalizeRepairFlashStatus(repairStatus);
+  return mappedStatus === 'queued' || mappedStatus === 'orchestration_queued' ? 'accepted' : 'warn';
+}
+
+function repairableHealthFlags(flags: CatalogMovieDetailHealthFlag[]) {
+  return flags.filter((flag) => flag.isActive && REPAIRABLE_CATALOG_ISSUE_KEYS.has(flag.key));
+}
+
+function MovieRepairPanel({
+  detail,
+  repairStatus,
+}: {
+  detail: CatalogMovieDetail;
+  repairStatus: string | null;
+}) {
+  const repairableFlags = repairableHealthFlags(detail.healthFlags);
+  const activeFlags = detail.healthFlags.filter((flag) => flag.isActive);
+  const flash = repairFlashMessage(repairStatus);
+  const flashTone = repairFlashTone(repairStatus);
+
+  return (
+    <section className="panel movie-repair-panel">
+      <div className="panel-header">
+        <div>
+          <h2>Focused repair</h2>
+          <div className="issue-hint">
+            Queue one catalog-maintenance job for this movie through the existing paced worker path.
+          </div>
+        </div>
+        <span className={repairableFlags.length > 0 ? 'pill repairable' : 'pill'}>
+          {repairableFlags.length > 0 ? `${repairableFlags.length} repairable` : 'No action'}
+        </span>
+      </div>
+      {flash ? <p className={`repair-message ${flashTone}`}>{flash}</p> : null}
+      {repairableFlags.length > 0 ? (
+        <form className="movie-repair-form" action="/catalog-health/actions" method="post">
+          <input type="hidden" name="action" value="enqueue_backfill" />
+          <input type="hidden" name="movie_id" value={detail.movie.id} />
+          <input
+            type="hidden"
+            name="return_to"
+            value={`/movies/${encodeURIComponent(detail.movie.id)}`}
+          />
+          <input
+            type="hidden"
+            name="note"
+            value={`Queued from movie detail for ${detail.movie.name}`}
+          />
+          <label>
+            Repair reason
+            <select name="issue_key" defaultValue={repairableFlags[0]?.key}>
+              {repairableFlags.map((flag) => (
+                <option key={flag.key} value={flag.key}>
+                  {flag.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="button primary" type="submit">
+            Queue focused repair
+          </button>
+        </form>
+      ) : activeFlags.length > 0 ? (
+        <p className="empty">
+          Active issues for this movie need manual review or duplicate-merge tooling.
+        </p>
+      ) : (
+        <p className="empty">No active catalog-health flags need repair for this movie.</p>
+      )}
+    </section>
+  );
+}
+
+export function CatalogMovieDetailPage({
+  detail,
+  repairStatus,
+}: {
+  detail: CatalogMovieDetail;
+  repairStatus: string | null;
+}) {
   const { movie } = detail;
 
   return (
@@ -418,6 +531,7 @@ export function CatalogMovieDetailPage({ detail }: { detail: CatalogMovieDetail 
       }
     >
       <MovieIdentityPanel detail={detail} />
+      <MovieRepairPanel detail={detail} repairStatus={repairStatus} />
       <section className="detail-grid">
         <LocalFactsPanel detail={detail} />
         <HealthFlagsPanel detail={detail} />

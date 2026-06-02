@@ -382,6 +382,23 @@ function parseCatalogIssueKey(value: FormDataEntryValue | null): string {
   return value;
 }
 
+export function parseBackofficeReturnPath(value: FormDataEntryValue | null): string {
+  if (typeof value !== 'string') return '/';
+
+  const trimmed = value.trim();
+  if (trimmed === '' || !trimmed.startsWith('/') || trimmed.startsWith('//')) return '/';
+
+  try {
+    const base = 'https://backoffice.local';
+    const url = new URL(trimmed, base);
+    if (url.origin !== base) return '/';
+
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return '/';
+  }
+}
+
 function getBackfillReasonForIssue(issueKey: string): CatalogBackfillReason {
   if (issueKey === 'missing_tmdb_id') return 'missing_tmdb_id';
   if (issueKey === 'stale_tmdb_metadata') return 'manual_refresh';

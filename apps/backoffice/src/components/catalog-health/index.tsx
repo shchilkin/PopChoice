@@ -362,9 +362,13 @@ function SampleRows({
         <tbody>
           {samples.map((movie) => (
             <tr key={movie.id} data-repair-row data-issue-key={issueKey} data-movie-id={movie.id}>
-              <td className="id-cell">#{movie.id}</td>
+              <td className="id-cell">
+                <a href={`/movies/${encodeURIComponent(movie.id)}`}>#{movie.id}</a>
+              </td>
               <td className="movie-cell">
-                <strong>{movie.name}</strong>
+                <strong>
+                  <a href={`/movies/${encodeURIComponent(movie.id)}`}>{movie.name}</a>
+                </strong>
               </td>
               <td>{movie.year}</td>
               <td>

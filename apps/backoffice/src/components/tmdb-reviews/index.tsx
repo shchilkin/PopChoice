@@ -180,7 +180,8 @@ function ReviewRows({ reviews }: { reviews: TMDBMatchReview[] }) {
             <div className="movie-title">
               <strong>{review.movieName}</strong>
               <span className="muted">
-                {review.movieYear} · movie {review.movieId}
+                {review.movieYear} ·{' '}
+                <a href={`/movies/${encodeURIComponent(review.movieId)}`}>movie {review.movieId}</a>
               </span>
             </div>
           </td>
@@ -521,7 +522,9 @@ export function ReviewDetailPage({
           <dl className="facts">
             <div>
               <dt>ID</dt>
-              <dd>{review.movieId}</dd>
+              <dd>
+                <a href={`/movies/${encodeURIComponent(review.movieId)}`}>{review.movieId}</a>
+              </dd>
             </div>
             <div>
               <dt>Name</dt>
