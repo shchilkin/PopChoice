@@ -101,6 +101,18 @@ export type {
   UpdateCatalogRepairBatchItemEnqueueInput,
   UpdateCatalogRepairBatchItemStatusInput,
 } from './catalogRepairActions.js';
+export { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
+export {
+  ensureCatalogDuplicateMergeAuditSchema,
+  getCatalogDuplicateMergeDryRun,
+} from './catalogDuplicateMerge.js';
+export type {
+  CatalogDuplicateMergeAffectedRows,
+  CatalogDuplicateMergeDryRun,
+  CatalogDuplicateMergeIdentityKind,
+  CatalogDuplicateMergeMovieSnapshot,
+  CatalogDuplicateMergeUserMemoryConflict,
+} from './catalogDuplicateMerge.js';
 export {
   applyTMDBMatchReviewAction,
   ensureTMDBMatchReviewActionSchema,

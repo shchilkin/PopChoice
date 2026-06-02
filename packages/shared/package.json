@@ -16,6 +16,10 @@
       "types": "./dist/catalogMovieDetail.d.ts",
       "default": "./dist/catalogMovieDetail.js"
     },
+    "./catalogDuplicateMerge": {
+      "types": "./dist/catalogDuplicateMerge.d.ts",
+      "default": "./dist/catalogDuplicateMerge.js"
+    },
     "./tmdbMatchReviews": {
       "types": "./dist/tmdbMatchReviews.d.ts",
       "default": "./dist/tmdbMatchReviews.js"

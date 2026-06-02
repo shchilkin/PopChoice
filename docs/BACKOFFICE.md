@@ -181,8 +181,13 @@ intentionally conservative:
   instead of enqueueing duplicate in-flight work; completed and failed retained
   jobs are removed before retrying so stale BullMQ history does not block future
   repairs;
-- duplicate identity groups remain read-only because they can require manual
-  merge decisions;
+- duplicate identity groups remain read-only in the UI until the transactional
+  merge workflow lands, but shared dry-run support can now preview
+  canonical/loser snapshots, affected rows, user-memory conflicts, and warnings
+  for future duplicate merge screens;
+- future duplicate merge executions will write immutable history to
+  `catalog_duplicate_merge_audit`; the current dry-run helper is intentionally
+  `SELECT`-only;
 - backoffice stores immutable audit rows in `catalog_repair_audit` and durable
   bulk progress in `catalog_repair_batches` plus `catalog_repair_batch_items`,
   which gives operators a recovery trail without depending on retained BullMQ
