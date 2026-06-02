@@ -86,7 +86,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         })}
         issueMoviePage={issueMoviePage}
         bullBoardUrl={config.bullBoardUrl}
-        queueSnapshot={queueSnapshot}
         repairStatus={repairStatus}
       />
     );

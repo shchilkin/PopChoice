@@ -42,9 +42,11 @@ function parseStreamConnectionMessage(event: MessageEvent<string>): StreamConnec
 export function CatalogHealthLiveRefresh({
   initialData,
   fallbackIntervalSeconds = FALLBACK_REFRESH_SECONDS,
+  onSnapshot,
 }: {
   initialData: CatalogHealthLiveData;
   fallbackIntervalSeconds?: number;
+  onSnapshot?: (data: CatalogHealthLiveData) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,6 +90,7 @@ export function CatalogHealthLiveRefresh({
       try {
         const nextData = await fetchCatalogHealthLive(search);
         setData(nextData);
+        onSnapshot?.(nextData);
         setLastSnapshotAt(nextData.report.generatedAt);
         setIsStreamError(false);
       } catch {
@@ -108,7 +111,7 @@ export function CatalogHealthLiveRefresh({
       window.removeEventListener(CATALOG_HEALTH_REFRESH_EVENT, refresh);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [search]);
+  }, [onSnapshot, search]);
 
   useEffect(() => {
     const source = new EventSource(`/api/catalog-health/events${search}`);
@@ -123,6 +126,7 @@ export function CatalogHealthLiveRefresh({
       setConnectionState(isDegradedSnapshot ? 'fallback' : 'connected');
       setIsStreamError(isDegradedSnapshot);
       setData(message.data);
+      onSnapshot?.(message.data);
       setLastSnapshotAt(message.receivedAt);
       setLastSnapshotTrigger(message.trigger);
     };
@@ -149,7 +153,7 @@ export function CatalogHealthLiveRefresh({
     return () => {
       source.close();
     };
-  }, [search]);
+  }, [onSnapshot, search]);
 
   useEffect(() => {
     if (connectionState !== 'fallback') return;
@@ -161,6 +165,7 @@ export function CatalogHealthLiveRefresh({
         const nextData = await fetchCatalogHealthLive(search);
         if (cancelled) return;
         setData(nextData);
+        onSnapshot?.(nextData);
         setLastSnapshotAt(nextData.report.generatedAt);
       } catch {
         if (!cancelled) setIsStreamError(true);
@@ -176,7 +181,7 @@ export function CatalogHealthLiveRefresh({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [connectionState, refreshSeconds, search]);
+  }, [connectionState, onSnapshot, refreshSeconds, search]);
 
   useEffect(() => {
     if (!data) return;

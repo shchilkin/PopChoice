@@ -18,6 +18,7 @@ export interface CatalogHealthLiveData {
     duplicateGroups: number;
     generatedAt: string;
     issueCounts: Record<string, number>;
+    staleAfterDays: number;
     totalMovies: number;
   };
 }
@@ -63,6 +64,7 @@ export function toCatalogHealthLiveData({
         report.duplicateTmdbIds.totalGroups + report.duplicateNormalizedTitleYears.totalGroups,
       generatedAt: report.generatedAt,
       issueCounts: Object.fromEntries(report.issues.map((issue) => [issue.key, issue.count])),
+      staleAfterDays: report.staleAfterDays,
       totalMovies: report.totalMovies,
     },
   };
@@ -145,6 +147,7 @@ export function isCatalogHealthLiveData(value: unknown): value is CatalogHealthL
     hasFiniteNumber(report, 'duplicateGroups') &&
     typeof report.generatedAt === 'string' &&
     isNumberRecord(report.issueCounts) &&
+    hasFiniteNumber(report, 'staleAfterDays') &&
     hasFiniteNumber(report, 'totalMovies') &&
     isRecord(queueSnapshot) &&
     typeof queueSnapshot.available === 'boolean' &&

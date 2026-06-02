@@ -42,6 +42,7 @@ const liveData: CatalogHealthLiveData = {
       missing_poster_url: 12,
       missing_runtime: 4,
     },
+    staleAfterDays: 180,
     totalMovies: 351,
   },
 };
