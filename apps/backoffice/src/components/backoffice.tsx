@@ -5,6 +5,7 @@ export {
   BackofficeShell,
 } from './backoffice-layout';
 export { CatalogHealthPage } from './catalog-health';
+export { CatalogMaintenanceQueuePage } from './catalog-queue';
 export { CatalogMovieDetailPage, CatalogMovieNotFoundPage } from './movie-detail';
 export {
   RepairBatchDetailPage,

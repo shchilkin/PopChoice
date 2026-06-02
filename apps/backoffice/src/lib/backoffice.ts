@@ -25,8 +25,10 @@ import type {
 } from '@pop-choice/shared';
 
 import {
+  isCatalogMaintenanceQueueJobState,
   enqueueCatalogBackfillMovieFromBackoffice,
   type CatalogBackfillReason,
+  type CatalogMaintenanceQueueJobState,
 } from '../catalogMaintenanceQueue';
 
 export const DEFAULT_REPAIR_AUDIT_LIMIT = 25;
@@ -41,6 +43,9 @@ export const DEFAULT_REPAIR_BATCH_PAGE_SIZE = 25;
 export const DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE = 100;
 export const MAX_REPAIR_BATCH_PAGE_SIZE = 100;
 export const MAX_REPAIR_BATCH_PAGE_NUMBER = 4_001;
+export const DEFAULT_QUEUE_JOB_PAGE_SIZE = 25;
+export const MAX_QUEUE_JOB_PAGE_SIZE = 50;
+export const MAX_QUEUE_JOB_PAGE_NUMBER = 4_001;
 
 export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
   'missing_poster_url',
@@ -213,6 +218,36 @@ export function parseRepairBatchItemParams(params: Record<string, string | strin
   });
 
   return {
+    page,
+    pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
+}
+
+export function parseCatalogMaintenanceQueueParams(
+  params: Record<string, string | string[] | undefined>,
+): {
+  state: CatalogMaintenanceQueueJobState;
+  page: number;
+  pageSize: number;
+  limit: number;
+  offset: number;
+} {
+  const stateValue = firstSearchParam(params.state);
+  const pageSize = parsePositiveIntParam(
+    firstSearchParam(params.pageSize),
+    DEFAULT_QUEUE_JOB_PAGE_SIZE,
+    {
+      max: MAX_QUEUE_JOB_PAGE_SIZE,
+    },
+  );
+  const page = parsePositiveIntParam(firstSearchParam(params.page), 1, {
+    max: MAX_QUEUE_JOB_PAGE_NUMBER,
+  });
+
+  return {
+    state: isCatalogMaintenanceQueueJobState(stateValue) ? stateValue : 'waiting',
     page,
     pageSize,
     limit: pageSize,

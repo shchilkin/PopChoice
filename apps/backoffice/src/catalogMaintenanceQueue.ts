@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import type { Job } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { logger } from '@pop-choice/shared';
@@ -6,6 +7,13 @@ import { logger } from '@pop-choice/shared';
 const DEFAULT_TMDB_LANGUAGE = 'en-US';
 const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
 const CATALOG_BACKFILL_MOVIE_JOB_NAME = 'backfill-movie';
+export const CATALOG_MAINTENANCE_QUEUE_JOB_STATES = [
+  'waiting',
+  'active',
+  'delayed',
+  'failed',
+  'completed',
+] as const;
 
 const CATALOG_MAINTENANCE_JOB_OPTIONS = {
   attempts: 4,
@@ -15,6 +23,7 @@ const CATALOG_MAINTENANCE_JOB_OPTIONS = {
 };
 
 export type CatalogBackfillReason = 'missing_tmdb_id' | 'missing_metadata' | 'manual_refresh';
+export type CatalogMaintenanceQueueJobState = (typeof CATALOG_MAINTENANCE_QUEUE_JOB_STATES)[number];
 
 export interface EnqueueCatalogBackfillMovieInput {
   movieId: string | number;
@@ -48,17 +57,47 @@ export interface CatalogMaintenanceQueueSnapshot {
   updatedAt: string;
 }
 
-type CatalogBackfillMovieJobData = {
+export interface CatalogMaintenanceQueueJobSummary {
+  id: string;
+  name: string;
+  state: CatalogMaintenanceQueueJobState;
+  attemptsMade: number;
+  attemptsConfigured: number | null;
+  createdAt: string | null;
+  processedAt: string | null;
+  finishedAt: string | null;
+  failedReason: string | null;
+  payload: Array<{ label: string; value: string }>;
+  repairBatchId: string | null;
+  repairBatchItemId: string | null;
+  movieId: string | null;
+}
+
+export interface CatalogMaintenanceQueueJobPage {
+  queueName: string;
+  available: boolean;
+  state: CatalogMaintenanceQueueJobState;
+  jobs: CatalogMaintenanceQueueJobSummary[];
+  counts: CatalogMaintenanceQueueSnapshot['counts'];
+  openJobs: number;
+  totalCount: number;
+  limit: number;
+  offset: number;
+  updatedAt: string;
+}
+
+type CatalogMaintenanceJobData = {
   version: 1;
   movieId: string | number;
   reason?: CatalogBackfillReason;
   language?: string;
   repairBatchId?: string | number;
   repairBatchItemId?: string | number;
+  [key: string]: unknown;
 };
 
 let redisConnection: Redis | null = null;
-let catalogMaintenanceQueue: Queue<CatalogBackfillMovieJobData> | null = null;
+let catalogMaintenanceQueue: Queue<CatalogMaintenanceJobData> | null = null;
 
 const ACTIVE_DEDUPE_STATES = new Set([
   'active',
@@ -78,7 +117,7 @@ function toBullMQJobIdPart(value: string | number): string {
 
 function getCatalogMaintenanceQueue(
   redisUrl: string | undefined,
-): Queue<CatalogBackfillMovieJobData> | null {
+): Queue<CatalogMaintenanceJobData> | null {
   if (catalogMaintenanceQueue) return catalogMaintenanceQueue;
 
   if (!redisUrl) return null;
@@ -88,7 +127,7 @@ function getCatalogMaintenanceQueue(
     logger.error('Backoffice BullMQ Redis client error', { err: error });
   });
 
-  catalogMaintenanceQueue = new Queue<CatalogBackfillMovieJobData>(CATALOG_MAINTENANCE_QUEUE_NAME, {
+  catalogMaintenanceQueue = new Queue<CatalogMaintenanceJobData>(CATALOG_MAINTENANCE_QUEUE_NAME, {
     connection: redisConnection,
   });
   return catalogMaintenanceQueue;
@@ -96,6 +135,91 @@ function getCatalogMaintenanceQueue(
 
 export function getCatalogBackfillMovieJobId(movieId: string | number): string {
   return `backfill-${toBullMQJobIdPart(movieId)}`;
+}
+
+export function isCatalogMaintenanceQueueJobState(
+  value: string | null | undefined,
+): value is CatalogMaintenanceQueueJobState {
+  return CATALOG_MAINTENANCE_QUEUE_JOB_STATES.some((state) => state === value);
+}
+
+function isoFromEpoch(value: number | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function compactJobValue(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return null;
+}
+
+function addPayloadValue(
+  payload: Array<{ label: string; value: string }>,
+  label: string,
+  value: unknown,
+): void {
+  const compact = compactJobValue(value);
+  if (compact) payload.push({ label, value: compact });
+}
+
+export function summarizeCatalogMaintenanceJobPayload(
+  jobName: string,
+  data: Record<string, unknown>,
+): CatalogMaintenanceQueueJobSummary['payload'] {
+  const payload: CatalogMaintenanceQueueJobSummary['payload'] = [];
+
+  if (jobName === CATALOG_BACKFILL_MOVIE_JOB_NAME) {
+    addPayloadValue(payload, 'Movie', data.movieId);
+    addPayloadValue(payload, 'Reason', data.reason);
+    addPayloadValue(payload, 'Language', data.language);
+    addPayloadValue(payload, 'Batch', data.repairBatchId);
+    addPayloadValue(payload, 'Item', data.repairBatchItemId);
+    return payload;
+  }
+
+  addPayloadValue(payload, 'Movie', data.movieId);
+  addPayloadValue(payload, 'TMDB', data.tmdbId);
+  addPayloadValue(payload, 'Source', data.source);
+  addPayloadValue(payload, 'Page', data.page);
+  addPayloadValue(payload, 'Language', data.language);
+  addPayloadValue(payload, 'Version', data.version);
+  return payload;
+}
+
+function getCountForState(
+  counts: CatalogMaintenanceQueueSnapshot['counts'],
+  state: CatalogMaintenanceQueueJobState,
+): number {
+  if (state === 'waiting') return counts.waiting;
+  return counts[state];
+}
+
+function toJobSummary(
+  job: Job<CatalogMaintenanceJobData>,
+  state: CatalogMaintenanceQueueJobState,
+): CatalogMaintenanceQueueJobSummary {
+  const data = job.data;
+
+  return {
+    id: String(job.id ?? '-'),
+    name: job.name,
+    state,
+    attemptsMade: job.attemptsMade,
+    attemptsConfigured: typeof job.opts.attempts === 'number' ? job.opts.attempts : null,
+    createdAt: isoFromEpoch(job.timestamp),
+    processedAt: isoFromEpoch(job.processedOn),
+    finishedAt: isoFromEpoch(job.finishedOn),
+    failedReason: compactJobValue(job.failedReason),
+    payload: summarizeCatalogMaintenanceJobPayload(job.name, data),
+    repairBatchId: compactJobValue(data.repairBatchId),
+    repairBatchItemId: compactJobValue(data.repairBatchItemId),
+    movieId: compactJobValue(data.movieId),
+  };
 }
 
 export async function getCatalogMaintenanceQueueSnapshot(
@@ -151,6 +275,51 @@ export async function getCatalogMaintenanceQueueSnapshot(
       normalizedCounts.prioritized +
       normalizedCounts.waiting +
       normalizedCounts.waitingChildren,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export async function listCatalogMaintenanceQueueJobs({
+  limit,
+  offset,
+  redisUrl = process.env.REDIS_URL,
+  state,
+}: {
+  limit: number;
+  offset: number;
+  redisUrl?: string;
+  state: CatalogMaintenanceQueueJobState;
+}): Promise<CatalogMaintenanceQueueJobPage> {
+  const snapshot = await getCatalogMaintenanceQueueSnapshot(redisUrl);
+  const totalCount = getCountForState(snapshot.counts, state);
+  const queue = getCatalogMaintenanceQueue(redisUrl);
+
+  if (!queue || !snapshot.available) {
+    return {
+      ...snapshot,
+      state,
+      jobs: [],
+      totalCount: 0,
+      limit,
+      offset,
+    };
+  }
+
+  const end = Math.max(offset + limit - 1, offset);
+  const jobs = await queue.getJobs(
+    [state],
+    offset,
+    end,
+    state !== 'completed' && state !== 'failed',
+  );
+
+  return {
+    ...snapshot,
+    state,
+    jobs: jobs.map((job) => toJobSummary(job as Job<CatalogMaintenanceJobData>, state)),
+    totalCount,
+    limit,
+    offset,
     updatedAt: new Date().toISOString(),
   };
 }

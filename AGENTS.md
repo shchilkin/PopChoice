@@ -108,6 +108,13 @@ When adding new roadmap work:
 - If the work is broad, keep the original issue as an epic/umbrella and create focused implementation issues underneath it.
 - Prefer roadmap entries that link to concrete issues; avoid long-lived untracked bullets unless they are intentionally exploratory notes.
 
+## Pre-PR UI Critique
+
+Before opening or marking ready any PR that changes user-facing or operator-facing UI, run
+`$impeccable critique` against the affected page, component, or route. Address the actionable
+issues before publishing the PR. If a finding is intentionally deferred, document why in the PR
+description and add or link a follow-up issue.
+
 ## Gotchas
 
 - Next.js uses `apps/web/src/proxy.ts` for the CSRF cookie path. Older docs or comments may still say middleware.
