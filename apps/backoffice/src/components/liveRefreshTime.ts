@@ -1,13 +1,18 @@
-const TODAY_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const TODAY_TIME_FORMATTER = new Intl.DateTimeFormat('en', {
+  hourCycle: 'h23',
   hour: '2-digit',
   minute: '2-digit',
 });
 
-const STALE_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+const STALE_DATE_FORMATTER = new Intl.DateTimeFormat('en', {
   day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
   month: 'short',
+});
+
+const OLD_DATE_FORMATTER = new Intl.DateTimeFormat('en', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
 });
 
 function isSameLocalDay(left: Date, right: Date): boolean {
@@ -25,7 +30,14 @@ export function formatLiveSyncTime(value: string | number | Date): string {
     return 'unknown';
   }
 
-  return isSameLocalDay(date, new Date())
-    ? TODAY_TIME_FORMATTER.format(date)
-    : STALE_TIME_FORMATTER.format(date);
+  const now = new Date();
+  if (isSameLocalDay(date, now)) {
+    return `today at ${TODAY_TIME_FORMATTER.format(date)}`;
+  }
+
+  if (date.getFullYear() !== now.getFullYear()) {
+    return `${OLD_DATE_FORMATTER.format(date)} at ${TODAY_TIME_FORMATTER.format(date)}`;
+  }
+
+  return `${STALE_DATE_FORMATTER.format(date)} at ${TODAY_TIME_FORMATTER.format(date)}`;
 }
