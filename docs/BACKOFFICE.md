@@ -98,6 +98,10 @@ Mutation flows are deliberately narrow:
 - [#575](https://github.com/shchilkin/PopChoice/issues/575): durable repair
   batches are browsable from the backoffice at `/repair-batches`, with a detail
   view for per-movie item status, queue metadata, and worker errors.
+- [#627](https://github.com/shchilkin/PopChoice/issues/627): the backoffice has
+  a native read-only `catalog-maintenance` queue view at `/queue`, with BullMQ
+  state filters, compact job payload summaries, queue counts, and links to
+  related movies or repair batches.
 - Catalog-health operators can jump from backoffice to Bull Board when
   `BULL_BOARD_URL` is configured, queue the next bounded repair batch, or
   manually enqueue a single movie when automatic grouping misses a case. True
@@ -184,6 +188,9 @@ intentionally conservative:
 - workers advance durable item status from `queued`/`deduped` to `processing`,
   `completed_resolved`, `completed_unresolved`, `skipped`, or final `failed`
   when a repair job carries `repairBatchId` and `repairBatchItemId`;
+- the queue page at `/queue` shows a read-only BullMQ lens for the
+  `catalog-maintenance` queue, including waiting, active, scheduled, failed, and
+  completed jobs with compact payload fields;
 - the repair batch history page at `/repair-batches` shows recent durable batch
   attempts and links to per-item details, so operators do not need to infer
   batch state from Bull Board history alone;

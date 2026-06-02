@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  DEFAULT_QUEUE_JOB_PAGE_SIZE,
   DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE,
   DEFAULT_REPAIR_BATCH_PAGE_SIZE,
+  MAX_QUEUE_JOB_PAGE_SIZE,
   MAX_REPAIR_BATCH_PAGE_SIZE,
+  parseCatalogMaintenanceQueueParams,
   parseRepairBatchItemParams,
   parseRepairBatchListParams,
 } from './backoffice';
@@ -43,5 +46,33 @@ describe('repair batch query params', () => {
       limit: DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE,
       offset: 0,
     });
+  });
+
+  it('defaults catalog maintenance queue filters', () => {
+    expect(parseCatalogMaintenanceQueueParams({})).toEqual({
+      state: 'waiting',
+      page: 1,
+      pageSize: DEFAULT_QUEUE_JOB_PAGE_SIZE,
+      limit: DEFAULT_QUEUE_JOB_PAGE_SIZE,
+      offset: 0,
+    });
+  });
+
+  it('clamps catalog maintenance queue pagination and validates state', () => {
+    expect(
+      parseCatalogMaintenanceQueueParams({
+        page: '4',
+        pageSize: '999',
+        state: 'failed',
+      }),
+    ).toEqual({
+      state: 'failed',
+      page: 4,
+      pageSize: MAX_QUEUE_JOB_PAGE_SIZE,
+      limit: MAX_QUEUE_JOB_PAGE_SIZE,
+      offset: 150,
+    });
+
+    expect(parseCatalogMaintenanceQueueParams({ state: 'unknown' }).state).toBe('waiting');
   });
 });
