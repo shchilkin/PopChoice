@@ -759,7 +759,7 @@ export function CatalogHealthPage({
       }
     >
       <RepairFlash repairStatus={repairStatus} />
-      <CatalogMaintenanceRealtimeRefresh label="Realtime queue events trigger catalog refresh" />
+      <CatalogMaintenanceRealtimeRefresh label="Queue updates refresh the catalog view" />
       <CatalogHealthLiveRefresh initialData={initialLiveData} intervalSeconds={12} />
       <CatalogStatusStrip
         activeIssues={activeIssues}

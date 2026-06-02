@@ -3,16 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
+import { formatLiveSyncTime } from './liveRefreshTime';
+
 type RealtimeStatus = 'connecting' | 'connected' | 'error';
 
 const REFRESH_DEBOUNCE_MS = 350;
-const CLIENT_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
 
 export function CatalogMaintenanceRealtimeRefresh({
-  label = 'Realtime queue events',
+  label = 'Queue updates refresh this view',
 }: {
   label?: string;
 }) {
@@ -57,9 +55,10 @@ export function CatalogMaintenanceRealtimeRefresh({
     status === 'connected'
       ? label
       : status === 'connecting'
-        ? 'Connecting realtime queue events'
-        : 'Realtime queue events unavailable';
-  const lastEvent = lastEventAt ? CLIENT_TIME_FORMATTER.format(new Date(lastEventAt)) : null;
+        ? 'Connecting to queue updates'
+        : 'Queue updates unavailable';
+  const lastEvent = lastEventAt ? formatLiveSyncTime(lastEventAt) : null;
+  const syncLabel = status === 'connected' ? 'Synced' : 'Last sync';
 
   return (
     <div className={`live-refresh realtime-refresh ${status}`} aria-live="polite">
@@ -68,7 +67,9 @@ export function CatalogMaintenanceRealtimeRefresh({
         aria-hidden="true"
       />
       <span>{copy}</span>
-      <span className="live-refresh-meta">{lastEvent ? `Last event ${lastEvent}` : 'Waiting'}</span>
+      <span className="live-refresh-meta">
+        {lastEvent ? `${syncLabel} ${lastEvent}` : 'Waiting'}
+      </span>
     </div>
   );
 }
