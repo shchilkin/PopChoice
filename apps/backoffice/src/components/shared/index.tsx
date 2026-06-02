@@ -169,10 +169,17 @@ export function JsonDetails({
   open?: boolean;
   value: unknown;
 }) {
+  let serializedValue: string;
+  try {
+    serializedValue = JSON.stringify(value, null, 2);
+  } catch {
+    serializedValue = String(value);
+  }
+
   return (
     <details className={className ? `json-details ${className}` : 'json-details'} open={open}>
       <summary>{label}</summary>
-      <pre>{JSON.stringify(value, null, 2)}</pre>
+      <pre>{serializedValue}</pre>
     </details>
   );
 }

@@ -1,10 +1,17 @@
-import type { QueueEvents } from 'bullmq';
+import { QueueEvents } from 'bullmq';
+import { Redis } from 'ioredis';
 
 export const BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS = 25_000;
 export const BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS = 350;
 
 export type QueueEventPayload = Record<string, unknown> | string | number | null | undefined;
 export type SnapshotQueueEvent = { payload: Record<string, unknown>; type: string };
+export type BackofficeStreamSnapshotTrigger = 'connected' | 'queue-event' | 'redis-unavailable';
+export type BackofficeStreamSend = (event: string, payload: Record<string, unknown>) => void;
+export type BackofficeStreamScheduleSnapshot = (
+  trigger: BackofficeStreamSnapshotTrigger,
+  queueEvent?: SnapshotQueueEvent,
+) => void;
 
 const QUEUE_EVENT_NAMES = [
   'waiting',
@@ -42,9 +49,10 @@ export function withBackofficeStreamMetadata(
 export function createServerSentEventResponse(stream: ReadableStream<Uint8Array>): Response {
   return new Response(stream, {
     headers: {
-      'Cache-Control': 'no-store',
+      'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
       'Content-Type': 'text/event-stream',
+      'X-Accel-Buffering': 'no',
     },
   });
 }
@@ -71,8 +79,216 @@ export function getSearchParamsRecord(
 export function bindCatalogMaintenanceQueueEvents(
   queueEvents: QueueEvents,
   forward: (type: string) => (payload: QueueEventPayload) => void,
-): void {
-  for (const eventName of QUEUE_EVENT_NAMES) {
-    queueEvents.on(eventName, forward(eventName));
-  }
+): () => void {
+  const listeners = QUEUE_EVENT_NAMES.map((eventName) => {
+    const listener = forward(eventName);
+    queueEvents.on(eventName, listener);
+    return { eventName, listener };
+  });
+
+  return () => {
+    for (const { eventName, listener } of listeners) {
+      queueEvents.off(eventName, listener);
+    }
+  };
+}
+
+export interface BackofficeQueueEventStreamOptions {
+  connectedPayload?: (mode: 'live' | 'snapshot-only') => Record<string, unknown>;
+  errorEvent: string;
+  logError: (message: string, error: unknown) => void;
+  logOpenErrorMessage: string;
+  logQueueErrorMessage: string;
+  logRedisErrorMessage: string;
+  logSnapshotErrorMessage: string;
+  onQueueEvent?: (event: {
+    payload: Record<string, unknown>;
+    scheduleSnapshot: BackofficeStreamScheduleSnapshot;
+    send: BackofficeStreamSend;
+    type: string;
+  }) => void;
+  queueName: string;
+  readSnapshot: (context: {
+    queueEvent?: SnapshotQueueEvent;
+    trigger: BackofficeStreamSnapshotTrigger;
+  }) => Promise<Record<string, unknown>>;
+  redisUrl?: string | null;
+  request: Request;
+  sendSnapshotWhenRedisUnavailable?: boolean;
+  streamOpenErrorMessage: string;
+  streamQueueErrorMessage: string;
+  streamRedisErrorMessage: string;
+  streamSnapshotErrorMessage: string;
+  suppressDuplicateRedisErrors?: boolean;
+}
+
+export function createBackofficeQueueEventStream({
+  connectedPayload = (mode) => (mode === 'snapshot-only' ? { mode } : {}),
+  errorEvent,
+  logError,
+  logOpenErrorMessage,
+  logQueueErrorMessage,
+  logRedisErrorMessage,
+  logSnapshotErrorMessage,
+  onQueueEvent,
+  queueName,
+  readSnapshot,
+  redisUrl,
+  request,
+  sendSnapshotWhenRedisUnavailable = false,
+  streamOpenErrorMessage,
+  streamQueueErrorMessage,
+  streamRedisErrorMessage,
+  streamSnapshotErrorMessage,
+  suppressDuplicateRedisErrors = false,
+}: BackofficeQueueEventStreamOptions): ReadableStream<Uint8Array> {
+  let cleanupStream: (() => Promise<void>) | null = null;
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let closed = false;
+      let hasEmittedRedisError = false;
+      let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+      let snapshotInFlight = false;
+      let pendingSnapshot: {
+        queueEvent?: SnapshotQueueEvent;
+        trigger: BackofficeStreamSnapshotTrigger;
+      } | null = null;
+      const connection = redisUrl ? new Redis(redisUrl, { maxRetriesPerRequest: null }) : null;
+      const queueEvents = connection ? new QueueEvents(queueName, { connection }) : null;
+      let cleanupQueueEventListeners: (() => void) | null = null;
+
+      const send: BackofficeStreamSend = (event, payload) => {
+        if (closed) return;
+        controller.enqueue(
+          encodeServerSentEvent(event, withBackofficeStreamMetadata(payload, { queueName })),
+        );
+      };
+
+      const sendSnapshot = async (
+        trigger: BackofficeStreamSnapshotTrigger,
+        queueEvent?: SnapshotQueueEvent,
+      ) => {
+        if (closed) return;
+        if (snapshotInFlight) {
+          pendingSnapshot = { queueEvent, trigger };
+          return;
+        }
+
+        snapshotInFlight = true;
+        try {
+          send('snapshot', await readSnapshot({ queueEvent, trigger }));
+        } catch (error) {
+          logError(logSnapshotErrorMessage, error);
+          send(errorEvent, { message: streamSnapshotErrorMessage });
+        } finally {
+          snapshotInFlight = false;
+          if (pendingSnapshot) {
+            const nextSnapshot = pendingSnapshot;
+            pendingSnapshot = null;
+            void sendSnapshot(nextSnapshot.trigger, nextSnapshot.queueEvent);
+          }
+        }
+      };
+
+      const scheduleSnapshot: BackofficeStreamScheduleSnapshot = (trigger, queueEvent) => {
+        if (snapshotTimer !== null) {
+          clearTimeout(snapshotTimer);
+        }
+        snapshotTimer = setTimeout(
+          () => {
+            snapshotTimer = null;
+            void sendSnapshot(trigger, queueEvent);
+          },
+          trigger === 'queue-event' ? BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS : 0,
+        );
+      };
+
+      const cleanup = async () => {
+        if (closed) return;
+        closed = true;
+        cleanupStream = null;
+        if (snapshotTimer !== null) {
+          clearTimeout(snapshotTimer);
+        }
+        clearInterval(heartbeat);
+        cleanupQueueEventListeners?.();
+        queueEvents?.removeAllListeners();
+        connection?.removeAllListeners();
+        await queueEvents?.close().catch(() => undefined);
+        await connection?.quit().catch(() => undefined);
+        try {
+          controller.close();
+        } catch {
+          // The client can close the stream before cleanup finishes.
+        }
+      };
+      cleanupStream = cleanup;
+
+      const heartbeat = setInterval(() => {
+        send('heartbeat', {});
+      }, BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS);
+
+      if (request.signal.aborted) {
+        void cleanup();
+        return;
+      }
+
+      request.signal.addEventListener(
+        'abort',
+        () => {
+          void cleanup();
+        },
+        { once: true },
+      );
+
+      if (!connection || !queueEvents) {
+        send('connected', connectedPayload('snapshot-only'));
+        if (sendSnapshotWhenRedisUnavailable) {
+          scheduleSnapshot('redis-unavailable');
+        }
+        return;
+      }
+
+      const forward = (type: string) => (rawPayload: QueueEventPayload) => {
+        const payload = normalizeQueueEventPayload(rawPayload);
+        if (onQueueEvent) {
+          onQueueEvent({ payload, scheduleSnapshot, send, type });
+          return;
+        }
+        if (type !== 'progress') {
+          scheduleSnapshot('queue-event', { payload, type });
+        }
+      };
+
+      connection.on('error', (error) => {
+        if (suppressDuplicateRedisErrors && hasEmittedRedisError) return;
+        hasEmittedRedisError = true;
+        logError(logRedisErrorMessage, error);
+        send(errorEvent, { message: streamRedisErrorMessage });
+      });
+      connection.on('ready', () => {
+        hasEmittedRedisError = false;
+      });
+
+      cleanupQueueEventListeners = bindCatalogMaintenanceQueueEvents(queueEvents, forward);
+      queueEvents.on('error', (error) => {
+        logError(logQueueErrorMessage, error);
+        send(errorEvent, { message: streamQueueErrorMessage });
+      });
+
+      try {
+        await queueEvents.waitUntilReady();
+        send('connected', connectedPayload('live'));
+        scheduleSnapshot('connected');
+      } catch (error) {
+        logError(logOpenErrorMessage, error);
+        send(errorEvent, { message: streamOpenErrorMessage });
+        await cleanup();
+      }
+    },
+    cancel() {
+      void cleanupStream?.();
+    },
+  });
 }

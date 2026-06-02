@@ -77,7 +77,12 @@ export function repairResultStatusLabel(status: string): string {
 }
 
 export function repairResultStatusTone(status: string): 'good' | 'neutral' | 'warn' {
-  if (status === 'failed' || status === 'enqueue_failed' || status === 'unavailable') {
+  if (
+    status === 'failed' ||
+    status === 'enqueue_failed' ||
+    status === 'partial' ||
+    status === 'unavailable'
+  ) {
     return 'warn';
   }
   return status === 'completed_resolved' ? 'good' : 'neutral';
@@ -127,40 +132,42 @@ export function RepairAuditRows({ audit }: { audit: CatalogRepairActionAudit[] }
   }
 
   return (
-    <table className="repair-audit-table">
-      <thead>
-        <tr>
-          <th>When</th>
-          <th>Actor</th>
-          <th>Issue</th>
-          <th>Target</th>
-          <th>Action</th>
-          <th>Result</th>
-        </tr>
-      </thead>
-      <tbody>
-        {audit.map((entry) => (
-          <tr key={entry.id}>
-            <td>
-              <time dateTime={entry.createdAt} title={formatBackofficeDateTime(entry.createdAt)}>
-                {formatCompactBackofficeDateTime(entry.createdAt)}
-              </time>
-            </td>
-            <td>{entry.actor}</td>
-            <td>
-              <span className="repair-issue-label">
-                {humanizeBackofficeIdentifier(entry.issueKey)}
-              </span>
-              <span className="repair-issue-key">{entry.issueKey}</span>
-            </td>
-            <td>{formatRepairTarget(entry)}</td>
-            <td>{humanizeBackofficeIdentifier(entry.action)}</td>
-            <td>
-              <RepairResultSummary entry={entry} />
-            </td>
+    <div className="table-scroll">
+      <table className="repair-audit-table">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Actor</th>
+            <th>Issue</th>
+            <th>Target</th>
+            <th>Action</th>
+            <th>Result</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {audit.map((entry) => (
+            <tr key={entry.id}>
+              <td>
+                <time dateTime={entry.createdAt} title={formatBackofficeDateTime(entry.createdAt)}>
+                  {formatCompactBackofficeDateTime(entry.createdAt)}
+                </time>
+              </td>
+              <td>{entry.actor}</td>
+              <td>
+                <span className="repair-issue-label">
+                  {humanizeBackofficeIdentifier(entry.issueKey)}
+                </span>
+                <span className="repair-issue-key">{entry.issueKey}</span>
+              </td>
+              <td>{formatRepairTarget(entry)}</td>
+              <td>{humanizeBackofficeIdentifier(entry.action)}</td>
+              <td>
+                <RepairResultSummary entry={entry} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

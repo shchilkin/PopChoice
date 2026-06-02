@@ -96,5 +96,16 @@ describe('repair batch helpers', () => {
     expect(
       repairBatchRecoveryHint({ ...baseBatch, attemptedCount: 10, completedCount: 1 }),
     ).toContain('did not reach');
+    expect(
+      repairBatchRecoveryHint({
+        ...baseBatch,
+        attemptedCount: 10,
+        completedCount: 1,
+        dedupedCount: 4,
+        failedCount: 0,
+        skippedCount: 5,
+        unavailableCount: 0,
+      }),
+    ).toContain('No immediate recovery action');
   });
 });

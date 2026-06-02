@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import type { QueueEvents } from 'bullmq';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
+  bindCatalogMaintenanceQueueEvents,
+  createServerSentEventResponse,
   encodeServerSentEvent,
   getSearchParamsRecord,
   normalizeQueueEventPayload,
@@ -41,5 +44,43 @@ describe('backoffice event stream helpers', () => {
       page: '2',
       state: ['waiting', 'failed'],
     });
+  });
+
+  it('creates SSE responses with streaming-safe headers', () => {
+    const stream = new ReadableStream<Uint8Array>();
+    const response = createServerSentEventResponse(stream);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toBe('text/event-stream');
+    expect(response.headers.get('Cache-Control')).toBe('no-cache');
+    expect(response.headers.get('Connection')).toBe('keep-alive');
+    expect(response.headers.get('X-Accel-Buffering')).toBe('no');
+  });
+
+  it('binds and cleans up catalog maintenance queue event listeners', () => {
+    const listeners = new Map<string, Array<(payload: unknown) => void>>();
+    const queueEvents = {
+      off: vi.fn((eventName: string, listener: (payload: unknown) => void) => {
+        listeners.set(
+          eventName,
+          (listeners.get(eventName) ?? []).filter((current) => current !== listener),
+        );
+      }),
+      on: vi.fn((eventName: string, listener: (payload: unknown) => void) => {
+        listeners.set(eventName, [...(listeners.get(eventName) ?? []), listener]);
+      }),
+    } as unknown as QueueEvents;
+    const forward = vi.fn((eventName: string) => vi.fn((payload) => ({ eventName, payload })));
+
+    const cleanup = bindCatalogMaintenanceQueueEvents(queueEvents, forward);
+
+    expect(queueEvents.on).toHaveBeenCalledTimes(8);
+    expect(forward).toHaveBeenCalledWith('waiting');
+    expect(forward).toHaveBeenCalledWith('progress');
+
+    cleanup();
+
+    expect(queueEvents.off).toHaveBeenCalledTimes(8);
+    expect([...listeners.values()].every((entries) => entries.length === 0)).toBe(true);
   });
 });
