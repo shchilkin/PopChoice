@@ -14,7 +14,7 @@ import {
   DEFAULT_BULK_REPAIR_LIMIT,
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   formatBackofficeDateTime,
-  MAX_BULK_REPAIR_LIMIT,
+  MAX_ASYNC_BULK_REPAIR_LIMIT,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
@@ -413,9 +413,9 @@ function SampleRows({
 
 function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
   const batchLimit = Math.min(issue.count, DEFAULT_BULK_REPAIR_LIMIT);
-  const allLimit = Math.min(issue.count, MAX_BULK_REPAIR_LIMIT);
+  const allLimit = Math.min(issue.count, MAX_ASYNC_BULK_REPAIR_LIMIT);
   const allLabel =
-    issue.count > MAX_BULK_REPAIR_LIMIT ? `Queue first ${allLimit}` : `Queue all ${allLimit}`;
+    issue.count > MAX_ASYNC_BULK_REPAIR_LIMIT ? `Queue first ${allLimit}` : `Queue all ${allLimit}`;
 
   return (
     <div className="bulk-repair-actions">
@@ -440,9 +440,9 @@ function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
           method="post"
           action="/catalog-health/actions"
           data-bulk-repair-form
-          data-confirm-message={`${allLabel} repair jobs for ${issue.label}? Workers will keep the existing TMDB/OpenAI pacing.`}
+          data-confirm-message={`${allLabel} repair jobs for ${issue.label}? Backoffice will create a durable batch now, then workers will add repair jobs in chunks.`}
         >
-          <input type="hidden" name="action" value="bulk_enqueue_backfill" />
+          <input type="hidden" name="action" value="bulk_enqueue_backfill_async" />
           <input type="hidden" name="issue_key" value={issue.key} />
           <input type="hidden" name="batch_limit" value={allLimit} />
           <button className="button quiet small" type="submit" data-repair-submit>
@@ -579,6 +579,15 @@ function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
       <div className="notice neutral">
         Catalog repair batch accepted. Issues stay open until workers update the catalog and the
         next health report clears them.
+      </div>
+    );
+  }
+
+  if (repairStatus === 'bulk-orchestration-queued') {
+    return (
+      <div className="notice neutral">
+        Catalog repair orchestration accepted. A durable batch was created; workers will add repair
+        items and queue backfill jobs in chunks.
       </div>
     );
   }

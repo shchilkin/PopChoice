@@ -165,6 +165,12 @@ export interface UpdateCatalogRepairBatchItemStatusInput {
   result?: Record<string, unknown>;
 }
 
+export interface UpdateCatalogRepairBatchOrchestrationInput {
+  batchId: string | number;
+  status: Extract<CatalogRepairBatchStatus, 'enqueueing' | 'failed' | 'unavailable'>;
+  result: Record<string, unknown>;
+}
+
 export function catalogRepairCompletionStatusForResolution(
   resolved: boolean,
 ): Extract<CatalogRepairItemStatus, 'completed_resolved' | 'completed_unresolved'> {
@@ -872,6 +878,48 @@ export async function refreshCatalogRepairBatchCounts(
         batch.updated_at::text,
         batch.completed_at::text`,
     [batchId],
+  );
+
+  return normalizeBatch(result.rows[0]);
+}
+
+export async function updateCatalogRepairBatchOrchestrationResult(
+  input: UpdateCatalogRepairBatchOrchestrationInput,
+): Promise<CatalogRepairBatch> {
+  const result = await getPool().query<CatalogRepairBatchRow>(
+    `UPDATE catalog_repair_batches
+        SET status = $2,
+            result = $3::jsonb,
+            updated_at = now(),
+            completed_at = CASE
+              WHEN $2 IN ('failed', 'unavailable') THEN COALESCE(completed_at, now())
+              ELSE completed_at
+            END
+      WHERE id = $1
+      RETURNING
+        id::text,
+        action,
+        actor,
+        issue_key,
+        target_type,
+        target_id,
+        status,
+        requested_limit,
+        total_candidates,
+        attempted_count,
+        queued_count,
+        deduped_count,
+        unavailable_count,
+        failed_count,
+        completed_count,
+        skipped_count,
+        note,
+        previous_state,
+        result,
+        created_at::text,
+        updated_at::text,
+        completed_at::text`,
+    [input.batchId, input.status, JSON.stringify(input.result)],
   );
 
   return normalizeBatch(result.rows[0]);

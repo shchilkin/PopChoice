@@ -103,12 +103,13 @@ Mutation flows are deliberately narrow:
   a native read-only `catalog-maintenance` queue view at `/queue`, with BullMQ
   state filters, compact job payload summaries, queue counts, and links to
   related movies or repair batches.
+- [#630](https://github.com/shchilkin/PopChoice/issues/630): full-issue
+  `Queue all` repair actions create a durable batch immediately, enqueue an
+  `enqueue-catalog-repair-batch` orchestration job, and let workers create batch
+  items plus bounded `backfill-movie` jobs in chunks.
 - Catalog-health operators can jump from backoffice to Bull Board when
   `BULL_BOARD_URL` is configured, queue the next bounded repair batch, or
-  manually enqueue a single movie when automatic grouping misses a case. True
-  full-issue "Queue all" orchestration is tracked separately in
-  [#630](https://github.com/shchilkin/PopChoice/issues/630) so large repair
-  sweeps do not run inside a single HTTP request.
+  manually enqueue a single movie when automatic grouping misses a case.
 
 Shared operator auth is the login model for public exposure:
 
@@ -172,10 +173,10 @@ intentionally conservative:
 - bulk actions are capped, start from the first affected rows for the issue
   group, and rely on existing worker-side TMDB/OpenAI pacing rather than
   bypassing rate limits;
-- full-issue `Queue all` is intentionally deferred to
-  [#630](https://github.com/shchilkin/PopChoice/issues/630), where it can run as
-  a durable background orchestration job instead of a long operator HTTP
-  request;
+- full-issue `Queue all` uses a durable background orchestration job instead of
+  a long operator HTTP request. The HTTP action creates the batch and queues the
+  orchestration job; workers then create batch items and child `backfill-movie`
+  jobs in chunks;
 - deterministic `backfill-<movieId>` job ids let the action report deduped jobs
   instead of enqueueing duplicate in-flight work; completed and failed retained
   jobs are removed before retrying so stale BullMQ history does not block future
@@ -228,6 +229,9 @@ Recommended repair-batch recovery flow:
    queue failure.
 5. For `in_progress` items, wait for the realtime queue page or Bull Board to
    show terminal state before adding more work for the same issue.
+6. For `enqueueing` batches with no item rows yet, inspect the queue page for
+   the `enqueue-catalog-repair-batch` job. If it failed, retry the batch only
+   after checking Redis and worker logs.
 
 The auto-refresh UI treats enqueue success as "work accepted", not "catalog
 fixed". It removes the clicked sample row to keep the operator surface

@@ -12,6 +12,7 @@ import {
   listCatalogRepairBatchPage,
   refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemEnqueueResult,
+  updateCatalogRepairBatchOrchestrationResult,
   updateCatalogRepairBatchItemStatus,
 } from './catalogRepairActions.js';
 
@@ -269,6 +270,58 @@ describe('catalog repair audit pages', () => {
     expect(String(poolMock.query.mock.calls[0][0])).toContain("'completedUnresolved'");
     expect(String(poolMock.query.mock.calls[0][0])).toContain(
       'WHEN completed_count = attempted_count THEN',
+    );
+  });
+
+  it('records repair batch orchestration result without item rows', async () => {
+    poolMock.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: '7',
+          action: 'bulk_enqueue_backfill',
+          actor: 'operator',
+          issue_key: 'missing_poster_url',
+          target_type: 'catalog_issue',
+          target_id: 'missing_poster_url',
+          status: 'unavailable',
+          requested_limit: 250,
+          total_candidates: 351,
+          attempted_count: 0,
+          queued_count: 0,
+          deduped_count: 0,
+          unavailable_count: 0,
+          failed_count: 0,
+          completed_count: 0,
+          skipped_count: 0,
+          note: null,
+          previous_state: {},
+          result: { status: 'queue_unavailable' },
+          created_at: '2026-05-28 09:00:00+00',
+          updated_at: '2026-05-28 09:02:00+00',
+          completed_at: '2026-05-28 09:02:00+00',
+        },
+      ],
+    });
+
+    const batch = await updateCatalogRepairBatchOrchestrationResult({
+      batchId: '7',
+      status: 'unavailable',
+      result: { status: 'queue_unavailable' },
+    });
+
+    expect(batch).toMatchObject({
+      id: '7',
+      requestedLimit: 250,
+      result: { status: 'queue_unavailable' },
+      status: 'unavailable',
+    });
+    expect(poolMock.query.mock.calls[0][1]).toEqual([
+      '7',
+      'unavailable',
+      JSON.stringify({ status: 'queue_unavailable' }),
+    ]);
+    expect(String(poolMock.query.mock.calls[0][0])).toContain(
+      "WHEN $2 IN ('failed', 'unavailable')",
     );
   });
 

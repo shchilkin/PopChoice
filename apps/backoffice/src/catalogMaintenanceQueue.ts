@@ -7,6 +7,7 @@ import { logger } from '@pop-choice/shared';
 const DEFAULT_TMDB_LANGUAGE = 'en-US';
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
 const CATALOG_BACKFILL_MOVIE_JOB_NAME = 'backfill-movie';
+const CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME = 'enqueue-catalog-repair-batch';
 export const CATALOG_MAINTENANCE_QUEUE_JOB_STATES = [
   'waiting',
   'active',
@@ -33,7 +34,24 @@ export interface EnqueueCatalogBackfillMovieInput {
   repairBatchItemId?: string | number;
 }
 
+export interface EnqueueCatalogRepairBatchInput {
+  batchId: string | number;
+  issueKey: string;
+  limit: number;
+  pageSize: number;
+  language?: string;
+  staleAfterDays: number;
+}
+
 export interface EnqueueCatalogBackfillMovieResult {
+  queueName: string;
+  jobName: string;
+  jobId: string;
+  language: string;
+  status: 'queued' | 'deduped';
+}
+
+export interface EnqueueCatalogRepairBatchResult {
   queueName: string;
   jobName: string;
   jobId: string;
@@ -88,7 +106,11 @@ export interface CatalogMaintenanceQueueJobPage {
 
 type CatalogMaintenanceJobData = {
   version: 1;
-  movieId: string | number;
+  movieId?: string | number;
+  batchId?: string | number;
+  issueKey?: string;
+  limit?: number;
+  pageSize?: number;
   reason?: CatalogBackfillReason;
   language?: string;
   repairBatchId?: string | number;
@@ -137,6 +159,10 @@ export function getCatalogBackfillMovieJobId(movieId: string | number): string {
   return `backfill-${toBullMQJobIdPart(movieId)}`;
 }
 
+export function getCatalogRepairBatchJobId(batchId: string | number): string {
+  return `repair-batch-${toBullMQJobIdPart(batchId)}`;
+}
+
 export function isCatalogMaintenanceQueueJobState(
   value: string | null | undefined,
 ): value is CatalogMaintenanceQueueJobState {
@@ -179,6 +205,15 @@ export function summarizeCatalogMaintenanceJobPayload(
     addPayloadValue(payload, 'Language', data.language);
     addPayloadValue(payload, 'Batch', data.repairBatchId);
     addPayloadValue(payload, 'Item', data.repairBatchItemId);
+    return payload;
+  }
+
+  if (jobName === CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME) {
+    addPayloadValue(payload, 'Batch', data.batchId);
+    addPayloadValue(payload, 'Issue', data.issueKey);
+    addPayloadValue(payload, 'Limit', data.limit);
+    addPayloadValue(payload, 'Page size', data.pageSize);
+    addPayloadValue(payload, 'Language', data.language);
     return payload;
   }
 
@@ -369,6 +404,58 @@ export async function enqueueCatalogBackfillMovieFromBackoffice(
   return {
     queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
     jobName: CATALOG_BACKFILL_MOVIE_JOB_NAME,
+    jobId: String(job.id ?? jobId),
+    language,
+    status: 'queued',
+  };
+}
+
+export async function enqueueCatalogRepairBatchFromBackoffice(
+  input: EnqueueCatalogRepairBatchInput,
+  redisUrl = process.env.REDIS_URL,
+): Promise<EnqueueCatalogRepairBatchResult | null> {
+  const queue = getCatalogMaintenanceQueue(redisUrl);
+  if (!queue) return null;
+
+  const language = normalizeLanguage(input.language);
+  const jobId = getCatalogRepairBatchJobId(input.batchId);
+  const existingJob = await queue.getJob(jobId);
+
+  if (existingJob) {
+    const state = await existingJob.getState();
+    if (ACTIVE_DEDUPE_STATES.has(state)) {
+      return {
+        queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+        jobName: CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
+        jobId: String(existingJob.id ?? jobId),
+        language,
+        status: 'deduped',
+      };
+    }
+
+    await existingJob.remove();
+  }
+
+  const job = await queue.add(
+    CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
+    {
+      version: 1,
+      batchId: input.batchId,
+      issueKey: input.issueKey,
+      limit: input.limit,
+      pageSize: input.pageSize,
+      language,
+      staleAfterDays: input.staleAfterDays,
+    },
+    {
+      ...CATALOG_MAINTENANCE_JOB_OPTIONS,
+      jobId,
+    },
+  );
+
+  return {
+    queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+    jobName: CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
     jobId: String(job.id ?? jobId),
     language,
     status: 'queued',

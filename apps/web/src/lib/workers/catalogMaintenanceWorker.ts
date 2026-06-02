@@ -1,13 +1,17 @@
 import {
   catalogRepairCompletionStatusForResolution,
   createEmbeddings,
+  createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
   ensureCatalogMetadataSchema,
   getPool,
   initDatabase,
   insertMovies,
   isCatalogHealthIssueResolvedForMovie,
+  listCatalogHealthIssueMoviePage,
   refreshCatalogRepairBatchCounts,
+  updateCatalogRepairBatchItemEnqueueResult,
+  updateCatalogRepairBatchOrchestrationResult,
   updateCatalogRepairBatchItemStatus,
   upsertMovieCatalogMetadata,
 } from '@pop-choice/shared';
@@ -28,6 +32,7 @@ import {
   CATALOG_MAINTENANCE_JOB_NAMES,
   CATALOG_MAINTENANCE_JOB_OPTIONS,
   CATALOG_MAINTENANCE_QUEUE_NAME,
+  catalogMaintenanceQueue,
   createBullMQConnection,
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
@@ -37,6 +42,7 @@ import { withTraceSpan } from '@/lib/tracing';
 import type {
   CatalogBackfillMovieJobData,
   CatalogDiscoverTMDBSourcePageJobData,
+  CatalogEnqueueRepairBatchJobData,
   CatalogMaintenanceJobData,
   CatalogMaintenanceJobName,
   CatalogSeedTMDBMovieJobData,
@@ -72,6 +78,15 @@ const DEFAULT_TMDB_429_BACKOFF_MS = 30_000;
 const DEFAULT_MIN_VOTE_COUNT = 500;
 const DEFAULT_MIN_VOTE_AVERAGE = 6.5;
 const DEFAULT_CATALOG_HEALTH_STALE_DAYS = 180;
+const DEFAULT_REPAIR_ORCHESTRATION_CHUNK_SIZE = 25;
+const MAX_REPAIR_ORCHESTRATION_CHUNK_SIZE = 100;
+const ACTIVE_DEDUPE_STATES = new Set([
+  'active',
+  'delayed',
+  'prioritized',
+  'waiting',
+  'waiting-children',
+]);
 
 let databaseInitialized = false;
 let schemaReadyPromise: Promise<void> | null = null;
@@ -192,6 +207,22 @@ function catalogTMDBOperationForJob(jobName: CatalogMaintenanceJobName) {
   return jobName === CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage
     ? 'catalog_discover'
     : 'catalog_details';
+}
+
+function toBullMQJobIdPart(value: string | number): string {
+  return String(value).replace(/[^a-zA-Z0-9_.-]/g, '-');
+}
+
+function getCatalogBackfillMovieJobId(movieId: string | number): string {
+  return `backfill-${toBullMQJobIdPart(movieId)}`;
+}
+
+function getBackfillReasonForIssue(
+  issueKey: string,
+): NonNullable<CatalogBackfillMovieJobData['reason']> {
+  if (issueKey === 'missing_tmdb_id') return 'missing_tmdb_id';
+  if (issueKey === 'stale_tmdb_metadata') return 'manual_refresh';
+  return 'missing_metadata';
 }
 
 function isTimeoutError(error: unknown): boolean {
@@ -370,6 +401,193 @@ async function processDiscoverTMDBSourcePage(
   );
 }
 
+async function enqueueBackfillJobForRepairBatchItem(input: {
+  batchId: string | number;
+  itemId: string | number;
+  language?: string;
+  movieId: string | number;
+  reason: NonNullable<CatalogBackfillMovieJobData['reason']>;
+}): Promise<{ jobId?: string; status: 'queued' | 'deduped' | 'unavailable' }> {
+  if (!catalogMaintenanceQueue) return { status: 'unavailable' };
+
+  const jobId = getCatalogBackfillMovieJobId(input.movieId);
+  const existingJob = await catalogMaintenanceQueue.getJob(jobId);
+
+  if (existingJob) {
+    const state = await existingJob.getState();
+    if (ACTIVE_DEDUPE_STATES.has(state)) {
+      return { jobId: String(existingJob.id ?? jobId), status: 'deduped' };
+    }
+
+    await existingJob.remove();
+  }
+
+  const job = await catalogMaintenanceQueue.add(
+    CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
+    {
+      version: 1,
+      movieId: input.movieId,
+      reason: input.reason,
+      language: input.language,
+      repairBatchId: input.batchId,
+      repairBatchItemId: input.itemId,
+    },
+    {
+      ...CATALOG_MAINTENANCE_JOB_OPTIONS,
+      jobId,
+    },
+  );
+
+  return { jobId: String(job.id ?? jobId), status: 'queued' };
+}
+
+async function processEnqueueRepairBatch(
+  job: Job<CatalogEnqueueRepairBatchJobData>,
+): Promise<void> {
+  await ensureCatalogSchema();
+
+  const issueKey = job.data.issueKey;
+  const batchId = job.data.batchId;
+  const limit = Math.max(0, Number.isFinite(job.data.limit) ? Math.floor(job.data.limit) : 0);
+  const pageSize = Math.min(
+    Math.max(
+      1,
+      Number.isFinite(job.data.pageSize)
+        ? Math.floor(job.data.pageSize)
+        : DEFAULT_REPAIR_ORCHESTRATION_CHUNK_SIZE,
+    ),
+    MAX_REPAIR_ORCHESTRATION_CHUNK_SIZE,
+  );
+  const staleAfterDays = Math.max(
+    1,
+    Number.isFinite(job.data.staleAfterDays)
+      ? Math.floor(job.data.staleAfterDays ?? DEFAULT_CATALOG_HEALTH_STALE_DAYS)
+      : DEFAULT_CATALOG_HEALTH_STALE_DAYS,
+  );
+  const reason = getBackfillReasonForIssue(issueKey);
+  let offset = 0;
+  let attempted = 0;
+  let queued = 0;
+  let deduped = 0;
+  let failed = 0;
+  let unavailable = 0;
+
+  try {
+    while (attempted < limit) {
+      const chunkLimit = Math.min(pageSize, limit - attempted);
+      const page = await listCatalogHealthIssueMoviePage({
+        issueKey,
+        limit: chunkLimit,
+        offset,
+        staleAfterDays,
+      });
+
+      if (page.movies.length === 0) break;
+
+      for (const movie of page.movies) {
+        const item = await createCatalogRepairBatchItem({
+          batchId,
+          issueKey,
+          language: job.data.language,
+          movieId: movie.id,
+          movieSnapshot: { ...movie },
+          reason,
+        });
+
+        try {
+          const enqueueResult = await enqueueBackfillJobForRepairBatchItem({
+            batchId,
+            itemId: item.id,
+            language: job.data.language,
+            movieId: movie.id,
+            reason,
+          });
+
+          if (enqueueResult.status === 'unavailable') {
+            unavailable += 1;
+            await updateCatalogRepairBatchItemEnqueueResult({
+              itemId: item.id,
+              status: 'unavailable',
+              errorMessage: 'catalog-maintenance queue is unavailable in the worker process.',
+              result: { status: 'queue_unavailable', queueName: CATALOG_MAINTENANCE_QUEUE_NAME },
+            });
+            continue;
+          }
+
+          if (enqueueResult.status === 'deduped') deduped += 1;
+          else queued += 1;
+
+          await updateCatalogRepairBatchItemEnqueueResult({
+            itemId: item.id,
+            status: enqueueResult.status,
+            queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+            jobName: CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
+            jobId: enqueueResult.jobId,
+            language: job.data.language,
+            result: {
+              status: enqueueResult.status,
+              queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+            },
+          });
+        } catch (error) {
+          failed += 1;
+          await updateCatalogRepairBatchItemEnqueueResult({
+            itemId: item.id,
+            status: 'enqueue_failed',
+            errorMessage: error instanceof Error ? error.message : String(error),
+            result: { status: 'enqueue_failed' },
+          });
+          logger.error(
+            { err: error, batchId, issueKey, movieId: movie.id },
+            'Catalog repair batch orchestration failed to enqueue item',
+          );
+        }
+      }
+
+      attempted += page.movies.length;
+      offset += page.movies.length;
+      await refreshCatalogRepairBatchCounts(batchId);
+
+      if (page.movies.length < chunkLimit) break;
+    }
+
+    await updateCatalogRepairBatchOrchestrationResult({
+      batchId,
+      status: failed + unavailable > 0 && queued + deduped === 0 ? 'failed' : 'enqueueing',
+      result: {
+        jobId: String(job.id ?? 'unknown'),
+        jobName: job.name,
+        attempted,
+        queued,
+        deduped,
+        unavailable,
+        failed,
+        issueKey,
+        limit,
+        pageSize,
+      },
+    });
+    await refreshCatalogRepairBatchCounts(batchId);
+  } catch (error) {
+    await updateCatalogRepairBatchOrchestrationResult({
+      batchId,
+      status: 'failed',
+      result: {
+        jobId: String(job.id ?? 'unknown'),
+        jobName: job.name,
+        error: error instanceof Error ? error.message : String(error),
+        attempted,
+        queued,
+        deduped,
+        unavailable,
+        failed,
+        issueKey,
+      },
+    });
+    throw error;
+  }
+}
+
 async function loadBackfillMovie(movieId: string | number): Promise<BackfillMovieRow | null> {
   const result = await getPool().query<BackfillMovieRow>(
     `SELECT id::text, name, year, duration, description, score_rating, tmdb_id
@@ -537,6 +755,10 @@ export function createCatalogMaintenanceWorker(): CatalogWorker | null {
             }
             if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie) {
               await processBackfillMovie(job as Job<CatalogBackfillMovieJobData>);
+              return;
+            }
+            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.enqueueCatalogRepairBatch) {
+              await processEnqueueRepairBatch(job as Job<CatalogEnqueueRepairBatchJobData>);
               return;
             }
             throw new Error(`Unsupported catalog maintenance job: ${job.name}`);

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   enqueueCatalogBackfillMovieFromBackoffice,
+  enqueueCatalogRepairBatchFromBackoffice,
   getCatalogBackfillMovieJobId,
+  getCatalogRepairBatchJobId,
   getCatalogMaintenanceQueueSnapshot,
   listCatalogMaintenanceQueueJobs,
   summarizeCatalogMaintenanceJobPayload,
@@ -11,12 +13,26 @@ import {
 describe('catalog maintenance queue helpers', () => {
   it('sanitizes BullMQ job ids so operator-supplied ids cannot contain colons', () => {
     expect(getCatalogBackfillMovieJobId('tmdb:331')).toBe('backfill-tmdb-331');
+    expect(getCatalogRepairBatchJobId('batch:12')).toBe('repair-batch-batch-12');
   });
 
   it('does not pretend to queue work when Redis is unavailable', async () => {
     await expect(
       enqueueCatalogBackfillMovieFromBackoffice(
         { movieId: 331, reason: 'missing_metadata', language: 'en-US' },
+        undefined,
+      ),
+    ).resolves.toBeNull();
+    await expect(
+      enqueueCatalogRepairBatchFromBackoffice(
+        {
+          batchId: 12,
+          issueKey: 'missing_poster_url',
+          language: 'en-US',
+          limit: 250,
+          pageSize: 25,
+          staleAfterDays: 180,
+        },
         undefined,
       ),
     ).resolves.toBeNull();
@@ -73,6 +89,25 @@ describe('catalog maintenance queue helpers', () => {
       { label: 'Language', value: 'en-US' },
       { label: 'Batch', value: '12' },
       { label: 'Item', value: '44' },
+    ]);
+  });
+
+  it('summarizes repair batch orchestration payloads without exposing raw job internals', () => {
+    expect(
+      summarizeCatalogMaintenanceJobPayload('enqueue-catalog-repair-batch', {
+        batchId: 12,
+        issueKey: 'missing_poster_url',
+        language: 'en-US',
+        limit: 250,
+        pageSize: 25,
+        ignored: { large: true },
+      }),
+    ).toEqual([
+      { label: 'Batch', value: '12' },
+      { label: 'Issue', value: 'missing_poster_url' },
+      { label: 'Limit', value: '250' },
+      { label: 'Page size', value: '25' },
+      { label: 'Language', value: 'en-US' },
     ]);
   });
 });
