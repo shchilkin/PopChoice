@@ -181,13 +181,22 @@ intentionally conservative:
   instead of enqueueing duplicate in-flight work; completed and failed retained
   jobs are removed before retrying so stale BullMQ history does not block future
   repairs;
-- duplicate identity groups remain read-only in the UI until the transactional
-  merge workflow lands, but shared dry-run support can now preview
-  canonical/loser snapshots, affected rows, user-memory conflicts, and warnings
-  for future duplicate merge screens;
-- future duplicate merge executions will write immutable history to
-  `catalog_duplicate_merge_audit`; the current dry-run helper is intentionally
-  `SELECT`-only;
+- duplicate identity groups remain read-only in the UI until the operator merge
+  workflow lands, but shared support can now preview canonical/loser snapshots,
+  affected rows, user-memory conflicts, and warnings, then apply an audited
+  transactional merge when a future screen submits an explicit operator action;
+- duplicate merge executions write immutable history to
+  `catalog_duplicate_merge_audit`, including the pre-merge dry-run snapshot,
+  rewired row counts, deleted loser movie ids, and any preserved conflicting
+  TMDB review rows;
+- `manual_review_required` means the helper found risk that should be reviewed
+  before deleting loser rows, such as mismatched TMDB ids, conflicting title/year
+  identity, warnings, or user-memory conflicts. `allowManualReviewRequired`
+  is the explicit operator override for those blocked merges; before using it,
+  compare the canonical and loser snapshots, affected row counts, warnings,
+  user-memory conflicts, and expected audit payload. The enforced behavior is
+  covered by `packages/shared/src/catalogDuplicateMerge.test.ts` in the
+  `allowManualReviewRequired` rejection path.
 - backoffice stores immutable audit rows in `catalog_repair_audit` and durable
   bulk progress in `catalog_repair_batches` plus `catalog_repair_batch_items`,
   which gives operators a recovery trail without depending on retained BullMQ

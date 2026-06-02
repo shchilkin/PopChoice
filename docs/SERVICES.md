@@ -503,7 +503,7 @@ The app and root services share the same PostgreSQL schema through `db/init/*.sq
 - **Tables:** `catalog_people`, `catalog_genres`, `catalog_keywords`, `movie_people`, `movie_genres`, and `movie_keywords` — store normalized cast, director, genre, and keyword metadata populated by TMDB discovery/backfill and used by future search. These tables can still be partially populated while older catalog rows wait for a backfill run.
 - **Table:** `tmdb_match_reviews` — stores ambiguous TMDB/local match cases for backoffice manual review
 - **Table:** `tmdb_match_review_audit` — stores audited operator decisions for applying, rejecting, deferring, or reopening TMDB match reviews
-- **Table:** `catalog_duplicate_merge_audit` — reserved for audited duplicate movie merge executions; the current shared duplicate merge dry-run helper is `SELECT`-only and uses this schema foundation for the upcoming transactional merge workflow
+- **Table:** `catalog_duplicate_merge_audit` — stores audited duplicate movie merge executions, including the pre-merge dry-run snapshot, rewired row counts, deleted loser ids, preserved TMDB review rows, and operator notes
 - **Table:** `users` and `password_reset_tokens` — support email/password auth and reset flow
 - **Tables:** `recommendations`, `recommendation_movies`, `recommendation_feedback`, and `user_movie_interactions` — support persisted async recommendations, feedback, sharing, account history, and movie memory
 - **Function:** `match_movies(query_embedding, match_threshold, match_count)` — returns movies ordered by cosine similarity
