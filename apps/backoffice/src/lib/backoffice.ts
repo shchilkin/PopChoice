@@ -14,6 +14,7 @@ import {
   recordCatalogRepairAction,
   refreshCatalogRepairBatchCounts,
   readBackofficeRuntimeConfig,
+  updateCatalogRepairBatchOrchestrationResult,
   updateCatalogRepairBatchItemEnqueueResult,
 } from '@pop-choice/shared';
 import type {
@@ -30,6 +31,7 @@ import type {
 
 import {
   isCatalogMaintenanceQueueJobState,
+  enqueueCatalogRepairBatchFromBackoffice,
   enqueueCatalogBackfillMovieFromBackoffice,
   type CatalogBackfillReason,
   type CatalogMaintenanceQueueJobState,
@@ -43,6 +45,8 @@ export const DEFAULT_REVIEW_PAGE_SIZE = 25;
 export const MAX_REVIEW_PAGE_SIZE = 100;
 export const DEFAULT_BULK_REPAIR_LIMIT = 25;
 export const MAX_BULK_REPAIR_LIMIT = DEFAULT_BULK_REPAIR_LIMIT;
+export const MAX_ASYNC_BULK_REPAIR_LIMIT = 1_000;
+export const DEFAULT_ASYNC_BULK_REPAIR_CHUNK_SIZE = DEFAULT_BULK_REPAIR_LIMIT;
 export const DEFAULT_REPAIR_BATCH_PAGE_SIZE = 25;
 export const DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE = 100;
 export const MAX_REPAIR_BATCH_PAGE_SIZE = 100;
@@ -385,6 +389,9 @@ function getBackfillReasonForIssue(issueKey: string): CatalogBackfillReason {
 }
 
 export function catalogRepairMessage(status: CatalogRepairActionResult['status']): string {
+  if (status === 'orchestration_queued') {
+    return 'Catalog repair orchestration accepted. A worker will create repair items and queue backfill jobs in chunks.';
+  }
   if (status === 'queued') {
     return 'Catalog backfill job queued. Workers will process it through the existing rate-limited TMDB path.';
   }
@@ -411,7 +418,7 @@ export type CatalogRepairActionResult =
     }
   | {
       mode: 'bulk';
-      status: 'queued' | 'partial' | 'failed' | 'unavailable' | 'empty';
+      status: 'queued' | 'orchestration_queued' | 'partial' | 'failed' | 'unavailable' | 'empty';
       issueKey: string;
       summary: CatalogBulkRepairSummary;
     };
@@ -439,6 +446,150 @@ function parseBulkRepairLimit(value: FormDataEntryValue | null): number {
   return typeof value === 'string'
     ? parsePositiveIntParam(value, DEFAULT_BULK_REPAIR_LIMIT, { max: MAX_BULK_REPAIR_LIMIT })
     : DEFAULT_BULK_REPAIR_LIMIT;
+}
+
+function parseAsyncBulkRepairLimit(value: FormDataEntryValue | null, fallback: number): number {
+  return typeof value === 'string'
+    ? parsePositiveIntParam(value, fallback, { max: MAX_ASYNC_BULK_REPAIR_LIMIT })
+    : Math.min(fallback, MAX_ASYNC_BULK_REPAIR_LIMIT);
+}
+
+async function performAsyncBulkCatalogRepairAction(
+  formData: FormData,
+  headers: Headers,
+): Promise<CatalogRepairActionResult> {
+  const config = await ensureBackofficeReady();
+  const issueKey = parseCatalogIssueKey(formData.get('issue_key'));
+  const actor = parseOperatorActor(headers);
+  const note = typeof formData.get('note') === 'string' ? String(formData.get('note')) : undefined;
+  const countPage = await listCatalogHealthIssueMoviePage({
+    issueKey,
+    limit: 1,
+    offset: 0,
+    staleAfterDays: config.catalogHealthStaleDays,
+  });
+  const limit = parseAsyncBulkRepairLimit(formData.get('batch_limit'), countPage.totalCount);
+  const requestedLimit = Math.min(limit, countPage.totalCount);
+  const summary: CatalogBulkRepairSummary = {
+    issueKey,
+    totalCandidates: countPage.totalCount,
+    attempted: 0,
+    queued: 0,
+    deduped: 0,
+    failed: 0,
+    unavailable: 0,
+    limit: requestedLimit,
+    movieIds: [],
+    jobs: [],
+  };
+
+  if (requestedLimit === 0) {
+    return {
+      mode: 'bulk',
+      status: 'empty',
+      issueKey,
+      summary,
+    };
+  }
+
+  const batch = await createCatalogRepairBatch({
+    action: 'bulk_enqueue_backfill',
+    actor,
+    issueKey,
+    targetType: 'catalog_issue',
+    targetId: issueKey,
+    requestedLimit,
+    totalCandidates: countPage.totalCount,
+    attemptedCount: 0,
+    note,
+    previousState: {
+      async: true,
+      issueKey,
+      requestedLimit,
+      totalCandidates: countPage.totalCount,
+    },
+  });
+  summary.batchId = batch.id;
+
+  const orchestrationJob = await enqueueCatalogRepairBatchFromBackoffice(
+    {
+      batchId: batch.id,
+      issueKey,
+      limit: requestedLimit,
+      pageSize: DEFAULT_ASYNC_BULK_REPAIR_CHUNK_SIZE,
+      language: config.tmdbLanguage,
+      staleAfterDays: config.catalogHealthStaleDays,
+    },
+    config.redisUrl,
+  );
+
+  if (!orchestrationJob) {
+    await updateCatalogRepairBatchOrchestrationResult({
+      batchId: batch.id,
+      status: 'unavailable',
+      result: { status: 'queue_unavailable', queueName: 'catalog-maintenance' },
+    });
+    await recordCatalogRepairAction({
+      action: 'bulk_enqueue_backfill',
+      actor,
+      issueKey,
+      targetType: 'catalog_issue',
+      targetId: issueKey,
+      note,
+      previousState: {
+        async: true,
+        issueKey,
+        requestedLimit,
+        totalCandidates: countPage.totalCount,
+      },
+      result: {
+        ...summary,
+        status: 'queue_unavailable',
+        queueName: 'catalog-maintenance',
+      },
+      repairBatchId: batch.id,
+    });
+
+    return { mode: 'bulk', status: 'unavailable', issueKey, summary };
+  }
+
+  await updateCatalogRepairBatchOrchestrationResult({
+    batchId: batch.id,
+    status: 'enqueueing',
+    result: { ...orchestrationJob, async: true, requestedLimit },
+  });
+  await recordCatalogRepairAction({
+    action: 'bulk_enqueue_backfill',
+    actor,
+    issueKey,
+    targetType: 'catalog_issue',
+    targetId: issueKey,
+    note,
+    previousState: {
+      async: true,
+      issueKey,
+      requestedLimit,
+      totalCandidates: countPage.totalCount,
+    },
+    result: {
+      ...summary,
+      orchestrationJob,
+      status: 'orchestration_queued',
+    },
+    repairBatchId: batch.id,
+  });
+  summary.jobs.push({
+    movieId: 'batch',
+    jobId: orchestrationJob.jobId,
+    status: orchestrationJob.status,
+  });
+
+  return {
+    mode: 'bulk',
+    status: 'orchestration_queued',
+    issueKey,
+    summary,
+  };
 }
 
 async function performBulkCatalogRepairAction(
@@ -596,6 +747,10 @@ export async function performCatalogRepairAction(
 
   if (formData.get('action') === 'bulk_enqueue_backfill') {
     return performBulkCatalogRepairAction(formData, headers);
+  }
+
+  if (formData.get('action') === 'bulk_enqueue_backfill_async') {
+    return performAsyncBulkCatalogRepairAction(formData, headers);
   }
 
   if (formData.get('action') !== 'enqueue_backfill') {

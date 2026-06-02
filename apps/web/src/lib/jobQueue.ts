@@ -18,6 +18,7 @@ export const CATALOG_MAINTENANCE_JOB_NAMES = {
   discoverTMDBSourcePage: 'discover-tmdb-source-page',
   seedTMDBMovie: 'seed-tmdb-movie',
   backfillMovie: 'backfill-movie',
+  enqueueCatalogRepairBatch: 'enqueue-catalog-repair-batch',
 } as const;
 
 export type CatalogMaintenanceJobName =
@@ -88,10 +89,22 @@ export type CatalogBackfillMovieJobData = {
   trace?: TraceCarrier;
 };
 
+export type CatalogEnqueueRepairBatchJobData = {
+  version: 1;
+  batchId: string | number;
+  issueKey: string;
+  limit: number;
+  pageSize: number;
+  language?: string;
+  staleAfterDays?: number;
+  trace?: TraceCarrier;
+};
+
 export type CatalogMaintenanceJobData =
   | CatalogDiscoverTMDBSourcePageJobData
   | CatalogSeedTMDBMovieJobData
-  | CatalogBackfillMovieJobData;
+  | CatalogBackfillMovieJobData
+  | CatalogEnqueueRepairBatchJobData;
 
 export const MOVIE_SEED_JOB_OPTIONS = {
   attempts: 3,

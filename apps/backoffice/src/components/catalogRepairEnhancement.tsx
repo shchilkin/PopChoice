@@ -143,6 +143,7 @@ export function CatalogRepairEnhancement() {
             mode?: string;
             status?: string;
             summary?: {
+              batchId?: string;
               queued?: number;
               deduped?: number;
               failed?: number;
@@ -170,6 +171,21 @@ export function CatalogRepairEnhancement() {
               }, 450);
               timeouts.push(timeoutId);
             }
+            return;
+          }
+
+          if (response.ok && payload?.status === 'orchestration_queued') {
+            requestCatalogHealthRefresh();
+            row?.classList.remove('repair-pending');
+            setButton(form, 'Orchestration accepted', true);
+            const batchId = payload.summary?.batchId;
+            setMessage(
+              form,
+              batchId
+                ? `Batch ${batchId} accepted. Worker will queue jobs in chunks.`
+                : 'Batch accepted. Worker will queue jobs in chunks.',
+              'accepted',
+            );
             return;
           }
 

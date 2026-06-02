@@ -33,9 +33,10 @@ export async function POST(request: NextRequest) {
     const result = await performCatalogRepairAction(formData, request.headers);
 
     if (wantsJsonResponse(request)) {
+      const ok = result.status === 'queued' || result.status === 'orchestration_queued';
       return NextResponse.json(
         {
-          ok: result.status === 'queued',
+          ok,
           mode: result.mode,
           status: result.status,
           message: catalogRepairMessage(result.status),
@@ -61,13 +62,15 @@ export async function POST(request: NextRequest) {
       new URL(
         result.status === 'queued'
           ? `/?repair=${result.mode === 'bulk' ? 'bulk-queued' : 'queued'}`
-          : result.status === 'partial'
-            ? '/?repair=bulk-partial'
-            : result.status === 'empty'
-              ? '/?repair=empty'
-              : result.status === 'failed'
-                ? '/?repair=failed'
-                : '/?repair=unavailable',
+          : result.status === 'orchestration_queued'
+            ? '/?repair=bulk-orchestration-queued'
+            : result.status === 'partial'
+              ? '/?repair=bulk-partial'
+              : result.status === 'empty'
+                ? '/?repair=empty'
+                : result.status === 'failed'
+                  ? '/?repair=failed'
+                  : '/?repair=unavailable',
         request.url,
       ),
       303,

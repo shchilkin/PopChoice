@@ -74,6 +74,7 @@ export {
   listCatalogRepairAuditPage,
   recordCatalogRepairAction,
   refreshCatalogRepairBatchCounts,
+  updateCatalogRepairBatchOrchestrationResult,
   updateCatalogRepairBatchItemEnqueueResult,
   updateCatalogRepairBatchItemStatus,
 } from './catalogRepairActions.js';
@@ -96,6 +97,7 @@ export type {
   CreateCatalogRepairBatchInput,
   CreateCatalogRepairBatchItemInput,
   RecordCatalogRepairActionInput,
+  UpdateCatalogRepairBatchOrchestrationInput,
   UpdateCatalogRepairBatchItemEnqueueInput,
   UpdateCatalogRepairBatchItemStatusInput,
 } from './catalogRepairActions.js';
