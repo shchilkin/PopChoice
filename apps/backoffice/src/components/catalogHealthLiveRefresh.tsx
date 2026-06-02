@@ -1,25 +1,22 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import {
-  CATALOG_HEALTH_LIVE_QUERY_KEY,
   catalogHealthLiveFingerprint,
+  parseCatalogHealthSnapshotMessage,
   type CatalogHealthLiveData,
 } from '../lib/catalogHealthLive';
 import { CATALOG_HEALTH_REFRESH_EVENT } from './catalogHealthRefreshEvent';
 import { formatLiveSyncTime } from './liveRefreshTime';
 
 type LiveConnectionState = 'connecting' | 'connected' | 'fallback';
-type QueueEventMessage = {
-  receivedAt?: unknown;
-  type?: unknown;
+type StreamConnectionMessage = {
+  mode?: unknown;
 };
 
 const FALLBACK_REFRESH_SECONDS = 60;
-const QUEUE_EVENT_DEBOUNCE_MS = 350;
 
 async function fetchCatalogHealthLive(search: string): Promise<CatalogHealthLiveData> {
   const response = await fetch(`/api/catalog-health${search}`, {
@@ -34,25 +31,12 @@ async function fetchCatalogHealthLive(search: string): Promise<CatalogHealthLive
   return (await response.json()) as CatalogHealthLiveData;
 }
 
-function parseQueueEventMessage(event: MessageEvent<string>): QueueEventMessage {
+function parseStreamConnectionMessage(event: MessageEvent<string>): StreamConnectionMessage {
   try {
-    return JSON.parse(event.data) as QueueEventMessage;
+    return JSON.parse(event.data) as StreamConnectionMessage;
   } catch {
     return {};
   }
-}
-
-function getQueueEventReceivedAt(message: QueueEventMessage): string {
-  if (typeof message.receivedAt === 'string') {
-    const receivedAt = new Date(message.receivedAt);
-    if (!Number.isNaN(receivedAt.getTime())) return message.receivedAt;
-  }
-
-  return new Date().toISOString();
-}
-
-function shouldRefreshFromQueueEvent(message: QueueEventMessage): boolean {
-  return message.type !== 'progress';
 }
 
 export function CatalogHealthLiveRefresh({
@@ -63,28 +47,54 @@ export function CatalogHealthLiveRefresh({
   fallbackIntervalSeconds?: number;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [connectionState, setConnectionState] = useState<LiveConnectionState>('connecting');
-  const [lastQueueEventAt, setLastQueueEventAt] = useState<string | null>(null);
+  const [data, setData] = useState(initialData);
+  const [isFallbackFetching, setIsFallbackFetching] = useState(false);
+  const [isStreamError, setIsStreamError] = useState(false);
+  const [lastSnapshotAt, setLastSnapshotAt] = useState(initialData.report.generatedAt);
+  const [lastSnapshotTrigger, setLastSnapshotTrigger] = useState<
+    'connected' | 'queue-event' | 'redis-unavailable'
+  >('connected');
   const initialFingerprint = useMemo(
     () => catalogHealthLiveFingerprint(initialData),
     [initialData],
   );
   const lastFingerprint = useRef(initialFingerprint);
-  const refreshTimer = useRef<number | null>(null);
-  const search = typeof window === 'undefined' ? '' : window.location.search;
+  const search = useMemo(() => {
+    const serialized = searchParams.toString();
+    return serialized ? `?${serialized}` : '';
+  }, [searchParams]);
+  const lastSearch = useRef(search);
   const refreshSeconds = Math.max(fallbackIntervalSeconds, 30);
-  const query = useQuery({
-    initialData,
-    queryFn: () => fetchCatalogHealthLive(search),
-    queryKey: [...CATALOG_HEALTH_LIVE_QUERY_KEY, search],
-    refetchInterval: connectionState === 'fallback' ? refreshSeconds * 1000 : false,
-  });
-  const { data, dataUpdatedAt, isError, isFetching, refetch } = query;
 
   useEffect(() => {
-    const refresh = () => {
-      void refetch();
+    if (lastSearch.current === search) return;
+
+    lastSearch.current = search;
+    lastFingerprint.current = initialFingerprint;
+    setData(initialData);
+    setLastSnapshotAt(initialData.report.generatedAt);
+    setLastSnapshotTrigger('connected');
+    setConnectionState('connecting');
+    setIsFallbackFetching(false);
+    setIsStreamError(false);
+  }, [initialData, initialFingerprint, search]);
+
+  useEffect(() => {
+    const refresh = async () => {
+      setIsFallbackFetching(true);
+      try {
+        const nextData = await fetchCatalogHealthLive(search);
+        setData(nextData);
+        setLastSnapshotAt(nextData.report.generatedAt);
+        setIsStreamError(false);
+      } catch {
+        setIsStreamError(true);
+      } finally {
+        setIsFallbackFetching(false);
+      }
     };
 
     const onVisibilityChange = () => {
@@ -98,48 +108,75 @@ export function CatalogHealthLiveRefresh({
       window.removeEventListener(CATALOG_HEALTH_REFRESH_EVENT, refresh);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [refetch]);
+  }, [search]);
 
   useEffect(() => {
-    const source = new EventSource('/api/catalog-maintenance-queue/events');
+    const source = new EventSource(`/api/catalog-health/events${search}`);
 
-    const refreshFromQueueEvent = (event: MessageEvent<string>) => {
-      const message = parseQueueEventMessage(event);
-      if (!shouldRefreshFromQueueEvent(message)) return;
-
-      setConnectionState('connected');
-      setLastQueueEventAt(getQueueEventReceivedAt(message));
-
-      if (refreshTimer.current !== null) {
-        window.clearTimeout(refreshTimer.current);
+    const applySnapshot = (event: MessageEvent<string>) => {
+      const message = parseCatalogHealthSnapshotMessage(event.data);
+      if (!message) {
+        setIsStreamError(true);
+        return;
       }
-
-      refreshTimer.current = window.setTimeout(() => {
-        void refetch();
-      }, QUEUE_EVENT_DEBOUNCE_MS);
+      const isDegradedSnapshot = message.trigger === 'redis-unavailable';
+      setConnectionState(isDegradedSnapshot ? 'fallback' : 'connected');
+      setIsStreamError(isDegradedSnapshot);
+      setData(message.data);
+      setLastSnapshotAt(message.receivedAt);
+      setLastSnapshotTrigger(message.trigger);
     };
 
-    source.addEventListener('connected', () => {
-      setConnectionState('connected');
+    source.addEventListener('connected', (event: MessageEvent<string>) => {
+      const { mode } = parseStreamConnectionMessage(event);
+      const isSnapshotOnly = mode === 'snapshot-only';
+      setConnectionState(isSnapshotOnly ? 'fallback' : 'connected');
+      setIsStreamError(isSnapshotOnly);
     });
-    source.addEventListener('queue-event', refreshFromQueueEvent);
+    source.addEventListener('snapshot', applySnapshot);
     source.addEventListener('heartbeat', () => {
-      setConnectionState('connected');
+      setConnectionState((current) => (current === 'fallback' ? current : 'connected'));
     });
-    source.addEventListener('queue-error', () => {
+    source.addEventListener('stream-error', () => {
       setConnectionState('fallback');
+      setIsStreamError(true);
     });
     source.onerror = () => {
       setConnectionState('fallback');
+      setIsStreamError(true);
     };
 
     return () => {
-      if (refreshTimer.current !== null) {
-        window.clearTimeout(refreshTimer.current);
-      }
       source.close();
     };
-  }, [refetch]);
+  }, [search]);
+
+  useEffect(() => {
+    if (connectionState !== 'fallback') return;
+
+    let cancelled = false;
+    const refresh = async () => {
+      setIsFallbackFetching(true);
+      try {
+        const nextData = await fetchCatalogHealthLive(search);
+        if (cancelled) return;
+        setData(nextData);
+        setLastSnapshotAt(nextData.report.generatedAt);
+      } catch {
+        if (!cancelled) setIsStreamError(true);
+      } finally {
+        if (!cancelled) setIsFallbackFetching(false);
+      }
+    };
+
+    void refresh();
+    const interval = window.setInterval(refresh, refreshSeconds * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [connectionState, refreshSeconds, search]);
 
   useEffect(() => {
     if (!data) return;
@@ -153,21 +190,19 @@ export function CatalogHealthLiveRefresh({
     });
   }, [data, router]);
 
-  const lastChecked = dataUpdatedAt ? formatLiveSyncTime(dataUpdatedAt) : null;
-  const lastQueueEvent = lastQueueEventAt ? formatLiveSyncTime(lastQueueEventAt) : null;
-  const isBusy = isPending || isFetching;
+  const lastSnapshot = formatLiveSyncTime(lastSnapshotAt);
+  const isBusy = isPending || isFallbackFetching;
   const statusCopy = isBusy
     ? 'Refreshing catalog status'
     : connectionState === 'connected'
-      ? 'Catalog and queue changes update live'
+      ? 'Catalog and queue state updates live'
       : connectionState === 'connecting'
         ? 'Connecting to live catalog updates'
         : 'Live updates are reconnecting; background checks continue';
-  const metaCopy = lastQueueEvent
-    ? `Last queue change ${lastQueueEvent}`
-    : lastChecked
-      ? `Last checked ${lastChecked}`
-      : 'Waiting for first sync';
+  const metaCopy =
+    lastSnapshotTrigger === 'queue-event'
+      ? `Last queue change ${lastSnapshot}`
+      : `Last status update ${lastSnapshot}`;
 
   return (
     <div className={`live-refresh ${connectionState}`} aria-live="polite">
@@ -177,7 +212,7 @@ export function CatalogHealthLiveRefresh({
       />
       <span>{statusCopy}</span>
       <span className="live-refresh-meta">{metaCopy}</span>
-      {isError ? <span className="live-refresh-error">Latest check failed</span> : null}
+      {isStreamError ? <span className="live-refresh-error">Live stream recovering</span> : null}
     </div>
   );
 }

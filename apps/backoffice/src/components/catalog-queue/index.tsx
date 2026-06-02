@@ -7,6 +7,7 @@ import { CATALOG_MAINTENANCE_QUEUE_JOB_STATES } from '../../catalogMaintenanceQu
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
+import { formatLiveSyncTime } from '../liveRefreshTime';
 import { SimplePaginationControls } from '../shared';
 
 const STATE_LABELS: Record<CatalogMaintenanceQueueJobState, string> = {
@@ -323,10 +324,7 @@ export function CatalogMaintenanceQueuePage({
       title="Catalog Maintenance Queue"
       eyebrow="Worker operations"
       description={
-        <>
-          Updated {formatBackofficeDateTime(jobPage.updatedAt)}. Queue changes refresh
-          automatically.
-        </>
+        <>Updated {formatLiveSyncTime(jobPage.updatedAt)}. Queue changes update automatically.</>
       }
       actions={
         bullBoardUrl ? (
