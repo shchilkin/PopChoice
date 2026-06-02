@@ -195,14 +195,14 @@ export function CatalogHealthLiveRefresh({
   const statusCopy = isBusy
     ? 'Refreshing catalog status'
     : connectionState === 'connected'
-      ? 'Catalog and queue state updates live'
+      ? 'Auto-updating catalog and queue state'
       : connectionState === 'connecting'
-        ? 'Connecting to live catalog updates'
-        : 'Live updates are reconnecting; background checks continue';
+        ? 'Connecting to automatic updates'
+        : 'Automatic updates are reconnecting; background checks continue';
   const metaCopy =
     lastSnapshotTrigger === 'queue-event'
-      ? `Last queue change ${lastSnapshot}`
-      : `Last status update ${lastSnapshot}`;
+      ? `Queue changed ${lastSnapshot}`
+      : `Updated ${lastSnapshot}`;
 
   return (
     <div className={`live-refresh ${connectionState}`} aria-live="polite">
@@ -212,7 +212,9 @@ export function CatalogHealthLiveRefresh({
       />
       <span>{statusCopy}</span>
       <span className="live-refresh-meta">{metaCopy}</span>
-      {isStreamError ? <span className="live-refresh-error">Live stream recovering</span> : null}
+      {isStreamError ? (
+        <span className="live-refresh-error">Automatic updates are recovering</span>
+      ) : null}
     </div>
   );
 }

@@ -31,7 +31,7 @@ function getReceivedAt(message: QueueSnapshotMessage): string {
 }
 
 export function CatalogMaintenanceRealtimeRefresh({
-  label = 'Queue changes update this view live',
+  label = 'Queue updates automatically',
 }: {
   label?: string;
 }) {
@@ -89,10 +89,9 @@ export function CatalogMaintenanceRealtimeRefresh({
     status === 'connected'
       ? label
       : status === 'connecting'
-        ? 'Connecting to queue updates'
-        : 'Queue updates unavailable';
+        ? 'Connecting to automatic updates'
+        : 'Automatic updates are reconnecting';
   const lastEvent = lastEventAt ? formatLiveSyncTime(lastEventAt) : null;
-  const syncLabel = status === 'connected' ? 'Synced' : 'Last sync';
 
   return (
     <div className={`live-refresh realtime-refresh ${status}`} aria-live="polite">
@@ -102,7 +101,7 @@ export function CatalogMaintenanceRealtimeRefresh({
       />
       <span>{copy}</span>
       <span className="live-refresh-meta">
-        {lastEvent ? `${syncLabel} ${lastEvent}` : 'Waiting'}
+        {lastEvent ? `Updated ${lastEvent}` : 'Waiting for the first update'}
       </span>
     </div>
   );
