@@ -413,6 +413,9 @@ input:disabled {
 .notice.good {
   border-color: color-mix(in srgb, var(--good), var(--border) 45%);
 }
+.notice.neutral {
+  border-color: color-mix(in srgb, var(--accent), var(--border) 55%);
+}
 .notice.warn {
   border-color: color-mix(in srgb, var(--warn), var(--border) 45%);
 }
@@ -822,8 +825,8 @@ input:disabled {
 .sample-table tr.repair-pending td {
   background: rgba(124, 199, 255, 0.05);
 }
-.sample-table tr.repair-queued td {
-  background: rgba(64, 196, 99, 0.06);
+.sample-table tr.repair-accepted td {
+  background: rgba(124, 199, 255, 0.05);
 }
 .data-pill {
   display: inline-flex;
@@ -909,15 +912,15 @@ input:disabled {
   white-space: nowrap;
 }
 .repair-completed,
-.repair-completed_resolved,
-.repair-queued,
-.repair-deduped {
+.repair-completed_resolved {
   color: var(--good);
   background: var(--good-soft);
 }
 .repair-completed_unresolved,
+.repair-deduped,
 .repair-enqueueing,
 .repair-processing,
+.repair-queued,
 .repair-pending,
 .repair-partial,
 .repair-empty {
@@ -1013,6 +1016,9 @@ input:disabled {
 }
 .repair-message.good {
   color: var(--good);
+}
+.repair-message.accepted {
+  color: var(--accent);
 }
 .repair-message.warn {
   color: var(--warn);

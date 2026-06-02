@@ -66,9 +66,6 @@ const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en', {
   hour: '2-digit',
   minute: '2-digit',
   month: 'short',
-  second: '2-digit',
-  timeZone: 'UTC',
-  timeZoneName: 'short',
   year: 'numeric',
 });
 

@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from 'react';
 type RealtimeStatus = 'connecting' | 'connected' | 'error';
 
 const REFRESH_DEBOUNCE_MS = 350;
+const CLIENT_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
 
 export function CatalogMaintenanceRealtimeRefresh({
   label = 'Realtime queue events',
@@ -54,7 +58,8 @@ export function CatalogMaintenanceRealtimeRefresh({
       ? label
       : status === 'connecting'
         ? 'Connecting realtime queue events'
-        : 'Realtime queue events unavailable, use Refresh';
+        : 'Realtime queue events unavailable';
+  const lastEvent = lastEventAt ? CLIENT_TIME_FORMATTER.format(new Date(lastEventAt)) : null;
 
   return (
     <div className={`live-refresh realtime-refresh ${status}`} aria-live="polite">
@@ -63,9 +68,7 @@ export function CatalogMaintenanceRealtimeRefresh({
         aria-hidden="true"
       />
       <span>{copy}</span>
-      <span className="live-refresh-meta">
-        {lastEventAt ? `Last event ${new Date(lastEventAt).toLocaleTimeString()}` : 'Waiting'}
-      </span>
+      <span className="live-refresh-meta">{lastEvent ? `Last event ${lastEvent}` : 'Waiting'}</span>
     </div>
   );
 }
