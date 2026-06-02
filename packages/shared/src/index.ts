@@ -103,14 +103,17 @@ export type {
 } from './catalogRepairActions.js';
 export { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 export {
+  applyCatalogDuplicateMovieMerge,
   ensureCatalogDuplicateMergeAuditSchema,
   getCatalogDuplicateMergeDryRun,
 } from './catalogDuplicateMerge.js';
 export type {
+  ApplyCatalogDuplicateMergeInput,
   CatalogDuplicateMergeAffectedRows,
   CatalogDuplicateMergeDryRun,
   CatalogDuplicateMergeIdentityKind,
   CatalogDuplicateMergeMovieSnapshot,
+  CatalogDuplicateMergeResult,
   CatalogDuplicateMergeUserMemoryConflict,
 } from './catalogDuplicateMerge.js';
 export {
