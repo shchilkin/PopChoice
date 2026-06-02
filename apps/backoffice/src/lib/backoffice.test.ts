@@ -18,33 +18,62 @@ describe('repair batch query params', () => {
       pageSize: DEFAULT_REPAIR_BATCH_PAGE_SIZE,
       limit: DEFAULT_REPAIR_BATCH_PAGE_SIZE,
       offset: 0,
+      sort: 'newest',
+      status: 'all',
     });
   });
 
   it('clamps list page size and calculates offset', () => {
-    expect(parseRepairBatchListParams({ page: '3', pageSize: '999' })).toEqual({
+    expect(
+      parseRepairBatchListParams({
+        page: '3',
+        pageSize: '999',
+        sort: 'needs_review',
+        status: 'partial',
+      }),
+    ).toEqual({
       page: 3,
       pageSize: MAX_REPAIR_BATCH_PAGE_SIZE,
       limit: MAX_REPAIR_BATCH_PAGE_SIZE,
       offset: 200,
+      sort: 'needs_review',
+      status: 'partial',
     });
   });
 
   it('uses independent item pagination names for detail pages', () => {
-    expect(parseRepairBatchItemParams({ itemPage: '2', itemPageSize: '10' })).toEqual({
+    expect(
+      parseRepairBatchItemParams({
+        itemPage: '2',
+        itemPageSize: '10',
+        itemSort: 'newest',
+        itemStatus: 'completed_unresolved',
+      }),
+    ).toEqual({
       page: 2,
       pageSize: 10,
       limit: 10,
       offset: 10,
+      sort: 'newest',
+      status: 'completed_unresolved',
     });
   });
 
   it('falls back for invalid item pagination values', () => {
-    expect(parseRepairBatchItemParams({ itemPage: 'zero', itemPageSize: '-1' })).toEqual({
+    expect(
+      parseRepairBatchItemParams({
+        itemPage: 'zero',
+        itemPageSize: '-1',
+        itemSort: 'unknown',
+        itemStatus: 'unknown',
+      }),
+    ).toEqual({
       page: 1,
       pageSize: DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE,
       limit: DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE,
       offset: 0,
+      sort: 'needs_review',
+      status: 'needs_review',
     });
   });
 

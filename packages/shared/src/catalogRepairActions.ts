@@ -178,12 +178,23 @@ export interface CatalogRepairBatchPage {
   offset: number;
 }
 
+export type CatalogRepairBatchStatusFilter = CatalogRepairBatchStatus | 'all';
+export type CatalogRepairBatchSort = 'newest' | 'updated' | 'needs_review';
+
 export interface CatalogRepairBatchItemPage {
   items: CatalogRepairBatchItem[];
   totalCount: number;
   limit: number;
   offset: number;
 }
+
+export type CatalogRepairBatchItemStatusFilter =
+  | CatalogRepairItemStatus
+  | 'all'
+  | 'failed'
+  | 'in_progress'
+  | 'needs_review';
+export type CatalogRepairBatchItemSort = 'oldest' | 'newest' | 'needs_review';
 
 export interface CatalogRepairBatchDetail {
   batch: CatalogRepairBatch;
@@ -965,16 +976,47 @@ export async function listCatalogRepairAuditPage({
 export async function listCatalogRepairBatchPage({
   limit = 25,
   offset = 0,
+  status = 'all',
+  sort = 'newest',
 }: {
   limit?: number;
   offset?: number;
+  status?: CatalogRepairBatchStatusFilter;
+  sort?: CatalogRepairBatchSort;
 } = {}): Promise<CatalogRepairBatchPage> {
   const boundedLimit = clampAuditLimit(limit);
   const boundedOffset = clampAuditOffset(offset);
+  const filters: string[] = [];
+  const values: Array<number | string> = [];
+
+  if (status !== 'all') {
+    values.push(status);
+    filters.push(`status = $${values.length}`);
+  }
+
+  const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+  const orderClause =
+    sort === 'needs_review'
+      ? `ORDER BY
+          CASE
+            WHEN status IN ('failed', 'partial', 'unavailable') THEN 1000
+            ELSE 0
+          END
+          + failed_count
+          + unavailable_count
+          + CASE WHEN completed_count < attempted_count THEN 1 ELSE 0 END DESC,
+          updated_at DESC,
+          id DESC`
+      : sort === 'updated'
+        ? 'ORDER BY updated_at DESC, id DESC'
+        : 'ORDER BY created_at DESC, id DESC';
+  const pageValues = [...values, boundedLimit, boundedOffset];
   const [countResult, batchResult] = await Promise.all([
     getPool().query<{ count: number | string }>(
       `SELECT COUNT(*)::int AS count
-         FROM catalog_repair_batches`,
+         FROM catalog_repair_batches
+        ${whereClause}`,
+      values,
     ),
     getPool().query<CatalogRepairBatchRow>(
       `SELECT
@@ -1001,10 +1043,11 @@ export async function listCatalogRepairBatchPage({
           updated_at::text,
           completed_at::text
          FROM catalog_repair_batches
-        ORDER BY created_at DESC, id DESC
-        LIMIT $1
-        OFFSET $2`,
-      [boundedLimit, boundedOffset],
+        ${whereClause}
+        ${orderClause}
+        LIMIT $${values.length + 1}
+        OFFSET $${values.length + 2}`,
+      pageValues,
     ),
   ]);
 
@@ -1021,9 +1064,13 @@ export async function getCatalogRepairBatchDetail(
   {
     limit = 100,
     offset = 0,
+    status = 'all',
+    sort = 'oldest',
   }: {
     limit?: number;
     offset?: number;
+    status?: CatalogRepairBatchItemStatusFilter;
+    sort?: CatalogRepairBatchItemSort;
   } = {},
 ): Promise<CatalogRepairBatchDetail | null> {
   const boundedLimit = clampAuditLimit(limit);
@@ -1059,12 +1106,46 @@ export async function getCatalogRepairBatchDetail(
 
   if (!batchResult.rows[0]) return null;
 
+  const itemFilters: string[] = ['batch_id = $1'];
+  const itemValues: Array<number | string> = [batchId];
+
+  if (status !== 'all') {
+    if (status === 'needs_review') {
+      itemFilters.push(
+        "status IN ('failed', 'enqueue_failed', 'unavailable', 'completed_unresolved')",
+      );
+    } else if (status === 'failed') {
+      itemFilters.push("status IN ('failed', 'enqueue_failed', 'unavailable')");
+    } else if (status === 'in_progress') {
+      itemFilters.push("status IN ('pending', 'queued', 'processing')");
+    } else {
+      itemValues.push(status);
+      itemFilters.push(`status = $${itemValues.length}`);
+    }
+  }
+
+  const itemWhereClause = `WHERE ${itemFilters.join(' AND ')}`;
+  const itemOrderClause =
+    sort === 'needs_review'
+      ? `ORDER BY
+          CASE
+            WHEN status IN ('failed', 'enqueue_failed', 'unavailable') THEN 100
+            WHEN status = 'completed_unresolved' THEN 90
+            WHEN status IN ('pending', 'queued', 'processing') THEN 50
+            ELSE 0
+          END DESC,
+          updated_at DESC,
+          id ASC`
+      : sort === 'newest'
+        ? 'ORDER BY updated_at DESC, id DESC'
+        : 'ORDER BY id ASC';
+  const itemPageValues = [...itemValues, boundedLimit, boundedOffset];
   const [countResult, itemResult] = await Promise.all([
     getPool().query<{ count: number | string }>(
       `SELECT COUNT(*)::int AS count
          FROM catalog_repair_batch_items
-        WHERE batch_id = $1`,
-      [batchId],
+        ${itemWhereClause}`,
+      itemValues,
     ),
     getPool().query<CatalogRepairBatchItemRow>(
       `SELECT
@@ -1085,11 +1166,11 @@ export async function getCatalogRepairBatchDetail(
           updated_at::text,
           completed_at::text
          FROM catalog_repair_batch_items
-        WHERE batch_id = $1
-        ORDER BY id ASC
-        LIMIT $2
-        OFFSET $3`,
-      [batchId, boundedLimit, boundedOffset],
+        ${itemWhereClause}
+        ${itemOrderClause}
+        LIMIT $${itemValues.length + 1}
+        OFFSET $${itemValues.length + 2}`,
+      itemPageValues,
     ),
   ]);
 

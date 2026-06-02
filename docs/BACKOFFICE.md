@@ -200,6 +200,12 @@ intentionally conservative:
 - the repair batch history page at `/repair-batches` shows recent durable batch
   attempts and links to per-item details, so operators do not need to infer
   batch state from Bull Board history alone;
+- the repair batch history page supports status and recovery-priority sorting,
+  while batch detail pages can filter item rows to needs-review, failed,
+  in-progress, still-flagged, or all work;
+- batch item rows link back to the catalog-health issue anchor and movie detail
+  page, and surface queue name, job name, job id, latest error, and retry
+  pressure without requiring raw JSON first;
 - the recent repair audit is paginated so large repair histories do not render
   as one long operator table.
 
@@ -207,6 +213,21 @@ If an accepted repair does not resolve the row, use Bull Board to inspect the
 job, check worker logs, and rerun the backfill or TMDB review flow manually.
 Prefer a manual migration only when the issue is an identity conflict rather
 than missing or stale metadata.
+
+Recommended repair-batch recovery flow:
+
+1. Open `/repair-batches?sort=needs_review` and filter to `Partial` or
+   `Failed` batches first.
+2. Open a batch and keep the default `Needs review` item filter. It focuses on
+   failed enqueue attempts, unavailable Redis work, and jobs that completed but
+   left the original catalog-health issue still flagged.
+3. For `unavailable` or `enqueue_failed` items, confirm `REDIS_URL`, worker
+   health, and BullMQ logs before retrying the specific movie.
+4. For `completed_unresolved` items, open the linked movie detail and
+   catalog-health issue anchor. Treat it as a data-quality investigation, not a
+   queue failure.
+5. For `in_progress` items, wait for the realtime queue page or Bull Board to
+   show terminal state before adding more work for the same issue.
 
 The auto-refresh UI treats enqueue success as "work accepted", not "catalog
 fixed". It removes the clicked sample row to keep the operator surface

@@ -18,6 +18,10 @@ import {
 } from '@pop-choice/shared';
 import type {
   BackofficeRuntimeConfig,
+  CatalogRepairBatchItemSort,
+  CatalogRepairBatchItemStatusFilter,
+  CatalogRepairBatchSort,
+  CatalogRepairBatchStatusFilter,
   TMDBMatchReviewAction,
   TMDBMatchReviewReason,
   TMDBMatchReviewSort,
@@ -68,6 +72,43 @@ const DATE_TIME_FORMATTER = new Intl.DateTimeFormat('en', {
   month: 'short',
   year: 'numeric',
 });
+
+const REPAIR_BATCH_STATUS_FILTERS = new Set<CatalogRepairBatchStatusFilter>([
+  'all',
+  'empty',
+  'enqueueing',
+  'failed',
+  'partial',
+  'processing',
+  'queued',
+  'completed',
+  'unavailable',
+]);
+
+const REPAIR_BATCH_SORTS = new Set<CatalogRepairBatchSort>(['newest', 'updated', 'needs_review']);
+
+const REPAIR_BATCH_ITEM_STATUS_FILTERS = new Set<CatalogRepairBatchItemStatusFilter>([
+  'all',
+  'completed',
+  'completed_resolved',
+  'completed_unresolved',
+  'deduped',
+  'enqueue_failed',
+  'failed',
+  'in_progress',
+  'needs_review',
+  'pending',
+  'processing',
+  'queued',
+  'skipped',
+  'unavailable',
+]);
+
+const REPAIR_BATCH_ITEM_SORTS = new Set<CatalogRepairBatchItemSort>([
+  'oldest',
+  'newest',
+  'needs_review',
+]);
 
 let cachedConfig: BackofficeRuntimeConfig | null = null;
 let initialization: Promise<BackofficeRuntimeConfig> | null = null;
@@ -181,6 +222,8 @@ export function parseRepairBatchListParams(params: Record<string, string | strin
   pageSize: number;
   limit: number;
   offset: number;
+  status: CatalogRepairBatchStatusFilter;
+  sort: CatalogRepairBatchSort;
 } {
   const pageSize = parsePositiveIntParam(
     firstSearchParam(params.pageSize),
@@ -190,12 +233,24 @@ export function parseRepairBatchListParams(params: Record<string, string | strin
   const page = parsePositiveIntParam(firstSearchParam(params.page), 1, {
     max: MAX_REPAIR_BATCH_PAGE_NUMBER,
   });
+  const statusValue = firstSearchParam(params.status);
+  const sortValue = firstSearchParam(params.sort);
+  const status =
+    statusValue && REPAIR_BATCH_STATUS_FILTERS.has(statusValue as CatalogRepairBatchStatusFilter)
+      ? (statusValue as CatalogRepairBatchStatusFilter)
+      : 'all';
+  const sort =
+    sortValue && REPAIR_BATCH_SORTS.has(sortValue as CatalogRepairBatchSort)
+      ? (sortValue as CatalogRepairBatchSort)
+      : 'newest';
 
   return {
     page,
     pageSize,
     limit: pageSize,
     offset: (page - 1) * pageSize,
+    status,
+    sort,
   };
 }
 
@@ -204,6 +259,8 @@ export function parseRepairBatchItemParams(params: Record<string, string | strin
   pageSize: number;
   limit: number;
   offset: number;
+  status: CatalogRepairBatchItemStatusFilter;
+  sort: CatalogRepairBatchItemSort;
 } {
   const pageSize = parsePositiveIntParam(
     firstSearchParam(params.itemPageSize),
@@ -213,12 +270,25 @@ export function parseRepairBatchItemParams(params: Record<string, string | strin
   const page = parsePositiveIntParam(firstSearchParam(params.itemPage), 1, {
     max: MAX_REPAIR_BATCH_PAGE_NUMBER,
   });
+  const statusValue = firstSearchParam(params.itemStatus);
+  const sortValue = firstSearchParam(params.itemSort);
+  const status =
+    statusValue &&
+    REPAIR_BATCH_ITEM_STATUS_FILTERS.has(statusValue as CatalogRepairBatchItemStatusFilter)
+      ? (statusValue as CatalogRepairBatchItemStatusFilter)
+      : 'needs_review';
+  const sort =
+    sortValue && REPAIR_BATCH_ITEM_SORTS.has(sortValue as CatalogRepairBatchItemSort)
+      ? (sortValue as CatalogRepairBatchItemSort)
+      : 'needs_review';
 
   return {
     page,
     pageSize,
     limit: pageSize,
     offset: (page - 1) * pageSize,
+    status,
+    sort,
   };
 }
 

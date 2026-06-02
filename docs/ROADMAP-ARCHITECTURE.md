@@ -211,7 +211,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - [ ] Make full-issue backoffice `Queue all` repairs asynchronous and durable in [#630](https://github.com/shchilkin/PopChoice/issues/630), so large sweeps create orchestration work quickly and enqueue repair items from workers instead of long operator HTTP requests.
 - [x] Add a native backoffice `catalog-maintenance` queue view in [#627](https://github.com/shchilkin/PopChoice/issues/627), keeping Bull Board as the deeper queue console while surfacing operator-friendly counts, job summaries, and links.
 - [x] Add realtime backoffice `catalog-maintenance` queue updates in [#638](https://github.com/shchilkin/PopChoice/issues/638), using server-sent BullMQ `QueueEvents` to refresh queue and catalog-health snapshots without waiting for manual refresh.
-- [ ] Improve repair batch triage for failed and unresolved items in [#628](https://github.com/shchilkin/PopChoice/issues/628), including filters for partial, stuck, failed, and `completed_unresolved` items plus recovery links.
+- [x] Improve repair batch triage for failed and unresolved items in [#628](https://github.com/shchilkin/PopChoice/issues/628), including filters for partial, stuck, failed, and `completed_unresolved` items plus recovery links.
 - [x] Clarify queued vs resolved repair states across catalog health in [#629](https://github.com/shchilkin/PopChoice/issues/629), reserving success language and styling for actually resolved catalog issues.
 - Periodically refresh TMDB-backed metadata for older records without destabilizing existing recommendation history.
 - Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.
