@@ -1,5 +1,6 @@
 import pg from 'pg';
 
+import { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 import { logger } from './logger.js';
 
 const { Pool } = pg;
@@ -476,6 +477,8 @@ export async function ensureSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_batch_created_at
       ON catalog_repair_audit (repair_batch_id, created_at DESC)
       WHERE repair_batch_id IS NOT NULL;
+
+    ${CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL}
   `);
 
   await getPool().query(`
