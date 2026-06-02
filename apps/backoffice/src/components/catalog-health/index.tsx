@@ -18,7 +18,6 @@ import {
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
 import { CatalogHealthLiveRefresh } from '../catalogHealthLiveRefresh';
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
 import {
@@ -759,8 +758,7 @@ export function CatalogHealthPage({
       }
     >
       <RepairFlash repairStatus={repairStatus} />
-      <CatalogMaintenanceRealtimeRefresh label="Queue updates refresh the catalog view" />
-      <CatalogHealthLiveRefresh initialData={initialLiveData} intervalSeconds={12} />
+      <CatalogHealthLiveRefresh initialData={initialLiveData} />
       <CatalogStatusStrip
         activeIssues={activeIssues}
         duplicateGroups={duplicateGroups}
