@@ -609,13 +609,25 @@ describe('catalog duplicate merge dry-run', () => {
       finalTmdbId: 77,
     });
 
-    const genreSql = String(clientMock.query.mock.calls[7]?.[0]);
+    const genreCall = clientMock.query.mock.calls.find(([sql]: [unknown]) =>
+      String(sql).includes('INSERT INTO movie_genres'),
+    );
+    expect(genreCall).toBeDefined();
+    const genreSql = String(genreCall?.[0]);
     expect(genreSql).toContain("bool_or(source = 'manual')");
     expect(genreSql).toContain("WHEN movie_genres.source = 'manual'");
-    const keywordSql = String(clientMock.query.mock.calls[9]?.[0]);
+    const keywordCall = clientMock.query.mock.calls.find(([sql]: [unknown]) =>
+      String(sql).includes('INSERT INTO movie_keywords'),
+    );
+    expect(keywordCall).toBeDefined();
+    const keywordSql = String(keywordCall?.[0]);
     expect(keywordSql).toContain("bool_or(source = 'manual')");
     expect(keywordSql).toContain("WHEN movie_keywords.source = 'manual'");
-    const userMemorySql = String(clientMock.query.mock.calls[16]?.[0]);
+    const userMemoryCall = clientMock.query.mock.calls.find(([sql]: [unknown]) =>
+      String(sql).includes("WHEN 'not_interested' THEN 5"),
+    );
+    expect(userMemoryCall).toBeDefined();
+    const userMemorySql = String(userMemoryCall?.[0]);
     expect(userMemorySql).toContain("WHEN 'not_interested' THEN 5");
     expect(userMemorySql).toContain('ROW_NUMBER() OVER');
     const auditCall = clientMock.query.mock.calls.find(([sql]: [unknown]) =>
