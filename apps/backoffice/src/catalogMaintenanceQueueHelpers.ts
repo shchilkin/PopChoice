@@ -38,6 +38,16 @@ export interface CatalogMaintenanceQueueCounts {
   waitingChildren: number;
 }
 
+export const EMPTY_CATALOG_MAINTENANCE_QUEUE_COUNTS: CatalogMaintenanceQueueCounts = {
+  active: 0,
+  completed: 0,
+  delayed: 0,
+  failed: 0,
+  prioritized: 0,
+  waiting: 0,
+  waitingChildren: 0,
+};
+
 export interface CatalogMaintenanceJobData {
   version: 1;
   movieId?: string | number;

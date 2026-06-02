@@ -10,6 +10,7 @@ import {
   CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
   CATALOG_MAINTENANCE_JOB_OPTIONS,
   CATALOG_MAINTENANCE_QUEUE_JOB_STATES,
+  EMPTY_CATALOG_MAINTENANCE_QUEUE_COUNTS,
   compactJobValue,
   getCatalogBackfillMovieJobId,
   getCatalogRepairBatchJobId,
@@ -152,22 +153,13 @@ function toJobSummary(
 export async function getCatalogMaintenanceQueueSnapshot(
   redisUrl = process.env.REDIS_URL,
 ): Promise<CatalogMaintenanceQueueSnapshot> {
-  const emptyCounts: CatalogMaintenanceQueueSnapshot['counts'] = {
-    active: 0,
-    completed: 0,
-    delayed: 0,
-    failed: 0,
-    prioritized: 0,
-    waiting: 0,
-    waitingChildren: 0,
-  };
   const queue = getCatalogMaintenanceQueue(redisUrl);
 
   if (!queue) {
     return {
       queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
       available: false,
-      counts: emptyCounts,
+      counts: EMPTY_CATALOG_MAINTENANCE_QUEUE_COUNTS,
       openJobs: 0,
       updatedAt: new Date().toISOString(),
     };

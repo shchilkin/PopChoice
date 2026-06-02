@@ -1156,6 +1156,12 @@ input:disabled {
   cursor: pointer;
   width: fit-content;
 }
+.json-details summary:focus,
+.json-details summary:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
 .json-details pre {
   max-height: 180px;
   margin: 6px 0 0;

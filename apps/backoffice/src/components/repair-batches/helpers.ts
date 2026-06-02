@@ -19,6 +19,26 @@ export function getRepairBatchProgress(batch: CatalogRepairBatch): string {
   return `${finished}/${attempted} finished`;
 }
 
+export const REPAIR_BATCH_ITEM_STATUS_FILTERS: Array<{
+  label: string;
+  status: CatalogRepairBatchItemStatusFilter;
+}> = [
+  { label: 'Needs review', status: 'needs_review' },
+  { label: 'Failed', status: 'failed' },
+  { label: 'In progress', status: 'in_progress' },
+  { label: 'Still flagged', status: 'completed_unresolved' },
+  { label: 'All', status: 'all' },
+];
+
+export const REPAIR_BATCH_ITEM_SORT_FILTERS: Array<{
+  label: string;
+  sort: CatalogRepairBatchItemSort;
+}> = [
+  { label: 'Needs review', sort: 'needs_review' },
+  { label: 'Newest', sort: 'newest' },
+  { label: 'Original order', sort: 'oldest' },
+];
+
 export function buildRepairBatchListHref({
   page = 1,
   pageSize,
@@ -106,7 +126,13 @@ export function repairBatchRecoveryHint(batch: CatalogRepairBatch): string {
   if (batch.status === 'processing' || batch.status === 'queued' || batch.status === 'enqueueing') {
     return 'Workers still have open work. Wait for queue events before retrying the same issue.';
   }
-  if (batch.completedCount < batch.attemptedCount) {
+  const terminalCount =
+    batch.completedCount +
+    batch.failedCount +
+    batch.skippedCount +
+    batch.dedupedCount +
+    batch.unavailableCount;
+  if (terminalCount < batch.attemptedCount) {
     return 'Some items did not reach a resolved terminal state. Filter needs review.';
   }
   return 'No immediate recovery action. Verify the catalog-health issue cleared.';

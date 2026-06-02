@@ -20,7 +20,7 @@ export function parseAction(value: FormDataEntryValue | null): TMDBMatchReviewAc
   throw backofficeActionError(`Unsupported review action "${String(value)}".`);
 }
 
-function parseCandidateId(value: FormDataEntryValue | null): number | undefined {
+export function parseCandidateId(value: FormDataEntryValue | null): number | undefined {
   if (value === null || value === undefined || value === '') return undefined;
 
   if (typeof value !== 'string') {
@@ -42,6 +42,15 @@ function parseCandidateId(value: FormDataEntryValue | null): number | undefined 
   return candidateId;
 }
 
+export function assertCandidateIdForAction(
+  action: TMDBMatchReviewAction,
+  candidateId: number | undefined,
+): void {
+  if (action === 'apply_candidate' && candidateId === undefined) {
+    throw backofficeActionError('Candidate id is required when applying a TMDB candidate.');
+  }
+}
+
 export async function applyTMDBReviewFormAction(
   reviewId: string,
   formData: FormData,
@@ -52,6 +61,8 @@ export async function applyTMDBReviewFormAction(
   const action = parseAction(formData.get('action'));
   const candidateId = parseCandidateId(formData.get('candidate_id'));
   const note = formData.get('note');
+
+  assertCandidateIdForAction(action, candidateId);
 
   await applyTMDBMatchReviewAction({
     reviewId,

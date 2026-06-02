@@ -1,13 +1,10 @@
 import {
   createCatalogRepairBatch,
-  createCatalogRepairBatchItem,
   getCatalogRepairMovieSnapshot,
   listCatalogHealthIssueMoviePage,
-  logger,
   recordCatalogRepairAction,
   refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchOrchestrationResult,
-  updateCatalogRepairBatchItemEnqueueResult,
 } from '@pop-choice/shared';
 
 import {
@@ -26,6 +23,11 @@ import {
   REPAIRABLE_CATALOG_ISSUE_KEYS,
   type CatalogRepairActionStatus,
 } from './catalogRepairActionHelpers';
+import {
+  createCatalogBulkRepairSummary,
+  enqueueCatalogRepairBatchItems,
+  type CatalogBulkRepairSummary,
+} from './catalogRepairBatchActions';
 import {
   backofficeActionError,
   ensureBackofficeReady,
@@ -49,25 +51,6 @@ export type CatalogRepairActionResult =
       summary: CatalogBulkRepairSummary;
     };
 
-export type CatalogBulkRepairSummary = {
-  batchId?: string;
-  issueKey: string;
-  totalCandidates: number;
-  attempted: number;
-  queued: number;
-  deduped: number;
-  failed: number;
-  unavailable: number;
-  limit: number;
-  movieIds: string[];
-  jobs: Array<{
-    movieId: string;
-    itemId?: string;
-    jobId?: string;
-    status: 'queued' | 'deduped' | 'failed' | 'unavailable';
-  }>;
-};
-
 async function performAsyncBulkCatalogRepairAction(
   formData: FormData,
   headers: Headers,
@@ -84,20 +67,51 @@ async function performAsyncBulkCatalogRepairAction(
   });
   const limit = parseAsyncBulkRepairLimit(formData.get('batch_limit'), countPage.totalCount);
   const requestedLimit = Math.min(limit, countPage.totalCount);
-  const summary: CatalogBulkRepairSummary = {
+  const summary = createCatalogBulkRepairSummary({
     issueKey,
     totalCandidates: countPage.totalCount,
-    attempted: 0,
-    queued: 0,
-    deduped: 0,
-    failed: 0,
-    unavailable: 0,
     limit: requestedLimit,
-    movieIds: [],
-    jobs: [],
-  };
+  });
 
   if (requestedLimit === 0) {
+    const batch = await createCatalogRepairBatch({
+      action: 'bulk_enqueue_backfill',
+      actor,
+      issueKey,
+      targetType: 'catalog_issue',
+      targetId: issueKey,
+      requestedLimit,
+      totalCandidates: countPage.totalCount,
+      attemptedCount: 0,
+      note,
+      previousState: {
+        async: true,
+        issueKey,
+        requestedLimit,
+        totalCandidates: countPage.totalCount,
+      },
+    });
+    summary.batchId = batch.id;
+    await recordCatalogRepairAction({
+      action: 'bulk_enqueue_backfill',
+      actor,
+      issueKey,
+      targetType: 'catalog_issue',
+      targetId: issueKey,
+      note,
+      previousState: {
+        async: true,
+        issueKey,
+        requestedLimit,
+        totalCandidates: countPage.totalCount,
+      },
+      result: {
+        ...summary,
+        status: 'empty',
+      },
+      repairBatchId: batch.id,
+    });
+
     return {
       mode: 'bulk',
       status: 'empty',
@@ -221,18 +235,12 @@ async function performBulkCatalogRepairAction(
     offset: 0,
     staleAfterDays: config.catalogHealthStaleDays,
   });
-  const summary: CatalogBulkRepairSummary = {
+  const summary = createCatalogBulkRepairSummary({
     issueKey,
     totalCandidates: page.totalCount,
-    attempted: page.movies.length,
-    queued: 0,
-    deduped: 0,
-    failed: 0,
-    unavailable: 0,
     limit: page.limit,
-    movieIds: page.movies.map((movie) => movie.id),
-    jobs: [],
-  };
+    movies: page.movies,
+  });
   const batch = await createCatalogRepairBatch({
     action: 'bulk_enqueue_backfill',
     actor,
@@ -250,74 +258,14 @@ async function performBulkCatalogRepairAction(
     },
   });
   summary.batchId = batch.id;
-  const reason = getBackfillReasonForIssue(issueKey);
-
-  for (const movie of page.movies) {
-    const item = await createCatalogRepairBatchItem({
-      batchId: batch.id,
-      movieId: movie.id,
-      issueKey,
-      movieSnapshot: { ...movie },
-      reason,
-      language: config.tmdbLanguage,
-    });
-
-    try {
-      const job = await enqueueCatalogBackfillMovieFromBackoffice(
-        {
-          movieId: movie.id,
-          reason,
-          language: config.tmdbLanguage,
-          repairBatchId: batch.id,
-          repairBatchItemId: item.id,
-        },
-        config.redisUrl,
-      );
-
-      if (!job) {
-        await updateCatalogRepairBatchItemEnqueueResult({
-          itemId: item.id,
-          status: 'unavailable',
-          errorMessage: 'REDIS_URL is unavailable or the catalog-maintenance queue is disabled.',
-          result: { status: 'queue_unavailable', queueName: 'catalog-maintenance' },
-        });
-        summary.unavailable += 1;
-        summary.jobs.push({ movieId: movie.id, itemId: item.id, status: 'unavailable' });
-        continue;
-      }
-
-      await updateCatalogRepairBatchItemEnqueueResult({
-        itemId: item.id,
-        status: job.status,
-        queueName: job.queueName,
-        jobName: job.jobName,
-        jobId: job.jobId,
-        language: job.language,
-        result: { ...job },
-      });
-      summary[job.status] += 1;
-      summary.jobs.push({
-        movieId: movie.id,
-        itemId: item.id,
-        jobId: job.jobId,
-        status: job.status,
-      });
-    } catch (error) {
-      await updateCatalogRepairBatchItemEnqueueResult({
-        itemId: item.id,
-        status: 'enqueue_failed',
-        errorMessage: error instanceof Error ? error.message : String(error),
-        result: { status: 'enqueue_failed' },
-      });
-      summary.failed += 1;
-      summary.jobs.push({ movieId: movie.id, itemId: item.id, status: 'failed' });
-      logger.error('Failed to enqueue catalog repair job from bulk action', {
-        err: error,
-        issueKey,
-        movieId: movie.id,
-      });
-    }
-  }
+  await enqueueCatalogRepairBatchItems({
+    batchId: batch.id,
+    issueKey,
+    language: config.tmdbLanguage,
+    movies: page.movies,
+    redisUrl: config.redisUrl,
+    summary,
+  });
 
   await refreshCatalogRepairBatchCounts(batch.id);
   await recordCatalogRepairAction({
