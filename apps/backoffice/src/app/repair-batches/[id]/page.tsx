@@ -29,13 +29,21 @@ export default async function RepairBatchDetail({ params, searchParams }: Repair
     const detail = await getCatalogRepairBatchDetail(id, {
       limit: pagination.limit,
       offset: pagination.offset,
+      sort: pagination.sort,
+      status: pagination.status,
     });
 
     if (!detail) {
       return <RepairBatchNotFoundPage batchId={id} />;
     }
 
-    return <RepairBatchDetailPage detail={detail} />;
+    return (
+      <RepairBatchDetailPage
+        detail={detail}
+        selectedItemSort={pagination.sort}
+        selectedItemStatus={pagination.status}
+      />
+    );
   } catch (error) {
     logBackofficeError('Failed to render catalog repair batch detail', error);
     return (

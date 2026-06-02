@@ -7,7 +7,9 @@ import {
   createCatalogRepairBatch,
   createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
+  getCatalogRepairBatchDetail,
   listCatalogRepairAuditPage,
+  listCatalogRepairBatchPage,
   refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemEnqueueResult,
   updateCatalogRepairBatchItemStatus,
@@ -268,6 +270,120 @@ describe('catalog repair audit pages', () => {
     expect(String(poolMock.query.mock.calls[0][0])).toContain(
       'WHEN completed_count = attempted_count THEN',
     );
+  });
+
+  it('filters repair batch pages by status and needs-review sort', async () => {
+    poolMock.query.mockResolvedValueOnce({ rows: [{ count: 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          id: '7',
+          action: 'bulk_enqueue_backfill',
+          actor: 'operator',
+          issue_key: 'missing_poster_url',
+          target_type: 'catalog_issue',
+          target_id: 'missing_poster_url',
+          status: 'partial',
+          requested_limit: 25,
+          total_candidates: 351,
+          attempted_count: 25,
+          queued_count: 20,
+          deduped_count: 0,
+          unavailable_count: 1,
+          failed_count: 4,
+          completed_count: 0,
+          skipped_count: 0,
+          note: null,
+          previous_state: {},
+          result: {},
+          created_at: '2026-05-28 09:00:00+00',
+          updated_at: '2026-05-28 09:02:00+00',
+          completed_at: null,
+        },
+      ],
+    });
+
+    const page = await listCatalogRepairBatchPage({
+      limit: 10,
+      offset: 20,
+      sort: 'needs_review',
+      status: 'partial',
+    });
+
+    expect(page).toMatchObject({ totalCount: 1, limit: 10, offset: 20 });
+    expect(String(poolMock.query.mock.calls[0][0])).toContain('WHERE status = $1');
+    expect(String(poolMock.query.mock.calls[1][0])).toContain('failed_count');
+    expect(String(poolMock.query.mock.calls[1][0])).toContain('LIMIT $2');
+    expect(poolMock.query.mock.calls[1][1]).toEqual(['partial', 10, 20]);
+  });
+
+  it('filters repair batch detail items for needs-review triage', async () => {
+    poolMock.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: '7',
+          action: 'bulk_enqueue_backfill',
+          actor: 'operator',
+          issue_key: 'missing_poster_url',
+          target_type: 'catalog_issue',
+          target_id: 'missing_poster_url',
+          status: 'partial',
+          requested_limit: 25,
+          total_candidates: 351,
+          attempted_count: 25,
+          queued_count: 20,
+          deduped_count: 0,
+          unavailable_count: 1,
+          failed_count: 4,
+          completed_count: 0,
+          skipped_count: 0,
+          note: null,
+          previous_state: {},
+          result: {},
+          created_at: '2026-05-28 09:00:00+00',
+          updated_at: '2026-05-28 09:02:00+00',
+          completed_at: null,
+        },
+      ],
+    });
+    poolMock.query.mockResolvedValueOnce({ rows: [{ count: 1 }] }).mockResolvedValueOnce({
+      rows: [
+        {
+          id: '11',
+          batch_id: '7',
+          movie_id: '334',
+          issue_key: 'missing_poster_url',
+          status: 'completed_unresolved',
+          queue_name: 'catalog-maintenance',
+          job_name: 'backfill-movie',
+          job_id: 'backfill-334',
+          language: 'en-US',
+          reason: 'missing_metadata',
+          error_message: null,
+          movie_snapshot: { id: '334', name: 'Movie' },
+          result: { issueResolved: false },
+          created_at: '2026-05-28 09:00:01+00',
+          updated_at: '2026-05-28 09:03:00+00',
+          completed_at: '2026-05-28 09:03:00+00',
+        },
+      ],
+    });
+
+    const detail = await getCatalogRepairBatchDetail('7', {
+      limit: 50,
+      offset: 0,
+      sort: 'needs_review',
+      status: 'needs_review',
+    });
+
+    expect(detail?.items.items[0]).toMatchObject({
+      id: '11',
+      status: 'completed_unresolved',
+    });
+    expect(String(poolMock.query.mock.calls[1][0])).toContain(
+      "status IN ('failed', 'enqueue_failed', 'unavailable', 'completed_unresolved')",
+    );
+    expect(String(poolMock.query.mock.calls[2][0])).toContain('ORDER BY');
+    expect(poolMock.query.mock.calls[2][1]).toEqual(['7', 50, 0]);
   });
 
   it('records resolved and unresolved terminal item statuses', async () => {

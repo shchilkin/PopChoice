@@ -22,9 +22,17 @@ export default async function RepairBatchesPage({ searchParams }: RepairBatchesP
     const batchPage = await listCatalogRepairBatchPage({
       limit: pagination.limit,
       offset: pagination.offset,
+      sort: pagination.sort,
+      status: pagination.status,
     });
 
-    return <RepairBatchListPage batchPage={batchPage} />;
+    return (
+      <RepairBatchListPage
+        batchPage={batchPage}
+        selectedSort={pagination.sort}
+        selectedStatus={pagination.status}
+      />
+    );
   } catch (error) {
     logBackofficeError('Failed to render catalog repair batch history', error);
     return (

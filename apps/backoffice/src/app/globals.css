@@ -1139,8 +1139,38 @@ input:disabled {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.01);
+}
+.filter-bar.quiet {
+  padding-top: 0;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  color: var(--muted);
+  background: #111419;
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
+}
+.filter-chip:hover,
+.filter-chip.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent), var(--border) 42%);
+  background: var(--accent-soft);
+}
 .repair-batch-table {
-  min-width: 980px;
+  min-width: 1120px;
 }
 .repair-counts {
   display: flex;
@@ -1159,6 +1189,23 @@ input:disabled {
 }
 .batch-summary {
   margin-top: 0;
+}
+.triage-panel {
+  border-color: color-mix(in srgb, var(--accent), var(--border) 55%);
+}
+.queue-metadata {
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+}
+.queue-metadata strong {
+  color: var(--text);
+}
+.queue-metadata span {
+  color: var(--subtle);
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 .loading-panel {
   min-height: 150px;
