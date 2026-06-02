@@ -108,7 +108,7 @@ function CatalogQueueStatus({
           </div>
           <p>
             {snapshot.available
-              ? `Queue checked ${formatLiveSyncTime(snapshot.updatedAt)}.`
+              ? `Queue updated ${formatLiveSyncTime(snapshot.updatedAt)}.`
               : 'Queue data is unavailable, so backoffice cannot read repair job state.'}
           </p>
         </div>
