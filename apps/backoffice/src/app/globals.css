@@ -1148,15 +1148,15 @@ input:disabled {
 .repair-result-chips strong {
   color: var(--text);
 }
-.repair-result-raw {
+.json-details {
   color: var(--subtle);
   font-size: 11px;
 }
-.repair-result-raw summary {
+.json-details summary {
   cursor: pointer;
   width: fit-content;
 }
-.repair-result-raw pre {
+.json-details pre {
   max-height: 180px;
   margin: 6px 0 0;
   overflow: auto;
@@ -1167,6 +1167,21 @@ input:disabled {
   background: #0f1217;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+.metadata-json-details {
+  font-size: 12px;
+}
+.metadata-json-details pre {
+  max-height: 520px;
+  margin: 0;
+  padding: 14px;
+  color: var(--text);
+  line-height: 1.55;
+  border-top: 1px solid var(--border);
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
 }
 .filter-bar {
   display: flex;

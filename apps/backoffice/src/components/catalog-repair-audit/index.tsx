@@ -1,6 +1,7 @@
 import type { CatalogRepairActionAudit } from '@pop-choice/shared';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
+import { JsonDetails } from '../shared';
 
 export function humanizeBackofficeIdentifier(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -115,10 +116,7 @@ function RepairResultSummary({ entry }: { entry: CatalogRepairActionAudit }) {
           ))}
         </div>
       ) : null}
-      <details className="repair-result-raw">
-        <summary>Raw result</summary>
-        <pre>{JSON.stringify(entry.result, null, 2)}</pre>
-      </details>
+      <JsonDetails className="repair-result-raw" label="Raw result" value={entry.result} />
     </div>
   );
 }

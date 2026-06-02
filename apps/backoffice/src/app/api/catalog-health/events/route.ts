@@ -3,33 +3,28 @@ import { Redis } from 'ioredis';
 
 import { CATALOG_MAINTENANCE_QUEUE_NAME } from '../../../../catalogMaintenanceQueue';
 import { ensureBackofficeReady, logBackofficeError } from '../../../../lib/backoffice';
+import {
+  BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS,
+  BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS,
+  bindCatalogMaintenanceQueueEvents,
+  createServerSentEventResponse,
+  encodeServerSentEvent,
+  normalizeQueueEventPayload,
+  withBackofficeStreamMetadata,
+  type QueueEventPayload,
+  type SnapshotQueueEvent,
+} from '../../../../lib/backofficeEventStream';
 import { readCatalogHealthLiveData } from '../../../../lib/catalogHealthLiveServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
 
-const HEARTBEAT_INTERVAL_MS = 25_000;
-const SNAPSHOT_DEBOUNCE_MS = 350;
-
-type QueueEventPayload = Record<string, unknown> | string | number | null | undefined;
 type SnapshotTrigger = 'connected' | 'queue-event' | 'redis-unavailable';
-type SnapshotQueueEvent = { payload: Record<string, unknown>; type: string };
 type PendingSnapshot = {
   queueEvent?: SnapshotQueueEvent;
   trigger: SnapshotTrigger;
 };
-
-function encodeServerSentEvent(event: string, payload: Record<string, unknown>): Uint8Array {
-  return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
-}
-
-function normalizePayload(payload: QueueEventPayload): Record<string, unknown> {
-  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-    return payload;
-  }
-  return { value: payload ?? null };
-}
 
 export async function GET(request: Request) {
   try {
@@ -53,11 +48,12 @@ export async function GET(request: Request) {
         const send = (event: string, payload: Record<string, unknown>) => {
           if (closed) return;
           controller.enqueue(
-            encodeServerSentEvent(event, {
-              ...payload,
-              queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
-              receivedAt: new Date().toISOString(),
-            }),
+            encodeServerSentEvent(
+              event,
+              withBackofficeStreamMetadata(payload, {
+                queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+              }),
+            ),
           );
         };
 
@@ -101,7 +97,7 @@ export async function GET(request: Request) {
               snapshotTimer = null;
               void sendSnapshot(trigger, queueEvent);
             },
-            trigger === 'queue-event' ? SNAPSHOT_DEBOUNCE_MS : 0,
+            trigger === 'queue-event' ? BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS : 0,
           );
         };
 
@@ -127,7 +123,7 @@ export async function GET(request: Request) {
 
         const heartbeat = setInterval(() => {
           send('heartbeat', {});
-        }, HEARTBEAT_INTERVAL_MS);
+        }, BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS);
 
         if (request.signal.aborted) {
           void cleanup();
@@ -150,7 +146,7 @@ export async function GET(request: Request) {
 
         const forward = (type: string) => (payload: QueueEventPayload) => {
           if (type === 'progress') return;
-          scheduleSnapshot('queue-event', { type, payload: normalizePayload(payload) });
+          scheduleSnapshot('queue-event', { type, payload: normalizeQueueEventPayload(payload) });
         };
 
         let hasEmittedRedisError = false;
@@ -164,14 +160,7 @@ export async function GET(request: Request) {
           hasEmittedRedisError = false;
         });
 
-        queueEvents.on('waiting', forward('waiting'));
-        queueEvents.on('active', forward('active'));
-        queueEvents.on('completed', forward('completed'));
-        queueEvents.on('failed', forward('failed'));
-        queueEvents.on('delayed', forward('delayed'));
-        queueEvents.on('stalled', forward('stalled'));
-        queueEvents.on('drained', forward('drained'));
-        queueEvents.on('progress', forward('progress'));
+        bindCatalogMaintenanceQueueEvents(queueEvents, forward);
         queueEvents.on('error', (error) => {
           logBackofficeError('Backoffice catalog health stream queue error', error);
           send('stream-error', { message: 'Queue events stream error.' });
@@ -192,13 +181,7 @@ export async function GET(request: Request) {
       },
     });
 
-    return new Response(stream, {
-      headers: {
-        'Cache-Control': 'no-store',
-        Connection: 'keep-alive',
-        'Content-Type': 'text/event-stream',
-      },
-    });
+    return createServerSentEventResponse(stream);
   } catch (error) {
     logBackofficeError('Failed to start catalog health live stream', error);
     return new Response('Failed to start catalog health live stream.', { status: 500 });
