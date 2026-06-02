@@ -69,6 +69,7 @@ export function CatalogHealthLiveRefresh({
     return serialized ? `?${serialized}` : '';
   }, [searchParams]);
   const lastSearch = useRef(search);
+  const refreshRequestId = useRef(0);
   const refreshSeconds = Math.max(fallbackIntervalSeconds, 30);
 
   useEffect(() => {
@@ -87,17 +88,19 @@ export function CatalogHealthLiveRefresh({
 
   useEffect(() => {
     const refresh = async () => {
+      const requestId = ++refreshRequestId.current;
       setIsFallbackFetching(true);
       try {
         const nextData = await fetchCatalogHealthLive(search);
+        if (requestId !== refreshRequestId.current) return;
         setData(nextData);
         onSnapshot?.(nextData);
         setLastSnapshotAt(nextData.report.generatedAt);
         setIsStreamError(false);
       } catch {
-        setIsStreamError(true);
+        if (requestId === refreshRequestId.current) setIsStreamError(true);
       } finally {
-        setIsFallbackFetching(false);
+        if (requestId === refreshRequestId.current) setIsFallbackFetching(false);
       }
     };
 
@@ -109,6 +112,7 @@ export function CatalogHealthLiveRefresh({
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      refreshRequestId.current += 1;
       window.removeEventListener(CATALOG_HEALTH_REFRESH_EVENT, refresh);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
