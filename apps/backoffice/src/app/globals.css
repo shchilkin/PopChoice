@@ -465,11 +465,18 @@ input:disabled {
   background: var(--warn);
   box-shadow: 0 0 0 4px var(--warn-soft);
 }
+.live-refresh-dot.error {
+  background: var(--bad);
+  box-shadow: 0 0 0 4px var(--bad-soft);
+}
 .live-refresh-meta {
   color: var(--subtle);
 }
 .live-refresh-error {
   color: var(--warn);
+}
+.realtime-refresh.error {
+  border-color: color-mix(in srgb, var(--bad), var(--border) 55%);
 }
 .queue-status {
   align-items: flex-start;
@@ -777,6 +784,25 @@ input:disabled {
   font-size: 12px;
   font-weight: 650;
 }
+.issue-panel-header {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(360px, auto);
+  gap: 16px;
+  align-items: start;
+}
+.issue-panel-controls {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  min-width: 0;
+}
+.issue-panel-row-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .table-scroll {
   overflow-x: auto;
 }
@@ -960,11 +986,12 @@ input:disabled {
   margin: 0;
 }
 .bulk-repair-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
   gap: 8px;
-  align-items: flex-start;
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  align-items: start;
+  justify-content: end;
+  max-width: 100%;
 }
 .bulk-repair-form {
   display: flex;
@@ -972,6 +999,7 @@ input:disabled {
   justify-content: flex-end;
   gap: 8px;
   margin: 0;
+  flex-wrap: wrap;
 }
 .bulk-repair-form .repair-message {
   max-width: 180px;
@@ -991,7 +1019,7 @@ input:disabled {
 }
 .inline-confirmation {
   flex-basis: 100%;
-  min-width: min(340px, 100%);
+  width: min(520px, 100%);
   display: grid;
   gap: 8px;
   padding: 10px;
@@ -1477,6 +1505,18 @@ input:disabled {
   }
   .status-metrics {
     justify-content: flex-start;
+  }
+  .issue-panel-header {
+    grid-template-columns: 1fr;
+  }
+  .issue-panel-controls,
+  .issue-panel-row-actions {
+    justify-items: start;
+    justify-content: flex-start;
+  }
+  .bulk-repair-actions {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
   }
   .detail-grid {
     grid-template-columns: 1fr;

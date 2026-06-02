@@ -18,6 +18,7 @@ import {
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
+import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
 import { CatalogHealthLiveRefresh } from '../catalogHealthLiveRefresh';
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
 import {
@@ -450,7 +451,7 @@ function CatalogIssuePanel({
       id={`issue-${issue.key}`}
       className={`panel issue-panel ${severity} ${canRepair && issue.count > 0 ? 'repairable' : ''}`}
     >
-      <div className="panel-header">
+      <div className="panel-header issue-panel-header">
         <div className="issue-title">
           <div className="issue-title-row">
             <h2>{issue.label}</h2>
@@ -460,20 +461,22 @@ function CatalogIssuePanel({
           </div>
           <div className="issue-hint">{catalogIssueHint(issue.key)}</div>
         </div>
-        <div className="panel-actions">
-          <CountPill count={issue.count} state={state} />
-          {issue.count > 0 ? (
-            <a
-              className={`button small ${activePage ? 'quiet' : ''}`}
-              href={buildCatalogIssuePageHref({
-                issueKey: issue.key,
-                page: 1,
-                pageSize: activePage?.limit ?? DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
-              })}
-            >
-              {activePage ? 'Browsing rows' : 'Browse rows'}
-            </a>
-          ) : null}
+        <div className="issue-panel-controls">
+          <div className="issue-panel-row-actions">
+            <CountPill count={issue.count} state={state} />
+            {issue.count > 0 ? (
+              <a
+                className={`button small ${activePage ? 'quiet' : ''}`}
+                href={buildCatalogIssuePageHref({
+                  issueKey: issue.key,
+                  page: 1,
+                  pageSize: activePage?.limit ?? DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
+                })}
+              >
+                {activePage ? 'Browsing rows' : 'Browse rows'}
+              </a>
+            ) : null}
+          </div>
           {canRepair && issue.count > 0 ? <BulkRepairForm issue={issue} /> : null}
         </div>
       </div>
@@ -715,8 +718,8 @@ export function CatalogHealthPage({
       eyebrow="Catalog operations"
       description={
         <>
-          Generated {formatBackofficeDateTime(report.generatedAt)}. Live refresh is enabled without
-          a full page reload.
+          Generated {formatBackofficeDateTime(report.generatedAt)}. Auto-refresh checks DB and
+          BullMQ changes, and queue events trigger immediate refreshes.
         </>
       }
       actions={
@@ -726,6 +729,7 @@ export function CatalogHealthPage({
       }
     >
       <RepairFlash repairStatus={repairStatus} />
+      <CatalogMaintenanceRealtimeRefresh label="Realtime queue events trigger catalog refresh" />
       <CatalogHealthLiveRefresh initialData={initialLiveData} intervalSeconds={12} />
       <CatalogStatusStrip
         activeIssues={activeIssues}

@@ -39,11 +39,12 @@ export function CatalogHealthLiveRefresh({
   );
   const lastFingerprint = useRef(initialFingerprint);
   const search = typeof window === 'undefined' ? '' : window.location.search;
+  const refreshSeconds = Math.max(intervalSeconds, 5);
   const query = useQuery({
     initialData,
     queryFn: () => fetchCatalogHealthLive(search),
     queryKey: [...CATALOG_HEALTH_LIVE_QUERY_KEY, search],
-    refetchInterval: Math.max(intervalSeconds, 5) * 1000,
+    refetchInterval: refreshSeconds * 1000,
   });
   const { data, dataUpdatedAt, isError, isFetching, refetch } = query;
 
@@ -85,13 +86,13 @@ export function CatalogHealthLiveRefresh({
       />
       <span>
         {isPending || isFetching
-          ? 'Syncing DB and BullMQ state'
-          : 'Live DB and BullMQ sync via TanStack Query'}
+          ? 'Refreshing catalog snapshot'
+          : `Auto-refresh checks DB and BullMQ every ${refreshSeconds}s`}
       </span>
       <span className="live-refresh-meta">
         {dataUpdatedAt ? `Last checked ${new Date(dataUpdatedAt).toLocaleTimeString()}` : 'Waiting'}
       </span>
-      {isError ? <span className="live-refresh-error">Live sync failed</span> : null}
+      {isError ? <span className="live-refresh-error">Auto-refresh failed</span> : null}
     </div>
   );
 }

@@ -191,6 +191,9 @@ intentionally conservative:
 - the queue page at `/queue` shows a read-only BullMQ lens for the
   `catalog-maintenance` queue, including waiting, active, scheduled, failed, and
   completed jobs with compact payload fields;
+- the queue page listens to BullMQ `QueueEvents` through a server-sent events
+  stream, so waiting, active, completed, failed, delayed, and stalled job changes
+  refresh the operator snapshot without waiting for manual refresh;
 - the repair batch history page at `/repair-batches` shows recent durable batch
   attempts and links to per-item details, so operators do not need to infer
   batch state from Bull Board history alone;
@@ -202,10 +205,10 @@ check worker logs, and rerun the backfill or TMDB review flow manually. Prefer a
 manual migration only when the issue is an identity conflict rather than missing
 or stale metadata.
 
-The live UI treats enqueue success as "work accepted", not "catalog fixed". It
-removes the clicked sample row to keep the operator surface responsive, but the
-issue count still comes from the next catalog-health report after workers update
-the database.
+The auto-refresh UI treats enqueue success as "work accepted", not "catalog
+fixed". It removes the clicked sample row to keep the operator surface
+responsive, but the issue count still comes from the next catalog-health report
+after workers update the database.
 
 ## TMDB Review Workflow
 

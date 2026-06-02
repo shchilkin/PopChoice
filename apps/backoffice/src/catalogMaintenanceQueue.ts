@@ -5,7 +5,7 @@ import { Redis } from 'ioredis';
 import { logger } from '@pop-choice/shared';
 
 const DEFAULT_TMDB_LANGUAGE = 'en-US';
-const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
+export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
 const CATALOG_BACKFILL_MOVIE_JOB_NAME = 'backfill-movie';
 export const CATALOG_MAINTENANCE_QUEUE_JOB_STATES = [
   'waiting',
