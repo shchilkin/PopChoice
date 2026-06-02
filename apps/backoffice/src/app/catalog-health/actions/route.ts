@@ -4,6 +4,7 @@ import {
   catalogRepairMessage,
   getBackofficeErrorStatus,
   logBackofficeError,
+  parseBackofficeReturnPath,
   performCatalogRepairAction,
 } from '../../../lib/backoffice';
 import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
@@ -16,7 +17,32 @@ function wantsJsonResponse(request: NextRequest): boolean {
   return accept.includes('application/json') || requestedWith.toLowerCase() === 'fetch';
 }
 
+function repairRedirectStatus(result: Awaited<ReturnType<typeof performCatalogRepairAction>>) {
+  if (result.status === 'queued') return result.mode === 'bulk' ? 'bulk-queued' : 'queued';
+  if (result.status === 'orchestration_queued') return 'bulk-orchestration-queued';
+  if (result.status === 'partial') return 'bulk-partial';
+  if (result.status === 'empty') return 'empty';
+  if (result.status === 'failed') return 'failed';
+  return 'unavailable';
+}
+
+function buildRepairRedirectUrl({
+  request,
+  returnPath,
+  repairStatus,
+}: {
+  request: NextRequest;
+  returnPath: string;
+  repairStatus: string;
+}) {
+  const url = new URL(returnPath, request.url);
+  url.searchParams.set('repair', repairStatus);
+  return url;
+}
+
 export async function POST(request: NextRequest) {
+  let returnPath = '/';
+
   try {
     if (!isSameOriginRequest(request)) {
       if (wantsJsonResponse(request)) {
@@ -30,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
+    returnPath = parseBackofficeReturnPath(formData.get('return_to'));
     const result = await performCatalogRepairAction(formData, request.headers);
 
     if (wantsJsonResponse(request)) {
@@ -59,20 +86,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      new URL(
-        result.status === 'queued'
-          ? `/?repair=${result.mode === 'bulk' ? 'bulk-queued' : 'queued'}`
-          : result.status === 'orchestration_queued'
-            ? '/?repair=bulk-orchestration-queued'
-            : result.status === 'partial'
-              ? '/?repair=bulk-partial'
-              : result.status === 'empty'
-                ? '/?repair=empty'
-                : result.status === 'failed'
-                  ? '/?repair=failed'
-                  : '/?repair=unavailable',
-        request.url,
-      ),
+      buildRepairRedirectUrl({
+        request,
+        returnPath,
+        repairStatus: repairRedirectStatus(result),
+      }),
       303,
     );
   } catch (error) {
@@ -97,6 +115,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(new URL('/?repair=failed', request.url), 303);
+    return NextResponse.redirect(
+      buildRepairRedirectUrl({ request, returnPath, repairStatus: 'failed' }),
+      303,
+    );
   }
 }

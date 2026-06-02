@@ -9,10 +9,21 @@ export const revalidate = 0;
 
 type CatalogMovieDetailRouteProps = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function CatalogMovieDetailRoute({ params }: CatalogMovieDetailRouteProps) {
+function getParamValue(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+export default async function CatalogMovieDetailRoute({
+  params,
+  searchParams,
+}: CatalogMovieDetailRouteProps) {
   const { id } = await params;
+  const query = (await searchParams) ?? {};
+  const repairStatus = getParamValue(query.repair)?.trim() ?? null;
   let result: Awaited<ReturnType<typeof getCatalogMovieDetail>>;
 
   try {
@@ -36,5 +47,5 @@ export default async function CatalogMovieDetailRoute({ params }: CatalogMovieDe
     notFound();
   }
 
-  return <CatalogMovieDetailPage detail={result.detail} />;
+  return <CatalogMovieDetailPage detail={result.detail} repairStatus={repairStatus} />;
 }
