@@ -105,6 +105,8 @@ export interface CatalogDuplicateMergeResult {
   };
   deletedLoserMovieRows: number;
   preservedReviewRows: number;
+  finalMovieKey: string;
+  finalTmdbId: number | null;
 }
 
 interface CatalogDuplicateMergeMovieRow {
@@ -685,22 +687,48 @@ export async function applyCatalogDuplicateMovieMerge(
 
     const genreInsertResult = await client.query(
       `INSERT INTO movie_genres (movie_id, genre_id, source, created_at)
-       SELECT $1::bigint, genre_id, source, MIN(created_at)
+       SELECT
+         $1::bigint,
+         genre_id,
+         CASE
+           WHEN bool_or(source = 'manual') THEN 'manual'
+           ELSE 'tmdb'
+         END,
+         MIN(created_at)
          FROM movie_genres
         WHERE movie_id = ANY($2::bigint[])
-        GROUP BY genre_id, source
-       ON CONFLICT (movie_id, genre_id) DO NOTHING`,
+        GROUP BY genre_id
+       ON CONFLICT (movie_id, genre_id)
+       DO UPDATE SET
+         source = CASE
+           WHEN movie_genres.source = 'manual' OR EXCLUDED.source = 'manual' THEN 'manual'
+           ELSE movie_genres.source
+         END,
+         created_at = LEAST(movie_genres.created_at, EXCLUDED.created_at)`,
       [canonical.id, loserIds],
     );
     await client.query(`DELETE FROM movie_genres WHERE movie_id = ANY($1::bigint[])`, [loserIds]);
 
     const keywordInsertResult = await client.query(
       `INSERT INTO movie_keywords (movie_id, keyword_id, source, created_at)
-       SELECT $1::bigint, keyword_id, source, MIN(created_at)
+       SELECT
+         $1::bigint,
+         keyword_id,
+         CASE
+           WHEN bool_or(source = 'manual') THEN 'manual'
+           ELSE 'tmdb'
+         END,
+         MIN(created_at)
          FROM movie_keywords
         WHERE movie_id = ANY($2::bigint[])
-        GROUP BY keyword_id, source
-       ON CONFLICT (movie_id, keyword_id) DO NOTHING`,
+        GROUP BY keyword_id
+       ON CONFLICT (movie_id, keyword_id)
+       DO UPDATE SET
+         source = CASE
+           WHEN movie_keywords.source = 'manual' OR EXCLUDED.source = 'manual' THEN 'manual'
+           ELSE movie_keywords.source
+         END,
+         created_at = LEAST(movie_keywords.created_at, EXCLUDED.created_at)`,
       [canonical.id, loserIds],
     );
     await client.query(`DELETE FROM movie_keywords WHERE movie_id = ANY($1::bigint[])`, [loserIds]);

@@ -605,8 +605,16 @@ describe('catalog duplicate merge dry-run', () => {
       },
       deletedLoserMovieRows: 1,
       preservedReviewRows: 1,
+      finalMovieKey: 'tmdb:77',
+      finalTmdbId: 77,
     });
 
+    const genreSql = String(clientMock.query.mock.calls[7]?.[0]);
+    expect(genreSql).toContain("bool_or(source = 'manual')");
+    expect(genreSql).toContain("WHEN movie_genres.source = 'manual'");
+    const keywordSql = String(clientMock.query.mock.calls[9]?.[0]);
+    expect(keywordSql).toContain("bool_or(source = 'manual')");
+    expect(keywordSql).toContain("WHEN movie_keywords.source = 'manual'");
     const userMemorySql = String(clientMock.query.mock.calls[16]?.[0]);
     expect(userMemorySql).toContain("WHEN 'not_interested' THEN 5");
     expect(userMemorySql).toContain('ROW_NUMBER() OVER');
