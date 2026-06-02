@@ -13,6 +13,7 @@ import type {
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
+import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
 import { CatalogStat, SimplePaginationControls } from '../shared';
 
 export function repairStatusLabel(
@@ -336,12 +337,8 @@ export function RepairBatchListPage({
       title="Catalog Repair Batches"
       eyebrow="Repair history"
       description="Review durable bulk repair attempts, enqueue outcomes, and worker progress by item."
-      actions={
-        <a className="button" href="/repair-batches">
-          Refresh
-        </a>
-      }
     >
+      <CatalogMaintenanceRealtimeRefresh label="Realtime repair batch updates" />
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -492,6 +489,7 @@ export function RepairBatchDetailPage({
         </>
       }
     >
+      <CatalogMaintenanceRealtimeRefresh label="Realtime repair batch item updates" />
       <RepairBatchSummary batch={batch} />
       <section className="panel triage-panel">
         <div className="panel-header">
