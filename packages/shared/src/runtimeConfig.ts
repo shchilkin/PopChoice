@@ -110,6 +110,7 @@ const OperatorAuthRuntimeEnvSchema = z
 type OperatorAuthRuntimeEnv = z.infer<typeof OperatorAuthRuntimeEnvSchema>;
 
 export interface BackofficeRuntimeConfig {
+  bullBoardUrl: string | undefined;
   catalogHealthSampleLimit: number;
   catalogHealthStaleDays: number;
   databaseUrl: string;
@@ -130,6 +131,7 @@ export interface BullBoardRuntimeConfig {
 }
 
 const BackofficeRuntimeEnvSchema = OperatorAuthRuntimeEnvSchema.extend({
+  BULL_BOARD_URL: optionalUrlEnv('BULL_BOARD_URL', ['http:', 'https:']),
   CATALOG_HEALTH_SAMPLE_LIMIT: positiveIntegerEnv(DEFAULT_CATALOG_HEALTH_SAMPLE_LIMIT),
   CATALOG_HEALTH_STALE_DAYS: positiveIntegerEnv(DEFAULT_CATALOG_HEALTH_STALE_DAYS),
   DATABASE_URL: requiredUrlEnv('DATABASE_URL', ['postgres:', 'postgresql:']),
@@ -185,6 +187,7 @@ export function readBackofficeRuntimeConfig(
   const parsed = parseRuntimeEnv('Backoffice', BackofficeRuntimeEnvSchema, env);
 
   return {
+    bullBoardUrl: parsed.BULL_BOARD_URL,
     catalogHealthSampleLimit: parsed.CATALOG_HEALTH_SAMPLE_LIMIT,
     catalogHealthStaleDays: parsed.CATALOG_HEALTH_STALE_DAYS,
     databaseUrl: parsed.DATABASE_URL,

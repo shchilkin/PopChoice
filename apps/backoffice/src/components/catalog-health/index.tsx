@@ -14,6 +14,7 @@ import {
   DEFAULT_BULK_REPAIR_LIMIT,
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   formatBackofficeDateTime,
+  MAX_BULK_REPAIR_LIMIT,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
@@ -68,6 +69,99 @@ function buildRepairAuditPageHref({ page, pageSize }: { page: number; pageSize: 
   return `/?${params.toString()}#repair-audit`;
 }
 
+function humanizeIdentifier(value: string): string {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatCompactDateTime(value: string): string {
+  const formatted = formatBackofficeDateTime(value);
+  return formatted.replace(/,\s*/g, ' ').replace(/\sUTC$/, ' UTC');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function numberFromResult(result: Record<string, unknown>, key: string): number | null {
+  const value = result[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function formatRepairTarget(entry: CatalogRepairActionAudit) {
+  if (entry.targetType === 'movie') {
+    return <a href={`/movies/${encodeURIComponent(entry.targetId)}`}>Movie #{entry.targetId}</a>;
+  }
+
+  if (entry.targetType === 'catalog_issue') {
+    return (
+      <a href={`/#issue-${encodeURIComponent(entry.targetId)}`}>
+        {humanizeIdentifier(entry.targetId)}
+      </a>
+    );
+  }
+
+  return (
+    <span>
+      {entry.targetType}:{entry.targetId}
+    </span>
+  );
+}
+
+function repairResultChips(result: Record<string, unknown>) {
+  const fields = [
+    ['queued', 'Queued'],
+    ['deduped', 'Deduped'],
+    ['failed', 'Failed'],
+    ['unavailable', 'Unavailable'],
+    ['attempted', 'Attempted'],
+    ['totalCandidates', 'Total'],
+  ] as const;
+
+  return fields.flatMap(([key, label]) => {
+    const value = numberFromResult(result, key);
+    return value === null ? [] : [{ key, label, value }];
+  });
+}
+
+function RepairResultSummary({ entry }: { entry: CatalogRepairActionAudit }) {
+  const result = isRecord(entry.result) ? entry.result : {};
+  const jobId = typeof result.jobId === 'string' ? result.jobId : null;
+  const status = typeof result.status === 'string' ? result.status : null;
+  const chips = repairResultChips(result);
+
+  return (
+    <div className="repair-result">
+      <div className="repair-result-headline">
+        {entry.repairBatchId ? (
+          <a className="repair-result-primary" href={`/repair-batches/${entry.repairBatchId}`}>
+            Batch #{entry.repairBatchId}
+          </a>
+        ) : jobId ? (
+          <span className="repair-result-primary">{jobId}</span>
+        ) : (
+          <span className="repair-result-primary">{status ?? 'Recorded'}</span>
+        )}
+        {status ? (
+          <span className={`data-pill ${status === 'queued' ? 'good' : 'neutral'}`}>{status}</span>
+        ) : null}
+      </div>
+      {chips.length > 0 ? (
+        <div className="repair-result-chips">
+          {chips.map((chip) => (
+            <span key={chip.key} className={chip.key === 'failed' ? 'warn' : ''}>
+              <strong>{chip.value}</strong> {chip.label.toLowerCase()}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <details className="repair-result-raw">
+        <summary>Raw result</summary>
+        <pre>{JSON.stringify(entry.result, null, 2)}</pre>
+      </details>
+    </div>
+  );
+}
+
 function CatalogStatusStrip({
   activeIssues,
   duplicateGroups,
@@ -112,21 +206,80 @@ function CatalogStatusStrip({
   );
 }
 
-function CatalogQueueStatus({ snapshot }: { snapshot: CatalogMaintenanceQueueSnapshot }) {
+function ManualRepairForm() {
+  const repairableIssueKeys = Array.from(REPAIRABLE_CATALOG_ISSUE_KEYS);
+
+  return (
+    <form
+      className="manual-repair-form"
+      method="post"
+      action="/catalog-health/actions"
+      data-repair-form
+    >
+      <input type="hidden" name="action" value="enqueue_backfill" />
+      <label>
+        Movie ID
+        <input name="movie_id" inputMode="numeric" pattern="[0-9]+" placeholder="331" required />
+      </label>
+      <label>
+        Issue
+        <select name="issue_key" defaultValue="missing_keyword_metadata" required>
+          {repairableIssueKeys.map((issueKey) => (
+            <option key={issueKey} value={issueKey}>
+              {humanizeIdentifier(issueKey)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Note
+        <input name="note" placeholder="Optional context" />
+      </label>
+      <button className="button secondary small" type="submit" data-repair-submit>
+        Queue manual backfill
+      </button>
+      <span className="repair-message" aria-live="polite" data-repair-message />
+    </form>
+  );
+}
+
+function CatalogQueueStatus({
+  bullBoardUrl,
+  snapshot,
+}: {
+  bullBoardUrl?: string;
+  snapshot: CatalogMaintenanceQueueSnapshot;
+}) {
   const state = !snapshot.available ? 'warning' : snapshot.openJobs > 0 ? 'neutral' : 'healthy';
 
   return (
     <section className="queue-status" aria-label="Catalog maintenance queue status">
-      <div>
-        <div className="queue-status-title">
-          <span className={`queue-dot ${state}`} aria-hidden="true" />
-          <span>Catalog maintenance queue</span>
+      <div className="queue-status-main">
+        <div>
+          <div className="queue-status-title">
+            <span className={`queue-dot ${state}`} aria-hidden="true" />
+            <span>Catalog maintenance queue</span>
+          </div>
+          <p>
+            {snapshot.available
+              ? `Synced from BullMQ at ${formatBackofficeDateTime(snapshot.updatedAt)}.`
+              : 'REDIS_URL is unavailable, so backoffice cannot read BullMQ state.'}
+          </p>
         </div>
-        <p>
-          {snapshot.available
-            ? `Synced from BullMQ at ${formatBackofficeDateTime(snapshot.updatedAt)}.`
-            : 'REDIS_URL is unavailable, so backoffice cannot read BullMQ state.'}
-        </p>
+        <div className="queue-status-actions">
+          {bullBoardUrl ? (
+            <a className="button small" href={bullBoardUrl} target="_blank" rel="noreferrer">
+              Open Bull Board
+            </a>
+          ) : (
+            <span className="button small disabled" aria-disabled="true">
+              Bull Board URL missing
+            </span>
+          )}
+          <a className="button small" href="/repair-batches">
+            Repair batches
+          </a>
+        </div>
       </div>
       <div className="queue-counts">
         <span>
@@ -145,6 +298,10 @@ function CatalogQueueStatus({ snapshot }: { snapshot: CatalogMaintenanceQueueSna
           <strong>{snapshot.counts.completed}</strong> completed
         </span>
       </div>
+      <details className="manual-repair">
+        <summary>Manually queue a movie</summary>
+        <ManualRepairForm />
+      </details>
     </section>
   );
 }
@@ -233,23 +390,45 @@ function SampleRows({
 
 function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
   const batchLimit = Math.min(issue.count, DEFAULT_BULK_REPAIR_LIMIT);
+  const allLimit = Math.min(issue.count, MAX_BULK_REPAIR_LIMIT);
+  const allLabel =
+    issue.count > MAX_BULK_REPAIR_LIMIT ? `Queue first ${allLimit}` : `Queue all ${allLimit}`;
 
   return (
-    <form
-      className="bulk-repair-form"
-      method="post"
-      action="/catalog-health/actions"
-      data-bulk-repair-form
-      data-confirm-message={`Queue up to ${batchLimit} repair jobs for ${issue.label}? Workers will keep the existing TMDB/OpenAI pacing.`}
-    >
-      <input type="hidden" name="action" value="bulk_enqueue_backfill" />
-      <input type="hidden" name="issue_key" value={issue.key} />
-      <input type="hidden" name="batch_limit" value={batchLimit} />
-      <button className="button secondary small" type="submit" data-repair-submit>
-        Queue next {batchLimit}
-      </button>
-      <span className="repair-message" aria-live="polite" data-repair-message />
-    </form>
+    <div className="bulk-repair-actions">
+      <form
+        className="bulk-repair-form"
+        method="post"
+        action="/catalog-health/actions"
+        data-bulk-repair-form
+        data-confirm-message={`Queue up to ${batchLimit} repair jobs for ${issue.label}? Workers will keep the existing TMDB/OpenAI pacing.`}
+      >
+        <input type="hidden" name="action" value="bulk_enqueue_backfill" />
+        <input type="hidden" name="issue_key" value={issue.key} />
+        <input type="hidden" name="batch_limit" value={batchLimit} />
+        <button className="button secondary small" type="submit" data-repair-submit>
+          Queue next {batchLimit}
+        </button>
+        <span className="repair-message" aria-live="polite" data-repair-message />
+      </form>
+      {allLimit > batchLimit ? (
+        <form
+          className="bulk-repair-form"
+          method="post"
+          action="/catalog-health/actions"
+          data-bulk-repair-form
+          data-confirm-message={`${allLabel} repair jobs for ${issue.label}? Workers will keep the existing TMDB/OpenAI pacing.`}
+        >
+          <input type="hidden" name="action" value="bulk_enqueue_backfill" />
+          <input type="hidden" name="issue_key" value={issue.key} />
+          <input type="hidden" name="batch_limit" value={allLimit} />
+          <button className="button quiet small" type="submit" data-repair-submit>
+            {allLabel}
+          </button>
+          <span className="repair-message" aria-live="polite" data-repair-message />
+        </form>
+      ) : null}
+    </div>
   );
 }
 
@@ -416,7 +595,7 @@ export function RepairAuditRows({ audit }: { audit: CatalogRepairActionAudit[] }
   }
 
   return (
-    <table>
+    <table className="repair-audit-table">
       <thead>
         <tr>
           <th>When</th>
@@ -430,17 +609,20 @@ export function RepairAuditRows({ audit }: { audit: CatalogRepairActionAudit[] }
       <tbody>
         {audit.map((entry) => (
           <tr key={entry.id}>
-            <td>{formatBackofficeDateTime(entry.createdAt)}</td>
-            <td>{entry.actor}</td>
-            <td>{entry.issueKey}</td>
             <td>
-              {entry.targetType}:{entry.targetId}
+              <time dateTime={entry.createdAt} title={formatBackofficeDateTime(entry.createdAt)}>
+                {formatCompactDateTime(entry.createdAt)}
+              </time>
             </td>
-            <td>{entry.action}</td>
+            <td>{entry.actor}</td>
             <td>
-              {entry.repairBatchId
-                ? `batch:${entry.repairBatchId}`
-                : String(entry.result.jobId ?? entry.result.status ?? JSON.stringify(entry.result))}
+              <span className="repair-issue-label">{humanizeIdentifier(entry.issueKey)}</span>
+              <span className="repair-issue-key">{entry.issueKey}</span>
+            </td>
+            <td>{formatRepairTarget(entry)}</td>
+            <td>{humanizeIdentifier(entry.action)}</td>
+            <td>
+              <RepairResultSummary entry={entry} />
             </td>
           </tr>
         ))}
@@ -507,6 +689,7 @@ function DuplicateReport({
 
 export function CatalogHealthPage({
   auditPage,
+  bullBoardUrl,
   initialLiveData,
   issueMoviePage,
   queueSnapshot,
@@ -515,6 +698,7 @@ export function CatalogHealthPage({
 }: {
   report: CatalogHealthReport;
   auditPage: CatalogRepairActionAuditPage;
+  bullBoardUrl?: string;
   initialLiveData: CatalogHealthLiveData;
   issueMoviePage: CatalogHealthIssueMoviePage | null;
   queueSnapshot: CatalogMaintenanceQueueSnapshot;
@@ -548,7 +732,7 @@ export function CatalogHealthPage({
         duplicateGroups={duplicateGroups}
         queueSnapshot={queueSnapshot}
       />
-      <CatalogQueueStatus snapshot={queueSnapshot} />
+      <CatalogQueueStatus bullBoardUrl={bullBoardUrl} snapshot={queueSnapshot} />
       <section className="summary" aria-label="Catalog health summary">
         <CatalogStat label="Movies" value={report.totalMovies} meta="Catalog rows tracked" />
         <CatalogStat
