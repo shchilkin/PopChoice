@@ -218,7 +218,7 @@ export function CatalogHealthLiveRefresh({
       <span>{statusCopy}</span>
       <span className="live-refresh-meta">{metaCopy}</span>
       {isStreamError ? (
-        <span className="live-refresh-error">Automatic updates are recovering</span>
+        <span className="live-refresh-error">Live updates are recovering</span>
       ) : null}
     </div>
   );
