@@ -1,15 +1,9 @@
 import { QueueEvents } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import {
-  CATALOG_MAINTENANCE_QUEUE_NAME,
-  listCatalogMaintenanceQueueJobs,
-} from '../../../../catalogMaintenanceQueue';
-import {
-  ensureBackofficeReady,
-  logBackofficeError,
-  parseCatalogMaintenanceQueueParams,
-} from '../../../../lib/backoffice';
+import { CATALOG_MAINTENANCE_QUEUE_NAME } from '../../../../catalogMaintenanceQueue';
+import { ensureBackofficeReady, logBackofficeError } from '../../../../lib/backoffice';
+import { readCatalogHealthLiveData } from '../../../../lib/catalogHealthLiveServer';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -19,6 +13,12 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 const SNAPSHOT_DEBOUNCE_MS = 350;
 
 type QueueEventPayload = Record<string, unknown> | string | number | null | undefined;
+type SnapshotTrigger = 'connected' | 'queue-event' | 'redis-unavailable';
+type SnapshotQueueEvent = { payload: Record<string, unknown>; type: string };
+type PendingSnapshot = {
+  queueEvent?: SnapshotQueueEvent;
+  trigger: SnapshotTrigger;
+};
 
 function encodeServerSentEvent(event: string, payload: Record<string, unknown>): Uint8Array {
   return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
@@ -31,45 +31,24 @@ function normalizePayload(payload: QueueEventPayload): Record<string, unknown> {
   return { value: payload ?? null };
 }
 
-function getSearchParamsRecord(searchParams: URLSearchParams): Record<string, string | string[]> {
-  const params: Record<string, string | string[]> = {};
-
-  for (const [key, value] of searchParams.entries()) {
-    const existing = params[key];
-    if (Array.isArray(existing)) {
-      existing.push(value);
-    } else if (typeof existing === 'string') {
-      params[key] = [existing, value];
-    } else {
-      params[key] = value;
-    }
-  }
-
-  return params;
-}
-
 export async function GET(request: Request) {
   try {
     const config = await ensureBackofficeReady();
     const requestUrl = new URL(request.url);
 
-    const redisUrl = config.redisUrl;
-
-    if (!redisUrl) {
-      return new Response('Catalog maintenance queue events require REDIS_URL.', { status: 503 });
-    }
-
+    let cleanupStream: (() => Promise<void>) | null = null;
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         let closed = false;
         let snapshotTimer: ReturnType<typeof setTimeout> | null = null;
         let snapshotInFlight = false;
-        let snapshotQueued = false;
-        const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
-        const queueEvents = new QueueEvents(CATALOG_MAINTENANCE_QUEUE_NAME, { connection });
-        const queueParams = parseCatalogMaintenanceQueueParams(
-          getSearchParamsRecord(requestUrl.searchParams),
-        );
+        let pendingSnapshot: PendingSnapshot | null = null;
+        const connection = config.redisUrl
+          ? new Redis(config.redisUrl, { maxRetriesPerRequest: null })
+          : null;
+        const queueEvents = connection
+          ? new QueueEvents(CATALOG_MAINTENANCE_QUEUE_NAME, { connection })
+          : null;
 
         const send = (event: string, payload: Record<string, unknown>) => {
           if (closed) return;
@@ -82,54 +61,38 @@ export async function GET(request: Request) {
           );
         };
 
-        const forward = (type: string) => (payload: QueueEventPayload) => {
-          const normalizedPayload = normalizePayload(payload);
-          send('queue-event', { type, payload: normalizedPayload });
-          if (type !== 'progress') {
-            scheduleSnapshot('queue-event', { type, payload: normalizedPayload });
-          }
-        };
-
-        const sendSnapshot = async (
-          trigger: 'connected' | 'queue-event',
-          queueEvent?: { payload: Record<string, unknown>; type: string },
-        ) => {
+        const sendSnapshot = async (trigger: SnapshotTrigger, queueEvent?: SnapshotQueueEvent) => {
           if (closed) return;
           if (snapshotInFlight) {
-            snapshotQueued = true;
+            pendingSnapshot = { queueEvent, trigger };
             return;
           }
 
           snapshotInFlight = true;
           try {
-            const jobPage = await listCatalogMaintenanceQueueJobs({
-              limit: queueParams.limit,
-              offset: queueParams.offset,
-              redisUrl,
-              state: queueParams.state,
+            const data = await readCatalogHealthLiveData({
+              config,
+              searchParams: requestUrl.searchParams,
             });
             send('snapshot', {
-              jobPage,
+              data,
               queueEvent,
               trigger,
             });
           } catch (error) {
-            logBackofficeError('Failed to stream catalog maintenance queue snapshot', error);
-            send('queue-error', { message: 'Failed to read queue snapshot.' });
-            void cleanup();
+            logBackofficeError('Failed to stream live catalog health snapshot', error);
+            send('stream-error', { message: 'Failed to read live catalog health snapshot.' });
           } finally {
             snapshotInFlight = false;
-            if (snapshotQueued) {
-              snapshotQueued = false;
-              void sendSnapshot('queue-event');
+            if (pendingSnapshot) {
+              const nextSnapshot = pendingSnapshot;
+              pendingSnapshot = null;
+              void sendSnapshot(nextSnapshot.trigger, nextSnapshot.queueEvent);
             }
           }
         };
 
-        const scheduleSnapshot = (
-          trigger: 'connected' | 'queue-event',
-          queueEvent?: { payload: Record<string, unknown>; type: string },
-        ) => {
+        const scheduleSnapshot = (trigger: SnapshotTrigger, queueEvent?: SnapshotQueueEvent) => {
           if (snapshotTimer !== null) {
             clearTimeout(snapshotTimer);
           }
@@ -145,32 +108,60 @@ export async function GET(request: Request) {
         const cleanup = async () => {
           if (closed) return;
           closed = true;
+          cleanupStream = null;
           if (snapshotTimer !== null) {
             clearTimeout(snapshotTimer);
           }
           clearInterval(heartbeat);
-          queueEvents.removeAllListeners();
-          connection.removeAllListeners();
-          await queueEvents.close().catch(() => undefined);
-          await connection.quit().catch(() => undefined);
+          queueEvents?.removeAllListeners();
+          connection?.removeAllListeners();
+          await queueEvents?.close().catch(() => undefined);
+          await connection?.quit().catch(() => undefined);
           try {
             controller.close();
           } catch {
             // The client can close the stream before cleanup finishes.
           }
         };
+        cleanupStream = cleanup;
 
         const heartbeat = setInterval(() => {
           send('heartbeat', {});
         }, HEARTBEAT_INTERVAL_MS);
 
-        request.signal.addEventListener('abort', () => {
+        if (request.signal.aborted) {
           void cleanup();
-        });
+          return;
+        }
 
+        request.signal.addEventListener(
+          'abort',
+          () => {
+            void cleanup();
+          },
+          { once: true },
+        );
+
+        if (!connection || !queueEvents) {
+          send('connected', { mode: 'snapshot-only' });
+          scheduleSnapshot('redis-unavailable');
+          return;
+        }
+
+        const forward = (type: string) => (payload: QueueEventPayload) => {
+          if (type === 'progress') return;
+          scheduleSnapshot('queue-event', { type, payload: normalizePayload(payload) });
+        };
+
+        let hasEmittedRedisError = false;
         connection.on('error', (error) => {
-          logBackofficeError('Backoffice queue events Redis error', error);
-          send('queue-error', { message: 'Redis connection error.' });
+          if (hasEmittedRedisError) return;
+          hasEmittedRedisError = true;
+          logBackofficeError('Backoffice catalog health stream Redis error', error);
+          send('stream-error', { message: 'Redis connection error.' });
+        });
+        connection.on('ready', () => {
+          hasEmittedRedisError = false;
         });
 
         queueEvents.on('waiting', forward('waiting'));
@@ -182,19 +173,22 @@ export async function GET(request: Request) {
         queueEvents.on('drained', forward('drained'));
         queueEvents.on('progress', forward('progress'));
         queueEvents.on('error', (error) => {
-          logBackofficeError('Backoffice queue events stream error', error);
-          send('queue-error', { message: 'Queue events stream error.' });
+          logBackofficeError('Backoffice catalog health stream queue error', error);
+          send('stream-error', { message: 'Queue events stream error.' });
         });
 
         try {
           await queueEvents.waitUntilReady();
-          send('connected', {});
+          send('connected', { mode: 'live' });
           scheduleSnapshot('connected');
         } catch (error) {
-          logBackofficeError('Failed to open catalog maintenance queue event stream', error);
-          send('queue-error', { message: 'Failed to open queue event stream.' });
+          logBackofficeError('Failed to open catalog health live stream', error);
+          send('stream-error', { message: 'Failed to open catalog health live stream.' });
           await cleanup();
         }
+      },
+      cancel() {
+        void cleanupStream?.();
       },
     });
 
@@ -206,7 +200,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    logBackofficeError('Failed to start catalog maintenance queue event stream', error);
-    return new Response('Failed to start catalog maintenance queue event stream.', { status: 500 });
+    logBackofficeError('Failed to start catalog health live stream', error);
+    return new Response('Failed to start catalog health live stream.', { status: 500 });
   }
 }

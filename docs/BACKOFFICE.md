@@ -201,11 +201,12 @@ intentionally conservative:
   `catalog-maintenance` queue, including waiting, active, scheduled, failed, and
   completed jobs with compact payload fields;
 - the queue page listens to BullMQ `QueueEvents` through a server-sent events
-  stream, so waiting, active, completed, failed, delayed, and stalled job changes
-  refresh the operator snapshot without waiting for manual refresh;
-- the catalog-health home uses the same server-sent queue events to refresh its
-  live DB and queue snapshot immediately after catalog-maintenance changes, with
-  a slower background check only as a reconnect fallback;
+  stream that pushes the current queue snapshot for the active filter/page, so
+  waiting, active, completed, failed, delayed, and stalled job changes update
+  the operator view without waiting for manual refresh;
+- the catalog-health home uses a dedicated server-sent events stream that pushes
+  the live DB and queue snapshot after catalog-maintenance changes, with a
+  slower background check only as a reconnect fallback;
 - the repair batch history page at `/repair-batches` shows recent durable batch
   attempts and links to per-item details, so operators do not need to infer
   batch state from Bull Board history alone;

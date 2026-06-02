@@ -20,6 +20,7 @@ import {
 import { BackofficeLayout } from '../backoffice-layout';
 import { CatalogHealthLiveRefresh } from '../catalogHealthLiveRefresh';
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
+import { formatLiveSyncTime } from '../liveRefreshTime';
 import {
   BooleanDataPill,
   CatalogStat,
@@ -284,8 +285,8 @@ function CatalogQueueStatus({
           </div>
           <p>
             {snapshot.available
-              ? `Synced from BullMQ at ${formatBackofficeDateTime(snapshot.updatedAt)}.`
-              : 'REDIS_URL is unavailable, so backoffice cannot read BullMQ state.'}
+              ? `Queue data synced ${formatLiveSyncTime(snapshot.updatedAt)}.`
+              : 'Queue data is unavailable, so backoffice cannot read repair job state.'}
           </p>
         </div>
         <div className="queue-status-actions">
@@ -752,7 +753,7 @@ export function CatalogHealthPage({
       eyebrow="Catalog operations"
       description={
         <>
-          Updated {formatBackofficeDateTime(report.generatedAt)}. Catalog and queue status refresh
+          Updated {formatLiveSyncTime(report.generatedAt)}. Catalog and queue status update
           automatically.
         </>
       }

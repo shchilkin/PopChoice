@@ -1,29 +1,60 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { formatLiveSyncTime } from './liveRefreshTime';
 
 type RealtimeStatus = 'connecting' | 'connected' | 'error';
+type QueueSnapshotMessage = {
+  receivedAt?: unknown;
+  trigger?: unknown;
+};
 
 const REFRESH_DEBOUNCE_MS = 350;
 
+function parseQueueSnapshotMessage(event: MessageEvent<string>): QueueSnapshotMessage {
+  try {
+    return JSON.parse(event.data) as QueueSnapshotMessage;
+  } catch {
+    return {};
+  }
+}
+
+function getReceivedAt(message: QueueSnapshotMessage): string {
+  if (typeof message.receivedAt === 'string') {
+    const receivedAt = new Date(message.receivedAt);
+    if (!Number.isNaN(receivedAt.getTime())) return message.receivedAt;
+  }
+
+  return new Date().toISOString();
+}
+
 export function CatalogMaintenanceRealtimeRefresh({
-  label = 'Queue updates refresh this view',
+  label = 'Queue changes update this view live',
 }: {
   label?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState<RealtimeStatus>('connecting');
   const [lastEventAt, setLastEventAt] = useState<string | null>(null);
   const refreshTimer = useRef<number | null>(null);
+  const search = useMemo(() => {
+    const serialized = searchParams.toString();
+    return serialized ? `?${serialized}` : '';
+  }, [searchParams]);
 
   useEffect(() => {
-    const source = new EventSource('/api/catalog-maintenance-queue/events');
+    setStatus('connecting');
+    setLastEventAt(null);
 
-    const scheduleRefresh = () => {
-      setLastEventAt(new Date().toISOString());
+    const source = new EventSource(`/api/catalog-maintenance-queue/events${search}`);
+
+    const scheduleRefresh = (event: MessageEvent<string>) => {
+      const message = parseQueueSnapshotMessage(event);
+      setStatus('connected');
+      setLastEventAt(getReceivedAt(message));
       if (refreshTimer.current !== null) {
         window.clearTimeout(refreshTimer.current);
       }
@@ -35,7 +66,10 @@ export function CatalogMaintenanceRealtimeRefresh({
     source.addEventListener('connected', () => {
       setStatus('connected');
     });
-    source.addEventListener('queue-event', scheduleRefresh);
+    source.addEventListener('snapshot', scheduleRefresh);
+    source.addEventListener('heartbeat', () => {
+      setStatus((current) => (current === 'error' ? current : 'connected'));
+    });
     source.addEventListener('queue-error', () => {
       setStatus('error');
     });
@@ -49,7 +83,7 @@ export function CatalogMaintenanceRealtimeRefresh({
       }
       source.close();
     };
-  }, [router]);
+  }, [router, search]);
 
   const copy =
     status === 'connected'
