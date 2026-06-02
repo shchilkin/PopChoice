@@ -324,24 +324,16 @@ export function CatalogMaintenanceQueuePage({
       eyebrow="Worker operations"
       description={
         <>
-          Snapshot from BullMQ at {formatBackofficeDateTime(jobPage.updatedAt)}. Realtime queue
-          events refresh the page automatically; use Refresh if the stream disconnects.
+          Updated {formatBackofficeDateTime(jobPage.updatedAt)}. Queue changes refresh
+          automatically.
         </>
       }
       actions={
-        <>
-          {bullBoardUrl ? (
-            <a className="button" href={bullBoardUrl}>
-              Open Bull Board
-            </a>
-          ) : null}
-          <a
-            className="button"
-            href={buildQueueHref({ page: 1, pageSize: jobPage.limit, state: jobPage.state })}
-          >
-            Refresh
+        bullBoardUrl ? (
+          <a className="button" href={bullBoardUrl}>
+            Open Bull Board
           </a>
-        </>
+        ) : null
       }
     >
       <CatalogMaintenanceRealtimeRefresh />

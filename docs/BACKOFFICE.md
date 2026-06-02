@@ -74,9 +74,10 @@ Mutation flows are deliberately narrow:
   records actor, issue key, movie snapshot, queue/job result, optional note, and
   timestamp in `catalog_repair_audit`.
 - [#592](https://github.com/shchilkin/PopChoice/issues/592): repair actions are
-  progressively enhanced. Operators get pending, queued, unavailable, and error
-  states without a full page reload, successful enqueue attempts disable the
-  clicked action, and the queued sample row is removed from the visible table.
+  progressively enhanced. Operators get pending, accepted, unavailable, and
+  error states without a full page reload, successful enqueue attempts disable
+  the clicked action, and the accepted sample row is removed from the visible
+  table.
   The non-JavaScript form redirect flow remains available.
 - [#593](https://github.com/shchilkin/PopChoice/issues/593): repairable
   catalog-health panels can queue a bounded batch of `backfill-movie` jobs from
@@ -84,7 +85,7 @@ Mutation flows are deliberately narrow:
   `catalog-maintenance` worker pacing, uses deterministic job ids for dedupe,
   confirms the operator intent in the enhanced UI, reports partial enqueue
   results explicitly, and records a grouped `bulk_enqueue_backfill` audit
-  summary with queued, deduped, unavailable, and failed counts.
+  summary with accepted, already queued, unavailable, and failed counts.
 - [#572](https://github.com/shchilkin/PopChoice/issues/572): bulk repair
   attempts now create durable `catalog_repair_batches` and
   `catalog_repair_batch_items` rows before enqueueing BullMQ jobs. The audit row
@@ -185,9 +186,11 @@ intentionally conservative:
   bulk progress in `catalog_repair_batches` plus `catalog_repair_batch_items`,
   which gives operators a recovery trail without depending on retained BullMQ
   jobs;
-- workers advance durable item status from `queued`/`deduped` to `processing`,
-  `completed_resolved`, `completed_unresolved`, `skipped`, or final `failed`
-  when a repair job carries `repairBatchId` and `repairBatchItemId`;
+- workers advance durable item status from `queued`/`deduped` (shown as
+  "accepted" and "already queued") to `processing`, `completed_resolved` (shown
+  as "issue cleared"), `completed_unresolved` (shown as "still flagged"),
+  `skipped`, or final `failed` when a repair job carries `repairBatchId` and
+  `repairBatchItemId`;
 - the queue page at `/queue` shows a read-only BullMQ lens for the
   `catalog-maintenance` queue, including waiting, active, scheduled, failed, and
   completed jobs with compact payload fields;
@@ -200,10 +203,10 @@ intentionally conservative:
 - the recent repair audit is paginated so large repair histories do not render
   as one long operator table.
 
-If a queued repair does not resolve the row, use Bull Board to inspect the job,
-check worker logs, and rerun the backfill or TMDB review flow manually. Prefer a
-manual migration only when the issue is an identity conflict rather than missing
-or stale metadata.
+If an accepted repair does not resolve the row, use Bull Board to inspect the
+job, check worker logs, and rerun the backfill or TMDB review flow manually.
+Prefer a manual migration only when the issue is an identity conflict rather
+than missing or stale metadata.
 
 The auto-refresh UI treats enqueue success as "work accepted", not "catalog
 fixed". It removes the clicked sample row to keep the operator surface

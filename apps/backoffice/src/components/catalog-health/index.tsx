@@ -110,8 +110,8 @@ function formatRepairTarget(entry: CatalogRepairActionAudit) {
 
 function repairResultChips(result: Record<string, unknown>) {
   const fields = [
-    ['queued', 'Queued'],
-    ['deduped', 'Deduped'],
+    ['queued', 'Accepted'],
+    ['deduped', 'Already queued'],
     ['failed', 'Failed'],
     ['unavailable', 'Unavailable'],
     ['attempted', 'Attempted'],
@@ -122,6 +122,26 @@ function repairResultChips(result: Record<string, unknown>) {
     const value = numberFromResult(result, key);
     return value === null ? [] : [{ key, label, value }];
   });
+}
+
+export function repairResultStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    deduped: 'Already queued',
+    enqueue_failed: 'Enqueue failed',
+    failed: 'Failed',
+    partial: 'Partially accepted',
+    queued: 'Accepted',
+    unavailable: 'Unavailable',
+  };
+
+  return labels[status] ?? humanizeIdentifier(status);
+}
+
+export function repairResultStatusTone(status: string): 'good' | 'neutral' | 'warn' {
+  if (status === 'failed' || status === 'enqueue_failed' || status === 'unavailable') {
+    return 'warn';
+  }
+  return status === 'completed_resolved' ? 'good' : 'neutral';
 }
 
 function RepairResultSummary({ entry }: { entry: CatalogRepairActionAudit }) {
@@ -143,7 +163,9 @@ function RepairResultSummary({ entry }: { entry: CatalogRepairActionAudit }) {
           <span className="repair-result-primary">{status ?? 'Recorded'}</span>
         )}
         {status ? (
-          <span className={`data-pill ${status === 'queued' ? 'good' : 'neutral'}`}>{status}</span>
+          <span className={`data-pill ${repairResultStatusTone(status)}`}>
+            {repairResultStatusLabel(status)}
+          </span>
         ) : null}
       </div>
       {chips.length > 0 ? (
@@ -545,18 +567,18 @@ function CatalogIssuePanel({
 function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
   if (repairStatus === 'queued') {
     return (
-      <div className="notice good">
-        Catalog backfill job queued. Workers will process it through the existing rate-limited TMDB
-        path.
+      <div className="notice neutral">
+        Catalog backfill work accepted. This row is not resolved yet; workers will process it
+        through the existing rate-limited TMDB path.
       </div>
     );
   }
 
   if (repairStatus === 'bulk-queued') {
     return (
-      <div className="notice good">
-        Catalog repair batch queued. Workers will process jobs through the existing rate-limited
-        TMDB path.
+      <div className="notice neutral">
+        Catalog repair batch accepted. Issues stay open until workers update the catalog and the
+        next health report clears them.
       </div>
     );
   }
@@ -718,14 +740,9 @@ export function CatalogHealthPage({
       eyebrow="Catalog operations"
       description={
         <>
-          Generated {formatBackofficeDateTime(report.generatedAt)}. Auto-refresh checks DB and
-          BullMQ changes, and queue events trigger immediate refreshes.
+          Updated {formatBackofficeDateTime(report.generatedAt)}. Catalog and queue status refresh
+          automatically.
         </>
-      }
-      actions={
-        <a className="button" href="/">
-          Refresh
-        </a>
       }
     >
       <RepairFlash repairStatus={repairStatus} />

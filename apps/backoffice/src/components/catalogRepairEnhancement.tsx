@@ -4,13 +4,14 @@ import { useEffect } from 'react';
 
 import { requestCatalogHealthRefresh } from './catalogHealthRefreshEvent';
 
-type RepairTone = '' | 'good' | 'warn';
+type RepairTone = '' | 'accepted' | 'good' | 'warn';
 
 function setMessage(form: HTMLFormElement, text: string, tone: RepairTone): void {
   const message = form.querySelector<HTMLElement>('[data-repair-message]');
   if (!message) return;
 
   message.textContent = text;
+  message.classList.toggle('accepted', tone === 'accepted');
   message.classList.toggle('good', tone === 'good');
   message.classList.toggle('warn', tone === 'warn');
 }
@@ -77,7 +78,7 @@ function appendEmptyPlaceholder(body: HTMLElement | null, columnCount: number): 
   cell.className = 'repair-placeholder';
   cell.colSpan = columnCount;
   cell.textContent =
-    'Visible sample queued. Refresh after workers complete to verify catalog health.';
+    'Visible sample accepted. It stays unresolved until workers update catalog health.';
   placeholder.appendChild(cell);
   body.appendChild(placeholder);
 }
@@ -152,13 +153,13 @@ export function CatalogRepairEnhancement() {
           if (response.ok && payload?.status === 'queued') {
             requestCatalogHealthRefresh();
             row?.classList.remove('repair-pending');
-            row?.classList.add('repair-queued');
-            setButton(form, 'Queued', true);
+            row?.classList.add('repair-accepted');
+            setButton(form, 'Accepted', true);
             const bulkSummary = payload.mode === 'bulk' ? payload.summary : null;
             const bulkMessage = bulkSummary
-              ? `Queued ${bulkSummary.queued ?? 0}, deduped ${bulkSummary.deduped ?? 0}`
-              : 'Queued for workers';
-            setMessage(form, bulkMessage, 'good');
+              ? `Accepted ${bulkSummary.queued ?? 0}, already queued ${bulkSummary.deduped ?? 0}`
+              : 'Accepted for worker';
+            setMessage(form, bulkMessage, 'accepted');
 
             if (row) {
               const timeoutId = window.setTimeout(() => {

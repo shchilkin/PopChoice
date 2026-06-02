@@ -11,12 +11,14 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { CatalogStat, SimplePaginationControls } from '../shared';
 
-function repairStatusLabel(status: CatalogRepairBatchStatus | CatalogRepairItemStatus): string {
+export function repairStatusLabel(
+  status: CatalogRepairBatchStatus | CatalogRepairItemStatus,
+): string {
   const labels: Record<CatalogRepairBatchStatus | CatalogRepairItemStatus, string> = {
-    completed: 'Completed',
-    completed_resolved: 'Completed resolved',
-    completed_unresolved: 'Completed unresolved',
-    deduped: 'Deduped',
+    completed: 'Completed, verify',
+    completed_resolved: 'Issue cleared',
+    completed_unresolved: 'Still flagged',
+    deduped: 'Already queued',
     empty: 'Empty',
     enqueue_failed: 'Enqueue failed',
     enqueueing: 'Enqueueing',
@@ -24,7 +26,7 @@ function repairStatusLabel(status: CatalogRepairBatchStatus | CatalogRepairItemS
     partial: 'Partial',
     pending: 'Pending',
     processing: 'Processing',
-    queued: 'Queued',
+    queued: 'Accepted',
     skipped: 'Skipped',
     unavailable: 'Unavailable',
   };
@@ -112,8 +114,8 @@ function RepairBatchRows({ batches }: { batches: CatalogRepairBatch[] }) {
           <td>{batch.totalCandidates}</td>
           <td>
             <span className="repair-counts">
-              <span>{batch.queuedCount} queued</span>
-              <span>{batch.dedupedCount} deduped</span>
+              <span>{batch.queuedCount} accepted</span>
+              <span>{batch.dedupedCount} already queued</span>
               <span>{batch.failedCount} failed</span>
             </span>
           </td>
@@ -204,9 +206,9 @@ function RepairBatchSummary({ batch }: { batch: CatalogRepairBatch }) {
         meta={`Requested limit ${batch.requestedLimit}`}
       />
       <CatalogStat
-        label="Queued"
+        label="Accepted"
         value={batch.queuedCount}
-        meta={`${batch.dedupedCount} deduped, ${batch.unavailableCount} unavailable`}
+        meta={`${batch.dedupedCount} already queued, ${batch.unavailableCount} unavailable`}
         state={batch.failedCount > 0 ? 'warning' : 'neutral'}
       />
     </section>
@@ -344,7 +346,7 @@ export function RepairBatchDetailPage({ detail }: { detail: CatalogRepairBatchDe
           </div>
           <dl className="facts">
             <div>
-              <dt>Queued</dt>
+              <dt>Accepted</dt>
               <dd>{batch.queuedCount}</dd>
             </div>
             <div>

@@ -11,6 +11,11 @@ import {
 } from '../lib/catalogHealthLive';
 import { CATALOG_HEALTH_REFRESH_EVENT } from './catalogHealthRefreshEvent';
 
+const CLIENT_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
+
 async function fetchCatalogHealthLive(search: string): Promise<CatalogHealthLiveData> {
   const response = await fetch(`/api/catalog-health${search}`, {
     cache: 'no-store',
@@ -78,6 +83,8 @@ export function CatalogHealthLiveRefresh({
     });
   }, [data, router]);
 
+  const lastChecked = dataUpdatedAt ? CLIENT_TIME_FORMATTER.format(new Date(dataUpdatedAt)) : null;
+
   return (
     <div className="live-refresh" aria-live="polite">
       <span
@@ -87,10 +94,10 @@ export function CatalogHealthLiveRefresh({
       <span>
         {isPending || isFetching
           ? 'Refreshing catalog snapshot'
-          : `Auto-refresh checks DB and BullMQ every ${refreshSeconds}s`}
+          : `Catalog status refreshes automatically every ${refreshSeconds}s`}
       </span>
       <span className="live-refresh-meta">
-        {dataUpdatedAt ? `Last checked ${new Date(dataUpdatedAt).toLocaleTimeString()}` : 'Waiting'}
+        {lastChecked ? `Last checked ${lastChecked}` : 'Waiting'}
       </span>
       {isError ? <span className="live-refresh-error">Auto-refresh failed</span> : null}
     </div>
