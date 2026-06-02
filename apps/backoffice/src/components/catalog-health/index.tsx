@@ -753,8 +753,8 @@ export function CatalogHealthPage({
       eyebrow="Catalog operations"
       description={
         <>
-          Last update {formatLiveSyncTime(report.generatedAt)}. Catalog and queue state stays
-          current while you work.
+          Updated {formatLiveSyncTime(report.generatedAt)}. Changes appear automatically while you
+          work.
         </>
       }
     >

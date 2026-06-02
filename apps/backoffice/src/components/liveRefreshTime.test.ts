@@ -34,9 +34,7 @@ describe('formatLiveSyncTime', () => {
 
     const timestamp = new Date(2026, 5, 2, 9, 13);
 
-    expect(formatLiveSyncTime(timestamp)).toBe(
-      `today at ${TODAY_TIME_FORMATTER.format(timestamp)}`,
-    );
+    expect(formatLiveSyncTime(timestamp)).toBe(`Today, ${TODAY_TIME_FORMATTER.format(timestamp)}`);
   });
 
   it('adds date context for stale timestamps', () => {
@@ -46,7 +44,7 @@ describe('formatLiveSyncTime', () => {
     const timestamp = new Date(2026, 5, 1, 23, 55);
 
     expect(formatLiveSyncTime(timestamp)).toBe(
-      `${STALE_DATE_FORMATTER.format(timestamp)} at ${TODAY_TIME_FORMATTER.format(timestamp)}`,
+      `${STALE_DATE_FORMATTER.format(timestamp)}, ${TODAY_TIME_FORMATTER.format(timestamp)}`,
     );
   });
 
@@ -57,7 +55,7 @@ describe('formatLiveSyncTime', () => {
     const timestamp = new Date(2025, 11, 31, 23, 55);
 
     expect(formatLiveSyncTime(timestamp)).toBe(
-      `${OLD_DATE_FORMATTER.format(timestamp)} at ${TODAY_TIME_FORMATTER.format(timestamp)}`,
+      `${OLD_DATE_FORMATTER.format(timestamp)}, ${TODAY_TIME_FORMATTER.format(timestamp)}`,
     );
   });
 });

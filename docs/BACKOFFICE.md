@@ -273,8 +273,8 @@ The queue shows `tmdb_match_reviews` rows with:
 - newest, oldest, and highest-risk sorting;
 - server-side pagination that preserves status, reason, sort, page, and page
   size in the URL so large queues do not render all rows at once;
-- readable UTC timestamps for generated reports, queue updates, match dates, and
-  audit history.
+- operator-friendly timestamps for generated reports, queue updates, match
+  dates, and audit history.
 
 The detail page compares the current local row with every captured candidate.
 Malformed or partial candidate JSON is shown defensively instead of breaking the
@@ -328,7 +328,7 @@ Check that:
 
 - the PopChoice brand icon loads and the page does not duplicate the document
   title;
-- generated, updated, matched, and audit timestamps are readable UTC strings;
+- generated, updated, matched, and audit timestamps use readable operator time;
 - pages do not create unintended horizontal viewport scroll. Wide data tables
   may scroll inside their table container only;
 - long movie titles, TMDB ids, reason/status labels, notes, and error messages

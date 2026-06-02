@@ -46,7 +46,7 @@ Browser → POST /api/recommendations/[id]/more-picks
              ↓
         storeMorePicks() / markMorePicksStatus()
              ↓
-        Browser poll detects completion (TanStack Query, 2s interval)
+        Browser observes completion and updates the recommendation view
 ```
 
 ### Queue names

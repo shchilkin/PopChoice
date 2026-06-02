@@ -32,12 +32,12 @@ export function formatLiveSyncTime(value: string | number | Date): string {
 
   const now = new Date();
   if (isSameLocalDay(date, now)) {
-    return `today at ${TODAY_TIME_FORMATTER.format(date)}`;
+    return `Today, ${TODAY_TIME_FORMATTER.format(date)}`;
   }
 
   if (date.getFullYear() !== now.getFullYear()) {
-    return `${OLD_DATE_FORMATTER.format(date)} at ${TODAY_TIME_FORMATTER.format(date)}`;
+    return `${OLD_DATE_FORMATTER.format(date)}, ${TODAY_TIME_FORMATTER.format(date)}`;
   }
 
-  return `${STALE_DATE_FORMATTER.format(date)} at ${TODAY_TIME_FORMATTER.format(date)}`;
+  return `${STALE_DATE_FORMATTER.format(date)}, ${TODAY_TIME_FORMATTER.format(date)}`;
 }

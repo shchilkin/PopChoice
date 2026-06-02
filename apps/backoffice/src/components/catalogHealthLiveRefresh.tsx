@@ -193,12 +193,12 @@ export function CatalogHealthLiveRefresh({
   const lastSnapshot = formatLiveSyncTime(lastSnapshotAt);
   const isBusy = isPending || isFallbackFetching;
   const statusCopy = isBusy
-    ? 'Refreshing catalog status'
+    ? 'Updating catalog status'
     : connectionState === 'connected'
-      ? 'Auto-updating catalog and queue state'
+      ? 'Catalog and queue updates are live'
       : connectionState === 'connecting'
-        ? 'Connecting to automatic updates'
-        : 'Automatic updates are reconnecting; background checks continue';
+        ? 'Connecting to live updates'
+        : 'Live updates are reconnecting';
   const metaCopy =
     lastSnapshotTrigger === 'queue-event'
       ? `Queue changed ${lastSnapshot}`
