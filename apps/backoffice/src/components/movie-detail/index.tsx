@@ -12,7 +12,7 @@ import {
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { RepairAuditRows } from '../catalog-health';
+import { RepairAuditRows } from '../catalog-repair-audit';
 import { ReasonBadge, StatusBadge } from '../tmdb-reviews/reviewPresentation';
 import {
   CountPill,

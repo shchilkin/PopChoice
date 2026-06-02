@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { repairResultStatusLabel, repairResultStatusTone } from './catalog-health';
-import { repairStatusLabel } from './repair-batches';
+import { repairResultStatusLabel, repairResultStatusTone } from './catalog-repair-audit';
+import { repairStatusLabel } from './catalog-repair-status';
 
 describe('repair state presentation', () => {
   it('labels accepted work separately from resolved work', () => {

@@ -6,48 +6,14 @@ import type {
   CatalogRepairBatchItemStatusFilter,
   CatalogRepairBatchPage,
   CatalogRepairBatchSort,
-  CatalogRepairBatchStatus,
   CatalogRepairBatchStatusFilter,
-  CatalogRepairItemStatus,
 } from '@pop-choice/shared';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
+import { RepairStatusBadge, repairStatusLabel } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
 import { CatalogStat, SimplePaginationControls } from '../shared';
-
-export function repairStatusLabel(
-  status: CatalogRepairBatchStatus | CatalogRepairItemStatus,
-): string {
-  const labels: Record<CatalogRepairBatchStatus | CatalogRepairItemStatus, string> = {
-    completed: 'Completed, verify',
-    completed_resolved: 'Issue cleared',
-    completed_unresolved: 'Still flagged',
-    deduped: 'Already queued',
-    empty: 'Empty',
-    enqueue_failed: 'Enqueue failed',
-    enqueueing: 'Enqueueing',
-    failed: 'Failed',
-    partial: 'Partial',
-    pending: 'Pending',
-    processing: 'Processing',
-    queued: 'Accepted',
-    skipped: 'Skipped',
-    unavailable: 'Unavailable',
-  };
-
-  return labels[status];
-}
-
-function RepairStatusBadge({
-  status,
-}: {
-  status: CatalogRepairBatchStatus | CatalogRepairItemStatus;
-}) {
-  return (
-    <span className={`status repair-status repair-${status}`}>{repairStatusLabel(status)}</span>
-  );
-}
 
 function getRepairBatchProgress(batch: CatalogRepairBatch): string {
   const finished =
