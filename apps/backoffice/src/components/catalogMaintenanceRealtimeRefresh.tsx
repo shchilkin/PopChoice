@@ -31,7 +31,7 @@ function getReceivedAt(message: QueueSnapshotMessage): string {
 }
 
 export function CatalogMaintenanceRealtimeRefresh({
-  label = 'Queue updates automatically',
+  label = 'Queue updates are live',
 }: {
   label?: string;
 }) {
@@ -89,8 +89,8 @@ export function CatalogMaintenanceRealtimeRefresh({
     status === 'connected'
       ? label
       : status === 'connecting'
-        ? 'Connecting to automatic updates'
-        : 'Automatic updates are reconnecting';
+        ? 'Connecting to live updates'
+        : 'Live updates are reconnecting';
   const lastEvent = lastEventAt ? formatLiveSyncTime(lastEventAt) : null;
 
   return (

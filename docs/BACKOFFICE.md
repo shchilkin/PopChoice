@@ -210,11 +210,13 @@ intentionally conservative:
   `catalog-maintenance` queue, including waiting, active, scheduled, failed, and
   completed jobs with compact payload fields;
 - the queue page listens to BullMQ `QueueEvents` through a server-sent events
-  stream that pushes the current queue snapshot for the active filter/page, so
-  waiting, active, completed, failed, delayed, and stalled job changes update
-  the operator view without waiting for manual refresh;
+  stream and applies the current queue snapshot for the active filter/page
+  directly in the browser, so waiting, active, completed, failed, delayed, and
+  stalled job changes update the operator view without waiting for manual
+  refresh or a full page reload;
 - the catalog-health home uses a dedicated server-sent events stream that pushes
-  the live DB and queue snapshot after catalog-maintenance changes, with a
+  the live DB and queue snapshot after catalog-maintenance changes. Its status,
+  queue counts, and summary cards update directly from the live snapshot, with a
   slower background check only as a reconnect fallback;
 - the repair batch history page at `/repair-batches` shows recent durable batch
   attempts and links to per-item details, so operators do not need to infer
@@ -273,8 +275,8 @@ The queue shows `tmdb_match_reviews` rows with:
 - newest, oldest, and highest-risk sorting;
 - server-side pagination that preserves status, reason, sort, page, and page
   size in the URL so large queues do not render all rows at once;
-- readable UTC timestamps for generated reports, queue updates, match dates, and
-  audit history.
+- operator-friendly timestamps for generated reports, queue updates, match
+  dates, and audit history.
 
 The detail page compares the current local row with every captured candidate.
 Malformed or partial candidate JSON is shown defensively instead of breaking the
@@ -328,7 +330,7 @@ Check that:
 
 - the PopChoice brand icon loads and the page does not duplicate the document
   title;
-- generated, updated, matched, and audit timestamps are readable UTC strings;
+- generated, updated, matched, and audit timestamps use readable operator time;
 - pages do not create unintended horizontal viewport scroll. Wide data tables
   may scroll inside their table container only;
 - long movie titles, TMDB ids, reason/status labels, notes, and error messages

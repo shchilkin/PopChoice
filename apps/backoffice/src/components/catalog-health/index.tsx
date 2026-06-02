@@ -8,7 +8,6 @@ import type {
   DuplicateIdentityGroup,
 } from '@pop-choice/shared';
 
-import type { CatalogMaintenanceQueueSnapshot } from '../../catalogMaintenanceQueue';
 import type { CatalogHealthLiveData } from '../../lib/catalogHealthLive';
 import {
   DEFAULT_BULK_REPAIR_LIMIT,
@@ -18,12 +17,11 @@ import {
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { CatalogHealthLiveRefresh } from '../catalogHealthLiveRefresh';
+import { CatalogHealthRealtimeOverview } from '../catalogHealthRealtimeOverview';
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
 import { formatLiveSyncTime } from '../liveRefreshTime';
 import {
   BooleanDataPill,
-  CatalogStat,
   CountPill,
   OptionalCatalogValue,
   SimplePaginationControls,
@@ -182,150 +180,6 @@ function RepairResultSummary({ entry }: { entry: CatalogRepairActionAudit }) {
         <pre>{JSON.stringify(entry.result, null, 2)}</pre>
       </details>
     </div>
-  );
-}
-
-function CatalogStatusStrip({
-  activeIssues,
-  duplicateGroups,
-  queueSnapshot,
-}: {
-  activeIssues: number;
-  duplicateGroups: number;
-  queueSnapshot: CatalogMaintenanceQueueSnapshot;
-}) {
-  const isHealthy = activeIssues === 0 && duplicateGroups === 0;
-
-  return (
-    <section
-      className={`catalog-status ${isHealthy ? 'healthy' : 'needs-work'}`}
-      aria-label="Catalog health status"
-    >
-      <div>
-        <div className="status-heading">
-          <span className="status-dot" aria-hidden="true" />
-          <span>{isHealthy ? 'Catalog is clear' : 'Catalog needs operator attention'}</span>
-        </div>
-        <p className="status-copy">
-          {isHealthy
-            ? 'No active issue categories or duplicate groups are currently reported.'
-            : 'Work the highest-count repairable panels first, then review duplicates before manual merges.'}
-        </p>
-      </div>
-      <div className="status-metrics" aria-label="Open catalog signals">
-        <span className={`pill ${activeIssues > 0 ? 'warning' : 'good'}`}>
-          {activeIssues} active issue categories
-        </span>
-        <span className={`pill ${duplicateGroups > 0 ? 'warning' : 'good'}`}>
-          {duplicateGroups} duplicate groups
-        </span>
-        <span className={`pill ${queueSnapshot.available ? 'good' : 'warning'}`}>
-          {queueSnapshot.available
-            ? `${queueSnapshot.openJobs} catalog queue open`
-            : 'Catalog queue unavailable'}
-        </span>
-      </div>
-    </section>
-  );
-}
-
-function ManualRepairForm() {
-  const repairableIssueKeys = Array.from(REPAIRABLE_CATALOG_ISSUE_KEYS);
-
-  return (
-    <form
-      className="manual-repair-form"
-      method="post"
-      action="/catalog-health/actions"
-      data-repair-form
-    >
-      <input type="hidden" name="action" value="enqueue_backfill" />
-      <label>
-        Movie ID
-        <input name="movie_id" inputMode="numeric" pattern="[0-9]+" placeholder="331" required />
-      </label>
-      <label>
-        Issue
-        <select name="issue_key" defaultValue="missing_keyword_metadata" required>
-          {repairableIssueKeys.map((issueKey) => (
-            <option key={issueKey} value={issueKey}>
-              {humanizeIdentifier(issueKey)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Note
-        <input name="note" placeholder="Optional context" />
-      </label>
-      <button className="button secondary small" type="submit" data-repair-submit>
-        Queue manual backfill
-      </button>
-      <span className="repair-message" aria-live="polite" data-repair-message />
-    </form>
-  );
-}
-
-function CatalogQueueStatus({
-  bullBoardUrl,
-  snapshot,
-}: {
-  bullBoardUrl?: string;
-  snapshot: CatalogMaintenanceQueueSnapshot;
-}) {
-  const state = !snapshot.available ? 'warning' : snapshot.openJobs > 0 ? 'neutral' : 'healthy';
-
-  return (
-    <section className="queue-status" aria-label="Catalog maintenance queue status">
-      <div className="queue-status-main">
-        <div>
-          <div className="queue-status-title">
-            <span className={`queue-dot ${state}`} aria-hidden="true" />
-            <span>Catalog maintenance queue</span>
-          </div>
-          <p>
-            {snapshot.available
-              ? `Queue data synced ${formatLiveSyncTime(snapshot.updatedAt)}.`
-              : 'Queue data is unavailable, so backoffice cannot read repair job state.'}
-          </p>
-        </div>
-        <div className="queue-status-actions">
-          {bullBoardUrl ? (
-            <a className="button small" href={bullBoardUrl} target="_blank" rel="noreferrer">
-              Open Bull Board
-            </a>
-          ) : (
-            <span className="button small disabled" aria-disabled="true">
-              Bull Board URL missing
-            </span>
-          )}
-          <a className="button small" href="/repair-batches">
-            Repair batches
-          </a>
-        </div>
-      </div>
-      <div className="queue-counts">
-        <span>
-          <strong>{snapshot.counts.waiting}</strong> waiting
-        </span>
-        <span>
-          <strong>{snapshot.counts.active}</strong> active
-        </span>
-        <span>
-          <strong>{snapshot.counts.delayed + snapshot.counts.prioritized}</strong> scheduled
-        </span>
-        <span>
-          <strong>{snapshot.counts.failed}</strong> failed
-        </span>
-        <span>
-          <strong>{snapshot.counts.completed}</strong> completed
-        </span>
-      </div>
-      <details className="manual-repair">
-        <summary>Manually queue a movie</summary>
-        <ManualRepairForm />
-      </details>
-    </section>
   );
 }
 
@@ -730,7 +584,6 @@ export function CatalogHealthPage({
   bullBoardUrl,
   initialLiveData,
   issueMoviePage,
-  queueSnapshot,
   report,
   repairStatus,
 }: {
@@ -739,13 +592,8 @@ export function CatalogHealthPage({
   bullBoardUrl?: string;
   initialLiveData: CatalogHealthLiveData;
   issueMoviePage: CatalogHealthIssueMoviePage | null;
-  queueSnapshot: CatalogMaintenanceQueueSnapshot;
   repairStatus: string | null;
 }) {
-  const activeIssues = report.issues.filter((issue) => issue.count > 0).length;
-  const duplicateGroups =
-    report.duplicateTmdbIds.totalGroups + report.duplicateNormalizedTitleYears.totalGroups;
-
   return (
     <BackofficeLayout
       active="health"
@@ -753,39 +601,17 @@ export function CatalogHealthPage({
       eyebrow="Catalog operations"
       description={
         <>
-          Last update {formatLiveSyncTime(report.generatedAt)}. Catalog and queue state stays
-          current while you work.
+          Updated {formatLiveSyncTime(report.generatedAt)}. Changes appear automatically while you
+          work.
         </>
       }
     >
       <RepairFlash repairStatus={repairStatus} />
-      <CatalogHealthLiveRefresh initialData={initialLiveData} />
-      <CatalogStatusStrip
-        activeIssues={activeIssues}
-        duplicateGroups={duplicateGroups}
-        queueSnapshot={queueSnapshot}
+      <CatalogHealthRealtimeOverview
+        bullBoardUrl={bullBoardUrl}
+        initialData={initialLiveData}
+        repairableIssueKeys={Array.from(REPAIRABLE_CATALOG_ISSUE_KEYS)}
       />
-      <CatalogQueueStatus bullBoardUrl={bullBoardUrl} snapshot={queueSnapshot} />
-      <section className="summary" aria-label="Catalog health summary">
-        <CatalogStat label="Movies" value={report.totalMovies} meta="Catalog rows tracked" />
-        <CatalogStat
-          label="Issue categories"
-          value={activeIssues}
-          meta={activeIssues === 0 ? 'No active categories' : 'Categories with affected rows'}
-          state={activeIssues === 0 ? 'healthy' : 'warning'}
-        />
-        <CatalogStat
-          label="Duplicate groups"
-          value={duplicateGroups}
-          meta={duplicateGroups === 0 ? 'No duplicate groups' : 'Groups awaiting review'}
-          state={duplicateGroups === 0 ? 'healthy' : 'warning'}
-        />
-        <CatalogStat
-          label="Stale threshold"
-          value={`${report.staleAfterDays}d`}
-          meta="TMDB metadata refresh window"
-        />
-      </section>
       <div className="grid">
         {report.issues.map((issue) => (
           <CatalogIssuePanel key={issue.key} issue={issue} issuePage={issueMoviePage} />
