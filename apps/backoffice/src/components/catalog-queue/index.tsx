@@ -6,6 +6,7 @@ import type {
 import { CATALOG_MAINTENANCE_QUEUE_JOB_STATES } from '../../catalogMaintenanceQueue';
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
+import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
 import { SimplePaginationControls } from '../shared';
 
 const STATE_LABELS: Record<CatalogMaintenanceQueueJobState, string> = {
@@ -69,8 +70,8 @@ function getQueueHealth(jobPage: CatalogMaintenanceQueueJobPage): {
   if (jobPage.openJobs > 0) {
     return {
       state: 'active',
-      title: 'Catalog maintenance is working',
-      copy: 'Workers have open jobs. Check active and scheduled states before adding more repairs.',
+      title: 'Catalog maintenance has open work',
+      copy: 'Realtime queue events refresh this snapshot while workers move jobs through active and scheduled states.',
     };
   }
 
@@ -323,8 +324,8 @@ export function CatalogMaintenanceQueuePage({
       eyebrow="Worker operations"
       description={
         <>
-          Synced from BullMQ at {formatBackofficeDateTime(jobPage.updatedAt)}. This read-only view
-          keeps daily queue checks inside backoffice.
+          Snapshot from BullMQ at {formatBackofficeDateTime(jobPage.updatedAt)}. Realtime queue
+          events refresh the page automatically; use Refresh if the stream disconnects.
         </>
       }
       actions={
@@ -343,6 +344,7 @@ export function CatalogMaintenanceQueuePage({
         </>
       }
     >
+      <CatalogMaintenanceRealtimeRefresh />
       <QueueCommandStrip bullBoardUrl={bullBoardUrl} jobPage={jobPage} />
       <section className="panel queue-panel">
         <div className="panel-header">
