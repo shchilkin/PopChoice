@@ -338,7 +338,7 @@ export function RepairBatchListPage({
       eyebrow="Repair history"
       description="Review durable bulk repair attempts, enqueue outcomes, and worker progress by item."
     >
-      <CatalogMaintenanceRealtimeRefresh label="Realtime repair batch updates" />
+      <CatalogMaintenanceRealtimeRefresh label="Repair batch updates refresh this view" />
       <section className="panel">
         <div className="panel-header">
           <div>
@@ -489,7 +489,7 @@ export function RepairBatchDetailPage({
         </>
       }
     >
-      <CatalogMaintenanceRealtimeRefresh label="Realtime repair batch item updates" />
+      <CatalogMaintenanceRealtimeRefresh label="Repair batch item updates refresh this view" />
       <RepairBatchSummary batch={batch} />
       <section className="panel triage-panel">
         <div className="panel-header">

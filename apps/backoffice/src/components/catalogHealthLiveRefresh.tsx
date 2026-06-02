@@ -10,11 +10,7 @@ import {
   type CatalogHealthLiveData,
 } from '../lib/catalogHealthLive';
 import { CATALOG_HEALTH_REFRESH_EVENT } from './catalogHealthRefreshEvent';
-
-const CLIENT_TIME_FORMATTER = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
+import { formatLiveSyncTime } from './liveRefreshTime';
 
 async function fetchCatalogHealthLive(search: string): Promise<CatalogHealthLiveData> {
   const response = await fetch(`/api/catalog-health${search}`, {
@@ -83,7 +79,8 @@ export function CatalogHealthLiveRefresh({
     });
   }, [data, router]);
 
-  const lastChecked = dataUpdatedAt ? CLIENT_TIME_FORMATTER.format(new Date(dataUpdatedAt)) : null;
+  const lastChecked = dataUpdatedAt ? formatLiveSyncTime(dataUpdatedAt) : null;
+  const syncLabel = isError ? 'Last sync' : 'Synced';
 
   return (
     <div className="live-refresh" aria-live="polite">
@@ -94,10 +91,10 @@ export function CatalogHealthLiveRefresh({
       <span>
         {isPending || isFetching
           ? 'Refreshing catalog snapshot'
-          : `Catalog status refreshes automatically every ${refreshSeconds}s`}
+          : `Catalog status updates automatically every ${refreshSeconds}s`}
       </span>
       <span className="live-refresh-meta">
-        {lastChecked ? `Last checked ${lastChecked}` : 'Waiting'}
+        {lastChecked ? `${syncLabel} ${lastChecked}` : 'Waiting'}
       </span>
       {isError ? <span className="live-refresh-error">Auto-refresh failed</span> : null}
     </div>

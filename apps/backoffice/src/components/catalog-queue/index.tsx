@@ -71,7 +71,7 @@ function getQueueHealth(jobPage: CatalogMaintenanceQueueJobPage): {
     return {
       state: 'active',
       title: 'Catalog maintenance has open work',
-      copy: 'Realtime queue events refresh this snapshot while workers move jobs through active and scheduled states.',
+      copy: 'Queue updates refresh this snapshot while workers move jobs through active and scheduled states.',
     };
   }
 
@@ -373,7 +373,7 @@ export function CatalogMaintenanceQueuePage({
                 <th>State</th>
                 <th>Details</th>
                 <th>Attempts</th>
-                <th>Last event</th>
+                <th>Last update</th>
                 <th>Links</th>
               </tr>
             </thead>
