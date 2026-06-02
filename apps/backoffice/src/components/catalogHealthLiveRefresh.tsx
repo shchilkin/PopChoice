@@ -77,12 +77,13 @@ export function CatalogHealthLiveRefresh({
     lastSearch.current = search;
     lastFingerprint.current = initialFingerprint;
     setData(initialData);
+    onSnapshot?.(initialData);
     setLastSnapshotAt(initialData.report.generatedAt);
     setLastSnapshotTrigger('connected');
     setConnectionState('connecting');
     setIsFallbackFetching(false);
     setIsStreamError(false);
-  }, [initialData, initialFingerprint, search]);
+  }, [initialData, initialFingerprint, onSnapshot, search]);
 
   useEffect(() => {
     const refresh = async () => {
