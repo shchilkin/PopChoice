@@ -4,27 +4,36 @@ import { Redis } from 'ioredis';
 
 import { logger } from '@pop-choice/shared';
 
-const DEFAULT_TMDB_LANGUAGE = 'en-US';
+import {
+  ACTIVE_DEDUPE_STATES,
+  CATALOG_BACKFILL_MOVIE_JOB_NAME,
+  CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
+  CATALOG_MAINTENANCE_JOB_OPTIONS,
+  CATALOG_MAINTENANCE_QUEUE_JOB_STATES,
+  compactJobValue,
+  getCatalogBackfillMovieJobId,
+  getCatalogRepairBatchJobId,
+  getCountForState,
+  isoFromEpoch,
+  isCatalogMaintenanceQueueJobState,
+  normalizeLanguage,
+  summarizeCatalogMaintenanceJobPayload,
+  type CatalogBackfillReason,
+  type CatalogMaintenanceJobData,
+  type CatalogMaintenanceQueueCounts,
+  type CatalogMaintenanceQueueJobState,
+} from './catalogMaintenanceQueueHelpers';
+
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
-const CATALOG_BACKFILL_MOVIE_JOB_NAME = 'backfill-movie';
-const CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME = 'enqueue-catalog-repair-batch';
-export const CATALOG_MAINTENANCE_QUEUE_JOB_STATES = [
-  'waiting',
-  'active',
-  'delayed',
-  'failed',
-  'completed',
-] as const;
 
-const CATALOG_MAINTENANCE_JOB_OPTIONS = {
-  attempts: 4,
-  backoff: { type: 'exponential' as const, delay: 5000 },
-  removeOnComplete: 500,
-  removeOnFail: 200,
+export {
+  CATALOG_MAINTENANCE_QUEUE_JOB_STATES,
+  getCatalogBackfillMovieJobId,
+  getCatalogRepairBatchJobId,
+  isCatalogMaintenanceQueueJobState,
+  summarizeCatalogMaintenanceJobPayload,
 };
-
-export type CatalogBackfillReason = 'missing_tmdb_id' | 'missing_metadata' | 'manual_refresh';
-export type CatalogMaintenanceQueueJobState = (typeof CATALOG_MAINTENANCE_QUEUE_JOB_STATES)[number];
+export type { CatalogBackfillReason, CatalogMaintenanceQueueJobState };
 
 export interface EnqueueCatalogBackfillMovieInput {
   movieId: string | number;
@@ -62,15 +71,7 @@ export interface EnqueueCatalogRepairBatchResult {
 export interface CatalogMaintenanceQueueSnapshot {
   queueName: string;
   available: boolean;
-  counts: {
-    active: number;
-    completed: number;
-    delayed: number;
-    failed: number;
-    prioritized: number;
-    waiting: number;
-    waitingChildren: number;
-  };
+  counts: CatalogMaintenanceQueueCounts;
   openJobs: number;
   updatedAt: string;
 }
@@ -104,38 +105,8 @@ export interface CatalogMaintenanceQueueJobPage {
   updatedAt: string;
 }
 
-type CatalogMaintenanceJobData = {
-  version: 1;
-  movieId?: string | number;
-  batchId?: string | number;
-  issueKey?: string;
-  limit?: number;
-  pageSize?: number;
-  reason?: CatalogBackfillReason;
-  language?: string;
-  repairBatchId?: string | number;
-  repairBatchItemId?: string | number;
-  [key: string]: unknown;
-};
-
 let redisConnection: Redis | null = null;
 let catalogMaintenanceQueue: Queue<CatalogMaintenanceJobData> | null = null;
-
-const ACTIVE_DEDUPE_STATES = new Set([
-  'active',
-  'delayed',
-  'prioritized',
-  'waiting',
-  'waiting-children',
-]);
-
-function normalizeLanguage(language?: string): string {
-  return (language ?? DEFAULT_TMDB_LANGUAGE).trim() || DEFAULT_TMDB_LANGUAGE;
-}
-
-function toBullMQJobIdPart(value: string | number): string {
-  return String(value).replace(/[^a-zA-Z0-9_.-]/g, '-');
-}
 
 function getCatalogMaintenanceQueue(
   redisUrl: string | undefined,
@@ -153,85 +124,6 @@ function getCatalogMaintenanceQueue(
     connection: redisConnection,
   });
   return catalogMaintenanceQueue;
-}
-
-export function getCatalogBackfillMovieJobId(movieId: string | number): string {
-  return `backfill-${toBullMQJobIdPart(movieId)}`;
-}
-
-export function getCatalogRepairBatchJobId(batchId: string | number): string {
-  return `repair-batch-${toBullMQJobIdPart(batchId)}`;
-}
-
-export function isCatalogMaintenanceQueueJobState(
-  value: string | null | undefined,
-): value is CatalogMaintenanceQueueJobState {
-  return CATALOG_MAINTENANCE_QUEUE_JOB_STATES.some((state) => state === value);
-}
-
-function isoFromEpoch(value: number | undefined): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-function compactJobValue(value: unknown): string | null {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed === '' ? null : trimmed;
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  return null;
-}
-
-function addPayloadValue(
-  payload: Array<{ label: string; value: string }>,
-  label: string,
-  value: unknown,
-): void {
-  const compact = compactJobValue(value);
-  if (compact) payload.push({ label, value: compact });
-}
-
-export function summarizeCatalogMaintenanceJobPayload(
-  jobName: string,
-  data: Record<string, unknown>,
-): CatalogMaintenanceQueueJobSummary['payload'] {
-  const payload: CatalogMaintenanceQueueJobSummary['payload'] = [];
-
-  if (jobName === CATALOG_BACKFILL_MOVIE_JOB_NAME) {
-    addPayloadValue(payload, 'Movie', data.movieId);
-    addPayloadValue(payload, 'Reason', data.reason);
-    addPayloadValue(payload, 'Language', data.language);
-    addPayloadValue(payload, 'Batch', data.repairBatchId);
-    addPayloadValue(payload, 'Item', data.repairBatchItemId);
-    return payload;
-  }
-
-  if (jobName === CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME) {
-    addPayloadValue(payload, 'Batch', data.batchId);
-    addPayloadValue(payload, 'Issue', data.issueKey);
-    addPayloadValue(payload, 'Limit', data.limit);
-    addPayloadValue(payload, 'Page size', data.pageSize);
-    addPayloadValue(payload, 'Language', data.language);
-    return payload;
-  }
-
-  addPayloadValue(payload, 'Movie', data.movieId);
-  addPayloadValue(payload, 'TMDB', data.tmdbId);
-  addPayloadValue(payload, 'Source', data.source);
-  addPayloadValue(payload, 'Page', data.page);
-  addPayloadValue(payload, 'Language', data.language);
-  addPayloadValue(payload, 'Version', data.version);
-  return payload;
-}
-
-function getCountForState(
-  counts: CatalogMaintenanceQueueSnapshot['counts'],
-  state: CatalogMaintenanceQueueJobState,
-): number {
-  if (state === 'waiting') return counts.waiting;
-  return counts[state];
 }
 
 function toJobSummary(

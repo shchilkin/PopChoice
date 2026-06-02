@@ -153,7 +153,28 @@ export function renderMetadataSnapshot(metadata: Record<string, unknown>) {
     return <p className="empty">No TMDB metadata snapshot has been stored for this movie.</p>;
   }
 
-  return <pre className="json-block">{JSON.stringify(metadata, null, 2)}</pre>;
+  return (
+    <JsonDetails label="Raw metadata" value={metadata} className="metadata-json-details" open />
+  );
+}
+
+export function JsonDetails({
+  className,
+  label,
+  open = false,
+  value,
+}: {
+  className?: string;
+  label: string;
+  open?: boolean;
+  value: unknown;
+}) {
+  return (
+    <details className={className ? `json-details ${className}` : 'json-details'} open={open}>
+      <summary>{label}</summary>
+      <pre>{JSON.stringify(value, null, 2)}</pre>
+    </details>
+  );
 }
 
 export function formatPercent(value: number | null): string {

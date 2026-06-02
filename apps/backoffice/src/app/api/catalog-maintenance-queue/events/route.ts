@@ -10,43 +10,22 @@ import {
   logBackofficeError,
   parseCatalogMaintenanceQueueParams,
 } from '../../../../lib/backoffice';
+import {
+  BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS,
+  BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS,
+  bindCatalogMaintenanceQueueEvents,
+  createServerSentEventResponse,
+  encodeServerSentEvent,
+  getSearchParamsRecord,
+  normalizeQueueEventPayload,
+  withBackofficeStreamMetadata,
+  type QueueEventPayload,
+  type SnapshotQueueEvent,
+} from '../../../../lib/backofficeEventStream';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
-
-const HEARTBEAT_INTERVAL_MS = 25_000;
-const SNAPSHOT_DEBOUNCE_MS = 350;
-
-type QueueEventPayload = Record<string, unknown> | string | number | null | undefined;
-
-function encodeServerSentEvent(event: string, payload: Record<string, unknown>): Uint8Array {
-  return new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
-}
-
-function normalizePayload(payload: QueueEventPayload): Record<string, unknown> {
-  if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-    return payload;
-  }
-  return { value: payload ?? null };
-}
-
-function getSearchParamsRecord(searchParams: URLSearchParams): Record<string, string | string[]> {
-  const params: Record<string, string | string[]> = {};
-
-  for (const [key, value] of searchParams.entries()) {
-    const existing = params[key];
-    if (Array.isArray(existing)) {
-      existing.push(value);
-    } else if (typeof existing === 'string') {
-      params[key] = [existing, value];
-    } else {
-      params[key] = value;
-    }
-  }
-
-  return params;
-}
 
 export async function GET(request: Request) {
   try {
@@ -74,16 +53,17 @@ export async function GET(request: Request) {
         const send = (event: string, payload: Record<string, unknown>) => {
           if (closed) return;
           controller.enqueue(
-            encodeServerSentEvent(event, {
-              ...payload,
-              queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
-              receivedAt: new Date().toISOString(),
-            }),
+            encodeServerSentEvent(
+              event,
+              withBackofficeStreamMetadata(payload, {
+                queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+              }),
+            ),
           );
         };
 
         const forward = (type: string) => (payload: QueueEventPayload) => {
-          const normalizedPayload = normalizePayload(payload);
+          const normalizedPayload = normalizeQueueEventPayload(payload);
           send('queue-event', { type, payload: normalizedPayload });
           if (type !== 'progress') {
             scheduleSnapshot('queue-event', { type, payload: normalizedPayload });
@@ -92,7 +72,7 @@ export async function GET(request: Request) {
 
         const sendSnapshot = async (
           trigger: 'connected' | 'queue-event',
-          queueEvent?: { payload: Record<string, unknown>; type: string },
+          queueEvent?: SnapshotQueueEvent,
         ) => {
           if (closed) return;
           if (snapshotInFlight) {
@@ -128,7 +108,7 @@ export async function GET(request: Request) {
 
         const scheduleSnapshot = (
           trigger: 'connected' | 'queue-event',
-          queueEvent?: { payload: Record<string, unknown>; type: string },
+          queueEvent?: SnapshotQueueEvent,
         ) => {
           if (snapshotTimer !== null) {
             clearTimeout(snapshotTimer);
@@ -138,7 +118,7 @@ export async function GET(request: Request) {
               snapshotTimer = null;
               void sendSnapshot(trigger, queueEvent);
             },
-            trigger === 'queue-event' ? SNAPSHOT_DEBOUNCE_MS : 0,
+            trigger === 'queue-event' ? BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS : 0,
           );
         };
 
@@ -162,7 +142,7 @@ export async function GET(request: Request) {
 
         const heartbeat = setInterval(() => {
           send('heartbeat', {});
-        }, HEARTBEAT_INTERVAL_MS);
+        }, BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS);
 
         request.signal.addEventListener('abort', () => {
           void cleanup();
@@ -173,14 +153,7 @@ export async function GET(request: Request) {
           send('queue-error', { message: 'Redis connection error.' });
         });
 
-        queueEvents.on('waiting', forward('waiting'));
-        queueEvents.on('active', forward('active'));
-        queueEvents.on('completed', forward('completed'));
-        queueEvents.on('failed', forward('failed'));
-        queueEvents.on('delayed', forward('delayed'));
-        queueEvents.on('stalled', forward('stalled'));
-        queueEvents.on('drained', forward('drained'));
-        queueEvents.on('progress', forward('progress'));
+        bindCatalogMaintenanceQueueEvents(queueEvents, forward);
         queueEvents.on('error', (error) => {
           logBackofficeError('Backoffice queue events stream error', error);
           send('queue-error', { message: 'Queue events stream error.' });
@@ -198,13 +171,7 @@ export async function GET(request: Request) {
       },
     });
 
-    return new Response(stream, {
-      headers: {
-        'Cache-Control': 'no-store',
-        Connection: 'keep-alive',
-        'Content-Type': 'text/event-stream',
-      },
-    });
+    return createServerSentEventResponse(stream);
   } catch (error) {
     logBackofficeError('Failed to start catalog maintenance queue event stream', error);
     return new Response('Failed to start catalog maintenance queue event stream.', { status: 500 });
