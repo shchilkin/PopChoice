@@ -13,34 +13,26 @@ import {
 import {
   enqueueCatalogBackfillMovieFromBackoffice,
   enqueueCatalogRepairBatchFromBackoffice,
-  type CatalogBackfillReason,
 } from '../catalogMaintenanceQueue';
 import {
-  DEFAULT_ASYNC_BULK_REPAIR_CHUNK_SIZE,
-  DEFAULT_BULK_REPAIR_LIMIT,
-  MAX_ASYNC_BULK_REPAIR_LIMIT,
-  MAX_BULK_REPAIR_LIMIT,
-  parsePositiveIntParam,
-} from './backofficeParams';
+  catalogRepairMessage,
+  getAsyncBulkRepairPageSize,
+  getBackfillReasonForIssue,
+  getBulkRepairStatus,
+  parseAsyncBulkRepairLimit,
+  parseBulkRepairLimit,
+  parseCatalogIssueKey,
+  parseMovieId,
+  REPAIRABLE_CATALOG_ISSUE_KEYS,
+  type CatalogRepairActionStatus,
+} from './catalogRepairActionHelpers';
 import {
   backofficeActionError,
   ensureBackofficeReady,
   parseOperatorActor,
 } from './backofficeRuntime';
 
-export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
-  'missing_poster_url',
-  'missing_localized_name',
-  'missing_tmdb_id',
-  'missing_runtime',
-  'missing_age_rating',
-  'missing_tmdb_matched_at',
-  'stale_tmdb_metadata',
-  'missing_cast_metadata',
-  'missing_director_metadata',
-  'missing_genre_metadata',
-  'missing_keyword_metadata',
-]);
+export { catalogRepairMessage, REPAIRABLE_CATALOG_ISSUE_KEYS };
 
 export type CatalogRepairActionResult =
   | {
@@ -52,7 +44,7 @@ export type CatalogRepairActionResult =
     }
   | {
       mode: 'bulk';
-      status: 'queued' | 'orchestration_queued' | 'partial' | 'failed' | 'unavailable' | 'empty';
+      status: CatalogRepairActionStatus;
       issueKey: string;
       summary: CatalogBulkRepairSummary;
     };
@@ -75,65 +67,6 @@ export type CatalogBulkRepairSummary = {
     status: 'queued' | 'deduped' | 'failed' | 'unavailable';
   }>;
 };
-
-function parseMovieId(value: FormDataEntryValue | null): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw backofficeActionError('Movie id is required.');
-  }
-
-  const trimmed = value.trim();
-  if (!/^\d+$/.test(trimmed)) {
-    throw backofficeActionError('Movie id must be numeric.');
-  }
-
-  return trimmed;
-}
-
-function parseCatalogIssueKey(value: FormDataEntryValue | null): string {
-  if (typeof value !== 'string' || !REPAIRABLE_CATALOG_ISSUE_KEYS.has(value)) {
-    throw backofficeActionError('Unsupported catalog-health repair issue.');
-  }
-
-  return value;
-}
-
-function getBackfillReasonForIssue(issueKey: string): CatalogBackfillReason {
-  if (issueKey === 'missing_tmdb_id') return 'missing_tmdb_id';
-  if (issueKey === 'stale_tmdb_metadata') return 'manual_refresh';
-  return 'missing_metadata';
-}
-
-export function catalogRepairMessage(status: CatalogRepairActionResult['status']): string {
-  if (status === 'orchestration_queued') {
-    return 'Catalog repair orchestration accepted. A worker will create repair items and queue backfill jobs in chunks.';
-  }
-  if (status === 'queued') {
-    return 'Catalog backfill job queued. Workers will process it through the existing rate-limited TMDB path.';
-  }
-  if (status === 'empty') {
-    return 'No affected movies are currently available for this repair action.';
-  }
-  if (status === 'partial') {
-    return 'Catalog repair batch partially queued. Review the queued, deduped, unavailable, and failed counts.';
-  }
-  if (status === 'failed') {
-    return 'Catalog repair jobs failed to enqueue. Check backoffice logs before retrying.';
-  }
-
-  return 'Catalog repair queue is unavailable. Check REDIS_URL and the backoffice logs.';
-}
-
-function parseBulkRepairLimit(value: FormDataEntryValue | null): number {
-  return typeof value === 'string'
-    ? parsePositiveIntParam(value, DEFAULT_BULK_REPAIR_LIMIT, { max: MAX_BULK_REPAIR_LIMIT })
-    : DEFAULT_BULK_REPAIR_LIMIT;
-}
-
-function parseAsyncBulkRepairLimit(value: FormDataEntryValue | null, fallback: number): number {
-  return typeof value === 'string'
-    ? parsePositiveIntParam(value, fallback, { max: MAX_ASYNC_BULK_REPAIR_LIMIT })
-    : Math.min(fallback, MAX_ASYNC_BULK_REPAIR_LIMIT);
-}
 
 async function performAsyncBulkCatalogRepairAction(
   formData: FormData,
@@ -197,7 +130,7 @@ async function performAsyncBulkCatalogRepairAction(
       batchId: batch.id,
       issueKey,
       limit: requestedLimit,
-      pageSize: DEFAULT_ASYNC_BULK_REPAIR_CHUNK_SIZE,
+      pageSize: getAsyncBulkRepairPageSize(),
       language: config.tmdbLanguage,
       staleAfterDays: config.catalogHealthStaleDays,
     },
@@ -405,16 +338,7 @@ async function performBulkCatalogRepairAction(
 
   return {
     mode: 'bulk',
-    status:
-      summary.attempted === 0
-        ? 'empty'
-        : summary.failed + summary.unavailable > 0 && summary.queued + summary.deduped > 0
-          ? 'partial'
-          : summary.queued + summary.deduped > 0
-            ? 'queued'
-            : summary.failed > 0
-              ? 'failed'
-              : 'unavailable',
+    status: getBulkRepairStatus(summary),
     issueKey,
     summary,
   };
