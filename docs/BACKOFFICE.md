@@ -8,6 +8,8 @@ PopChoice backoffice work is tracked under
 [#493](https://github.com/shchilkin/PopChoice/issues/493). The backoffice is an
 operational app for catalog health, TMDB match review, and later manual data
 repair. It must not be implemented inside the user-facing `apps/web` app.
+Post-MVP operator hardening is tracked under
+[#660](https://github.com/shchilkin/PopChoice/issues/660).
 
 ## Boundary Decision
 
@@ -142,13 +144,25 @@ Use workspace scripts that mirror the other apps:
 
 ```bash
 npm run dev:backoffice
+npm run check:backoffice
 npm run build:backoffice
 npm run start --workspace=apps/backoffice
+npm run quality:backoffice
+npm run test:e2e:backoffice
 ```
 
 Run `npm run copy:env` after editing root `.env`; it copies values into
 `apps/backoffice/.env` for the local dev script. Local dev defaults to port
 `3004`; use `PORT=4030 npm run dev:backoffice` when you want a specific port.
+Use `npm run check:backoffice` before publishing most backoffice changes; it
+builds `packages/shared`, runs the module-size guard, type-checks
+`apps/backoffice`, and runs the backoffice Vitest suite. Use
+`npm run quality:backoffice` for the faster structure-only guard that keeps app
+routes, operator panels, and queue helpers split into reviewable files.
+Use `npm run test:e2e:backoffice` when a change touches core operator browser
+flows such as catalog repair enqueueing, queue visibility, or TMDB review
+decisions. The script prepares the isolated e2e PostgreSQL/Redis services before
+starting the backoffice Playwright suite.
 The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;

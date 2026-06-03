@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CatalogMaintenanceQueueJobPage } from '../catalogMaintenanceQueue';
-import { parseCatalogMaintenanceQueueSnapshotMessage } from './catalogMaintenanceQueueLive';
+import {
+  catalogMaintenanceQueueJobPage,
+  catalogMaintenanceQueueJobSummary,
+} from '../test/backofficeFixtures';
+import {
+  parseCatalogMaintenanceQueueConnectedMode,
+  parseCatalogMaintenanceQueueSnapshotMessage,
+} from './catalogMaintenanceQueueLive';
 
-const jobPage: CatalogMaintenanceQueueJobPage = {
-  available: true,
+const jobPage = catalogMaintenanceQueueJobPage({
   counts: {
     active: 1,
     completed: 8,
@@ -14,31 +19,12 @@ const jobPage: CatalogMaintenanceQueueJobPage = {
     waiting: 2,
     waitingChildren: 0,
   },
-  jobs: [
-    {
-      attemptsConfigured: 4,
-      attemptsMade: 1,
-      createdAt: '2026-06-02T12:00:00.000Z',
-      failedReason: null,
-      finishedAt: null,
-      id: 'backfill-331',
-      movieId: '331',
-      name: 'backfill-movie',
-      payload: [{ label: 'Movie', value: '331' }],
-      processedAt: '2026-06-02T12:01:00.000Z',
-      repairBatchId: null,
-      repairBatchItemId: null,
-      state: 'active',
-    },
-  ],
-  limit: 25,
-  offset: 0,
+  jobs: [catalogMaintenanceQueueJobSummary({ id: 'backfill-331', movieId: '331' })],
   openJobs: 3,
-  queueName: 'catalog-maintenance',
   state: 'active',
   totalCount: 1,
   updatedAt: '2026-06-02T12:02:00.000Z',
-};
+});
 
 describe('catalog maintenance queue live snapshots', () => {
   it('parses streamed job pages for client-side queue updates', () => {
@@ -64,6 +50,29 @@ describe('catalog maintenance queue live snapshots', () => {
 
     expect(message?.receivedAt).toBe(jobPage.updatedAt);
     expect(message?.trigger).toBe('queue-event');
+  });
+
+  it('preserves Redis-unavailable snapshot triggers', () => {
+    const message = parseCatalogMaintenanceQueueSnapshotMessage(
+      JSON.stringify({
+        jobPage: { ...jobPage, available: false },
+        receivedAt: '2026-06-02T12:04:00.000Z',
+        trigger: 'redis-unavailable',
+      }),
+    );
+
+    expect(message?.trigger).toBe('redis-unavailable');
+    expect(message?.jobPage.available).toBe(false);
+  });
+
+  it('parses connected stream modes for snapshot-only fallbacks', () => {
+    expect(
+      parseCatalogMaintenanceQueueConnectedMode(JSON.stringify({ mode: 'snapshot-only' })),
+    ).toBe('snapshot-only');
+    expect(parseCatalogMaintenanceQueueConnectedMode(JSON.stringify({ mode: 'live' }))).toBe(
+      'live',
+    );
+    expect(parseCatalogMaintenanceQueueConnectedMode('not-json')).toBe('live');
   });
 
   it('rejects malformed queue pages', () => {

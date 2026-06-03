@@ -1,21 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
+  backofficeActionErrorResponse,
+  backofficeActionFailureResponse,
   catalogRepairMessage,
-  getBackofficeErrorStatus,
   logBackofficeError,
   parseBackofficeReturnPath,
   performCatalogRepairAction,
+  wantsBackofficeJsonResponse,
 } from '../../../lib/backoffice';
 import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
-
-function wantsJsonResponse(request: NextRequest): boolean {
-  const accept = request.headers.get('accept') ?? '';
-  const requestedWith = request.headers.get('x-requested-with') ?? '';
-  return accept.includes('application/json') || requestedWith.toLowerCase() === 'fetch';
-}
 
 function repairRedirectStatus(result: Awaited<ReturnType<typeof performCatalogRepairAction>>) {
   if (result.status === 'queued') return result.mode === 'bulk' ? 'bulk-queued' : 'queued';
@@ -45,11 +41,8 @@ export async function POST(request: NextRequest) {
 
   try {
     if (!isSameOriginRequest(request)) {
-      if (wantsJsonResponse(request)) {
-        return NextResponse.json(
-          { ok: false, status: 'failed', message: 'Forbidden.' },
-          { status: 403 },
-        );
+      if (wantsBackofficeJsonResponse(request)) {
+        return backofficeActionFailureResponse('Forbidden.', 403);
       }
 
       return NextResponse.redirect(new URL('/?repair=forbidden', request.url), 303);
@@ -59,7 +52,7 @@ export async function POST(request: NextRequest) {
     returnPath = parseBackofficeReturnPath(formData.get('return_to'));
     const result = await performCatalogRepairAction(formData, request.headers);
 
-    if (wantsJsonResponse(request)) {
+    if (wantsBackofficeJsonResponse(request)) {
       const ok = result.status === 'queued' || result.status === 'orchestration_queued';
       return NextResponse.json(
         {
@@ -95,23 +88,10 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     logBackofficeError('Failed to apply catalog-health repair action', error);
-    if (wantsJsonResponse(request)) {
-      const publicMessage =
-        typeof error === 'object' && error !== null && 'publicMessage' in error
-          ? (error as { publicMessage?: unknown }).publicMessage
-          : undefined;
-      const clientMessage =
-        typeof publicMessage === 'string' && publicMessage.trim() !== ''
-          ? publicMessage
-          : 'Catalog repair action failed. Check backoffice logs for details.';
-
-      return NextResponse.json(
-        {
-          ok: false,
-          status: 'failed',
-          message: clientMessage,
-        },
-        { status: getBackofficeErrorStatus(error) },
+    if (wantsBackofficeJsonResponse(request)) {
+      return backofficeActionErrorResponse(
+        error,
+        'Catalog repair action failed. Check backoffice logs for details.',
       );
     }
 

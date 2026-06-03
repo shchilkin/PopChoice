@@ -64,6 +64,7 @@ describe('catalog repair audit presentation', () => {
     expect(repairResultStatusTone('queued')).toBe('neutral');
     expect(repairResultStatusTone('deduped')).toBe('neutral');
     expect(repairResultStatusTone('completed_resolved')).toBe('good');
+    expect(repairResultStatusTone('partial')).toBe('warn');
     expect(repairResultStatusTone('failed')).toBe('warn');
   });
 
@@ -71,6 +72,7 @@ describe('catalog repair audit presentation', () => {
     const html = renderToStaticMarkup(<RepairAuditRows audit={[auditEntry()]} />);
 
     expect(html).toContain('Missing Poster Url');
+    expect(html).toContain('class="table-scroll"');
     expect(html).toContain('Bulk Enqueue Backfill');
     expect(html).toContain('Batch #42');
     expect(html).toContain('Partially accepted');

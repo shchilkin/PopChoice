@@ -174,6 +174,41 @@ async function seedDatabase(databaseUrl) {
       WHERE name = 'Fixture Comedy'
     `);
 
+    await client.query(
+      `
+        INSERT INTO tmdb_match_reviews
+          (movie_id, movie_name, movie_year, reason, status, candidates, notes)
+        VALUES
+          (
+            1,
+            'PopChoice E2E Space Opera',
+            2024,
+            'ambiguous_match',
+            'open',
+            $1::jsonb,
+            'E2E fixture for the backoffice TMDB review decision flow.'
+          )
+      `,
+      [
+        JSON.stringify([
+          {
+            id: 990001,
+            title: 'PopChoice E2E Space Opera Definitive Match',
+            originalTitle: 'PopChoice E2E Space Opera Definitive Match',
+            releaseYear: 2024,
+            confidence: 0.96,
+          },
+          {
+            id: 990002,
+            title: 'PopChoice E2E Space Opera Alternate',
+            originalTitle: 'PopChoice E2E Space Opera Alternate',
+            releaseYear: 2023,
+            confidence: 0.72,
+          },
+        ]),
+      ],
+    );
+
     await client.query('COMMIT');
     console.log('[e2e:db] Seeded deterministic movie fixtures.');
   } catch (error) {

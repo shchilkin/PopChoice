@@ -3,7 +3,7 @@ import type { CatalogMovieDetail } from '@pop-choice/shared';
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairAuditRows } from '../catalog-repair-audit';
-import { renderMetadataSnapshot } from '../shared';
+import { EmptyState, PanelHeader, renderMetadataSnapshot } from '../shared';
 import {
   DuplicatePeersPanel,
   HealthFlagsPanel,
@@ -65,51 +65,35 @@ export function CatalogMovieDetailPage({
       </section>
       <section className="detail-grid">
         <article className="panel">
-          <div className="panel-header">
-            <h2>Genres</h2>
-            <span className="count">{detail.genres.length}</span>
-          </div>
+          <PanelHeader title="Genres" count={detail.genres.length} />
           <TaxonomyList emptyLabel="No genres stored." items={detail.genres} />
         </article>
         <article className="panel">
-          <div className="panel-header">
-            <h2>Keywords</h2>
-            <span className="count">{detail.keywords.length}</span>
-          </div>
+          <PanelHeader title="Keywords" count={detail.keywords.length} />
           <TaxonomyList emptyLabel="No keywords stored." items={detail.keywords} />
         </article>
       </section>
       <section className="detail-grid">
         <article className="panel">
-          <div className="panel-header">
-            <h2>Directors</h2>
-            <span className="count">{detail.directors.length}</span>
-          </div>
+          <PanelHeader title="Directors" count={detail.directors.length} />
           <PeopleTable emptyLabel="No directors stored." people={detail.directors} />
         </article>
         <article className="panel">
-          <div className="panel-header">
-            <h2>Top cast</h2>
-            <span className="count">{detail.cast.length}</span>
-          </div>
+          <PanelHeader title="Top cast" count={detail.cast.length} />
           <PeopleTable emptyLabel="No cast credits stored." people={detail.cast} />
         </article>
       </section>
       <RelatedReviewsPanel reviews={detail.relatedReviews} />
       <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Repair audit</h2>
-            <div className="issue-hint">Recent audited repair attempts for this movie.</div>
-          </div>
-          <span className="count">{detail.repairAudit.length}</span>
-        </div>
+        <PanelHeader
+          title="Repair audit"
+          hint="Recent audited repair attempts for this movie."
+          count={detail.repairAudit.length}
+        />
         <RepairAuditRows audit={detail.repairAudit} />
       </section>
       <section className="panel">
-        <div className="panel-header">
-          <h2>TMDB metadata snapshot</h2>
-        </div>
+        <PanelHeader title="TMDB metadata snapshot" />
         {renderMetadataSnapshot(movie.tmdbMetadata)}
       </section>
     </BackofficeLayout>
@@ -130,9 +114,9 @@ export function CatalogMovieNotFoundPage() {
       }
     >
       <section className="panel">
-        <p className="empty">
+        <EmptyState>
           The movie may belong to another environment or may not be seeded yet.
-        </p>
+        </EmptyState>
       </section>
     </BackofficeLayout>
   );

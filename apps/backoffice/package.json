@@ -6,6 +6,7 @@
   "scripts": {
     "build": "next build --webpack",
     "dev": "next dev --port ${PORT:-3004}",
+    "quality:structure": "node ../../scripts/check-backoffice-module-size.mjs",
     "start": "next start",
     "test": "vitest run",
     "type-check": "tsc --noEmit"
