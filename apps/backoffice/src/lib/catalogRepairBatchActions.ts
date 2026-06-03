@@ -10,6 +10,8 @@ import {
 } from '@pop-choice/shared';
 
 import { enqueueCatalogBackfillMovieFromBackoffice } from '../catalogMaintenanceQueue';
+import { logBackofficeAction } from './backofficeActionLog';
+import { recordBackofficeRepairEnqueue } from './backofficeMetrics';
 import { getBackfillReasonForIssue } from './catalogRepairActionHelpers';
 import {
   backofficeActionError,
@@ -192,6 +194,7 @@ export async function retryCatalogRepairBatchItem(
   headers: Headers,
 ): Promise<CatalogRepairBatchItemRetryResult> {
   const config = await ensureBackofficeReady();
+  const startedAt = Date.now();
   if (formData.get('action') !== 'retry_item') {
     throw backofficeActionError('Unsupported repair batch action.');
   }
@@ -264,6 +267,21 @@ export async function retryCatalogRepairBatchItem(
       repairBatchId: item.batchId,
       repairBatchItemId: item.id,
     });
+    logBackofficeAction({
+      action: 'retry_item',
+      actor,
+      durationMs: Date.now() - startedAt,
+      issueKey: item.issueKey,
+      repairBatchId: item.batchId,
+      repairBatchItemId: item.id,
+      resultStatus: job ? job.status : 'unavailable',
+      targetId: item.movieId,
+      targetType: 'movie',
+    });
+    recordBackofficeRepairEnqueue({
+      mode: 'single',
+      status: job ? job.status : 'unavailable',
+    });
 
     return {
       batchId: item.batchId,
@@ -301,6 +319,18 @@ export async function retryCatalogRepairBatchItem(
       issueKey: item.issueKey,
       movieId: item.movieId,
     });
+    logBackofficeAction({
+      action: 'retry_item',
+      actor,
+      durationMs: Date.now() - startedAt,
+      issueKey: item.issueKey,
+      repairBatchId: item.batchId,
+      repairBatchItemId: item.id,
+      resultStatus: 'failed',
+      targetId: item.movieId,
+      targetType: 'movie',
+    });
+    recordBackofficeRepairEnqueue({ mode: 'single', status: 'failed' });
 
     return {
       batchId: item.batchId,

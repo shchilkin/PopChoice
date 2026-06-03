@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { catalogMaintenanceQueueJobPage } from '../../../../test/backofficeFixtures';
+
 const mocks = vi.hoisted(() => ({
   createBackofficeQueueEventStream: vi.fn(),
   createServerSentEventResponse: vi.fn(),
@@ -42,26 +44,10 @@ describe('catalog maintenance queue events route', () => {
   });
 
   it('opens a snapshot-only stream when Redis is unavailable', async () => {
-    const jobPage = {
+    const jobPage = catalogMaintenanceQueueJobPage({
       available: false,
-      counts: {
-        active: 0,
-        completed: 0,
-        delayed: 0,
-        failed: 0,
-        prioritized: 0,
-        waiting: 0,
-        waitingChildren: 0,
-      },
-      jobs: [],
-      limit: 25,
-      offset: 0,
-      openJobs: 0,
-      queueName: 'catalog-maintenance',
-      state: 'waiting',
-      totalCount: 0,
       updatedAt: '2026-06-03T00:00:00.000Z',
-    };
+    });
     mocks.listCatalogMaintenanceQueueJobs.mockResolvedValue(jobPage);
 
     const response = await GET(

@@ -3,12 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   applyTMDBMatchReviewAction: vi.fn(),
   ensureBackofficeReady: vi.fn(),
+  loggerInfo: vi.fn(),
   listTMDBMatchReviewPage: vi.fn(),
   parseOperatorActor: vi.fn(),
 }));
 
 vi.mock('@pop-choice/shared', () => ({
   applyTMDBMatchReviewAction: mocks.applyTMDBMatchReviewAction,
+  logger: { info: mocks.loggerInfo },
   listTMDBMatchReviewPage: mocks.listTMDBMatchReviewPage,
 }));
 
@@ -112,6 +114,15 @@ describe('tmdb review action helpers', () => {
       candidateId: 42,
       note: 'Looks right',
       reviewId: 'review-1',
+    });
+    expect(mocks.loggerInfo).toHaveBeenCalledWith('Backoffice operator action', {
+      action: 'apply_candidate',
+      actor: 'operator@example.test',
+      durationMs: expect.any(Number),
+      resultStatus: 'resolved',
+      reviewId: 'review-1',
+      targetId: 'review-1',
+      targetType: 'tmdb_match_review',
     });
   });
 });

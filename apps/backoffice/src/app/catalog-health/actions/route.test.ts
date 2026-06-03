@@ -48,13 +48,13 @@ function createRepairRequest({
 } = {}) {
   return createBackofficeFormRequest({
     accept,
+    fetch: requestedWith === 'fetch',
     fields: {
       action,
       issue_key: 'missing_poster_url',
       movie_id: '42',
       return_to: returnTo,
     },
-    requestedWith,
     url: 'https://backoffice.test/catalog-health/actions',
   });
 }

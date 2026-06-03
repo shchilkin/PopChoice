@@ -1,8 +1,10 @@
 import type { QueueEvents } from 'bullmq';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { readBackofficeCounterSnapshot, resetBackofficeMetricsForTest } from './backofficeMetrics';
 import {
   bindCatalogMaintenanceQueueEvents,
+  createBackofficeQueueEventStream,
   createServerSentEventResponse,
   encodeServerSentEvent,
   getSearchParamsRecord,
@@ -11,6 +13,10 @@ import {
 } from './backofficeEventStream';
 
 describe('backoffice event stream helpers', () => {
+  afterEach(() => {
+    resetBackofficeMetricsForTest();
+  });
+
   it('encodes server-sent events with JSON payloads', () => {
     const encoded = new TextDecoder().decode(encodeServerSentEvent('snapshot', { ok: true }));
 
@@ -55,6 +61,39 @@ describe('backoffice event stream helpers', () => {
     expect(response.headers.get('Cache-Control')).toBe('no-cache');
     expect(response.headers.get('Connection')).toBe('keep-alive');
     expect(response.headers.get('X-Accel-Buffering')).toBe('no');
+  });
+
+  it('records lifecycle metrics for snapshot-only SSE streams', async () => {
+    const stream = createBackofficeQueueEventStream({
+      errorEvent: 'stream-error',
+      logError: vi.fn(),
+      logOpenErrorMessage: 'open failed',
+      logQueueErrorMessage: 'queue failed',
+      logRedisErrorMessage: 'redis failed',
+      logSnapshotErrorMessage: 'snapshot failed',
+      queueName: 'catalog-maintenance',
+      readSnapshot: vi.fn(),
+      redisUrl: null,
+      request: new Request('https://backoffice.test/events'),
+      streamOpenErrorMessage: 'open failed',
+      streamQueueErrorMessage: 'queue failed',
+      streamRedisErrorMessage: 'redis failed',
+      streamSnapshotErrorMessage: 'snapshot failed',
+    });
+
+    const reader = stream.getReader();
+    await reader.read();
+    await reader.cancel();
+
+    expect(readBackofficeCounterSnapshot()).toEqual(
+      expect.arrayContaining([
+        {
+          labels: { event: 'connected_snapshot_only', queue: 'catalog-maintenance' },
+          name: 'backoffice_sse_lifecycle_total',
+          value: 1,
+        },
+      ]),
+    );
   });
 
   it('binds and cleans up catalog maintenance queue event listeners', () => {

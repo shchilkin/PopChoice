@@ -1,5 +1,10 @@
-import type { CatalogMovieSample } from '@pop-choice/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  catalogBackfillQueueJob,
+  catalogMovieSample,
+  catalogRepairBatchItem,
+} from '../test/backofficeFixtures';
 
 const mocks = vi.hoisted(() => ({
   createCatalogRepairBatchItem: vi.fn(),
@@ -7,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   ensureBackofficeReady: vi.fn(),
   getCatalogRepairBatchItem: vi.fn(),
   loggerError: vi.fn(),
+  loggerInfo: vi.fn(),
   parseOperatorActor: vi.fn(),
   recordCatalogRepairAction: vi.fn(),
   refreshCatalogRepairBatchCounts: vi.fn(),
@@ -16,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@pop-choice/shared', () => ({
   createCatalogRepairBatchItem: mocks.createCatalogRepairBatchItem,
   getCatalogRepairBatchItem: mocks.getCatalogRepairBatchItem,
-  logger: { error: mocks.loggerError },
+  logger: { error: mocks.loggerError, info: mocks.loggerInfo },
   recordCatalogRepairAction: mocks.recordCatalogRepairAction,
   refreshCatalogRepairBatchCounts: mocks.refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemEnqueueResult: mocks.updateCatalogRepairBatchItemEnqueueResult,
@@ -41,20 +47,6 @@ import {
   retryCatalogRepairBatchItem,
 } from './catalogRepairBatchActions';
 
-function sampleMovie(id: string): CatalogMovieSample {
-  return {
-    age_rating: 'PG',
-    duration: 100,
-    id,
-    localized_name: null,
-    name: `Movie ${id}`,
-    poster_url: null,
-    tmdb_id: null,
-    tmdb_matched_at: null,
-    year: 2026,
-  };
-}
-
 describe('catalog repair batch actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,7 +61,10 @@ describe('catalog repair batch actions', () => {
   });
 
   it('continues processing when failure-status persistence fails', async () => {
-    const movies = [sampleMovie('1'), sampleMovie('2')];
+    const movies = [
+      catalogMovieSample({ id: '1', name: 'Movie 1', year: 2026 }),
+      catalogMovieSample({ id: '2', name: 'Movie 2', year: 2026 }),
+    ];
     const summary = createCatalogBulkRepairSummary({
       issueKey: 'missing_poster_url',
       limit: 2,
@@ -79,13 +74,7 @@ describe('catalog repair batch actions', () => {
 
     mocks.enqueueCatalogBackfillMovieFromBackoffice
       .mockRejectedValueOnce(new Error('queue failed'))
-      .mockResolvedValueOnce({
-        jobId: 'job-2',
-        jobName: 'backfill-movie',
-        language: 'en',
-        queueName: 'catalog-maintenance',
-        status: 'queued',
-      });
+      .mockResolvedValueOnce(catalogBackfillQueueJob({ jobId: 'job-2', language: 'en' }));
     mocks.updateCatalogRepairBatchItemEnqueueResult
       .mockRejectedValueOnce(new Error('persist failed'))
       .mockResolvedValueOnce(undefined);
@@ -117,31 +106,10 @@ describe('catalog repair batch actions', () => {
   });
 
   it('retries a failed repair batch item with the original batch item context', async () => {
-    const item = {
-      batchId: 'batch-1',
+    const item = catalogRepairBatchItem({
       completedAt: '2026-06-02T12:05:00.000Z',
-      createdAt: '2026-06-02T12:00:00.000Z',
-      errorMessage: 'worker failed',
-      id: 'item-1',
-      issueKey: 'missing_poster_url',
-      jobId: 'old-job',
-      jobName: 'backfill-movie',
-      language: 'en',
-      movieId: '42',
-      movieSnapshot: { id: '42', name: 'Heat' },
-      queueName: 'catalog-maintenance',
-      reason: 'missing_metadata',
-      result: { status: 'failed' },
-      status: 'failed',
-      updatedAt: '2026-06-02T12:05:00.000Z',
-    };
-    const job = {
-      jobId: 'job-42',
-      jobName: 'backfill-movie',
-      language: 'en-US',
-      queueName: 'catalog-maintenance',
-      status: 'queued',
-    };
+    });
+    const job = catalogBackfillQueueJob();
     const updatedItem = { ...item, completedAt: null, jobId: 'job-42', status: 'queued' };
     mocks.getCatalogRepairBatchItem.mockResolvedValue(item);
     mocks.enqueueCatalogBackfillMovieFromBackoffice.mockResolvedValue(job);
@@ -192,27 +160,31 @@ describe('catalog repair batch actions', () => {
         targetType: 'movie',
       }),
     );
+    expect(mocks.loggerInfo).toHaveBeenCalledWith('Backoffice operator action', {
+      action: 'retry_item',
+      actor: 'operator@example.test',
+      durationMs: expect.any(Number),
+      issueKey: 'missing_poster_url',
+      repairBatchId: 'batch-1',
+      repairBatchItemId: 'item-1',
+      resultStatus: 'queued',
+      targetId: '42',
+      targetType: 'movie',
+    });
   });
 
   it('marks retried items unavailable when the queue is disabled', async () => {
-    const item = {
-      batchId: 'batch-1',
+    const item = catalogRepairBatchItem({
       completedAt: '2026-06-02T12:05:00.000Z',
-      createdAt: '2026-06-02T12:00:00.000Z',
       errorMessage: 'redis missing',
-      id: 'item-1',
-      issueKey: 'missing_poster_url',
       jobId: null,
       jobName: null,
       language: null,
-      movieId: '42',
-      movieSnapshot: { id: '42', name: 'Heat' },
       queueName: null,
       reason: null,
       result: { status: 'queue_unavailable' },
       status: 'unavailable',
-      updatedAt: '2026-06-02T12:05:00.000Z',
-    };
+    });
     const updatedItem = { ...item, status: 'unavailable' };
     mocks.getCatalogRepairBatchItem.mockResolvedValue(item);
     mocks.enqueueCatalogBackfillMovieFromBackoffice.mockResolvedValue(null);
@@ -235,13 +207,11 @@ describe('catalog repair batch actions', () => {
   });
 
   it('rejects retry for completed-unresolved items', async () => {
-    mocks.getCatalogRepairBatchItem.mockResolvedValue({
-      batchId: 'batch-1',
-      id: 'item-1',
-      issueKey: 'missing_poster_url',
-      movieId: '42',
-      status: 'completed_unresolved',
-    });
+    mocks.getCatalogRepairBatchItem.mockResolvedValue(
+      catalogRepairBatchItem({
+        status: 'completed_unresolved',
+      }),
+    );
 
     const formData = new FormData();
     formData.set('action', 'retry_item');
