@@ -5,6 +5,9 @@ import type {
 } from '../../catalogMaintenanceQueue';
 import { formatLiveSyncTime } from '../liveRefreshTime';
 
+export const QUEUE_REALTIME_FALLBACK_INTERVAL_SECONDS = 30;
+export const QUEUE_REALTIME_STALE_AFTER_MS = 120_000;
+
 export const QUEUE_STATES = [
   'waiting',
   'active',
@@ -20,6 +23,9 @@ export const STATE_LABELS: Record<CatalogMaintenanceQueueJobState, string> = {
   failed: 'Failed',
   waiting: 'Waiting',
 };
+
+export type QueueRealtimeConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'fallback';
+export type QueueRealtimeStatus = QueueRealtimeConnectionState | 'stale' | 'unavailable';
 
 export function getQueueStateCount(
   jobPage: CatalogMaintenanceQueueJobPage,
@@ -118,8 +124,47 @@ export function getLastQueueEvent(
   return job.createdAt ? `Created ${formatLiveSyncTime(job.createdAt)}` : 'Created unknown';
 }
 
-export function queueRealtimeCopy(status: 'connecting' | 'connected' | 'error'): string {
+export function getQueueRealtimeStatus({
+  connectionState,
+  jobPage,
+  lastEventAt,
+  nowMs = Date.now(),
+  staleAfterMs = QUEUE_REALTIME_STALE_AFTER_MS,
+}: {
+  connectionState: QueueRealtimeConnectionState;
+  jobPage: Pick<CatalogMaintenanceQueueJobPage, 'available'>;
+  lastEventAt: string | null;
+  nowMs?: number;
+  staleAfterMs?: number;
+}): QueueRealtimeStatus {
+  if (!jobPage.available) return 'unavailable';
+
+  const lastEventMs = lastEventAt ? Date.parse(lastEventAt) : Number.NaN;
+  if (Number.isFinite(lastEventMs) && nowMs - lastEventMs > staleAfterMs) {
+    return 'stale';
+  }
+
+  return connectionState;
+}
+
+export function isQueueRealtimeFallbackStatus(status: QueueRealtimeStatus): boolean {
+  return status !== 'connected';
+}
+
+export function queueRealtimeCopy(status: QueueRealtimeStatus): string {
   if (status === 'connected') return 'Queue updates are live';
   if (status === 'connecting') return 'Connecting to live updates';
+  if (status === 'fallback') return 'Queue updates are in polling fallback';
+  if (status === 'stale') return 'Queue snapshot is stale';
+  if (status === 'unavailable') return 'Queue realtime is unavailable';
   return 'Live updates are reconnecting';
+}
+
+export function queueRealtimeDetailCopy(status: QueueRealtimeStatus): string | null {
+  if (status === 'fallback') return 'Polling snapshots until the live stream recovers';
+  if (status === 'reconnecting') return 'Polling snapshots while the live stream reconnects';
+  if (status === 'stale') return 'No recent live snapshot; polling for a fresh queue page';
+  if (status === 'unavailable')
+    return 'Redis or QueueEvents is unavailable; showing snapshot-only data';
+  return null;
 }

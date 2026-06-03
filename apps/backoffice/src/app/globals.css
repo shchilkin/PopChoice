@@ -478,7 +478,11 @@ input:disabled {
 .live-refresh-error {
   color: var(--warn);
 }
-.realtime-refresh.error {
+.realtime-refresh.error,
+.realtime-refresh.reconnecting,
+.realtime-refresh.fallback,
+.realtime-refresh.stale,
+.realtime-refresh.unavailable {
   border-color: color-mix(in srgb, var(--bad), var(--border) 55%);
 }
 .queue-status {

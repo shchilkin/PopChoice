@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CatalogMaintenanceQueueJobPage } from '../catalogMaintenanceQueue';
-import { parseCatalogMaintenanceQueueSnapshotMessage } from './catalogMaintenanceQueueLive';
+import {
+  parseCatalogMaintenanceQueueConnectedMode,
+  parseCatalogMaintenanceQueueSnapshotMessage,
+} from './catalogMaintenanceQueueLive';
 
 const jobPage: CatalogMaintenanceQueueJobPage = {
   available: true,
@@ -64,6 +67,29 @@ describe('catalog maintenance queue live snapshots', () => {
 
     expect(message?.receivedAt).toBe(jobPage.updatedAt);
     expect(message?.trigger).toBe('queue-event');
+  });
+
+  it('preserves Redis-unavailable snapshot triggers', () => {
+    const message = parseCatalogMaintenanceQueueSnapshotMessage(
+      JSON.stringify({
+        jobPage: { ...jobPage, available: false },
+        receivedAt: '2026-06-02T12:04:00.000Z',
+        trigger: 'redis-unavailable',
+      }),
+    );
+
+    expect(message?.trigger).toBe('redis-unavailable');
+    expect(message?.jobPage.available).toBe(false);
+  });
+
+  it('parses connected stream modes for snapshot-only fallbacks', () => {
+    expect(
+      parseCatalogMaintenanceQueueConnectedMode(JSON.stringify({ mode: 'snapshot-only' })),
+    ).toBe('snapshot-only');
+    expect(parseCatalogMaintenanceQueueConnectedMode(JSON.stringify({ mode: 'live' }))).toBe(
+      'live',
+    );
+    expect(parseCatalogMaintenanceQueueConnectedMode('not-json')).toBe('live');
   });
 
   it('rejects malformed queue pages', () => {
