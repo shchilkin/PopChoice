@@ -68,6 +68,7 @@ export {
   createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
   getCatalogRepairBatchDetail,
+  getCatalogRepairBatchItem,
   getCatalogRepairMovieSnapshot,
   listCatalogRepairBatchPage,
   listCatalogRepairAudit,

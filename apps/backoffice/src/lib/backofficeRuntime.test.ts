@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  backofficeActionError,
   formatBackofficeDateTime,
   getBackofficeErrorStatus,
   parseBackofficeReturnPath,
@@ -52,5 +53,12 @@ describe('backoffice runtime helpers', () => {
     expect(getBackofficeErrorStatus({ statusCode: 503 })).toBe(503);
     expect(getBackofficeErrorStatus({ statusCode: 302 })).toBe(500);
     expect(getBackofficeErrorStatus(new Error('no status'))).toBe(500);
+  });
+
+  it('marks action validation errors as safe to show to operators', () => {
+    const error = backofficeActionError('Unsupported review action.', 400);
+
+    expect(error.statusCode).toBe(400);
+    expect(error.publicMessage).toBe('Unsupported review action.');
   });
 });

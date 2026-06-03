@@ -2,8 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import {
   applyTMDBReviewFormAction,
+  backofficeActionErrorResponse,
+  backofficeActionFailureResponse,
   getBackofficeErrorStatus,
   logBackofficeError,
+  wantsBackofficeJsonResponse,
 } from '../../../../lib/backoffice';
 import { isSameOriginRequest } from '../../../../lib/sameOriginRequest';
 
@@ -18,6 +21,10 @@ export async function POST(request: NextRequest, context: ReviewActionContext) {
 
   try {
     if (!isSameOriginRequest(request)) {
+      if (wantsBackofficeJsonResponse(request)) {
+        return backofficeActionFailureResponse('Forbidden.', 403);
+      }
+
       return new Response('Forbidden.', {
         status: 403,
         headers: {
@@ -27,14 +34,30 @@ export async function POST(request: NextRequest, context: ReviewActionContext) {
     }
 
     const formData = await request.formData();
-    await applyTMDBReviewFormAction(id, formData, request.headers);
-    return NextResponse.redirect(
-      new URL(`/tmdb-reviews/${encodeURIComponent(id)}`, request.url),
-      303,
-    );
+    const result = await applyTMDBReviewFormAction(id, formData, request.headers);
+
+    if (wantsBackofficeJsonResponse(request)) {
+      return NextResponse.json({
+        ok: true,
+        status: 'applied',
+        message: 'Review action applied.',
+        reviewId: id,
+        action: result.action,
+        redirectTo: result.redirectTo,
+      });
+    }
+
+    return NextResponse.redirect(new URL(result.redirectTo, request.url), 303);
   } catch (error) {
     logBackofficeError('Failed to apply TMDB match review action', error);
     const status = getBackofficeErrorStatus(error);
+    if (wantsBackofficeJsonResponse(request)) {
+      return backofficeActionErrorResponse(
+        error,
+        'Review action failed. Check backoffice logs for details.',
+      );
+    }
+
     return new Response('Review action failed. Check backoffice logs for details.', {
       status,
       headers: {

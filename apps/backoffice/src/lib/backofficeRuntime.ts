@@ -30,8 +30,9 @@ export function getBackofficeErrorStatus(error: unknown): number {
 export function backofficeActionError(
   message: string,
   statusCode = 400,
-): Error & { statusCode: number } {
-  const error = new Error(message) as Error & { statusCode: number };
+): Error & { publicMessage: string; statusCode: number } {
+  const error = new Error(message) as Error & { publicMessage: string; statusCode: number };
+  error.publicMessage = message;
   error.statusCode = statusCode;
   return error;
 }

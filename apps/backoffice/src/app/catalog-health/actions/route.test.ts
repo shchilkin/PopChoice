@@ -1,20 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  createBackofficeFormRequest,
+  expectBackofficeActionFailureJson,
+  expectBackofficeActionJson,
+} from '../../../test/backofficeActionRoute';
+
 const mocks = vi.hoisted(() => ({
+  backofficeActionErrorResponse: vi.fn(),
+  backofficeActionFailureResponse: vi.fn(),
   catalogRepairMessage: vi.fn(),
   getBackofficeErrorStatus: vi.fn(),
   isSameOriginRequest: vi.fn(),
   logBackofficeError: vi.fn(),
   parseBackofficeReturnPath: vi.fn(),
   performCatalogRepairAction: vi.fn(),
+  wantsBackofficeJsonResponse: vi.fn(),
 }));
 
 vi.mock('../../../lib/backoffice', () => ({
+  backofficeActionErrorResponse: mocks.backofficeActionErrorResponse,
+  backofficeActionFailureResponse: mocks.backofficeActionFailureResponse,
   catalogRepairMessage: mocks.catalogRepairMessage,
   getBackofficeErrorStatus: mocks.getBackofficeErrorStatus,
   logBackofficeError: mocks.logBackofficeError,
   parseBackofficeReturnPath: mocks.parseBackofficeReturnPath,
   performCatalogRepairAction: mocks.performCatalogRepairAction,
+  wantsBackofficeJsonResponse: mocks.wantsBackofficeJsonResponse,
 }));
 
 vi.mock('../../../lib/sameOriginRequest', () => ({
@@ -34,20 +46,16 @@ function createRepairRequest({
   returnTo?: string;
   requestedWith?: string;
 } = {}) {
-  const formData = new FormData();
-  formData.set('action', action);
-  formData.set('issue_key', 'missing_poster_url');
-  formData.set('movie_id', '42');
-  formData.set('return_to', returnTo);
-
-  const headers = new Headers();
-  if (accept) headers.set('accept', accept);
-  if (requestedWith) headers.set('x-requested-with', requestedWith);
-
-  return new Request('https://backoffice.test/catalog-health/actions', {
-    body: formData,
-    headers,
-    method: 'POST',
+  return createBackofficeFormRequest({
+    accept,
+    fetch: requestedWith === 'fetch',
+    fields: {
+      action,
+      issue_key: 'missing_poster_url',
+      movie_id: '42',
+      return_to: returnTo,
+    },
+    url: 'https://backoffice.test/catalog-health/actions',
   });
 }
 
@@ -60,6 +68,26 @@ describe('catalog health repair action route', () => {
     mocks.parseBackofficeReturnPath.mockImplementation((value: FormDataEntryValue | null) =>
       typeof value === 'string' ? value : '/',
     );
+    mocks.wantsBackofficeJsonResponse.mockImplementation((request: Request) => {
+      const accept = request.headers.get('accept') ?? '';
+      const requestedWith = request.headers.get('x-requested-with') ?? '';
+      return accept.includes('application/json') || requestedWith.toLowerCase() === 'fetch';
+    });
+    mocks.backofficeActionFailureResponse.mockImplementation((message: string, status: number) =>
+      Response.json({ ok: false, status: 'failed', message }, { status }),
+    );
+    mocks.backofficeActionErrorResponse.mockImplementation((error: unknown, fallback: string) => {
+      const publicMessage =
+        typeof error === 'object' && error !== null && 'publicMessage' in error
+          ? (error as { publicMessage?: unknown }).publicMessage
+          : undefined;
+      const message =
+        typeof publicMessage === 'string' && publicMessage.trim() !== '' ? publicMessage : fallback;
+      return Response.json(
+        { ok: false, status: 'failed', message },
+        { status: mocks.getBackofficeErrorStatus(error) },
+      );
+    });
   });
 
   it('returns the JSON forbidden contract for cross-origin fetches', async () => {
@@ -67,12 +95,7 @@ describe('catalog health repair action route', () => {
 
     const response = await POST(createRepairRequest({ accept: 'application/json' }) as never);
 
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      message: 'Forbidden.',
-    });
+    await expectBackofficeActionFailureJson(response, { message: 'Forbidden.', status: 403 });
     expect(mocks.performCatalogRepairAction).not.toHaveBeenCalled();
   });
 
@@ -87,15 +110,17 @@ describe('catalog health repair action route', () => {
 
     const response = await POST(createRepairRequest({ requestedWith: 'fetch' }) as never);
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({
-      issueKey: 'missing_poster_url',
-      job: { jobId: 'backfill-42', status: 'queued' },
-      message: 'message:queued',
-      mode: 'single',
-      movieId: '42',
-      ok: true,
-      status: 'queued',
+    await expectBackofficeActionJson(response, {
+      body: {
+        issueKey: 'missing_poster_url',
+        job: { jobId: 'backfill-42', status: 'queued' },
+        message: 'message:queued',
+        mode: 'single',
+        movieId: '42',
+        ok: true,
+        status: 'queued',
+      },
+      status: 200,
     });
     expect(mocks.performCatalogRepairAction).toHaveBeenCalledWith(
       expect.any(FormData),
@@ -130,14 +155,16 @@ describe('catalog health repair action route', () => {
       }) as never,
     );
 
-    expect(response.status).toBe(207);
-    await expect(response.json()).resolves.toEqual({
-      issueKey: 'missing_poster_url',
-      message: 'message:partial',
-      mode: 'bulk',
-      ok: false,
-      status: 'partial',
-      summary,
+    await expectBackofficeActionJson(response, {
+      body: {
+        issueKey: 'missing_poster_url',
+        message: 'message:partial',
+        mode: 'bulk',
+        ok: false,
+        status: 'partial',
+        summary,
+      },
+      status: 207,
     });
   });
 
@@ -167,12 +194,7 @@ describe('catalog health repair action route', () => {
 
     const response = await POST(createRepairRequest({ accept: 'application/json' }) as never);
 
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      ok: false,
-      status: 'failed',
-      message: 'Movie not found.',
-    });
+    await expectBackofficeActionFailureJson(response, { message: 'Movie not found.', status: 404 });
     expect(mocks.logBackofficeError).toHaveBeenCalledWith(
       'Failed to apply catalog-health repair action',
       error,

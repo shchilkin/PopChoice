@@ -1,6 +1,8 @@
 import { QueueEvents } from 'bullmq';
 import { Redis } from 'ioredis';
 
+import { recordBackofficeSseLifecycle } from './backofficeMetrics';
+
 export const BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS = 25_000;
 export const BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS = 350;
 
@@ -179,6 +181,7 @@ export function createBackofficeQueueEventStream({
         try {
           send('snapshot', await readSnapshot({ queueEvent, trigger }));
         } catch (error) {
+          recordBackofficeSseLifecycle({ event: 'snapshot_error', queueName });
           logError(logSnapshotErrorMessage, error);
           send(errorEvent, { message: streamSnapshotErrorMessage });
         } finally {
@@ -211,6 +214,7 @@ export function createBackofficeQueueEventStream({
       const cleanup = async () => {
         if (closed) return;
         closed = true;
+        recordBackofficeSseLifecycle({ event: 'closed', queueName });
         cleanupStream = null;
         if (snapshotTimer !== null) {
           clearTimeout(snapshotTimer);
@@ -243,6 +247,7 @@ export function createBackofficeQueueEventStream({
       );
 
       if (!connection || !queueEvents) {
+        recordBackofficeSseLifecycle({ event: 'connected_snapshot_only', queueName });
         send('connected', connectedPayload('snapshot-only'));
         if (sendSnapshotWhenRedisUnavailable) {
           scheduleSnapshot('redis-unavailable');
@@ -252,6 +257,7 @@ export function createBackofficeQueueEventStream({
 
       const forward = (type: string) => (rawPayload: QueueEventPayload) => {
         const payload = normalizeQueueEventPayload(rawPayload);
+        recordBackofficeSseLifecycle({ event: 'queue_event', queueName });
         if (onQueueEvent) {
           onQueueEvent({ payload, scheduleSnapshot, send, type });
           return;
@@ -264,6 +270,7 @@ export function createBackofficeQueueEventStream({
       connection.on('error', (error) => {
         if (suppressDuplicateRedisErrors && hasEmittedRedisError) return;
         hasEmittedRedisError = true;
+        recordBackofficeSseLifecycle({ event: 'redis_error', queueName });
         logError(logRedisErrorMessage, error);
         send(errorEvent, { message: streamRedisErrorMessage });
       });
@@ -273,15 +280,18 @@ export function createBackofficeQueueEventStream({
 
       cleanupQueueEventListeners = bindCatalogMaintenanceQueueEvents(queueEvents, forward);
       queueEvents.on('error', (error) => {
+        recordBackofficeSseLifecycle({ event: 'queue_error', queueName });
         logError(logQueueErrorMessage, error);
         send(errorEvent, { message: streamQueueErrorMessage });
       });
 
       try {
         await queueEvents.waitUntilReady();
+        recordBackofficeSseLifecycle({ event: 'connected_live', queueName });
         send('connected', connectedPayload('live'));
         scheduleSnapshot('connected');
       } catch (error) {
+        recordBackofficeSseLifecycle({ event: 'open_error', queueName });
         logError(logOpenErrorMessage, error);
         send(errorEvent, { message: streamOpenErrorMessage });
         await cleanup();

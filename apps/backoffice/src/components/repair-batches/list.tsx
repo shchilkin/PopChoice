@@ -9,18 +9,16 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
-import { SimplePaginationControls } from '../shared';
+import { PanelHeader, SimplePaginationControls, TableEmptyRow, TableScroll } from '../shared';
 import { FilterLink } from './filterLink';
 import { buildRepairBatchListHref } from './helpers';
 
 function RepairBatchRows({ batches }: { batches: CatalogRepairBatch[] }) {
   if (batches.length === 0) {
     return (
-      <tr>
-        <td colSpan={9} className="empty">
-          No durable catalog repair batches have been recorded yet.
-        </td>
-      </tr>
+      <TableEmptyRow colSpan={9}>
+        No durable catalog repair batches have been recorded yet.
+      </TableEmptyRow>
     );
   }
 
@@ -96,15 +94,11 @@ export function RepairBatchListPage({
     >
       <CatalogMaintenanceRealtimeRefresh label="Repair batches are live" />
       <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Recent batches</h2>
-            <div className="issue-hint">
-              Filter durable batches by operator recovery state before opening raw JSON.
-            </div>
-          </div>
-          <span className="count">{batchPage.totalCount}</span>
-        </div>
+        <PanelHeader
+          title="Recent batches"
+          hint="Filter durable batches by operator recovery state before opening raw JSON."
+          count={batchPage.totalCount}
+        />
         <div className="filter-bar" aria-label="Repair batch filters">
           {statusFilters.map((filter) => (
             <FilterLink
@@ -142,7 +136,7 @@ export function RepairBatchListPage({
           totalCount={batchPage.totalCount}
           hrefForPage={hrefForPage}
         />
-        <div className="table-scroll">
+        <TableScroll>
           <table className="repair-batch-table">
             <thead>
               <tr>
@@ -161,7 +155,7 @@ export function RepairBatchListPage({
               <RepairBatchRows batches={batchPage.batches} />
             </tbody>
           </table>
-        </div>
+        </TableScroll>
         <SimplePaginationControls
           ariaLabel="Catalog repair batch pagination bottom"
           emptyLabel="No repair batches"

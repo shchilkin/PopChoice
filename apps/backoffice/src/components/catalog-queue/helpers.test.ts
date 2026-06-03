@@ -1,36 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 
+import { catalogMaintenanceQueueJobPage } from '../../test/backofficeFixtures';
 import {
   buildQueueHref,
   getLastQueueEvent,
   getQueueHealth,
   getQueueJobLinks,
+  getQueueRealtimeStatus,
   getQueueStateClass,
   getQueueStateCount,
+  isQueueRealtimeFallbackStatus,
+  queueRealtimeDetailCopy,
   queueRealtimeCopy,
 } from './helpers';
 
-const page: CatalogMaintenanceQueueJobPage = {
-  available: true,
-  counts: {
-    active: 0,
-    completed: 10,
-    delayed: 0,
-    failed: 0,
-    prioritized: 0,
-    waiting: 0,
-    waitingChildren: 0,
-  },
-  jobs: [],
-  limit: 25,
-  offset: 0,
-  openJobs: 0,
-  queueName: 'catalog-maintenance',
-  state: 'waiting',
-  totalCount: 0,
-  updatedAt: '2026-06-02T12:00:00Z',
-};
+const page = catalogMaintenanceQueueJobPage();
 
 describe('catalog queue helpers', () => {
   it('builds queue state links and state labels', () => {
@@ -82,6 +66,45 @@ describe('catalog queue helpers', () => {
     );
     expect(queueRealtimeCopy('connected')).toBe('Queue updates are live');
     expect(queueRealtimeCopy('connecting')).toBe('Connecting to live updates');
-    expect(queueRealtimeCopy('error')).toBe('Live updates are reconnecting');
+    expect(queueRealtimeCopy('reconnecting')).toBe('Live updates are reconnecting');
+    expect(queueRealtimeCopy('fallback')).toBe('Queue updates are in polling fallback');
+    expect(queueRealtimeCopy('stale')).toBe('Queue snapshot is stale');
+    expect(queueRealtimeDetailCopy('unavailable')).toContain('snapshot-only data');
+  });
+
+  it('derives realtime fallback, stale, and unavailable statuses', () => {
+    expect(
+      getQueueRealtimeStatus({
+        connectionState: 'connected',
+        jobPage: page,
+        lastEventAt: '2026-06-02T12:00:00.000Z',
+        nowMs: Date.parse('2026-06-02T12:01:00.000Z'),
+      }),
+    ).toBe('connected');
+    expect(
+      getQueueRealtimeStatus({
+        connectionState: 'connected',
+        jobPage: page,
+        lastEventAt: '2026-06-02T12:00:00.000Z',
+        nowMs: Date.parse('2026-06-02T12:03:00.000Z'),
+      }),
+    ).toBe('stale');
+    expect(
+      getQueueRealtimeStatus({
+        connectionState: 'fallback',
+        jobPage: { ...page, available: false },
+        lastEventAt: page.updatedAt,
+      }),
+    ).toBe('unavailable');
+    expect(
+      isQueueRealtimeFallbackStatus(
+        getQueueRealtimeStatus({
+          connectionState: 'reconnecting',
+          jobPage: page,
+          lastEventAt: page.updatedAt,
+        }),
+      ),
+    ).toBe(true);
+    expect(isQueueRealtimeFallbackStatus('connected')).toBe(false);
   });
 });
