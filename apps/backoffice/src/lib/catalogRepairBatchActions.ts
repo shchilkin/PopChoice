@@ -123,13 +123,25 @@ export async function enqueueCatalogRepairBatchItems({
         status: job.status,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
       if (itemId) {
-        await updateCatalogRepairBatchItemEnqueueResult({
-          itemId,
-          status: 'enqueue_failed',
-          errorMessage: error instanceof Error ? error.message : String(error),
-          result: { status: 'enqueue_failed' },
-        });
+        try {
+          await updateCatalogRepairBatchItemEnqueueResult({
+            itemId,
+            status: 'enqueue_failed',
+            errorMessage,
+            result: { status: 'enqueue_failed' },
+          });
+        } catch (persistError) {
+          logger.error('Failed to persist catalog repair batch enqueue failure', {
+            err: persistError,
+            itemId,
+            issueKey,
+            movieId: movie.id,
+            originalError: errorMessage,
+          });
+        }
       }
       summary.failed += 1;
       summary.jobs.push({ movieId: movie.id, itemId, status: 'failed' });

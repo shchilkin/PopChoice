@@ -130,6 +130,7 @@ function QueueStateTabs({ jobPage }: { jobPage: CatalogMaintenanceQueueJobPage }
         <a
           key={state}
           className={jobPage.state === state ? 'active' : ''}
+          aria-current={jobPage.state === state ? 'page' : undefined}
           href={buildQueueHref({ page: 1, pageSize: jobPage.limit, state })}
         >
           <span>{STATE_LABELS[state]}</span>
@@ -254,8 +255,7 @@ function QueuePayload({ job }: { job: CatalogMaintenanceQueueJobSummary }) {
     <div className="queue-payload">
       {job.payload.map((item) => (
         <span key={`${job.id}-${item.label}`}>
-          <strong>{item.label}</strong>
-          {item.value}
+          <strong>{item.label}:</strong> <span>{item.value}</span>
         </span>
       ))}
     </div>

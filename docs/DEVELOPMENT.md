@@ -32,6 +32,8 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 - `npm run format:package` - Sort and format package.json
 - `npm run type-check` - Run TypeScript type checking
 - `npm run fix` - Run all fixes (lint, format, package.json)
+- `npm run quality:backoffice` - Run the backoffice structural module-size
+  guard used to keep operator UI/routes split into reviewable files
 - `$impeccable critique <target>` - Run before publishing UI PRs, then address
   actionable findings or document deferred follow-ups in the PR.
 

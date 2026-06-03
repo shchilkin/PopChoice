@@ -204,6 +204,10 @@ export function createBackofficeQueueEventStream({
         );
       };
 
+      const heartbeat = setInterval(() => {
+        send('heartbeat', {});
+      }, BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS);
+
       const cleanup = async () => {
         if (closed) return;
         closed = true;
@@ -224,10 +228,6 @@ export function createBackofficeQueueEventStream({
         }
       };
       cleanupStream = cleanup;
-
-      const heartbeat = setInterval(() => {
-        send('heartbeat', {});
-      }, BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS);
 
       if (request.signal.aborted) {
         void cleanup();

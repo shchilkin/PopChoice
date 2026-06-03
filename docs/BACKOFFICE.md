@@ -144,11 +144,15 @@ Use workspace scripts that mirror the other apps:
 npm run dev:backoffice
 npm run build:backoffice
 npm run start --workspace=apps/backoffice
+npm run quality:backoffice
 ```
 
 Run `npm run copy:env` after editing root `.env`; it copies values into
 `apps/backoffice/.env` for the local dev script. Local dev defaults to port
 `3004`; use `PORT=4030 npm run dev:backoffice` when you want a specific port.
+Use `npm run quality:backoffice` before publishing broad backoffice changes; it
+runs the module-size guard that keeps app routes, operator panels, and queue
+helpers split into reviewable files.
 The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;

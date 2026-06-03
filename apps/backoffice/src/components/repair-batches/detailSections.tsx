@@ -81,6 +81,8 @@ export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[]
 }
 
 export function RepairBatchSummary({ batch }: { batch: CatalogRepairBatch }) {
+  const hasUnavailableItems = batch.unavailableCount > 0;
+
   return (
     <section className="summary batch-summary" aria-label="Repair batch summary">
       <CatalogStat
@@ -88,9 +90,12 @@ export function RepairBatchSummary({ batch }: { batch: CatalogRepairBatch }) {
         value={repairStatusLabel(batch.status)}
         meta={getRepairBatchProgress(batch)}
         state={
-          batch.status === 'completed'
+          batch.status === 'completed' && !hasUnavailableItems
             ? 'healthy'
-            : batch.status === 'failed' || batch.status === 'partial'
+            : batch.status === 'failed' ||
+                batch.status === 'partial' ||
+                batch.status === 'unavailable' ||
+                hasUnavailableItems
               ? 'warning'
               : 'neutral'
         }
@@ -109,7 +114,7 @@ export function RepairBatchSummary({ batch }: { batch: CatalogRepairBatch }) {
         label="Accepted"
         value={batch.queuedCount}
         meta={`${batch.dedupedCount} already queued, ${batch.unavailableCount} unavailable`}
-        state={batch.failedCount > 0 ? 'warning' : 'neutral'}
+        state={batch.failedCount > 0 || hasUnavailableItems ? 'warning' : 'neutral'}
       />
     </section>
   );
