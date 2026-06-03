@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CatalogRepairBatch } from '@pop-choice/shared';
 
+import { catalogRepairBatch } from '../../test/backofficeFixtures';
 import {
   buildRepairBatchItemPageHref,
   buildRepairBatchListHref,
@@ -14,30 +14,7 @@ import {
   truncateText,
 } from './helpers';
 
-const baseBatch: CatalogRepairBatch = {
-  action: 'bulk_enqueue_backfill',
-  actor: 'lexi',
-  attemptedCount: 10,
-  completedAt: null,
-  completedCount: 3,
-  createdAt: '2026-06-02T10:00:00Z',
-  dedupedCount: 2,
-  failedCount: 0,
-  id: '42',
-  issueKey: 'missing_poster_url',
-  note: null,
-  previousState: {},
-  requestedLimit: 10,
-  result: {},
-  skippedCount: 1,
-  status: 'completed',
-  targetId: 'missing_poster_url',
-  targetType: 'catalog_issue',
-  totalCandidates: 100,
-  unavailableCount: 0,
-  updatedAt: '2026-06-02T10:10:00Z',
-  queuedCount: 4,
-};
+const baseBatch = catalogRepairBatch({ actor: 'lexi', id: '42' });
 
 describe('repair batch helpers', () => {
   it('formats progress from terminal item counts', () => {

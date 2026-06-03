@@ -1,5 +1,7 @@
 export * from './backofficeParams';
 export * from './backofficeActionResponse';
+export * from './backofficeActionLog';
+export * from './backofficeMetrics';
 export * from './backofficeRuntime';
 export * from './catalogRepairActions';
 export * from './catalogRepairBatchActions';

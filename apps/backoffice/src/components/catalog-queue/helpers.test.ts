@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 
+import { catalogMaintenanceQueueJobPage } from '../../test/backofficeFixtures';
 import {
   buildQueueHref,
   getLastQueueEvent,
@@ -14,26 +14,7 @@ import {
   queueRealtimeCopy,
 } from './helpers';
 
-const page: CatalogMaintenanceQueueJobPage = {
-  available: true,
-  counts: {
-    active: 0,
-    completed: 10,
-    delayed: 0,
-    failed: 0,
-    prioritized: 0,
-    waiting: 0,
-    waitingChildren: 0,
-  },
-  jobs: [],
-  limit: 25,
-  offset: 0,
-  openJobs: 0,
-  queueName: 'catalog-maintenance',
-  state: 'waiting',
-  totalCount: 0,
-  updatedAt: '2026-06-02T12:00:00Z',
-};
+const page = catalogMaintenanceQueueJobPage();
 
 describe('catalog queue helpers', () => {
   it('builds queue state links and state labels', () => {

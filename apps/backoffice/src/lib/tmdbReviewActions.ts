@@ -1,11 +1,18 @@
-import { applyTMDBMatchReviewAction } from '@pop-choice/shared';
-import type { TMDBMatchReviewAction } from '@pop-choice/shared';
+import { applyTMDBMatchReviewAction, listTMDBMatchReviewPage } from '@pop-choice/shared';
+import type { TMDBMatchReview, TMDBMatchReviewAction } from '@pop-choice/shared';
 
 import {
   backofficeActionError,
   ensureBackofficeReady,
   parseOperatorActor,
 } from './backofficeRuntime';
+import { logBackofficeAction } from './backofficeActionLog';
+
+export type TMDBReviewFormActionResult = {
+  action: TMDBMatchReviewAction;
+  redirectTo: string;
+  review: TMDBMatchReview;
+};
 
 export function parseAction(value: FormDataEntryValue | null): TMDBMatchReviewAction {
   if (
@@ -51,12 +58,39 @@ export function assertCandidateIdForAction(
   }
 }
 
+export function isNextReviewRequested(value: FormDataEntryValue | null): boolean {
+  return value === '1' || value === 'true' || value === 'on';
+}
+
+export function reviewDetailPath(reviewId: string): string {
+  return `/tmdb-reviews/${encodeURIComponent(reviewId)}`;
+}
+
+export function openReviewQueuePath(): string {
+  return '/tmdb-reviews?status=open&reason=all&sort=highest_risk&page=1&pageSize=25';
+}
+
+export async function getNextOpenReviewPath(currentReviewId: string): Promise<string> {
+  const page = await listTMDBMatchReviewPage({
+    limit: 2,
+    offset: 0,
+    reason: 'all',
+    sort: 'highest_risk',
+    status: 'open',
+  });
+  const nextReview = page.reviews.find((review) => review.id !== currentReviewId);
+
+  return nextReview ? reviewDetailPath(nextReview.id) : openReviewQueuePath();
+}
+
 export async function applyTMDBReviewFormAction(
   reviewId: string,
   formData: FormData,
   headers: Headers,
-): Promise<void> {
+): Promise<TMDBReviewFormActionResult> {
   await ensureBackofficeReady();
+  const startedAt = Date.now();
+  const actor = parseOperatorActor(headers);
 
   const action = parseAction(formData.get('action'));
   const candidateId = parseCandidateId(formData.get('candidate_id'));
@@ -64,11 +98,25 @@ export async function applyTMDBReviewFormAction(
 
   assertCandidateIdForAction(action, candidateId);
 
-  await applyTMDBMatchReviewAction({
+  const review = await applyTMDBMatchReviewAction({
     reviewId,
     action,
-    actor: parseOperatorActor(headers),
+    actor,
     candidateId,
     note: typeof note === 'string' ? note : undefined,
   });
+  logBackofficeAction({
+    action,
+    actor,
+    durationMs: Date.now() - startedAt,
+    resultStatus: review.status,
+    reviewId,
+    targetId: reviewId,
+    targetType: 'tmdb_match_review',
+  });
+  const redirectTo = isNextReviewRequested(formData.get('next_review'))
+    ? await getNextOpenReviewPath(review.id)
+    : reviewDetailPath(review.id);
+
+  return { action, redirectTo, review };
 }
