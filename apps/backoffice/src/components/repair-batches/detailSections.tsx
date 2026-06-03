@@ -2,7 +2,7 @@ import type { CatalogRepairBatch, CatalogRepairBatchItem } from '@pop-choice/sha
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { RepairStatusBadge, repairStatusLabel } from '../catalog-repair-status';
-import { CatalogStat } from '../shared';
+import { CatalogStat, PanelHeader, TableEmptyRow } from '../shared';
 import {
   getRepairBatchProgress,
   issueHref,
@@ -13,14 +13,40 @@ import {
   truncateText,
 } from './helpers';
 
+const RETRIABLE_ITEM_STATUSES = new Set<CatalogRepairBatchItem['status']>([
+  'failed',
+  'enqueue_failed',
+  'unavailable',
+]);
+
+function canRetryRepairBatchItem(item: CatalogRepairBatchItem): boolean {
+  return RETRIABLE_ITEM_STATUSES.has(item.status);
+}
+
+function RepairBatchItemAction({ item }: { item: CatalogRepairBatchItem }) {
+  if (!canRetryRepairBatchItem(item)) return <span className="muted">Inspect</span>;
+
+  return (
+    <form action={`/repair-batches/${encodeURIComponent(item.batchId)}/actions`} method="post">
+      <input type="hidden" name="action" value="retry_item" />
+      <input type="hidden" name="batch_id" value={item.batchId} />
+      <input type="hidden" name="item_id" value={item.id} />
+      <input
+        type="hidden"
+        name="return_to"
+        value={`/repair-batches/${encodeURIComponent(item.batchId)}?status=needs_review`}
+      />
+      <button className="button small secondary" type="submit">
+        Retry item
+      </button>
+    </form>
+  );
+}
+
 export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[] }) {
   if (items.length === 0) {
     return (
-      <tr>
-        <td colSpan={10} className="empty">
-          No item rows were recorded for this repair batch.
-        </td>
-      </tr>
+      <TableEmptyRow colSpan={11}>No item rows were recorded for this repair batch.</TableEmptyRow>
     );
   }
 
@@ -73,6 +99,9 @@ export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[]
               </div>
             </td>
             <td>{formatBackofficeDateTime(item.updatedAt)}</td>
+            <td>
+              <RepairBatchItemAction item={item} />
+            </td>
           </tr>
         );
       })}
@@ -123,9 +152,7 @@ export function RepairBatchSummary({ batch }: { batch: CatalogRepairBatch }) {
 export function RepairBatchContextPanel({ batch }: { batch: CatalogRepairBatch }) {
   return (
     <article className="panel">
-      <div className="panel-header">
-        <h2>Batch context</h2>
-      </div>
+      <PanelHeader title="Batch context" />
       <dl className="facts">
         <div>
           <dt>Action</dt>
@@ -163,9 +190,7 @@ export function RepairBatchContextPanel({ batch }: { batch: CatalogRepairBatch }
 export function RepairBatchItemStatusCountsPanel({ batch }: { batch: CatalogRepairBatch }) {
   return (
     <article className="panel">
-      <div className="panel-header">
-        <h2>Item status counts</h2>
-      </div>
+      <PanelHeader title="Item status counts" />
       <dl className="facts">
         <div>
           <dt>Accepted</dt>

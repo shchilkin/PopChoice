@@ -8,7 +8,15 @@ import type {
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { formatPercent } from '../shared';
-import { canApplyCandidate, getCandidateWarning, isCurrentCandidate } from './helpers';
+import { ReviewActionSubmitButton } from './actionSubmitButton';
+import { AuditRows } from './auditRows';
+import {
+  buildReviewPageHref,
+  canApplyCandidate,
+  getCandidateWarning,
+  getReviewRiskSummary,
+  isCurrentCandidate,
+} from './helpers';
 import {
   ConfidenceMeter,
   CurrentTMDBValue,
@@ -75,54 +83,23 @@ function CandidateCard({
             Decision note
             <input name="note" maxLength={500} placeholder="Why this candidate is correct" />
           </label>
-          <button className="button success" type="submit">
-            Apply candidate
-          </button>
+          <ReviewActionSubmitButton
+            buttonClass="success"
+            label="Apply candidate"
+            pendingLabel="Applying..."
+          />
+          <ReviewActionSubmitButton
+            buttonClass="secondary"
+            label="Apply + next"
+            name="next_review"
+            pendingLabel="Applying..."
+            value="1"
+          />
         </form>
       ) : (
         <p className="muted">This candidate cannot be applied from the current review state.</p>
       )}
     </article>
-  );
-}
-
-function AuditRows({ audit }: { audit: TMDBMatchReviewActionAudit[] }) {
-  if (audit.length === 0) return <p className="empty">No decisions have been recorded yet.</p>;
-
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th>When</th>
-          <th>Actor</th>
-          <th>Action</th>
-          <th>Status</th>
-          <th>Candidate</th>
-          <th>Note</th>
-        </tr>
-      </thead>
-      <tbody>
-        {audit.map((entry) => (
-          <tr key={entry.id}>
-            <td>{formatBackofficeDateTime(entry.createdAt)}</td>
-            <td>{entry.actor}</td>
-            <td>{entry.action.replaceAll('_', ' ')}</td>
-            <td>
-              {entry.previousStatus ? (
-                <StatusBadge status={entry.previousStatus} />
-              ) : (
-                <span className="data-pill neutral">-</span>
-              )}{' '}
-              <StatusBadge status={entry.newStatus} />
-            </td>
-            <td>
-              {entry.candidate?.id ?? '-'} {entry.candidate ? entry.candidate.title : ''}
-            </td>
-            <td>{entry.note ?? '-'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }
 
@@ -174,9 +151,22 @@ function StatusActionForm({
           Decision note
           <input name="note" maxLength={500} placeholder="Optional rationale" disabled={disabled} />
         </label>
-        <button className={`button ${details.buttonClass}`} type="submit" disabled={disabled}>
-          {label}
-        </button>
+        <ReviewActionSubmitButton
+          buttonClass={details.buttonClass}
+          disabled={disabled}
+          label={label}
+          pendingLabel="Saving..."
+        />
+        {action === 'reopen' ? null : (
+          <ReviewActionSubmitButton
+            buttonClass="secondary"
+            disabled={disabled}
+            label={`${label} + next`}
+            name="next_review"
+            pendingLabel="Saving..."
+            value="1"
+          />
+        )}
       </form>
     </article>
   );
@@ -189,6 +179,13 @@ export function ReviewDetailPage({
   review: TMDBMatchReview;
   audit: TMDBMatchReviewActionAudit[];
 }) {
+  const riskSummary = getReviewRiskSummary(review);
+  const openQueueHref = buildReviewPageHref({
+    filters: { reason: 'all', sort: 'highest_risk', status: 'open' },
+    page: 1,
+    pageSize: 25,
+  });
+
   return (
     <BackofficeLayout
       active="reviews"
@@ -202,9 +199,14 @@ export function ReviewDetailPage({
         </div>
       }
       actions={
-        <a className="button" href="/tmdb-reviews">
-          Back to queue
-        </a>
+        <>
+          <a className="button" href={openQueueHref}>
+            Next open
+          </a>
+          <a className="button quiet" href="/tmdb-reviews">
+            Back to queue
+          </a>
+        </>
       }
     >
       <section className="detail-grid">
@@ -267,6 +269,22 @@ export function ReviewDetailPage({
               refreshes.
             </p>
           </div>
+        </article>
+        <article className={`panel review-risk ${riskSummary.level}`}>
+          <div className="panel-header">
+            <div>
+              <h2>{riskSummary.title}</h2>
+              <div className="issue-hint">Decision context before changing TMDB identity.</div>
+            </div>
+            <span className={`pill ${riskSummary.level === 'low' ? 'good' : 'warning'}`}>
+              {riskSummary.level}
+            </span>
+          </div>
+          <ul className="evidence-list">
+            {riskSummary.items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </article>
       </section>
       <section className="panel">

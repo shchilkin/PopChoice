@@ -18,7 +18,6 @@ type ReviewActionContext = {
 
 export async function POST(request: NextRequest, context: ReviewActionContext) {
   const { id } = await context.params;
-  const reviewPath = `/tmdb-reviews/${encodeURIComponent(id)}`;
 
   try {
     if (!isSameOriginRequest(request)) {
@@ -35,7 +34,7 @@ export async function POST(request: NextRequest, context: ReviewActionContext) {
     }
 
     const formData = await request.formData();
-    await applyTMDBReviewFormAction(id, formData, request.headers);
+    const result = await applyTMDBReviewFormAction(id, formData, request.headers);
 
     if (wantsBackofficeJsonResponse(request)) {
       return NextResponse.json({
@@ -43,11 +42,12 @@ export async function POST(request: NextRequest, context: ReviewActionContext) {
         status: 'applied',
         message: 'Review action applied.',
         reviewId: id,
-        redirectTo: reviewPath,
+        action: result.action,
+        redirectTo: result.redirectTo,
       });
     }
 
-    return NextResponse.redirect(new URL(reviewPath, request.url), 303);
+    return NextResponse.redirect(new URL(result.redirectTo, request.url), 303);
   } catch (error) {
     logBackofficeError('Failed to apply TMDB match review action', error);
     const status = getBackofficeErrorStatus(error);

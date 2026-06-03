@@ -1,25 +1,27 @@
 import type { CatalogMovieDetail, CatalogMovieDetailTMDBReview } from '@pop-choice/shared';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
-import { formatDuration, formatTMDBMetadataValue } from '../shared';
+import {
+  EmptyState,
+  PanelHeader,
+  TableScroll,
+  formatDuration,
+  formatTMDBMetadataValue,
+} from '../shared';
 import { ReasonBadge, StatusBadge } from '../tmdb-reviews/reviewPresentation';
 
 export function RelatedReviewsPanel({ reviews }: { reviews: CatalogMovieDetailTMDBReview[] }) {
   return (
     <section className="panel">
-      <div className="panel-header">
-        <div>
-          <h2>Related TMDB reviews</h2>
-          <div className="issue-hint">
-            Open or historical identity review rows tied to this movie.
-          </div>
-        </div>
-        <span className="count">{reviews.length}</span>
-      </div>
+      <PanelHeader
+        title="Related TMDB reviews"
+        hint="Open or historical identity review rows tied to this movie."
+        count={reviews.length}
+      />
       {reviews.length === 0 ? (
-        <p className="empty">No TMDB review rows are attached to this movie.</p>
+        <EmptyState>No TMDB review rows are attached to this movie.</EmptyState>
       ) : (
-        <div className="table-scroll">
+        <TableScroll>
           <table>
             <thead>
               <tr>
@@ -50,7 +52,7 @@ export function RelatedReviewsPanel({ reviews }: { reviews: CatalogMovieDetailTM
               ))}
             </tbody>
           </table>
-        </div>
+        </TableScroll>
       )}
     </section>
   );
@@ -61,9 +63,7 @@ export function LocalFactsPanel({ detail }: { detail: CatalogMovieDetail }) {
 
   return (
     <article className="panel">
-      <div className="panel-header">
-        <h2>Local facts</h2>
-      </div>
+      <PanelHeader title="Local facts" />
       <dl className="facts">
         <div>
           <dt>Local id</dt>
@@ -108,9 +108,7 @@ export function MetadataOverviewPanel({ detail }: { detail: CatalogMovieDetail }
 
   return (
     <article className="panel">
-      <div className="panel-header">
-        <h2>TMDB metadata overview</h2>
-      </div>
+      <PanelHeader title="TMDB metadata overview" />
       <dl className="facts">
         <div>
           <dt>Original title</dt>
