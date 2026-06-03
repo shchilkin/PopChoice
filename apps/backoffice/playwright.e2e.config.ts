@@ -1,4 +1,5 @@
 import { defineConfig, devices } from 'playwright/test';
+import { fileURLToPath } from 'node:url';
 
 const e2ePort = Number.parseInt(process.env.E2E_BACKOFFICE_PORT ?? '3101', 10);
 const baseURL = process.env.E2E_BACKOFFICE_BASE_URL ?? `http://127.0.0.1:${e2ePort}`;
@@ -6,6 +7,7 @@ const databaseUrl =
   process.env.E2E_DATABASE_URL ?? 'postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e';
 const redisUrl = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:56379';
 const operatorCredentials = Buffer.from('e2e-operator:e2e-operator-secret').toString('base64');
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 export default defineConfig({
   testDir: './e2e',
@@ -31,7 +33,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: `PORT=${e2ePort} npm run dev -- --hostname 127.0.0.1`,
+    command: `npm run build --workspace=packages/shared && PORT=${e2ePort} npm run dev --workspace=apps/backoffice -- --hostname 127.0.0.1`,
+    cwd: repoRoot,
     url: `${baseURL}/healthz`,
     reuseExistingServer: false,
     timeout: 120_000,
