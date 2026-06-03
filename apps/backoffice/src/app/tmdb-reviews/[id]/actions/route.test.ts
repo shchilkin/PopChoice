@@ -40,11 +40,11 @@ function createReviewRequest({
 } = {}) {
   return createBackofficeFormRequest({
     accept,
+    fetch: requestedWith === 'fetch',
     fields: {
       action: 'apply_candidate',
       candidate_id: '12',
     },
-    requestedWith,
     url: 'https://backoffice.test/tmdb-reviews/review-1/actions',
   });
 }
@@ -52,6 +52,11 @@ function createReviewRequest({
 describe('TMDB review action route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.applyTMDBReviewFormAction.mockResolvedValue({
+      action: 'apply_candidate',
+      redirectTo: '/tmdb-reviews/review-1',
+      review: { id: 'review-1' },
+    });
     mocks.getBackofficeErrorStatus.mockReturnValue(500);
     mocks.isSameOriginRequest.mockReturnValue(true);
     mocks.wantsBackofficeJsonResponse.mockImplementation((request: Request) => {
@@ -124,6 +129,7 @@ describe('TMDB review action route', () => {
         ok: true,
         status: 'applied',
         message: 'Review action applied.',
+        action: 'apply_candidate',
         reviewId: 'review-1',
         redirectTo: '/tmdb-reviews/review-1',
       },

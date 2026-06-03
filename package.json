@@ -18,6 +18,7 @@
     "catalog:backfill:enqueue": "npm run enqueue:catalog-maintenance --workspace=apps/web -- backfill",
     "catalog:discovery:enqueue": "npm run enqueue:catalog-maintenance --workspace=apps/web -- discovery",
     "catalog:health": "npm run catalog:health --workspace=movie-backfill",
+    "check:backoffice": "npm run build --workspace=packages/shared && npm run quality:backoffice && npm run type-check --workspace=apps/backoffice && npm run test --workspace=apps/backoffice",
     "cleanup:local-db": "bash scripts/cleanup-local-db.sh",
     "copy:env": "bash scripts/copy-env.sh",
     "dev": "npm run dev --workspace=apps/web",

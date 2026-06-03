@@ -288,6 +288,7 @@ npm run build:bull-board            # Build Bull Board runtime entrypoint
 npm run build:docs                  # Build the documentation site
 npm run build:backoffice            # Build the backoffice app
 npm run build:storybook             # Build static Storybook
+npm run check:backoffice            # Shared build + backoffice structure/type/test checks
 npm run start --workspace=apps/web  # Start production server (apps/web)
 cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
 cd apps/web && npm run bull-board    # Launch BullMQ dashboard (apps/web)
