@@ -4,9 +4,11 @@ import {
   CATALOG_MAINTENANCE_QUEUE_NAME,
   MORE_PICKS_QUEUE_NAME,
   MOVIE_SEED_QUEUE_NAME,
+  RECOMMENDATION_EVAL_QUEUE_NAME,
   RECOMMENDATION_QUEUE_NAME,
   catalogMaintenanceQueue,
   morePicksQueue,
+  recommendationEvalQueue,
   recommendationQueue,
   seedQueue,
 } from '@/lib/jobQueue';
@@ -33,6 +35,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     { name: RECOMMENDATION_QUEUE_NAME, queue: recommendationQueue },
     { name: MORE_PICKS_QUEUE_NAME, queue: morePicksQueue },
     { name: CATALOG_MAINTENANCE_QUEUE_NAME, queue: catalogMaintenanceQueue },
+    { name: RECOMMENDATION_EVAL_QUEUE_NAME, queue: recommendationEvalQueue },
   ]);
 
   return new Response(body, {

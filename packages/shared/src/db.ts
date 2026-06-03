@@ -2,6 +2,7 @@ import pg from 'pg';
 
 import { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 import { logger } from './logger.js';
+import { RECOMMENDATION_EVAL_RUN_SCHEMA_SQL } from './recommendationEvalSchema.js';
 
 const { Pool } = pg;
 
@@ -480,6 +481,8 @@ export async function ensureSchema(): Promise<void> {
 
     ${CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL}
   `);
+
+  await getPool().query(RECOMMENDATION_EVAL_RUN_SCHEMA_SQL);
 
   await getPool().query(`
     DROP FUNCTION IF EXISTS match_movies(vector, float, int);

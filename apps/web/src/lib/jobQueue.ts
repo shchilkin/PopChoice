@@ -17,6 +17,7 @@ export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 export const RECOMMENDATION_QUEUE_NAME = 'recommendation';
 export const MORE_PICKS_QUEUE_NAME = 'more-picks';
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
+export const RECOMMENDATION_EVAL_QUEUE_NAME = 'recommendation-evals';
 
 export const CATALOG_MAINTENANCE_JOB_NAMES = {
   discoverTMDBSourcePage: 'discover-tmdb-source-page',
@@ -27,6 +28,13 @@ export const CATALOG_MAINTENANCE_JOB_NAMES = {
 
 export type CatalogMaintenanceJobName =
   (typeof CATALOG_MAINTENANCE_JOB_NAMES)[keyof typeof CATALOG_MAINTENANCE_JOB_NAMES];
+
+export const RECOMMENDATION_EVAL_JOB_NAMES = {
+  runRecommendationEval: 'run-recommendation-eval',
+} as const;
+
+export type RecommendationEvalJobName =
+  (typeof RECOMMENDATION_EVAL_JOB_NAMES)[keyof typeof RECOMMENDATION_EVAL_JOB_NAMES];
 
 export type TMDBCatalogCandidate = {
   id: number;
@@ -61,6 +69,13 @@ export type MorePicksJobData = {
   recommendationId: string; // internal UUID
   slug: string; // public slug (for logging)
   locale: Locale;
+  trace?: TraceCarrier;
+};
+
+export type RecommendationEvalJobData = {
+  version: 1;
+  runId: string;
+  mode: 'mock' | 'real-data' | 'live';
   trace?: TraceCarrier;
 };
 
@@ -133,6 +148,14 @@ export const CATALOG_MAINTENANCE_JOB_OPTIONS = {
   removeOnFail: 200,
 };
 
+export const RECOMMENDATION_EVAL_JOB_OPTIONS = {
+  attempts: 2,
+  backoff: { type: 'exponential' as const, delay: 3000 },
+  removeOnComplete: 100,
+  removeOnFail: 100,
+  timeout: 120_000,
+};
+
 let bullMQConnection: IORedis | null = null;
 
 export function createBullMQConnection(): IORedis | null {
@@ -190,12 +213,20 @@ export const catalogMaintenanceQueue = queueConnection
     )
   : null;
 
+export const recommendationEvalQueue = queueConnection
+  ? new Queue<RecommendationEvalJobData, void, RecommendationEvalJobName>(
+      RECOMMENDATION_EVAL_QUEUE_NAME,
+      { connection: queueConnection },
+    )
+  : null;
+
 export async function closeBullMQQueues(): Promise<void> {
   await Promise.all([
     seedQueue?.close(),
     recommendationQueue?.close(),
     morePicksQueue?.close(),
     catalogMaintenanceQueue?.close(),
+    recommendationEvalQueue?.close(),
   ]);
   if (bullMQConnection) {
     const connection = bullMQConnection;

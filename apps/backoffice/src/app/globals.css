@@ -937,6 +937,29 @@ input:disabled {
   color: var(--bad);
   background: var(--bad-soft);
 }
+.eval-status {
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.eval-completed,
+.eval-result-passed {
+  color: var(--good);
+  background: var(--good-soft);
+}
+.eval-pending,
+.eval-processing,
+.eval-queued {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+.eval-canceled,
+.eval-enqueue_failed,
+.eval-failed,
+.eval-result-error,
+.eval-result-failed {
+  color: var(--bad);
+  background: var(--bad-soft);
+}
 .pill.reason-runtime {
   color: var(--bad);
   background: var(--bad-soft);
@@ -1226,6 +1249,9 @@ input:disabled {
 .repair-batch-table {
   min-width: 1120px;
 }
+.recommendation-eval-table {
+  min-width: 960px;
+}
 .repair-counts {
   display: flex;
   gap: 6px;
@@ -1243,6 +1269,45 @@ input:disabled {
 }
 .batch-summary {
   margin-top: 0;
+}
+.inline-action-form {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.eval-action-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.3fr);
+  gap: 18px;
+  align-items: start;
+}
+.inline-action-form label,
+.live-eval-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.inline-action-form select {
+  min-width: 220px;
+}
+.live-eval-form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--bad), var(--border) 45%);
+  border-radius: 8px;
+  background: rgba(255, 95, 86, 0.06);
+}
+.checkbox-line {
+  display: flex !important;
+  align-items: center;
+  gap: 8px !important;
+}
+.checkbox-line input {
+  width: auto;
 }
 .triage-panel {
   border-color: color-mix(in srgb, var(--accent), var(--border) 55%);
@@ -1680,6 +1745,9 @@ input:disabled {
   .bulk-repair-form {
     align-items: stretch;
     flex-direction: column;
+  }
+  .eval-action-grid {
+    grid-template-columns: 1fr;
   }
   .operator-badge {
     width: fit-content;

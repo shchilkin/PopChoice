@@ -167,7 +167,8 @@ The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
 - `REDIS_URL` for catalog-health repair actions because they enqueue
-  `catalog-maintenance` jobs rather than mutating catalog rows inline;
+  `catalog-maintenance` jobs rather than mutating catalog rows inline, and for
+  recommendation eval actions because they enqueue `recommendation-evals` jobs;
 - `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
   operator routes locally;
 - `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
@@ -308,6 +309,26 @@ previous status, new status, selected candidate, optional note, and timestamp.
 If a bad manual decision is made, reopen the review, correct the movie row via a
 safe migration/manual SQL change, and rerun the relevant backfill/discovery job
 so richer metadata can be refreshed consistently.
+
+## Recommendation Eval Workflow
+
+The `Recommendation evals` page gives operators a durable way to run the same
+quality gates that protect recommendation changes:
+
+- `mock` runs deterministic fixtures and mocked model output, matching the
+  default CI gate;
+- `real-data` uses real catalog retrieval while keeping model output
+  controlled, so it is useful after seed, backfill, metadata, retrieval, or
+  candidate-availability changes;
+- `live` is guarded by a cost acknowledgement checkbox and exact confirmation
+  phrase because it can spend provider credits and depends on live OpenAI/TMDB
+  behavior.
+
+Each action creates a `recommendation_eval_runs` row, enqueues a
+`recommendation-evals` BullMQ job, and leaves processing to the web workers.
+Completed runs store the report summary and per-case rows in
+`recommendation_eval_results`, so operators can inspect failures without
+recovering transient worker logs or local JSON artifacts.
 
 ## Visual QA Checklist
 

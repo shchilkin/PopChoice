@@ -92,6 +92,7 @@ const seedQueue = new Queue('movie-seed', { connection });
 const catalogMaintenanceQueue = new Queue('catalog-maintenance', { connection });
 const recommendationQueue = new Queue('recommendation', { connection });
 const morePicksQueue = new Queue('more-picks', { connection });
+const recommendationEvalQueue = new Queue('recommendation-evals', { connection });
 
 const serverAdapter = new ExpressAdapter();
 serverAdapter.setBasePath('/');
@@ -111,6 +112,7 @@ createBullBoard({
     new BullMQAdapter(catalogMaintenanceQueue),
     new BullMQAdapter(recommendationQueue),
     new BullMQAdapter(morePicksQueue),
+    new BullMQAdapter(recommendationEvalQueue),
   ],
   serverAdapter,
 });

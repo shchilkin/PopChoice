@@ -51,16 +51,17 @@ Browser → POST /api/recommendations/[id]/more-picks
 
 ### Queue names
 
-| Queue                 | Worker file                                            | Job data                                                         |
-| --------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
-| `recommendation`      | `apps/web/src/lib/workers/recommendationWorker.ts`     | `recommendationId`, `quizData`, `locale`                         |
-| `more-picks`          | `apps/web/src/lib/workers/morePicksWorker.ts`          | `recommendationId`, `slug`, `locale`                             |
-| `movie-seed`          | `apps/web/src/lib/workers/movieSeedWorker.ts`          | `tmdbMovies`, `localKeys`                                        |
-| `catalog-maintenance` | `apps/web/src/lib/workers/catalogMaintenanceWorker.ts` | `discover-tmdb-source-page`, `seed-tmdb-movie`, `backfill-movie` |
+| Queue                  | Worker file                                            | Job data                                                         |
+| ---------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `recommendation`       | `apps/web/src/lib/workers/recommendationWorker.ts`     | `recommendationId`, `quizData`, `locale`                         |
+| `more-picks`           | `apps/web/src/lib/workers/morePicksWorker.ts`          | `recommendationId`, `slug`, `locale`                             |
+| `movie-seed`           | `apps/web/src/lib/workers/movieSeedWorker.ts`          | `tmdbMovies`, `localKeys`                                        |
+| `catalog-maintenance`  | `apps/web/src/lib/workers/catalogMaintenanceWorker.ts` | `discover-tmdb-source-page`, `seed-tmdb-movie`, `backfill-movie` |
+| `recommendation-evals` | `apps/web/src/lib/workers/recommendationEvalWorker.ts` | `runId`, `mode`, `requestedBy`, `source`                         |
 
 ### Graceful degradation
 
-When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. Queue-backed recommendation creation requires Redis; the worker process and BullMQ queues are disabled without it.
+When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. Queue-backed recommendation creation and backoffice recommendation eval runs require Redis; the worker process and BullMQ queues are disabled without it.
 
 ### Starting workers
 
@@ -341,6 +342,14 @@ statuses start as `pending` and move to `queued`, `deduped`, `unavailable`, or
 `enqueue_failed`; workers then move repair jobs through `processing`,
 `completed`, `skipped`, or final `failed`. Use these tables for operator history
 instead of relying on retained BullMQ jobs.
+
+The backoffice also exposes recommendation eval operations. The
+`/recommendation-evals` page can queue deterministic mock and real-data evals,
+stores run metadata in `recommendation_eval_runs`, stores each fixture result in
+`recommendation_eval_results`, and uses the web worker `recommendation-evals`
+queue for processing. Live-provider evals are available only through an
+explicit cost acknowledgement and confirmation phrase because they can spend
+provider credits and depend on live OpenAI/TMDB behavior.
 
 Useful options:
 

@@ -23,6 +23,10 @@
     "./tmdbMatchReviews": {
       "types": "./dist/tmdbMatchReviews.d.ts",
       "default": "./dist/tmdbMatchReviews.js"
+    },
+    "./recommendationEvalRuns": {
+      "types": "./dist/recommendationEvalRuns.d.ts",
+      "default": "./dist/recommendationEvalRuns.js"
     }
   },
   "scripts": {

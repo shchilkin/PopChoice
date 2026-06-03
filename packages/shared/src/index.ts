@@ -155,3 +155,30 @@ export type {
   TMDBReviewCandidate,
   TMDBReviewMovieSnapshot,
 } from './tmdbMatchReviews.js';
+export { RECOMMENDATION_EVAL_RUN_SCHEMA_SQL } from './recommendationEvalSchema.js';
+export {
+  completeRecommendationEvalRun,
+  createRecommendationEvalRun,
+  ensureRecommendationEvalRunSchema,
+  failRecommendationEvalRun,
+  getRecommendationEvalRunDetail,
+  listRecommendationEvalRunPage,
+  markRecommendationEvalRunProcessing,
+  markRecommendationEvalRunQueued,
+} from './recommendationEvalRuns.js';
+export type {
+  CompleteRecommendationEvalRunInput,
+  CompleteRecommendationEvalRunResultInput,
+  CreateRecommendationEvalRunInput,
+  FailRecommendationEvalRunInput,
+  ListRecommendationEvalRunPageOptions,
+  MarkRecommendationEvalRunQueuedInput,
+  RecommendationEvalResult,
+  RecommendationEvalResultStatus,
+  RecommendationEvalRun,
+  RecommendationEvalRunDetail,
+  RecommendationEvalRunMode,
+  RecommendationEvalRunPage,
+  RecommendationEvalRunSource,
+  RecommendationEvalRunStatus,
+} from './recommendationEvalRuns.js';
