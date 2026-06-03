@@ -37,7 +37,7 @@ export const fi: Translations = {
   },
   features: {
     headline: 'Ei suodatin. Täsmäys.',
-    subheadline: 'Tunnelma, rytmi, tyyli — koodattuna 5 kysymykseen, haettuna tekoälyllä.',
+    subheadline: 'Tunnelma, rytmi, tyyli — koodattuna lyhyeen kyselyyn, haettuna tekoälyllä.',
     aiPowered: {
       title: 'Maku, ei tagit',
       desc: 'Vastauksistasi muodostuu makuprofiili, jota verrataan ennalta analysoituihin elokuviin tunteen, rytmin ja tyylin perusteella — ei genrelaatikoihin.',
@@ -59,25 +59,52 @@ export const fi: Translations = {
   cta: {
     headline: 'Oikea elokuva löytyy sieltä. Anna tekoälyn etsiä se.',
     description:
-      '60 sekuntia, 5 kysymystä. Toimii sekä yksin katsomiseen että ryhmän elokuvaväittelyn ratkaisemiseen.',
+      'Lyhyt ohjattu kysely. Toimii sekä yksin katsomiseen että ryhmän elokuvaväittelyn ratkaisemiseen.',
     button: 'Löydä elokuvani',
   },
   quiz: {
     intro: {
       title: 'Löydetään sinulle elokuva',
-      subtitle: 'Katsotko yksin vai muiden kanssa?',
+      subtitle: 'Valitse pikavalinta, soolohaku tai ryhmäilta.',
+      fastPickTitle: 'Pikavalinta',
+      fastPickDesc: 'Lyhyt reitti listaan yksin tai ryhmälle',
       soloTitle: 'Vain minä',
       soloDesc: 'Sooloelokuvailta — personoitu juuri sinulle',
+      duoTitle: 'Kahdestaan',
+      duoDesc: 'Kaksi makua, yksi tasapainoinen valinta',
       groupTitle: 'Ryhmätila 🎉',
-      groupDesc: 'Jokainen vastaa itse — yksi laite, 2–6 henkilöä',
+      groupDesc: 'Jokainen vastaa itse — yksi laite, 3–6 henkilöä',
       youLabel: 'Sinä',
+    },
+    fastAudience: {
+      title: 'Kenelle pikavalinta?',
+      subtitle: 'Valitse yleisö ensin, sitten kolme nopeaa kierrosta.',
+      soloTitle: 'Vain minä',
+      soloDesc: 'Kolme nopeaa signaalia ja oma suosikkilista',
+      duoTitle: 'Kaksi henkilöä',
+      duoDesc: 'Nopea kompromissi parille',
+      groupTitle: 'Ryhmä',
+      groupDesc: 'Kolmesta kuuteen henkilöä antaa nopeat signaalit samalla laitteella',
+      back: 'Takaisin',
+    },
+    duoSetup: {
+      title: 'Ketkä valitsevat?',
+      subtitle: 'Lisää molemmat nimet, jotta PopChoice tasapainottaa kaksi makua',
+      personPlaceholder: 'Henkilön {n} nimi',
+      addPerson: 'Lisää henkilö',
+      twoNamesHint: 'Lisää molemmat nimet aloittaaksesi Duo-tilan.',
+      countLabel: '{count}/2 paikkaa täytetty',
+      orderTitle: 'Duo-järjestys',
+      orderHint: 'Anna laite kerran eteenpäin',
+      back: 'Takaisin',
+      letsGo: 'Aloita Duo',
     },
     groupSetup: {
       title: 'Kuka katsoo?',
       subtitle: 'Lisää kaikkien nimet, jotta voimme personoida tuloksesi',
       personPlaceholder: 'Henkilön {n} nimi',
       addPerson: 'Lisää henkilö',
-      twoNamesHint: 'Lisää vähintään kaksi nimeä aloittaaksesi ryhmätilan.',
+      twoNamesHint: 'Lisää vähintään kolme nimeä aloittaaksesi ryhmätilan.',
       countLabel: '{count}/6 paikkaa täytetty',
       orderTitle: 'Vuorojärjestys',
       orderHint: 'Anna laite tässä järjestyksessä',
@@ -100,7 +127,50 @@ export const fi: Translations = {
       ofTotal: '{current} / {total}',
       personTurn: '{name}n vuoro',
     },
-    labels: ['Vertailukohta', 'Hakusuunta', 'Illan fiilis', 'Energia', 'Näyttelijä'],
+    labels: [
+      'Vertailukohta',
+      'Hakusuunta',
+      'Illan fiilis',
+      'Energia',
+      'Ehdottomat ei:t',
+      'Näyttelijä',
+    ],
+    fast: {
+      labels: ['Illan fiilis', 'Ehdottomat ei:t', 'Löytöhalu'],
+      intent: {
+        title: 'Millainen ilta?',
+        hint: 'Valitse enintään 3',
+        options: {
+          easy: 'Helppo',
+          funny: 'Hauska',
+          gripping: 'Koukuttava',
+          emotional: 'Tunteikas',
+          weird: 'Outo',
+          cozy: 'Kodikas',
+          dark: 'Tumma',
+        },
+      },
+      avoids: {
+        title: 'Mitä vältetään?',
+        hint: 'Valinnainen',
+        options: {
+          horror: 'Kauhu',
+          gore: 'Raakuus',
+          slow: 'Hidas tempo',
+          subtitles: 'Tekstitykset',
+          long: 'Pitkä kesto',
+          alreadySeen: 'Jo nähdyt',
+        },
+      },
+      discovery: {
+        title: 'Kuinka rohkea haku?',
+        options: {
+          safe: { title: 'Varma hitti', desc: 'Tuttu, luotettava ja helppo hyväksyä' },
+          balanced: { title: 'Tasapaino', desc: 'Hyvä osuma pienellä löytämisen tunteella' },
+          surprise: { title: 'Yllätä minut', desc: 'Vähemmän ilmeinen, mutta yhä kohdillaan' },
+        },
+      },
+    },
     favoriteMovie: {
       title: 'Anna vertailukohta',
       hint: 'Nimeä elokuva oikeaan suuntaan tai ohita tämä, jos haluat tuoreemman haun.',
@@ -213,10 +283,13 @@ export const fi: Translations = {
   },
   results: {
     badge: 'Henkilökohtaiset suosituksesi',
+    duoBadge: 'Kahden valinta',
     groupBadge: 'Ryhmän valinta',
     title: 'Löysimme täydellisen elokuvasi',
+    duoTitle: 'Löysimme teille kahdelle elokuvan',
     groupTitle: 'Löysimme ryhmällenne elokuvan',
     subtitle: 'Sovitettu {count} elokuvasta juuri sinulle',
+    duoSubtitle: 'Tasapainotettu kahdelle {count} elokuvasta',
     groupSubtitle: 'Tasapainotettu {people} henkilön maun mukaan {count} elokuvasta',
     topPick: 'Paras valinta',
     moreSuggestions: 'Lisää ehdotuksia',
@@ -264,6 +337,8 @@ export const fi: Translations = {
       '{name} nousi kärkeen, koska se osuu tunnelmaasi, sävyysi ja aikakauteen, ei vain yhteen genreen.',
     soloDecisionNoteWithActor:
       '{name} nousi kärkeen, koska se osuu tunnelmaasi, sävyysi, aikakauteen ja lempinäyttelijän vihjeeseen, ei vain yhteen genreen.',
+    duoDecisionNote:
+      '{name} voitti vahvimpana kahden hengen kompromissina, jossa huomioidaan yhteiset osumat ja ehdottomat vältettävät asiat.',
     groupDecisionNote:
       '{name} nousi katsottavimmaksi yhteiseksi valinnaksi {people} henkilölle, tasapainottaen yhteisen tunnelman, sävyn ja aikakauden.',
     expandedDecisionNote: 'PopChoice laajensi hakua TMDB:n kautta, jotta osuma pysyy vahvana.',
@@ -300,11 +375,11 @@ export const fi: Translations = {
     sourceCodeLink: 'täällä',
     whatItDoesLabel: 'Mitä se tekee',
     whatItDoesDescription:
-      'PopChoice tarjoaa 5 kysymyksen makutestin — lempifilmi, suosittu aikakausi, nykyinen tunnelma, sävy ja lempinäyttelijä — ja muuntaa vastauksesi vektorirepresentaatioksi OpenAI-rajapinnan avulla. Tätä vertaillaan yli 400 ennalta analysoituun elokuvaan PostgreSQL:ssä pgvector-laajennuksella. Jos paikallisesta kokoelmasta ei löydy laadukasta vastaavuutta, järjestelmä laajentaa hakua automaattisesti TMDb-tietokantaan. Läheisimmät vastaavuudet esitetään suosituksina, joista jokaiselle on GPT:n luoma selitys siitä, miksi se sopii juuri sinulle. Genre on vain yksi ulottuvuus — järjestelmä tunnistaa myös elokuvallisen tyylin, kerronnallisen monimutkaisuuden ja tunnesävyn.',
+      'PopChoice tarjoaa ohjatun makukyselyn — vertailuelokuvat, aikakauden, nykyisen tunnelman, sävyn, ehdottomat ei:t ja näyttelijävihjeet — ja muuntaa vastauksesi vektorirepresentaatioksi OpenAI-rajapinnan avulla. Tätä vertaillaan yli 400 ennalta analysoituun elokuvaan PostgreSQL:ssä pgvector-laajennuksella. Jos paikallisesta kokoelmasta ei löydy laadukasta vastaavuutta, järjestelmä laajentaa hakua automaattisesti TMDb-tietokantaan. Läheisimmät vastaavuudet esitetään suosituksina, joista jokaiselle on GPT:n luoma selitys siitä, miksi se sopii juuri sinulle. Genre on vain yksi ulottuvuus — järjestelmä tunnistaa myös elokuvallisen tyylin, kerronnallisen monimutkaisuuden ja tunnesävyn.',
     backgroundNote:
       'Kaikki tämä tapahtuu taustalla. Sinulle näkyy: 60 sekunnin testi ja elokuva, jota kannattaa katsoa.',
     ctaTitle: 'Valmis löytämään tämän illan elokuvan?',
-    ctaSubtitle: '60 sekuntia. 5 kysymystä. Täydellinen elokuva.',
+    ctaSubtitle: 'Lyhyt kysely. Täydellinen elokuva.',
     ctaButton: 'Aloita testi',
     howItWorks: {
       title: 'Prosessi',
@@ -409,7 +484,7 @@ export const fi: Translations = {
         },
         {
           q: 'Miten ryhmätila toimii?',
-          a: 'Jokainen ryhmän jäsen täyttää 5 kysymyksen testin samalla laitteella. PopChoice löytää sitten elokuvia, jotka sopivat kaikkien makuun — kompromissi, joka yllättävän hyvin toimii.',
+          a: 'Jokainen ryhmän jäsen täyttää ohjatun kyselyn samalla laitteella. PopChoice löytää sitten elokuvia, jotka sopivat kaikkien makuun — kompromissi, joka yllättävän hyvin toimii.',
         },
         {
           q: 'Kuinka tarkkoja suositukset ovat?',
@@ -453,7 +528,7 @@ export const fi: Translations = {
             name: 'XState',
             role: 'Tilanhallinta',
             rationale:
-              '5 kysymyksen testi on mallinnettu formaaliksi tilakoneeksi. Tämä estää laittomia tilasiirtymiä ja tarjoaa selkeän, ennustettavan kulun monimutkaiselle haarautumislogiikalle.',
+              'Ohjattu kysely on mallinnettu formaaliksi tilakoneeksi. Tämä estää laittomia tilasiirtymiä ja tarjoaa selkeän, ennustettavan kulun monimutkaiselle haarautumislogiikalle.',
             detail:
               '@xstate/react:n käyttö mahdollistaa UI:n reagoinnin koneen tilamuutoksiin, käsitellen lataustilat ja siirtymät ilman yhtäkään "if (loading)" spagettikoodia.',
           },
@@ -803,7 +878,7 @@ export const fi: Translations = {
         'FeatureCard — tasainen levossa, ikoni sävy color-arvolle, pinta var(--pc-surface)',
       featureAiTitle: 'Tekoälypohjainen',
       featureAiDesc: 'Käyttää OpenAI-vektoreita älykkäisiin suosituksiin',
-      featureQuestionsTitle: '5 kysymystä',
+      featureQuestionsTitle: 'Lyhyt kysely',
       featureQuestionsDesc: 'Vastaa lyhyeen tietokilpailuun personoituja ehdotuksia varten',
       featureGroupTitle: 'Ryhmätila',
       featureGroupDesc: 'Löydä elokuva, josta kaikki ryhmässä pitävät',

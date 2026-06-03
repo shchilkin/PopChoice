@@ -1,22 +1,21 @@
-import { QuizIntro } from './QuizIntro';
+import { FastAudience } from './FastAudience';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-const meta: Meta<typeof QuizIntro> = {
-  title: 'Quiz/QuizIntro',
-  component: QuizIntro,
+const meta: Meta<typeof FastAudience> = {
+  title: 'Quiz/FastAudience',
+  component: FastAudience,
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
     docs: {
       description: {
-        component:
-          'The intro screen of the movie quiz. Users choose fast pick, solo, or group mode.',
+        component: 'Audience selection screen for Fast Pick before the short question flow starts.',
       },
     },
   },
   args: {
-    onStartFastPick: () => {},
+    onBack: () => {},
     onStartSolo: () => {},
     onStartDuo: () => {},
     onStartGroup: () => {},
@@ -24,6 +23,6 @@ const meta: Meta<typeof QuizIntro> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof QuizIntro>;
+type Story = StoryObj<typeof FastAudience>;
 
 export const Default: Story = {};

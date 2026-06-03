@@ -79,6 +79,7 @@ export function RecommendationResultsView({
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const mainMovie = movies.find((movie) => movie.isMainRecommendation) || movies[0];
+  const isDuoResult = peopleCount === 2;
   const isGroupResult = peopleCount > 1;
   const otherMovies = movies.filter((movie) => movie !== mainMovie);
   const localOtherMovies = otherMovies.filter((movie) => !movie.fromTMDB);
@@ -141,7 +142,28 @@ export function RecommendationResultsView({
   const soloDecisionNote = hasActorSignal
     ? t.results.soloDecisionNoteWithActor
     : t.results.soloDecisionNote;
-  const decisionNote = (isGroupResult ? t.results.groupDecisionNote : soloDecisionNote)
+  const audienceBadge = isDuoResult
+    ? t.results.duoBadge
+    : isGroupResult
+      ? t.results.groupBadge
+      : t.results.badge;
+  const audienceTitle = isDuoResult
+    ? t.results.duoTitle
+    : isGroupResult
+      ? t.results.groupTitle
+      : t.results.title;
+  const audienceSubtitle = isDuoResult
+    ? t.results.duoSubtitle
+    : isGroupResult
+      ? t.results.groupSubtitle
+      : t.results.subtitle;
+  const decisionNote = (
+    isDuoResult
+      ? t.results.duoDecisionNote
+      : isGroupResult
+        ? t.results.groupDecisionNote
+        : soloDecisionNote
+  )
     .replace('{name}', mainMovieName)
     .replace('{people}', new Intl.NumberFormat(locale).format(peopleCount));
 
@@ -218,7 +240,7 @@ export function RecommendationResultsView({
           }}
         >
           {isGroupResult ? <Users size={11} /> : <Sparkles size={11} />}
-          {isGroupResult ? t.results.groupBadge : t.results.badge}
+          {audienceBadge}
         </div>
         <h1
           style={{
@@ -231,10 +253,10 @@ export function RecommendationResultsView({
             lineHeight: 1.1,
           }}
         >
-          {isGroupResult ? t.results.groupTitle : t.results.title}
+          {audienceTitle}
         </h1>
         <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
-          {(isGroupResult ? t.results.groupSubtitle : t.results.subtitle)
+          {audienceSubtitle
             .replace('{people}', new Intl.NumberFormat(locale).format(peopleCount))
             .replace(
               '{count}',

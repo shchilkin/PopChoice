@@ -8,17 +8,29 @@ import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
 interface GroupSetupProps {
+  audience?: 'duo' | 'group';
   groupNames: string[];
   onGroupNamesChange: (names: string[]) => void;
   onBack: () => void;
   onStart: () => void;
 }
 
-export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: GroupSetupProps) {
+export function GroupSetup({
+  audience = 'group',
+  groupNames,
+  onGroupNamesChange,
+  onBack,
+  onStart,
+}: GroupSetupProps) {
   const { t } = useLanguage();
-  const namedPeople = groupNames.map((name) => name.trim()).filter(Boolean);
+  const isDuo = audience === 'duo';
+  const copy = isDuo ? t.quiz.duoSetup : t.quiz.groupSetup;
+  const maxPeople = isDuo ? 2 : 6;
+  const minPeople = isDuo ? 2 : 3;
+  const visibleNames = isDuo ? groupNames.slice(0, 2) : groupNames;
+  const namedPeople = visibleNames.map((name) => name.trim()).filter(Boolean);
   const namedPeopleCount = namedPeople.length;
-  const canStart = namedPeopleCount >= 2;
+  const canStart = namedPeopleCount >= minPeople;
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 py-12 min-h-[80vh]">
@@ -40,10 +52,10 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               color: 'var(--pc-t1)',
             }}
           >
-            {t.quiz.groupSetup.title}
+            {copy.title}
           </h2>
           <p style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', marginTop: 6 }}>
-            {t.quiz.groupSetup.subtitle}
+            {copy.subtitle}
           </p>
           <p
             className="mt-4 inline-flex rounded-full px-3 py-1 text-xs"
@@ -54,12 +66,12 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               fontWeight: 700,
             }}
           >
-            {t.quiz.groupSetup.countLabel.replace('{count}', String(namedPeopleCount))}
+            {copy.countLabel.replace('{count}', String(namedPeopleCount))}
           </p>
         </div>
 
         <div className="flex flex-col gap-3 mb-6">
-          {groupNames.map((name, i) => (
+          {visibleNames.map((name, i) => (
             <div key={i} className="flex items-center gap-3">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs"
@@ -77,7 +89,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
                 onChange={(e) =>
                   onGroupNamesChange(groupNames.map((n, j) => (j === i ? e.target.value : n)))
                 }
-                placeholder={t.quiz.groupSetup.personPlaceholder.replace('{n}', String(i + 1))}
+                placeholder={copy.personPlaceholder.replace('{n}', String(i + 1))}
                 className="flex-1 px-4 py-3 rounded-xl outline-none transition-all duration-200"
                 style={{
                   background: 'var(--pc-surface)',
@@ -92,7 +104,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
                   (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
                 }}
               />
-              {groupNames.length > 2 && (
+              {!isDuo && groupNames.length > 2 && (
                 <button
                   onClick={() => onGroupNamesChange(groupNames.filter((_, j) => j !== i))}
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
@@ -113,7 +125,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
           ))}
         </div>
 
-        {groupNames.length < 6 && (
+        {!isDuo && groupNames.length < maxPeople && (
           <button
             onClick={() => onGroupNamesChange([...groupNames, ''])}
             className="w-full flex items-center gap-2 justify-center py-3 rounded-xl mb-6 text-sm transition-all duration-200"
@@ -130,7 +142,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd4)';
             }}
           >
-            <Plus size={15} /> {t.quiz.groupSetup.addPerson}
+            <Plus size={15} /> {copy.addPerson}
           </button>
         )}
 
@@ -146,11 +158,9 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
                   textTransform: 'uppercase',
                 }}
               >
-                {t.quiz.groupSetup.orderTitle}
+                {copy.orderTitle}
               </p>
-              <p style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>
-                {t.quiz.groupSetup.orderHint}
-              </p>
+              <p style={{ color: 'var(--pc-t4)', fontSize: '0.72rem' }}>{copy.orderHint}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {namedPeople.map((name, index) => (
@@ -173,7 +183,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
 
         {!canStart && (
           <p className="mb-4 text-center text-xs" style={{ color: 'var(--pc-t4)' }}>
-            {t.quiz.groupSetup.twoNamesHint}
+            {copy.twoNamesHint}
           </p>
         )}
 
@@ -187,7 +197,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               color: 'var(--pc-t2)',
             }}
           >
-            {t.quiz.groupSetup.back}
+            {copy.back}
           </button>
           <button
             onClick={onStart}
@@ -201,7 +211,7 @@ export function GroupSetup({ groupNames, onGroupNamesChange, onBack, onStart }: 
               cursor: canStart ? 'pointer' : 'not-allowed',
             }}
           >
-            {t.quiz.groupSetup.letsGo}
+            {copy.letsGo}
           </button>
         </div>
       </motion.div>

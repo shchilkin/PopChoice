@@ -37,14 +37,14 @@ export const en = {
   },
   features: {
     headline: 'Not a filter. A match.',
-    subheadline: 'Tone, pacing, cinematic style — encoded in 5 questions, searched by AI.',
+    subheadline: 'Tone, pacing, cinematic style — encoded in a short quiz, searched by AI.',
     aiPowered: {
       title: 'Taste, Not Tags',
       desc: 'Your answers become a taste profile matched against pre-analyzed films by emotional tone, pacing, and style — not genre boxes.',
     },
     fiveQuestions: {
-      title: 'Five Questions',
-      desc: 'Pick a reference point, the search lane, tonight’s vibe, energy, and an optional actor. Fast enough for the room to stay with you.',
+      title: 'Guided Signals',
+      desc: 'Pick a reference point, the search lane, tonight’s vibe, energy, dealbreakers, and an optional actor. Fast enough for the room to stay with you.',
     },
     groupMode: {
       title: 'Group Mode',
@@ -59,25 +59,52 @@ export const en = {
   cta: {
     headline: 'The right film is in there. Let AI find it.',
     description:
-      '60 seconds, 5 questions. Works whether you are watching alone or settling a group debate.',
+      'A short guided quiz. Works whether you are watching alone or settling a group debate.',
     button: 'Find My Movie',
   },
   quiz: {
     intro: {
       title: "Let's find your movie",
-      subtitle: 'Are you watching solo or with others?',
+      subtitle: 'Choose a quick pick, solo match, or group night.',
+      fastPickTitle: 'Fast Pick',
+      fastPickDesc: 'Short path to a shortlist for solo or group',
       soloTitle: 'Just me',
       soloDesc: 'Personalized picks — just for you',
+      duoTitle: 'Duo night',
+      duoDesc: 'Two people, one balanced match',
       groupTitle: 'Group mode 🎉',
-      groupDesc: 'Everyone answers on the same device — 2 to 6 people',
+      groupDesc: 'Everyone answers on the same device — 3 to 6 people',
       youLabel: 'You',
+    },
+    fastAudience: {
+      title: 'Who needs a fast pick?',
+      subtitle: 'Choose the audience first, then answer three quick rounds.',
+      soloTitle: 'Just me',
+      soloDesc: 'Three fast signals, one personal shortlist',
+      duoTitle: 'Two people',
+      duoDesc: 'A quick compromise for a pair',
+      groupTitle: 'Group',
+      groupDesc: 'Three to six people give quick signals on one device',
+      back: 'Back',
+    },
+    duoSetup: {
+      title: "Who's choosing?",
+      subtitle: 'Add both names so PopChoice can balance the two tastes',
+      personPlaceholder: "Person {n}'s name",
+      addPerson: 'Add another person',
+      twoNamesHint: 'Add both names to start Duo mode.',
+      countLabel: '{count}/2 seats filled',
+      orderTitle: 'Duo order',
+      orderHint: 'Pass the device once',
+      back: 'Back',
+      letsGo: 'Start Duo',
     },
     groupSetup: {
       title: "Who's watching?",
       subtitle: "Add everyone's name so we can personalize your results",
       personPlaceholder: "Person {n}'s name",
       addPerson: 'Add another person',
-      twoNamesHint: 'Add at least two names to start group mode.',
+      twoNamesHint: 'Add at least three names to start group mode.',
       countLabel: '{count}/6 seats filled',
       orderTitle: 'Turn order',
       orderHint: 'Pass the device this way',
@@ -100,7 +127,50 @@ export const en = {
       ofTotal: '{current} of {total}',
       personTurn: "{name}'s turn",
     },
-    labels: ['Reference point', 'Search lane', "Tonight's vibe", 'Energy level', 'Optional actor'],
+    labels: [
+      'Reference point',
+      'Search lane',
+      "Tonight's vibe",
+      'Energy level',
+      'Hard avoids',
+      'Optional actor',
+    ],
+    fast: {
+      labels: ["Tonight's feel", 'Hard avoids', 'Discovery'],
+      intent: {
+        title: 'What kind of night?',
+        hint: 'Pick up to 3',
+        options: {
+          easy: 'Easy',
+          funny: 'Funny',
+          gripping: 'Gripping',
+          emotional: 'Emotional',
+          weird: 'Weird',
+          cozy: 'Cozy',
+          dark: 'Dark',
+        },
+      },
+      avoids: {
+        title: 'What should we avoid?',
+        hint: 'Optional',
+        options: {
+          horror: 'Horror',
+          gore: 'Gore',
+          slow: 'Slow pacing',
+          subtitles: 'Subtitles',
+          long: 'Long runtime',
+          alreadySeen: 'Already-seen movies',
+        },
+      },
+      discovery: {
+        title: 'How adventurous?',
+        options: {
+          safe: { title: 'Safe hit', desc: 'Familiar, confident, easy to say yes to' },
+          balanced: { title: 'Balanced', desc: 'A strong fit with a little discovery' },
+          surprise: { title: 'Surprise me', desc: 'Something less obvious, but still on target' },
+        },
+      },
+    },
     favoriteMovie: {
       title: 'Give us a reference point',
       hint: 'Name a film that fits the direction, or skip this if you want a fresher search.',
@@ -211,10 +281,13 @@ export const en = {
   },
   results: {
     badge: 'Your personalized picks',
+    duoBadge: 'Your duo pick',
     groupBadge: 'Your group pick',
     title: 'We found your perfect film',
+    duoTitle: 'We found your duo film',
     groupTitle: 'We found your group film',
     subtitle: 'Matched from {count} films based on your vibe',
+    duoSubtitle: 'Balanced for two from {count} films',
     groupSubtitle: 'Balanced across {people} people from {count} films',
     topPick: 'Top Pick',
     moreSuggestions: 'More suggestions',
@@ -262,6 +335,8 @@ export const en = {
       '{name} won because it lines up with your mood, tone, and era, not just one genre.',
     soloDecisionNoteWithActor:
       '{name} won because it lines up with your mood, tone, era, and favorite actor cue, not just one genre.',
+    duoDecisionNote:
+      '{name} won as the strongest two-person compromise, balancing overlap and dealbreakers.',
     groupDecisionNote:
       '{name} won as the most watchable overlap for {people} people, balancing shared mood with tone and era.',
     expandedDecisionNote: 'PopChoice widened the search through TMDB to keep the match strong.',
@@ -298,17 +373,17 @@ export const en = {
     sourceCodeLink: 'here',
     whatItDoesLabel: 'What it does',
     whatItDoesDescription:
-      "PopChoice takes a 5-question taste quiz — favorite film, preferred era, current mood, tone, and a favorite actor — and transforms your answers into a vector embedding using the OpenAI API. That embedding is compared against a curated library of 400+ pre-analyzed films stored in PostgreSQL with the pgvector extension. If the local collection doesn't yield a high-quality match, the system automatically falls back to a broader search across the TMDb database. The closest matches surface as recommendations, each with a GPT-generated explanation of why it fits your specific taste profile. Genre is just one dimension; the system captures cinematographic style, narrative complexity, and emotional tone.",
+      "PopChoice takes a guided taste quiz — reference films, preferred era, current mood, tone, dealbreakers, and optional actor cues — and transforms your answers into a vector embedding using the OpenAI API. That embedding is compared against a curated library of 400+ pre-analyzed films stored in PostgreSQL with the pgvector extension. If the local collection doesn't yield a high-quality match, the system automatically falls back to a broader search across the TMDb database. The closest matches surface as recommendations, each with a GPT-generated explanation of why it fits your specific taste profile. Genre is just one dimension; the system captures cinematographic style, narrative complexity, and emotional tone.",
     backgroundNote:
       'All of this runs in the background. What you see: a 60-second quiz and a film worth watching.',
     ctaTitle: "Ready to find tonight's film?",
-    ctaSubtitle: '60 seconds. 5 questions. The perfect movie.',
+    ctaSubtitle: 'A short quiz. The perfect movie.',
     ctaButton: 'Start the Quiz',
     howItWorks: {
       title: 'The process',
       steps: [
         {
-          title: 'You answer 5 quick questions',
+          title: 'You answer a short guided quiz',
           desc: "Tell us your favorite film (and optionally why you love it), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you're after, and your favorite actor. It takes about 60 seconds.",
         },
         {
@@ -407,7 +482,7 @@ export const en = {
         },
         {
           q: 'How does group mode work?',
-          a: "Each person answers the 5 questions on the same device. Just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
+          a: "Each person answers the guided quiz on the same device. Just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
         },
         {
           q: 'How accurate are the recommendations?',
@@ -451,7 +526,7 @@ export const en = {
             name: 'XState',
             role: 'State Management',
             rationale:
-              'The 5-question quiz is modeled as a formal state machine. This prevents illegal state transitions and provides a clear, predictable flow for the complex branching logic.',
+              'The guided quiz is modeled as a formal state machine. This prevents illegal state transitions and provides a clear, predictable flow for the complex branching logic.',
             detail:
               'Using @xstate/react allows the UI to react to machine state changes, handling loading states and transitions with zero "if (loading)" spaghetti code.',
           },
