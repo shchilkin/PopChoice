@@ -1,4 +1,10 @@
-import type { ApiResponse, PersonFormData } from '../types';
+import type { CandidateSourceStrategyId } from '../sourceStrategyPolicy';
+import type {
+  ApiResponse,
+  CandidateSource,
+  CandidateSourceDistribution,
+  PersonFormData,
+} from '../types';
 import type { Locale } from '@/lib/locale';
 
 export type RecommendationEvalMemoryKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood';
@@ -14,25 +20,39 @@ export type RecommendationEvalCandidate = {
   year: number;
 };
 
+export type RecommendationEvalAudience = 'solo' | 'family' | 'group';
+
+export type RecommendationEvalDepth = 'focused' | 'memory-aware' | 'compromise';
+
+export type RecommendationEvalSourceStrategy = Extract<
+  CandidateSourceStrategyId,
+  'curated-showcase' | 'hybrid-fast' | 'tmdb-first'
+>;
+
 export type RecommendationEvalExpectations = {
   allowedMainTitles: string[];
   forbiddenTitles?: string[];
   forbiddenTerms?: string[];
+  minCandidateSources?: Partial<Record<CandidateSource, number>>;
   minDescriptionCharacters?: number;
+  minMetadataCompleteCandidates?: number;
   minPassingScore?: number;
   minSimilarMovies?: number;
   requiredExplanationTerms?: string[];
 };
 
 export type RecommendationEvalFixture = {
+  audience: RecommendationEvalAudience;
   candidates: RecommendationEvalCandidate[];
   description: string;
+  depth: RecommendationEvalDepth;
   expectations: RecommendationEvalExpectations;
   id: string;
   locale: Locale;
   mockResponse: ApiResponse;
   name: string;
   people: PersonFormData[];
+  sourceStrategy: RecommendationEvalSourceStrategy;
   userMemories: RecommendationEvalMemory[];
 };
 
@@ -54,6 +74,7 @@ export type RecommendationEvalResult = {
   mode: RecommendationEvalRunMode;
   passed: boolean;
   score: number;
+  sourceDistribution: CandidateSourceDistribution;
 };
 
 export type RecommendationEvalRunMode = 'mock' | 'real-data' | 'live';
@@ -65,6 +86,7 @@ export type RecommendationEvalReport = {
   mode: RecommendationEvalRunMode;
   passed: boolean;
   results: RecommendationEvalResult[];
+  sourceDistribution: CandidateSourceDistribution;
   summary: {
     failed: number;
     fixtureCount: number;

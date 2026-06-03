@@ -55,6 +55,24 @@ export type UserMovieInteractionKind =
   | 'wrong_mood'
   | 'not_seen';
 export type UserRecommendationMemoryKind = UserMovieInteractionKind | 'recently_recommended';
+export type RecommendationCandidateSource =
+  | 'curated'
+  | 'local-cache'
+  | 'tmdb-discover'
+  | 'tmdb-search'
+  | 'memory'
+  | 'jit-enriched';
+export type RecommendationSourceStrategy =
+  | 'curated-showcase'
+  | 'hybrid-fast'
+  | 'memory-aware-local'
+  | 'tmdb-first'
+  | 'compromise-hybrid';
+export type RecommendationExperienceMode =
+  | 'curated-showcase'
+  | 'fast-pick'
+  | 'normal-match'
+  | 'taste-swipe';
 
 export interface RecommendationMovie {
   id: number;
@@ -69,6 +87,7 @@ export interface RecommendationMovie {
   localizedName?: string;
   isMainRecommendation: boolean;
   fromTMDB: boolean;
+  source?: RecommendationCandidateSource;
 }
 
 export interface RecommendationWithMovies {
@@ -78,6 +97,8 @@ export interface RecommendationWithMovies {
   movies: RecommendationMovie[];
   usedBroaderSearch?: boolean;
   dbMovieCount?: number;
+  experienceMode?: RecommendationExperienceMode | null;
+  sourceStrategy?: RecommendationSourceStrategy | null;
   peopleCount?: number;
   hasActorSignal?: boolean;
   groupInsights?: ReturnType<typeof buildGroupResultInsights>;
@@ -164,6 +185,7 @@ export interface MovieRowToInsert {
   localizedName?: string;
   isMainRecommendation: boolean;
   fromTMDB: boolean;
+  source?: RecommendationCandidateSource;
 }
 
 function getInteractionKindForFeedback(
@@ -191,14 +213,24 @@ function getInteractionKindForFeedback(
 export async function createRecommendation(
   quizData: PersonFormData | PersonFormData[],
   userId?: string,
+  sourceStrategy?: RecommendationSourceStrategy,
+  experienceMode?: RecommendationExperienceMode,
 ): Promise<{ id: string; slug: string }> {
   const pool = getPool();
   const slug = nanoid(12);
   const result = await pool.query<{ id: string; slug: string }>(
-    `INSERT INTO recommendations (status, stage, quiz_data, slug, user_id)
-     VALUES ('pending', 'queued', $1, $2, $3)
+    `INSERT INTO recommendations (
+       status, stage, quiz_data, slug, user_id, source_strategy, experience_mode
+     )
+     VALUES ('pending', 'queued', $1, $2, $3, $4, $5)
      RETURNING id, slug`,
-    [JSON.stringify(quizData), slug, userId ?? null],
+    [
+      JSON.stringify(quizData),
+      slug,
+      userId ?? null,
+      sourceStrategy ?? 'hybrid-fast',
+      experienceMode ?? 'normal-match',
+    ],
   );
   const row = result.rows[0];
   if (!row) throw new Error('Failed to create recommendation row');
@@ -913,8 +945,8 @@ export async function insertRecommendationMovies(
         `INSERT INTO recommendation_movies (
           recommendation_id, movie_id, position, is_main_recommendation,
           ai_description, poster_url, localized_name, similarity,
-          from_tmdb, tmdb_id, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          from_tmdb, source, tmdb_id, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           recommendationId,
           movieId,
@@ -925,6 +957,7 @@ export async function insertRecommendationMovies(
           m.localizedName ?? null,
           m.similarity ?? null,
           m.fromTMDB,
+          m.source ?? (m.fromTMDB ? 'tmdb-discover' : 'local-cache'),
           m.fromTMDB ? Math.abs(m.id) : (m.tmdbId ?? null),
           m.fromTMDB ? m.name : null,
           m.fromTMDB ? m.year : null,
@@ -963,11 +996,14 @@ export async function getRecommendationWithMovies(
     used_broader_search: boolean | null;
     db_movie_count: number | null;
     quiz_data: unknown;
+    experience_mode: RecommendationExperienceMode | null;
     more_picks_status: string | null;
+    source_strategy: RecommendationSourceStrategy | null;
     user_id: string | null;
   }>(
     `SELECT
-       id, status, error, stage, used_broader_search, db_movie_count, quiz_data, more_picks_status, user_id
+       id, status, error, stage, used_broader_search, db_movie_count, quiz_data,
+       experience_mode, more_picks_status, source_strategy, user_id
        FROM recommendations
       WHERE slug = $1`,
     [slug],
@@ -1021,6 +1057,7 @@ export async function getRecommendationWithMovies(
     tmdb_score_rating: number | null;
     tmdb_duration: number | null;
     tmdb_age_rating: string | null;
+    source: RecommendationCandidateSource | null;
     m_name: string | null;
     m_year: number | null;
     m_age_rating: string | null;
@@ -1037,7 +1074,8 @@ export async function getRecommendationWithMovies(
        rm.localized_name,
        rm.similarity,
        rm.from_tmdb,
-      rm.tmdb_id,
+       rm.source,
+       rm.tmdb_id,
        rm.tmdb_name,
        rm.tmdb_year,
        rm.tmdb_score_rating,
@@ -1070,6 +1108,7 @@ export async function getRecommendationWithMovies(
         localizedName: row.localized_name ?? undefined,
         isMainRecommendation: row.is_main_recommendation,
         fromTMDB: true,
+        source: row.source ?? 'tmdb-discover',
       };
     }
     return {
@@ -1085,6 +1124,7 @@ export async function getRecommendationWithMovies(
       localizedName: row.localized_name ?? undefined,
       isMainRecommendation: row.is_main_recommendation,
       fromTMDB: false,
+      source: row.source ?? 'local-cache',
     };
   });
 
@@ -1095,6 +1135,8 @@ export async function getRecommendationWithMovies(
     movies,
     usedBroaderSearch: rec.used_broader_search ?? false,
     dbMovieCount: rec.db_movie_count ?? undefined,
+    experienceMode: rec.experience_mode,
+    sourceStrategy: rec.source_strategy,
     peopleCount,
     hasActorSignal,
     groupInsights,
@@ -1328,8 +1370,8 @@ export async function insertMorePicksMovies(
         `INSERT INTO recommendation_movies (
             recommendation_id, movie_id, position, is_main_recommendation,
             ai_description, poster_url, localized_name, similarity,
-            from_tmdb, tmdb_id, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            from_tmdb, source, tmdb_id, tmdb_name, tmdb_year, tmdb_score_rating, tmdb_duration, tmdb_age_rating
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           recommendationId,
           null, // all more-picks movies are TMDB-only; no local movie_id
@@ -1340,6 +1382,7 @@ export async function insertMorePicksMovies(
           m.localizedName ?? null,
           m.similarity ?? null,
           true,
+          m.source ?? 'tmdb-search',
           Math.abs(m.id),
           m.name,
           m.year,

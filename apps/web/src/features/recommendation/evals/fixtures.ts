@@ -1,225 +1,320 @@
-import type { RecommendationEvalFixture } from './types';
+import type { ApiResponse, CandidateSource, PersonFormData } from '../types';
+import type {
+  RecommendationEvalAudience,
+  RecommendationEvalCandidate,
+  RecommendationEvalDepth,
+  RecommendationEvalFixture,
+  RecommendationEvalMemory,
+  RecommendationEvalSourceStrategy,
+} from './types';
 
-export const recommendationEvalFixtures: RecommendationEvalFixture[] = [
+export const recommendationEvalAudiences = [
+  'solo',
+  'family',
+  'group',
+] as const satisfies readonly RecommendationEvalAudience[];
+export const recommendationEvalDepths = [
+  'focused',
+  'memory-aware',
+  'compromise',
+] as const satisfies readonly RecommendationEvalDepth[];
+export const recommendationEvalSourceStrategies = [
+  'curated-showcase',
+  'hybrid-fast',
+  'tmdb-first',
+] as const satisfies readonly RecommendationEvalSourceStrategy[];
+
+export const recommendationEvalScenarioMatrix = recommendationEvalAudiences.flatMap((audience) =>
+  recommendationEvalDepths.flatMap((depth) =>
+    recommendationEvalSourceStrategies.map((sourceStrategy) => ({
+      audience,
+      depth,
+      sourceStrategy,
+    })),
+  ),
+);
+
+const candidateCatalog: RecommendationEvalCandidate[] = [
+  { name: 'PopChoice E2E Space Opera', year: 2024 },
+  { name: 'PopChoice E2E Family Adventure', year: 2018 },
+  { name: 'PopChoice E2E Classic Drama', year: 1998 },
+  { name: 'PopChoice E2E Cozy Mystery', year: 2021 },
+  { name: 'PopChoice E2E Ensemble Comedy', year: 2020 },
+  { name: 'PopChoice E2E Grounded Thriller', year: 2016 },
+];
+
+const movieDetailsByName: Record<
+  string,
   {
-    id: 'solo-sci-fi-adventure',
-    name: 'Solo sci-fi adventure',
-    description: 'A single viewer asks for a clever modern sci-fi pick after The Matrix.',
-    locale: 'en',
-    people: [
+    age_rating: string;
+    aiDescription: string;
+    duration: number;
+    score_rating: number;
+    tmdbId: number;
+  }
+> = {
+  'PopChoice E2E Classic Drama': {
+    age_rating: 'PG-13',
+    aiDescription: 'A patient character drama for viewers who want emotional depth.',
+    duration: 126,
+    score_rating: 9.1,
+    tmdbId: 900003,
+  },
+  'PopChoice E2E Cozy Mystery': {
+    age_rating: 'PG',
+    aiDescription: 'A gentle mystery with soft humor and enough plot to stay engaging.',
+    duration: 108,
+    score_rating: 7.8,
+    tmdbId: 900005,
+  },
+  'PopChoice E2E Ensemble Comedy': {
+    age_rating: 'PG-13',
+    aiDescription: 'A bridge pick with playful character beats and energetic pacing.',
+    duration: 115,
+    score_rating: 8.3,
+    tmdbId: 900006,
+  },
+  'PopChoice E2E Family Adventure': {
+    age_rating: 'G',
+    aiDescription: 'A warm family pick with gentle jokes and adventure momentum.',
+    duration: 101,
+    score_rating: 8.1,
+    tmdbId: 900004,
+  },
+  'PopChoice E2E Grounded Thriller': {
+    age_rating: 'PG-13',
+    aiDescription: 'A precise thriller with grounded stakes and clean momentum.',
+    duration: 112,
+    score_rating: 7.9,
+    tmdbId: 900007,
+  },
+  'PopChoice E2E Space Opera': {
+    age_rating: 'PG-13',
+    aiDescription:
+      'A sci-fi adventure pick for viewers who want sleek action and thoughtful spectacle.',
+    duration: 142,
+    score_rating: 8.7,
+    tmdbId: 900001,
+  },
+};
+
+const mainTitleByDepth: Record<RecommendationEvalDepth, string> = {
+  compromise: 'PopChoice E2E Ensemble Comedy',
+  focused: 'PopChoice E2E Space Opera',
+  'memory-aware': 'PopChoice E2E Family Adventure',
+};
+
+const alternateTitlesByDepth: Record<RecommendationEvalDepth, string[]> = {
+  compromise: ['PopChoice E2E Family Adventure', 'PopChoice E2E Space Opera'],
+  focused: ['PopChoice E2E Grounded Thriller', 'PopChoice E2E Classic Drama'],
+  'memory-aware': ['PopChoice E2E Cozy Mystery', 'PopChoice E2E Ensemble Comedy'],
+};
+
+function hasMemoryRequirement(depth: RecommendationEvalDepth): boolean {
+  return depth === 'memory-aware';
+}
+
+function hasCompromiseRequirement(depth: RecommendationEvalDepth): boolean {
+  return depth === 'compromise';
+}
+
+function getPeople(audience: RecommendationEvalAudience): PersonFormData[] {
+  if (audience === 'solo') {
+    return [
       {
         favoriteMovie: 'The Matrix',
-        favoriteMovieWhy: 'I like clever world-building and tense action.',
+        favoriteMovieWhy: 'I like smart genre movies that balance ideas and momentum.',
         moodPreference: ['Sci-Fi', 'Adventurous'],
+        name: 'Riley',
         newVsClassic: 'Balanced',
         tonePreference: 'Smart and exciting',
       },
-    ],
-    userMemories: [],
-    candidates: [
-      { name: 'PopChoice E2E Space Opera', year: 2024 },
-      { name: 'PopChoice E2E Family Adventure', year: 2018 },
-      { name: 'PopChoice E2E Classic Drama', year: 1998 },
-    ],
-    expectations: {
-      allowedMainTitles: ['PopChoice E2E Space Opera'],
-      forbiddenTerms: ['sexual minors', 'self-harm instructions'],
-      minDescriptionCharacters: 80,
-      minPassingScore: 90,
-      minSimilarMovies: 3,
-      requiredExplanationTerms: ['sci-fi', 'adventure'],
-    },
-    mockResponse: {
-      title: 'PopChoice E2E Space Opera',
-      description:
-        'A polished sci-fi adventure with big world-building, brisk momentum, and enough emotional stakes to satisfy a Matrix-inspired mood.',
-      usedBroaderSearch: false,
-      dbMovieCount: 3,
-      similarMovies: [
-        {
-          id: 1,
-          tmdbId: 900001,
-          name: 'PopChoice E2E Space Opera',
-          year: 2024,
-          similarity: 0.97,
-          age_rating: 'PG-13',
-          duration: 142,
-          score_rating: 8.7,
-          aiDescription:
-            'A sci-fi adventure pick for viewers who want sleek action and thoughtful spectacle.',
-          isMainRecommendation: true,
-        },
-        {
-          id: 2,
-          tmdbId: 900004,
-          name: 'PopChoice E2E Family Adventure',
-          year: 2018,
-          similarity: 0.81,
-          age_rating: 'G',
-          duration: 101,
-          score_rating: 8.1,
-          aiDescription: 'A lighter alternate with adventure energy and broad appeal.',
-        },
-        {
-          id: 3,
-          tmdbId: 900003,
-          name: 'PopChoice E2E Classic Drama',
-          year: 1998,
-          similarity: 0.74,
-          age_rating: 'R',
-          duration: 126,
-          score_rating: 9.1,
-          aiDescription: 'A more serious backup when the viewer wants a slower classic.',
-        },
-      ],
-    },
-  },
-  {
-    id: 'family-night-repeat-avoidance',
-    name: 'Family night repeat avoidance',
-    description: 'A family prompt should avoid movies already watched or marked not interested.',
-    locale: 'en',
-    people: [
+    ];
+  }
+
+  if (audience === 'family') {
+    return [
       {
         favoriteMovie: 'Paddington 2',
-        favoriteMovieWhy: 'Warm, funny, and easy for everyone to enjoy together.',
+        favoriteMovieWhy: 'Warm, funny, and easy for different ages to enjoy together.',
         moodPreference: ['Funny', 'Heartwarming'],
+        name: 'Family',
         newVsClassic: 'New',
         tonePreference: 'Light',
       },
-    ],
-    userMemories: [
-      { kind: 'watched', movieName: 'PopChoice E2E Space Opera', movieYear: 2024 },
-      { kind: 'not_interested', movieName: 'PopChoice E2E Classic Drama', movieYear: 1998 },
-    ],
-    candidates: [
-      { name: 'PopChoice E2E Family Adventure', year: 2018 },
-      { name: 'PopChoice E2E Space Opera', year: 2024 },
-      { name: 'PopChoice E2E Classic Drama', year: 1998 },
-      { name: 'PopChoice E2E Cozy Mystery', year: 2021 },
-    ],
+    ];
+  }
+
+  return [
+    {
+      favoriteMovie: 'Amelie',
+      favoriteMovieWhy: 'Playful, humane, and visually charming.',
+      moodPreference: ['Whimsical', 'Romantic'],
+      name: 'Alex',
+      newVsClassic: 'Balanced',
+      tonePreference: 'Playful',
+    },
+    {
+      favoriteMovie: 'Mad Max: Fury Road',
+      favoriteMovieWhy: 'Kinetic and stylish without too much exposition.',
+      moodPreference: ['Energetic', 'Stylish'],
+      name: 'Sam',
+      newVsClassic: 'Balanced',
+      tonePreference: 'Bold',
+    },
+  ];
+}
+
+function getMemories(depth: RecommendationEvalDepth): RecommendationEvalMemory[] {
+  if (!hasMemoryRequirement(depth)) return [];
+
+  return [
+    { kind: 'watched', movieName: 'PopChoice E2E Classic Drama', movieYear: 1998 },
+    { kind: 'not_interested', movieName: 'PopChoice E2E Grounded Thriller', movieYear: 2016 },
+  ];
+}
+
+function getRequiredExplanationTerms(
+  audience: RecommendationEvalAudience,
+  depth: RecommendationEvalDepth,
+): string[] {
+  const terms: string[] = [audience];
+  if (hasMemoryRequirement(depth)) terms.push('avoid');
+  if (hasCompromiseRequirement(depth)) terms.push('both');
+  return terms;
+}
+
+function getDescription(
+  audience: RecommendationEvalAudience,
+  depth: RecommendationEvalDepth,
+  sourceStrategy: RecommendationEvalSourceStrategy,
+): string {
+  const audienceText = {
+    family: 'for the family',
+    group: 'for the group',
+    solo: 'for the solo viewer',
+  }[audience];
+  const sourceText = {
+    'curated-showcase': 'using curated showcase candidates only',
+    'hybrid-fast': 'mixing local cache candidates with bounded TMDB discovery fallbacks',
+    'tmdb-first': 'starting from TMDB discovery and search candidates',
+  }[sourceStrategy];
+  const memoryText = hasMemoryRequirement(depth)
+    ? ' It explicitly avoids watched or rejected titles from memory.'
+    : '';
+  const compromiseText = hasCompromiseRequirement(depth)
+    ? ' It explains how both preference sets are represented without letting one side dominate.'
+    : '';
+
+  return `A ${depth} ${sourceStrategy} recommendation ${audienceText} ${sourceText}.${memoryText}${compromiseText}`;
+}
+
+function getMockSource(
+  sourceStrategy: RecommendationEvalSourceStrategy,
+  index: number,
+): CandidateSource {
+  if (sourceStrategy === 'curated-showcase') return 'curated';
+  if (sourceStrategy === 'tmdb-first') return index % 2 === 0 ? 'tmdb-discover' : 'tmdb-search';
+  return index === 0 ? 'local-cache' : 'tmdb-discover';
+}
+
+function toSimilarMovie(
+  name: string,
+  index: number,
+  sourceStrategy: RecommendationEvalSourceStrategy,
+  isMainRecommendation = false,
+) {
+  const candidate = candidateCatalog.find((movie) => movie.name === name);
+  const details = movieDetailsByName[name];
+  if (!candidate || !details) {
+    throw new Error(`Missing deterministic eval movie fixture for "${name}".`);
+  }
+  const source = getMockSource(sourceStrategy, index);
+  const fromTMDB = source === 'tmdb-discover' || source === 'tmdb-search';
+
+  return {
+    id: fromTMDB ? -details.tmdbId : index + 1,
+    name,
+    similarity: Number((0.96 - index * 0.06).toFixed(2)),
+    year: candidate.year,
+    ...details,
+    fromTMDB,
+    source,
+    ...(isMainRecommendation ? { isMainRecommendation } : {}),
+  };
+}
+
+function getMockSourceDistribution(
+  sourceStrategy: RecommendationEvalSourceStrategy,
+  movieCount: number,
+): NonNullable<ApiResponse['candidateSourceDistribution']> {
+  const distribution: NonNullable<ApiResponse['candidateSourceDistribution']> = {};
+  for (let index = 0; index < movieCount; index += 1) {
+    const source = getMockSource(sourceStrategy, index);
+    distribution[source] = (distribution[source] ?? 0) + 1;
+  }
+  return distribution;
+}
+
+function getMinCandidateSources(
+  sourceStrategy: RecommendationEvalSourceStrategy,
+): NonNullable<RecommendationEvalFixture['expectations']['minCandidateSources']> {
+  if (sourceStrategy === 'curated-showcase') return { curated: 3 };
+  if (sourceStrategy === 'hybrid-fast') return { 'local-cache': 1, 'tmdb-discover': 1 };
+  return { 'tmdb-discover': 1, 'tmdb-search': 1 };
+}
+
+function getMockResponse(
+  audience: RecommendationEvalAudience,
+  depth: RecommendationEvalDepth,
+  sourceStrategy: RecommendationEvalSourceStrategy,
+): ApiResponse {
+  const mainTitle = mainTitleByDepth[depth];
+  const memoryTitles = new Set(getMemories(depth).map((memory) => memory.movieName));
+  const alternateTitles = alternateTitlesByDepth[depth]
+    .filter((title) => !memoryTitles.has(title))
+    .concat(candidateCatalog.map((movie) => movie.name).filter((title) => title !== mainTitle))
+    .filter((title, index, titles) => !memoryTitles.has(title) && titles.indexOf(title) === index)
+    .slice(0, 2);
+  const similarMovieTitles = [mainTitle, ...alternateTitles];
+
+  return {
+    dbMovieCount: candidateCatalog.length,
+    description: getDescription(audience, depth, sourceStrategy),
+    similarMovies: similarMovieTitles.map((title, index) =>
+      toSimilarMovie(title, index, sourceStrategy, index === 0),
+    ),
+    candidateSourceDistribution: getMockSourceDistribution(
+      sourceStrategy,
+      similarMovieTitles.length,
+    ),
+    sourceStrategy,
+    title: mainTitle,
+    usedBroaderSearch: sourceStrategy !== 'curated-showcase',
+  };
+}
+
+export const recommendationEvalFixtures: RecommendationEvalFixture[] =
+  recommendationEvalScenarioMatrix.map(({ audience, depth, sourceStrategy }) => ({
+    audience,
+    candidates: candidateCatalog,
+    depth,
+    description: getDescription(audience, depth, sourceStrategy),
     expectations: {
-      allowedMainTitles: ['PopChoice E2E Family Adventure'],
-      forbiddenTitles: ['PopChoice E2E Space Opera', 'PopChoice E2E Classic Drama'],
-      forbiddenTerms: ['R-rated', 'bleak violence'],
-      minDescriptionCharacters: 70,
+      allowedMainTitles: [mainTitleByDepth[depth]],
+      forbiddenTerms: ['sexual minors', 'self-harm instructions', 'bleak violence'],
+      minCandidateSources: getMinCandidateSources(sourceStrategy),
+      minDescriptionCharacters: 80,
+      minMetadataCompleteCandidates: 3,
       minPassingScore: 90,
-      minSimilarMovies: 2,
-      requiredExplanationTerms: ['family', 'warm'],
-    },
-    mockResponse: {
-      title: 'PopChoice E2E Family Adventure',
-      description:
-        'A warm family adventure that keeps the mood light, avoids already-watched options, and gives the group an upbeat movie-night choice.',
-      usedBroaderSearch: false,
-      dbMovieCount: 3,
-      similarMovies: [
-        {
-          id: 4,
-          tmdbId: 900004,
-          name: 'PopChoice E2E Family Adventure',
-          year: 2018,
-          similarity: 0.93,
-          age_rating: 'G',
-          duration: 101,
-          score_rating: 8.1,
-          aiDescription: 'A warm family pick with gentle jokes and adventure momentum.',
-          isMainRecommendation: true,
-        },
-        {
-          id: 5,
-          tmdbId: 900005,
-          name: 'PopChoice E2E Cozy Mystery',
-          year: 2021,
-          similarity: 0.77,
-          age_rating: 'PG',
-          duration: 108,
-          score_rating: 7.8,
-          aiDescription: 'A soft backup for groups that want a little puzzle without heaviness.',
-        },
-      ],
-    },
-  },
-  {
-    id: 'two-person-compromise',
-    name: 'Two-person compromise',
-    description:
-      'A mixed group should explain why the pick bridges both viewers instead of only one.',
-    locale: 'en',
-    people: [
-      {
-        favoriteMovie: 'Amelie',
-        favoriteMovieWhy: 'Playful, humane, and visually charming.',
-        moodPreference: ['Whimsical', 'Romantic'],
-        name: 'Alex',
-        newVsClassic: 'Balanced',
-        tonePreference: 'Playful',
-      },
-      {
-        favoriteMovie: 'Mad Max: Fury Road',
-        favoriteMovieWhy: 'Kinetic and stylish without too much exposition.',
-        moodPreference: ['Energetic', 'Stylish'],
-        name: 'Sam',
-        newVsClassic: 'Balanced',
-        tonePreference: 'Bold',
-      },
-    ],
-    userMemories: [{ kind: 'liked', movieName: 'PopChoice E2E Space Opera', movieYear: 2024 }],
-    candidates: [
-      { name: 'PopChoice E2E Ensemble Comedy', year: 2020 },
-      { name: 'PopChoice E2E Space Opera', year: 2024 },
-      { name: 'PopChoice E2E Family Adventure', year: 2018 },
-    ],
-    expectations: {
-      allowedMainTitles: ['PopChoice E2E Ensemble Comedy'],
-      forbiddenTerms: ['only Alex', 'only Sam'],
-      minDescriptionCharacters: 90,
-      minPassingScore: 85,
       minSimilarMovies: 3,
-      requiredExplanationTerms: ['both', 'playful', 'energy'],
+      requiredExplanationTerms: getRequiredExplanationTerms(audience, depth),
     },
-    mockResponse: {
-      title: 'PopChoice E2E Ensemble Comedy',
-      description:
-        'A playful ensemble comedy with enough visual energy for both viewers: it keeps the human charm upfront while still moving with bold, stylish rhythm.',
-      usedBroaderSearch: false,
-      dbMovieCount: 3,
-      similarMovies: [
-        {
-          id: 6,
-          tmdbId: 900006,
-          name: 'PopChoice E2E Ensemble Comedy',
-          year: 2020,
-          similarity: 0.9,
-          age_rating: 'PG-13',
-          duration: 115,
-          score_rating: 8.3,
-          aiDescription: 'A bridge pick for both whimsical romance and kinetic style.',
-          isMainRecommendation: true,
-        },
-        {
-          id: 1,
-          tmdbId: 900001,
-          name: 'PopChoice E2E Space Opera',
-          year: 2024,
-          similarity: 0.82,
-          age_rating: 'PG-13',
-          duration: 142,
-          score_rating: 8.7,
-          aiDescription: 'A higher-energy alternate if the group leans toward spectacle.',
-        },
-        {
-          id: 4,
-          tmdbId: 900004,
-          name: 'PopChoice E2E Family Adventure',
-          year: 2018,
-          similarity: 0.76,
-          age_rating: 'G',
-          duration: 101,
-          score_rating: 8.1,
-          aiDescription: 'A warmer alternate if the group wants something gentler.',
-        },
-      ],
-    },
-  },
-];
+    id: `${audience}-${depth}-${sourceStrategy}`,
+    locale: 'en',
+    mockResponse: getMockResponse(audience, depth, sourceStrategy),
+    name: `${audience} / ${depth} / ${sourceStrategy}`,
+    people: getPeople(audience),
+    sourceStrategy,
+    userMemories: getMemories(depth),
+  }));

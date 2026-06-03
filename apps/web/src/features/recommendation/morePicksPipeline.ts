@@ -398,6 +398,7 @@ Respond in ${language} only.`;
           localizedName: localizedTitle !== tmdb.title ? localizedTitle : undefined,
           isMainRecommendation: false,
           fromTMDB: true,
+          source: 'tmdb-search',
         } satisfies MovieRowToInsert;
       }),
     );

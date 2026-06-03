@@ -25,6 +25,17 @@ vi.mock('@/features/recommendation/input', () => ({
   getRecommendationInputBlock: (allPeopleData: unknown[]) =>
     mockGetRecommendationInputBlock(allPeopleData),
   normalizePeopleData: (body: unknown) => mockNormalizePeopleData(body),
+  normalizeRecommendationCreateRequest: (body: unknown) => {
+    if (typeof body === 'object' && body !== null && 'people' in body) {
+      const wrapped = body as { experienceMode?: unknown; people: unknown };
+      return { experienceMode: wrapped.experienceMode, quizData: wrapped.people };
+    }
+    if (typeof body === 'object' && body !== null && 'quizData' in body) {
+      const wrapped = body as { experienceMode?: unknown; quizData: unknown };
+      return { experienceMode: wrapped.experienceMode, quizData: wrapped.quizData };
+    }
+    return { quizData: body };
+  },
 }));
 
 const mockCreateAndStartRecommendation = vi.fn<(...args: unknown[]) => Promise<{ slug: string }>>(
@@ -83,7 +94,30 @@ describe('POST /api/recommendations', () => {
     expect(response.status).toBe(201);
     expect(data).toEqual({ id: 'rec-test-slug' });
     expect(mockGetRecommendationInputBlock).toHaveBeenCalled();
-    expect(mockCreateAndStartRecommendation).toHaveBeenCalled();
+    expect(mockCreateAndStartRecommendation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Array),
+      'en',
+      expect.objectContaining({ experienceMode: 'normal-match', sourceStrategy: 'tmdb-first' }),
+    );
+  });
+
+  it('accepts an explicit fast-pick experience mode wrapper', async () => {
+    const response = await POST(
+      makeRequest({
+        experienceMode: 'fast-pick',
+        people: validBody,
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockNormalizePeopleData).toHaveBeenCalledWith(validBody);
+    expect(mockCreateAndStartRecommendation).toHaveBeenCalledWith(
+      validBody,
+      expect.any(Array),
+      'en',
+      expect.objectContaining({ experienceMode: 'fast-pick', sourceStrategy: 'hybrid-fast' }),
+    );
   });
 
   it('skips AI moderation when deterministic e2e recommendations are enabled', async () => {
@@ -93,6 +127,14 @@ describe('POST /api/recommendations', () => {
 
     expect(response.status).toBe(201);
     expect(mockGetRecommendationInputBlock).not.toHaveBeenCalled();
-    expect(mockCreateAndStartRecommendation).toHaveBeenCalled();
+    expect(mockCreateAndStartRecommendation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Array),
+      'en',
+      expect.objectContaining({
+        experienceMode: 'curated-showcase',
+        sourceStrategy: 'curated-showcase',
+      }),
+    );
   });
 });
