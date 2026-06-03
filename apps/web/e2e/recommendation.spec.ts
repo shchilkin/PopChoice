@@ -82,6 +82,7 @@ test('submits the solo quiz, renders deterministic results, and records feedback
   await expect.poll(() => readSession(page)).toMatchObject({ authenticated: true });
 
   await page.goto('/quiz');
+  await page.getByRole('button', { name: /Normal Match/ }).click();
   await page.getByRole('button', { name: /Just me/ }).click();
 
   await completeNormalSoloQuestions(page);
@@ -108,6 +109,7 @@ test('submits the solo quiz, renders deterministic results, and records feedback
 
 test('submits the normal duo quiz and renders deterministic duo results', async ({ page }) => {
   await page.goto('/quiz');
+  await page.getByRole('button', { name: /Normal Match/ }).click();
   await page.getByRole('button', { name: /Duo night/ }).click();
 
   const inputs = await page.locator('input').all();
@@ -126,6 +128,7 @@ test('submits the normal duo quiz and renders deterministic duo results', async 
 
 test('submits the normal group quiz and renders deterministic group results', async ({ page }) => {
   await page.goto('/quiz');
+  await page.getByRole('button', { name: /Normal Match/ }).click();
   await page.getByRole('button', { name: /Group mode/ }).click();
 
   const inputs = await page.locator('input').all();

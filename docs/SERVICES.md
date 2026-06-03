@@ -468,7 +468,7 @@ No query produced a score ≥ 0.70. Setting `SIMILARITY_THRESHOLD` at or above 0
 
 - Stay below the realistic best-case score (~0.55–0.62), so 3+ local results qualify for mainstream genres without TMDB.
 - Stay high enough to exclude movies scoring below ~0.38, which have no meaningful thematic connection to the query.
-- Keep the UI match percentage in a readable range (40–62% shown) that sets appropriate expectations.
+- Keep raw similarity in a readable internal range, then show users calibrated match tiers instead of implying false precision with percentages. The exact experimental percentage can stay in hover/debug copy.
 
 #### How to recalibrate
 

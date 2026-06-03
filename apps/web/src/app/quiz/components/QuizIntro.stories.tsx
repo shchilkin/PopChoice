@@ -11,15 +11,13 @@ const meta: Meta<typeof QuizIntro> = {
     docs: {
       description: {
         component:
-          'The intro screen of the movie quiz. Users choose fast pick, solo, or group mode.',
+          'The intro screen of the movie quiz. Users choose match depth before audience size.',
       },
     },
   },
   args: {
     onStartFastPick: () => {},
-    onStartSolo: () => {},
-    onStartDuo: () => {},
-    onStartGroup: () => {},
+    onStartNormalMatch: () => {},
   },
 };
 

@@ -5,8 +5,9 @@ import { motion } from 'motion/react';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
-import { scaleSimilarity } from '@/utils/ui';
+import { getSimilarityTier } from '@/utils/ui';
 
 import type { MovieRecommendation } from '@/utils/client';
 
@@ -17,9 +18,12 @@ interface SmallSuggestionCardProps {
 }
 
 export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionCardProps) {
+  const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);
   const score = movie.score_rating ?? 0;
-  const pct = scaleSimilarity(movie.similarity);
+  const { pct, tier } = getSimilarityTier(movie.similarity);
+  const matchLabel = t.results.matchTiers[tier];
+  const matchExactLabel = t.results.matchTierExact.replace('{pct}', String(pct));
   const hasRating = !!movie.age_rating && movie.age_rating !== 'NR';
 
   return (
@@ -85,6 +89,8 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
         <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           <div
             className="text-xs px-2 py-0.5 rounded-full"
+            title={matchExactLabel}
+            aria-label={`${matchLabel}. ${matchExactLabel}`}
             style={{
               background: 'rgba(9,9,15,0.85)',
               border: '1px solid rgba(245,197,24,0.2)',
@@ -92,7 +98,7 @@ export function SmallSuggestionCard({ movie, active, onClick }: SmallSuggestionC
               backdropFilter: 'blur(6px)',
             }}
           >
-            {pct}%
+            {matchLabel}
           </div>
           {movie.fromTMDB && (
             <div

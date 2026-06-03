@@ -151,6 +151,10 @@ function QuizSession() {
     send({ type: 'START_FAST_PICK', youLabel: t.quiz.intro.youLabel });
   }
 
+  function startNormalMatch() {
+    send({ type: 'START_NORMAL_MATCH', youLabel: t.quiz.intro.youLabel });
+  }
+
   function startFastSolo() {
     send({ type: 'START_FAST_SOLO', youLabel: t.quiz.intro.youLabel });
   }
@@ -280,23 +284,29 @@ function QuizSession() {
 
   // ── INTRO ──
   if (state.matches('intro')) {
-    return (
-      <QuizIntro
-        onStartFastPick={startFastPick}
-        onStartSolo={startSolo}
-        onStartDuo={startDuo}
-        onStartGroup={startGroup}
-      />
-    );
+    return <QuizIntro onStartFastPick={startFastPick} onStartNormalMatch={startNormalMatch} />;
   }
 
   if (state.matches('fastAudience')) {
     return (
       <FastAudience
+        flow="fast"
         onBack={() => send({ type: 'BACK' })}
         onStartSolo={startFastSolo}
         onStartDuo={startFastDuo}
         onStartGroup={startFastGroup}
+      />
+    );
+  }
+
+  if (state.matches('normalAudience')) {
+    return (
+      <FastAudience
+        flow="normal"
+        onBack={() => send({ type: 'BACK' })}
+        onStartSolo={startSolo}
+        onStartDuo={startDuo}
+        onStartGroup={startGroup}
       />
     );
   }
