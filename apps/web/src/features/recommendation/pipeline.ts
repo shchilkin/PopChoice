@@ -36,6 +36,7 @@ import {
 import { resolveRecommendationSourceStrategy } from './sourceStrategyPolicy';
 import {
   MAX_TOTAL_MOVIES,
+  enrichTMDBMatchesWithDetails,
   fetchTMDBDiscoverMovies,
   parseTMDBReleaseYear,
   scoreAndConvertTMDBMovies,
@@ -237,10 +238,10 @@ export async function runRecommendationPipeline(
           .slice(0, slotsRemaining);
         const newTMDBMatches = await scoreAndConvertTMDBMovies(filteredTMDBMovies, embedding);
         const tmdbEmbeddings = newTMDBMatches.embeddings;
-        const newTMDBMatchList = applyFeedbackToLocalMovies(
-          newTMDBMatches.matches,
-          feedbackSignals,
-        );
+        const enrichedTMDBMatches = prefersTMDBCandidates
+          ? await enrichTMDBMatchesWithDetails(newTMDBMatches.matches, tmdbApiKey, locale)
+          : newTMDBMatches.matches;
+        const newTMDBMatchList = applyFeedbackToLocalMovies(enrichedTMDBMatches, feedbackSignals);
 
         if (prefersTMDBCandidates) {
           similarMovies = [...newTMDBMatchList, ...localResultsForMerge]
@@ -417,7 +418,12 @@ export async function runRecommendationPipeline(
         posterURL: movie.posterURL,
         aiDescription: movie.aiDescription,
         localizedName: movie.localizedName,
+        metadataQualityScore: movie.metadataQualityScore,
+        metadataQualityFlags: movie.metadataQualityFlags,
+        originalLanguage: movie.originalLanguage,
+        voteCount: movie.voteCount,
         popularity: movie.popularity,
+        watchProviders: movie.watchProviders,
         isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
         fromTMDB: Number(movie.id) < 0,
         source,

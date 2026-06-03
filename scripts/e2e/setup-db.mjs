@@ -64,7 +64,8 @@ async function seedDatabase(databaseUrl) {
           ($19, $20, $21, $22, $23, $24, $25, $26, $27),
           ($28, $29, $30, $31, $32, $33, $34, $35, $36),
           ($37, $38, $39, $40, $41, $42, $43, $44, $45),
-          ($46, $47, $48, $49, $50, $51, $52, $53, $54)
+          ($46, $47, $48, $49, $50, $51, $52, $53, $54),
+          ($55, $56, $57, $58, $59, $60, $61, $62, $63)
       `,
       [
         'PopChoice E2E Space Opera',
@@ -121,6 +122,15 @@ async function seedDatabase(databaseUrl) {
         900006,
         null,
         'PopChoice E2E Ensemble Comedy',
+        'PopChoice E2E Grounded Thriller',
+        'PG-13',
+        'A precise thriller fixture for focused recommendation eval candidate availability.',
+        112,
+        7.9,
+        2016,
+        900007,
+        null,
+        'PopChoice E2E Grounded Thriller',
       ],
     );
 

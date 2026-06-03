@@ -59,10 +59,45 @@ IMPORTANT: The "title" field must be returned exactly as it appears in the provi
 
 const movieService = new MovieService();
 
+const MAX_LOCAL_METADATA_QUALITY_BOOST = 0.02;
+const LOW_LOCAL_METADATA_QUALITY_PENALTY = 0.02;
+
 type LocalMatchRow = EnhancedMovieMatch & {
   tmdb_id?: number | null;
   tmdb_match_source?: string | null;
+  original_language?: string | null;
+  vote_count?: number | null;
+  popularity?: number | null;
+  metadata_quality_score?: number | null;
+  metadata_quality_flags?: unknown;
 };
+
+function normalizeMetadataQualityFlags(flags: unknown): string[] | undefined {
+  if (!Array.isArray(flags)) {
+    return undefined;
+  }
+
+  return flags.filter((flag): flag is string => typeof flag === 'string');
+}
+
+function adjustLocalSimilarityForMetadata(movie: LocalMatchRow): number {
+  const score =
+    typeof movie.metadata_quality_score === 'number' &&
+    Number.isFinite(movie.metadata_quality_score)
+      ? Math.max(0, Math.min(100, movie.metadata_quality_score))
+      : null;
+  const base = Number.isFinite(movie.similarity) ? movie.similarity : 0;
+
+  if (score === null) {
+    return Number((base - LOW_LOCAL_METADATA_QUALITY_PENALTY).toFixed(6));
+  }
+
+  if (score < 50) {
+    return Number((base - LOW_LOCAL_METADATA_QUALITY_PENALTY).toFixed(6));
+  }
+
+  return Number((base + (score / 100) * MAX_LOCAL_METADATA_QUALITY_BOOST).toFixed(6));
+}
 
 // ---------------------------------------------------------------------------
 // Vector DB search
@@ -89,9 +124,18 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
   return (data as LocalMatchRow[])
     .map((movie) => ({
       ...movie,
+      similarity: adjustLocalSimilarityForMetadata(movie),
       source: getLocalCandidateSource(movie.tmdb_match_source),
       tmdbId: movie.tmdb_id ?? movie.tmdbId ?? null,
       tmdbMatchSource: movie.tmdb_match_source ?? movie.tmdbMatchSource ?? null,
+      originalLanguage: movie.original_language ?? movie.originalLanguage ?? null,
+      voteCount: movie.vote_count ?? movie.voteCount ?? null,
+      popularity: movie.popularity ?? movie.popularity ?? null,
+      metadataQualityScore: movie.metadata_quality_score ?? movie.metadataQualityScore ?? 0,
+      metadataQualityFlags:
+        normalizeMetadataQualityFlags(movie.metadata_quality_flags) ??
+        movie.metadataQualityFlags ??
+        [],
     }))
     .sort((a, b) => b.similarity - a.similarity);
 }

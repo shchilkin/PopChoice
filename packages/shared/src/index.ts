@@ -24,7 +24,9 @@ export type {
   MoviePersonCreditInput,
   MoviePersonCreditRecord,
   MoviePersonRole,
+  MovieWatchProviderInput,
   MovieRecord,
+  WatchProviderAvailabilityType,
 } from './db.js';
 export { createEmbeddings } from './embeddings.js';
 export {

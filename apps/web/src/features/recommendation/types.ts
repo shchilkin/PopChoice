@@ -154,7 +154,22 @@ export const apiResponseSchema = z.object({
         posterURL: z.string().url().optional(), // Added poster URL support
         aiDescription: z.string().optional(), // Added AI-generated description
         localizedName: z.string().optional(), // Localized title from TMDB
+        metadataQualityScore: z.number().optional(),
+        metadataQualityFlags: z.array(z.string()).optional(),
+        originalLanguage: z.string().nullable().optional(),
+        voteCount: z.number().nullable().optional(),
         popularity: z.number().nullable().optional(),
+        watchProviders: z
+          .array(
+            z.object({
+              providerId: z.number(),
+              providerName: z.string(),
+              region: z.string(),
+              availabilityType: z.enum(['flatrate', 'rent', 'buy', 'ads', 'free']),
+              displayPriority: z.number().nullable().optional(),
+            }),
+          )
+          .optional(),
         isMainRecommendation: z.boolean().optional(), // Mark main recommendation
         fromTMDB: z.boolean().optional(), // True for movies sourced from TMDB fallback
         source: candidateSourceSchema.optional(), // First-class candidate provenance
@@ -202,7 +217,18 @@ export type EnhancedMovieMatch = {
   posterURL?: string;
   source?: CandidateSource;
   tmdbMatchSource?: string | null;
+  metadataQualityScore?: number;
+  metadataQualityFlags?: string[];
+  originalLanguage?: string | null;
+  voteCount?: number | null;
   popularity?: number | null;
+  watchProviders?: Array<{
+    providerId: number;
+    providerName: string;
+    region: string;
+    availabilityType: 'flatrate' | 'rent' | 'buy' | 'ads' | 'free';
+    displayPriority?: number | null;
+  }>;
 };
 
 /** Minimal movie match returned from the vector DB RPC. */

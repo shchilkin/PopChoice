@@ -239,6 +239,8 @@ function toSimilarMovie(
     year: candidate.year,
     ...details,
     fromTMDB,
+    metadataQualityFlags: [],
+    metadataQualityScore: 100,
     source,
     ...(isMainRecommendation ? { isMainRecommendation } : {}),
   };
