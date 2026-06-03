@@ -29,13 +29,13 @@ import { POST } from './route';
 
 function createRetryRequest(fields: Record<string, string> = {}) {
   return createBackofficeFormRequest({
+    fetch: true,
     fields: {
       action: 'retry_item',
       item_id: 'item-1',
       return_to: '/repair-batches/batch-1?status=needs_review',
       ...fields,
     },
-    requestedWith: 'fetch',
     url: 'https://backoffice.test/repair-batches/batch-1/actions',
   });
 }
