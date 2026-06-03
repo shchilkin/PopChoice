@@ -2,7 +2,7 @@ import type { CatalogRepairBatch, CatalogRepairBatchItem } from '@pop-choice/sha
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { RepairStatusBadge, repairStatusLabel } from '../catalog-repair-status';
-import { CatalogStat } from '../shared';
+import { CatalogStat, PanelHeader, TableEmptyRow } from '../shared';
 import {
   getRepairBatchProgress,
   issueHref,
@@ -16,11 +16,7 @@ import {
 export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[] }) {
   if (items.length === 0) {
     return (
-      <tr>
-        <td colSpan={10} className="empty">
-          No item rows were recorded for this repair batch.
-        </td>
-      </tr>
+      <TableEmptyRow colSpan={10}>No item rows were recorded for this repair batch.</TableEmptyRow>
     );
   }
 
@@ -123,9 +119,7 @@ export function RepairBatchSummary({ batch }: { batch: CatalogRepairBatch }) {
 export function RepairBatchContextPanel({ batch }: { batch: CatalogRepairBatch }) {
   return (
     <article className="panel">
-      <div className="panel-header">
-        <h2>Batch context</h2>
-      </div>
+      <PanelHeader title="Batch context" />
       <dl className="facts">
         <div>
           <dt>Action</dt>
@@ -163,9 +157,7 @@ export function RepairBatchContextPanel({ batch }: { batch: CatalogRepairBatch }
 export function RepairBatchItemStatusCountsPanel({ batch }: { batch: CatalogRepairBatch }) {
   return (
     <article className="panel">
-      <div className="panel-header">
-        <h2>Item status counts</h2>
-      </div>
+      <PanelHeader title="Item status counts" />
       <dl className="facts">
         <div>
           <dt>Accepted</dt>

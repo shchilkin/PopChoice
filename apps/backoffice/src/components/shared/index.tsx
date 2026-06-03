@@ -1,3 +1,64 @@
+import type { ReactNode } from 'react';
+
+function joinClassNames(...values: Array<string | false | null | undefined>): string {
+  return values.filter(Boolean).join(' ');
+}
+
+export function PanelHeader({
+  actions,
+  count,
+  hint,
+  title,
+}: {
+  actions?: ReactNode;
+  count?: number | string;
+  hint?: ReactNode;
+  title: ReactNode;
+}) {
+  const heading = typeof title === 'string' ? <h2>{title}</h2> : title;
+  const hintContent = typeof hint === 'string' ? <div className="issue-hint">{hint}</div> : hint;
+  const titleContent = hint ? (
+    <div>
+      {heading}
+      {hintContent}
+    </div>
+  ) : (
+    heading
+  );
+
+  return (
+    <div className="panel-header">
+      {titleContent}
+      {count === undefined ? null : <span className="count">{count}</span>}
+      {actions}
+    </div>
+  );
+}
+
+export function EmptyState({
+  children,
+  compact = false,
+}: {
+  children: ReactNode;
+  compact?: boolean;
+}) {
+  return <p className={joinClassNames('empty', compact && 'compact')}>{children}</p>;
+}
+
+export function TableScroll({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={joinClassNames('table-scroll', className)}>{children}</div>;
+}
+
+export function TableEmptyRow({ children, colSpan }: { children: ReactNode; colSpan: number }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="empty">
+        {children}
+      </td>
+    </tr>
+  );
+}
+
 export function BooleanDataPill({ value }: { value: boolean }) {
   return <span className={`data-pill ${value ? 'good' : 'warn'}`}>{value ? 'yes' : 'no'}</span>;
 }
@@ -150,7 +211,7 @@ export function formatTMDBMetadataValue(value: unknown): string {
 export function renderMetadataSnapshot(metadata: Record<string, unknown>) {
   const keys = Object.keys(metadata);
   if (keys.length === 0) {
-    return <p className="empty">No TMDB metadata snapshot has been stored for this movie.</p>;
+    return <EmptyState>No TMDB metadata snapshot has been stored for this movie.</EmptyState>;
   }
 
   return (

@@ -2,7 +2,7 @@ import type { TMDBMatchReview, TMDBReviewCandidate } from '@pop-choice/shared';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { formatPercent } from '../shared';
+import { PanelHeader, TableEmptyRow, TableScroll, formatPercent } from '../shared';
 import {
   ConfidenceMeter,
   CurrentTMDBValue,
@@ -113,13 +113,7 @@ function CandidateSummary({ candidates }: { candidates: TMDBReviewCandidate[] })
 
 function ReviewRows({ reviews }: { reviews: TMDBMatchReview[] }) {
   if (reviews.length === 0) {
-    return (
-      <tr>
-        <td colSpan={8} className="empty">
-          No TMDB review rows match these filters.
-        </td>
-      </tr>
-    );
+    return <TableEmptyRow colSpan={8}>No TMDB review rows match these filters.</TableEmptyRow>;
   }
 
   return (
@@ -224,12 +218,9 @@ export function ReviewListPage({
         <ReviewFilterSummary filters={filters} />
       </form>
       <section className="panel">
-        <div className="panel-header">
-          <h2>Review queue</h2>
-          <span className="count">{pagination.totalCount}</span>
-        </div>
+        <PanelHeader title="Review queue" count={pagination.totalCount} />
         <PaginationControls filters={filters} {...pagination} />
-        <div className="table-scroll">
+        <TableScroll>
           <table className="review-table">
             <thead>
               <tr>
@@ -247,7 +238,7 @@ export function ReviewListPage({
               <ReviewRows reviews={reviews} />
             </tbody>
           </table>
-        </div>
+        </TableScroll>
         <PaginationControls filters={filters} {...pagination} />
       </section>
     </BackofficeLayout>

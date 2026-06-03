@@ -8,7 +8,7 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
-import { SimplePaginationControls } from '../shared';
+import { PanelHeader, SimplePaginationControls, TableScroll } from '../shared';
 import {
   RepairBatchContextPanel,
   RepairBatchItemRows,
@@ -75,29 +75,22 @@ export function RepairBatchDetailPage({
       <CatalogMaintenanceRealtimeRefresh label="Repair batch items are live" />
       <RepairBatchSummary batch={batch} />
       <section className="panel triage-panel">
-        <div className="panel-header">
-          <div>
-            <h2>Recovery focus</h2>
-            <div className="issue-hint">{repairBatchRecoveryHint(batch)}</div>
-          </div>
-          <RepairStatusBadge status={batch.status} />
-        </div>
+        <PanelHeader
+          title="Recovery focus"
+          hint={repairBatchRecoveryHint(batch)}
+          actions={<RepairStatusBadge status={batch.status} />}
+        />
       </section>
       <section className="detail-grid">
         <RepairBatchContextPanel batch={batch} />
         <RepairBatchItemStatusCountsPanel batch={batch} />
       </section>
       <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Batch items</h2>
-            <div className="issue-hint">
-              Item rows preserve movie snapshot, queue metadata, latest error, and recovery
-              pressure.
-            </div>
-          </div>
-          <span className="count">{items.totalCount}</span>
-        </div>
+        <PanelHeader
+          title="Batch items"
+          hint="Item rows preserve movie snapshot, queue metadata, latest error, and recovery pressure."
+          count={items.totalCount}
+        />
         <div className="filter-bar" aria-label="Repair batch item filters">
           {REPAIR_BATCH_ITEM_STATUS_FILTERS.map((filter) => (
             <FilterLink
@@ -139,7 +132,7 @@ export function RepairBatchDetailPage({
           totalCount={items.totalCount}
           hrefForPage={hrefForItemPage}
         />
-        <div className="table-scroll">
+        <TableScroll>
           <table className="repair-batch-table">
             <thead>
               <tr>
@@ -159,7 +152,7 @@ export function RepairBatchDetailPage({
               <RepairBatchItemRows items={items.items} />
             </tbody>
           </table>
-        </div>
+        </TableScroll>
         <SimplePaginationControls
           ariaLabel="Catalog repair batch item pagination bottom"
           emptyLabel="No repair batch items"
