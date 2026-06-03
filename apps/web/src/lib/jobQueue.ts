@@ -5,7 +5,11 @@ import logger from '@/lib/logger';
 import { redisOptionsFromUrl } from '@/lib/redisConnection';
 
 import type { SerializableTMDBEmbeddings, TMDBDiscoverMovie } from '@/features/recommendation/tmdb';
-import type { PersonFormData } from '@/features/recommendation/types';
+import type {
+  PersonFormData,
+  RecommendationExperienceMode,
+  RecommendationSourceStrategy,
+} from '@/features/recommendation/types';
 import type { Locale } from '@/lib/locale';
 import type { TraceCarrier } from '@/lib/tracing';
 
@@ -46,7 +50,9 @@ export type MovieSeedJobData = {
 export type RecommendationJobData = {
   recommendationId: string;
   quizData: PersonFormData | PersonFormData[];
+  experienceMode?: RecommendationExperienceMode;
   locale: Locale;
+  sourceStrategy?: RecommendationSourceStrategy;
   userId?: string;
   trace?: TraceCarrier;
 };

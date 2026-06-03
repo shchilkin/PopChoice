@@ -3,6 +3,7 @@ import z from 'zod';
 
 import { getRecommendationInputBlock, normalizePeopleData } from '@/features/recommendation/input';
 import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
+import { resolveRecommendationSourceStrategy } from '@/features/recommendation/sourceStrategyPolicy';
 import { apiResponseSchema, requestBodySchema } from '@/features/recommendation/types';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import logger from '@/lib/logger';
@@ -44,8 +45,16 @@ async function postHandler(req: NextRequest): Promise<Response> {
 
     // Normalize to array format for consistent processing
     const allPeopleData = normalizePeopleData(validatedBody);
+    const experienceMode = 'normal-match';
+    const sourceStrategy = resolveRecommendationSourceStrategy({
+      experienceMode,
+      people: allPeopleData,
+    }).id;
 
-    logger.info({ personCount: allPeopleData.length, locale }, 'Processing recommendation request');
+    logger.info(
+      { experienceMode, personCount: allPeopleData.length, locale, sourceStrategy },
+      'Processing recommendation request',
+    );
 
     const inputBlock = await getRecommendationInputBlock(allPeopleData);
     if (inputBlock) {
@@ -63,8 +72,10 @@ async function postHandler(req: NextRequest): Promise<Response> {
       {
         attributes: {
           'http.route': '/api/movie-recommendation',
+          'recommendation.experience_mode': experienceMode,
           'recommendation.mode': 'legacy_sync',
           'recommendation.people.count': allPeopleData.length,
+          'recommendation.source_strategy': sourceStrategy,
           locale,
         },
       },
@@ -73,6 +84,8 @@ async function postHandler(req: NextRequest): Promise<Response> {
           onStageChange: (stage) => {
             setActiveTraceAttributes({ 'recommendation.stage': stage });
           },
+          experienceMode,
+          sourceStrategy,
         }),
     );
 

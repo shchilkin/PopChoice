@@ -6,7 +6,12 @@ import {
   updateRecommendationStatus,
 } from '@/lib/db/recommendations';
 
-import type { ApiResponse, RecommendationRequestBody } from './types';
+import type {
+  ApiResponse,
+  RecommendationExperienceMode,
+  RecommendationRequestBody,
+  RecommendationSourceStrategy,
+} from './types';
 import type {
   MovieRowToInsert,
   RecommendationStage,
@@ -16,8 +21,10 @@ import type {
 export async function createRecommendationRecord(
   quizData: RecommendationRequestBody,
   userId?: string,
+  sourceStrategy?: RecommendationSourceStrategy,
+  experienceMode?: RecommendationExperienceMode,
 ): Promise<{ id: string; slug: string }> {
-  return createRecommendation(quizData, userId);
+  return createRecommendation(quizData, userId, sourceStrategy, experienceMode);
 }
 
 export async function getRecommendationRecord(
@@ -77,5 +84,6 @@ function toMovieRows(result: ApiResponse): MovieRowToInsert[] {
     localizedName: movie.localizedName,
     isMainRecommendation: movie.isMainRecommendation ?? false,
     fromTMDB: movie.fromTMDB ?? false,
+    source: movie.source,
   }));
 }

@@ -101,6 +101,8 @@ describe('createRecommendation', () => {
     const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('user_id');
     expect(params[2]).toBe('42');
+    expect(params[3]).toBe('hybrid-fast');
+    expect(params[4]).toBe('normal-match');
   });
 
   it('stores null owner for anonymous recommendations', async () => {
@@ -110,6 +112,23 @@ describe('createRecommendation', () => {
 
     const [, params] = mockQuery.mock.calls[0] as [string, unknown[]];
     expect(params[2]).toBeNull();
+  });
+
+  it('stores recommendation source strategy and experience mode metadata when present', async () => {
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'rec-id', slug: 'abc123' }] });
+
+    await createRecommendation(
+      { favoriteMovie: 'Arrival' } as never,
+      undefined,
+      'tmdb-first',
+      'fast-pick',
+    );
+
+    const [sql, params] = mockQuery.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('source_strategy');
+    expect(sql).toContain('experience_mode');
+    expect(params[3]).toBe('tmdb-first');
+    expect(params[4]).toBe('fast-pick');
   });
 });
 
@@ -1170,6 +1189,7 @@ describe('insertRecommendationMovies', () => {
 
     const [, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
     expect(params).toContain(77);
+    expect(params).toContain('tmdb-discover');
   });
 
   it('stores a matched TMDB id for local recommendations', async () => {
@@ -1188,6 +1208,25 @@ describe('insertRecommendationMovies', () => {
     const [, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
     expect(params).toContain(129);
     expect(params).toContain(42);
+    expect(params).toContain('local-cache');
+  });
+
+  it('stores explicit recommendation candidate source provenance', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({}) // UPDATE recommendations metadata
+      .mockResolvedValueOnce({}) // INSERT
+      .mockResolvedValueOnce({}); // COMMIT
+
+    await insertRecommendationMovies(
+      'rec-id',
+      [makeMovie({ id: 42, fromTMDB: false, source: 'curated' })],
+      false,
+    );
+
+    const [sql, params] = mockClientQuery.mock.calls[2] as [string, unknown[]];
+    expect(sql).toContain('from_tmdb, source, tmdb_id');
+    expect(params).toContain('curated');
   });
 });
 
@@ -1217,7 +1256,9 @@ describe('getRecommendationWithMovies', () => {
             used_broader_search: false,
             db_movie_count: 12,
             quiz_data: null,
+            experience_mode: 'normal-match',
             more_picks_status: null,
+            source_strategy: 'tmdb-first',
             user_id: '42',
           },
         ],
@@ -1234,6 +1275,7 @@ describe('getRecommendationWithMovies', () => {
             localized_name: 'Localized',
             similarity: 0.8,
             from_tmdb: true,
+            source: 'tmdb-search',
             tmdb_id: 321,
             tmdb_name: 'TMDB Movie',
             tmdb_year: 2024,
@@ -1252,6 +1294,9 @@ describe('getRecommendationWithMovies', () => {
     const result = await getRecommendationWithMovies('slug-123', '42');
 
     expect(result?.movies[0]?.id).toBe(-321);
+    expect(result?.movies[0]?.source).toBe('tmdb-search');
+    expect(result?.experienceMode).toBe('normal-match');
+    expect(result?.sourceStrategy).toBe('tmdb-first');
     expect(result?.stage).toBe('complete');
     expect(result?.viewerCanRate).toBe(true);
     expect(result?.isSharedResult).toBe(false);
@@ -1269,7 +1314,9 @@ describe('getRecommendationWithMovies', () => {
             used_broader_search: false,
             db_movie_count: 12,
             quiz_data: null,
+            experience_mode: 'normal-match',
             more_picks_status: null,
+            source_strategy: 'tmdb-first',
             user_id: 42,
           },
         ],
@@ -1311,7 +1358,9 @@ describe('getRecommendationWithMovies', () => {
                 favoriteActor: 'Amy Adams',
               },
             ],
+            experience_mode: 'normal-match',
             more_picks_status: null,
+            source_strategy: 'compromise-hybrid',
             user_id: 'owner-1',
           },
         ],

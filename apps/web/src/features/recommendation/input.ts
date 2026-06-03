@@ -6,7 +6,12 @@ import {
   moderateInput,
 } from '@/utils/ai/moderation';
 
-import type { PersonFormData, RecommendationRequestBody } from './types';
+import type {
+  PersonFormData,
+  RecommendationCreateRequestBody,
+  RecommendationExperienceMode,
+  RecommendationRequestBody,
+} from './types';
 
 const BLOCKED_INPUT_ERROR =
   'Your input contains content that cannot be processed. Please revise your preferences and try again.';
@@ -18,6 +23,31 @@ type RecommendationInputBlock = {
 
 export function normalizePeopleData(validatedBody: RecommendationRequestBody): PersonFormData[] {
   return Array.isArray(validatedBody) ? validatedBody : [validatedBody];
+}
+
+export function normalizeRecommendationCreateRequest(
+  validatedBody: RecommendationCreateRequestBody,
+): {
+  experienceMode?: RecommendationExperienceMode;
+  quizData: RecommendationRequestBody;
+} {
+  if (typeof validatedBody === 'object' && validatedBody !== null && 'people' in validatedBody) {
+    return {
+      experienceMode: validatedBody.experienceMode,
+      quizData: validatedBody.people,
+    };
+  }
+
+  if (typeof validatedBody === 'object' && validatedBody !== null && 'quizData' in validatedBody) {
+    return {
+      experienceMode: validatedBody.experienceMode,
+      quizData: validatedBody.quizData,
+    };
+  }
+
+  return {
+    quizData: validatedBody,
+  };
 }
 
 export async function getRecommendationInputBlock(
