@@ -147,6 +147,7 @@ npm run dev:backoffice
 npm run build:backoffice
 npm run start --workspace=apps/backoffice
 npm run quality:backoffice
+npm run test:e2e:backoffice
 ```
 
 Run `npm run copy:env` after editing root `.env`; it copies values into
@@ -155,6 +156,10 @@ Run `npm run copy:env` after editing root `.env`; it copies values into
 Use `npm run quality:backoffice` before publishing broad backoffice changes; it
 runs the module-size guard that keeps app routes, operator panels, and queue
 helpers split into reviewable files.
+Use `npm run test:e2e:backoffice` when a change touches core operator browser
+flows such as catalog repair enqueueing, queue visibility, or TMDB review
+decisions. The script prepares the isolated e2e PostgreSQL/Redis services before
+starting the backoffice Playwright suite.
 The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
