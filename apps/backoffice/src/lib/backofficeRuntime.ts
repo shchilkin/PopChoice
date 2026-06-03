@@ -1,5 +1,6 @@
 import {
   ensureCatalogRepairActionSchema,
+  ensureRecommendationEvalRunSchema,
   ensureTMDBMatchReviewActionSchema,
   initDatabase,
   logger,
@@ -50,6 +51,7 @@ export async function ensureBackofficeReady(): Promise<BackofficeRuntimeConfig> 
         initDatabase(config.databaseUrl);
         await ensureCatalogRepairActionSchema();
         await ensureTMDBMatchReviewActionSchema();
+        await ensureRecommendationEvalRunSchema();
         return config;
       } catch (error) {
         initialization = null;

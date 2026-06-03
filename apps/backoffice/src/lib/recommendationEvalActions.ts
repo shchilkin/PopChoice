@@ -1,0 +1,148 @@
+import {
+  createRecommendationEvalRun,
+  failRecommendationEvalRun,
+  logger,
+  markRecommendationEvalRunQueued,
+} from '@pop-choice/shared';
+
+import {
+  enqueueRecommendationEvalFromBackoffice,
+  type BackofficeRecommendationEvalMode,
+} from '../recommendationEvalQueue';
+import {
+  backofficeActionError,
+  ensureBackofficeReady,
+  parseOperatorActor,
+} from './backofficeRuntime';
+
+import type { RecommendationEvalRunMode } from '@pop-choice/shared';
+
+const LIVE_RECOMMENDATION_EVAL_CONFIRMATION = 'RUN LIVE RECOMMENDATION EVAL';
+
+export function parseSafeRecommendationEvalMode(
+  value: FormDataEntryValue | string | null,
+): BackofficeRecommendationEvalMode {
+  if (value === 'mock' || value === 'real-data') return value;
+  throw backofficeActionError('Unsupported recommendation eval mode.');
+}
+
+export function parseRecommendationEvalMode(formData: FormData): BackofficeRecommendationEvalMode {
+  const value = formData.get('mode');
+  if (value === 'mock' || value === 'real-data') return value;
+  if (value !== 'live') {
+    throw backofficeActionError('Unsupported recommendation eval mode.');
+  }
+
+  const acknowledged = formData.get('acknowledge_live_cost') === 'yes';
+  const confirmation =
+    typeof formData.get('live_confirmation') === 'string'
+      ? String(formData.get('live_confirmation')).trim()
+      : '';
+  if (!acknowledged || confirmation !== LIVE_RECOMMENDATION_EVAL_CONFIRMATION) {
+    throw backofficeActionError(
+      `Live recommendation evals require checking the cost acknowledgement and typing "${LIVE_RECOMMENDATION_EVAL_CONFIRMATION}".`,
+    );
+  }
+
+  return 'live';
+}
+
+export type RecommendationEvalActionResult =
+  | {
+      status: 'queued';
+      runId: string;
+      jobId: string;
+      mode: BackofficeRecommendationEvalMode;
+    }
+  | {
+      status: 'unavailable' | 'failed';
+      runId: string;
+      mode: BackofficeRecommendationEvalMode;
+      errorMessage: string;
+    };
+
+export function recommendationEvalMessage(
+  status: RecommendationEvalActionResult['status'],
+): string {
+  if (status === 'queued') {
+    return 'Recommendation eval job queued. Workers will persist results when it finishes.';
+  }
+  if (status === 'unavailable') {
+    return 'Recommendation eval queue is unavailable. Check REDIS_URL and worker status.';
+  }
+  return 'Recommendation eval failed to enqueue. Check backoffice logs before retrying.';
+}
+
+export async function performRecommendationEvalAction(
+  formData: FormData,
+  headers: Headers,
+): Promise<RecommendationEvalActionResult> {
+  const config = await ensureBackofficeReady();
+  const mode = parseRecommendationEvalMode(formData);
+  const actor = parseOperatorActor(headers);
+  const run = await createRecommendationEvalRun({
+    actor,
+    mode: mode as RecommendationEvalRunMode,
+    requestedOptions: {
+      liveGuardAcknowledged: mode === 'live',
+      trigger: 'backoffice',
+    },
+    source: 'backoffice',
+  });
+
+  try {
+    const job = await enqueueRecommendationEvalFromBackoffice(
+      {
+        mode,
+        runId: run.id,
+      },
+      config.redisUrl,
+    );
+
+    if (!job) {
+      await failRecommendationEvalRun({
+        errorMessage: 'REDIS_URL is unavailable or the recommendation-evals queue is disabled.',
+        runId: run.id,
+        status: 'enqueue_failed',
+      });
+      return {
+        errorMessage: 'queue unavailable',
+        mode,
+        runId: run.id,
+        status: 'unavailable',
+      };
+    }
+
+    await markRecommendationEvalRunQueued({
+      jobId: job.jobId,
+      jobName: job.jobName,
+      queueName: job.queueName,
+      runId: run.id,
+    });
+
+    return {
+      jobId: job.jobId,
+      mode,
+      runId: run.id,
+      status: 'queued',
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await failRecommendationEvalRun({
+      errorMessage: message,
+      runId: run.id,
+      status: 'enqueue_failed',
+    });
+    logger.error('Failed to enqueue recommendation eval job from backoffice', {
+      err: error,
+      mode,
+      runId: run.id,
+    });
+    return {
+      errorMessage: message,
+      mode,
+      runId: run.id,
+      status: 'failed',
+    };
+  }
+}

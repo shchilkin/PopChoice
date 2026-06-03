@@ -13,9 +13,11 @@ vi.mock('@/lib/jobQueue', () => ({
   CATALOG_MAINTENANCE_QUEUE_NAME: 'catalog-maintenance',
   MORE_PICKS_QUEUE_NAME: 'more-picks',
   MOVIE_SEED_QUEUE_NAME: 'movie-seed',
+  RECOMMENDATION_EVAL_QUEUE_NAME: 'recommendation-evals',
   RECOMMENDATION_QUEUE_NAME: 'recommendation',
   catalogMaintenanceQueue: null,
   morePicksQueue: null,
+  recommendationEvalQueue: null,
   recommendationQueue: null,
   seedQueue: null,
 }));

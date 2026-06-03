@@ -11,6 +11,7 @@ async function main() {
     { createMorePicksWorker },
     { createMovieSeedWorker },
     { createRecommendationWorker },
+    { createRecommendationEvalWorker },
   ] = await Promise.all([
     import('@/lib/jobQueue'),
     import('./catalogMaintenanceWorker'),
@@ -18,12 +19,14 @@ async function main() {
     import('./morePicksWorker'),
     import('./movieSeedWorker'),
     import('./recommendationWorker'),
+    import('./recommendationEvalWorker'),
   ]);
 
   const catalogMaintenanceWorker = createCatalogMaintenanceWorker();
   const movieSeedWorker = createMovieSeedWorker();
   const recommendationWorker = createRecommendationWorker();
   const morePicksWorker = createMorePicksWorker();
+  const recommendationEvalWorker = createRecommendationEvalWorker();
   const metricsServer = startWorkerMetricsServer();
 
   if (!catalogMaintenanceWorker && !movieSeedWorker && !recommendationWorker) {
@@ -49,6 +52,10 @@ async function main() {
     logger.warn('More-picks worker could not be created — continuing without it.');
   }
 
+  if (!recommendationEvalWorker) {
+    logger.warn('Recommendation eval worker could not be created — continuing without it.');
+  }
+
   const shutdown = async (signal: NodeJS.Signals) => {
     logger.info({ signal }, 'Shutting down workers');
     try {
@@ -57,6 +64,7 @@ async function main() {
         movieSeedWorker?.close(),
         recommendationWorker?.close(),
         morePicksWorker?.close(),
+        recommendationEvalWorker?.close(),
         new Promise<void>((resolve, reject) => {
           if (!metricsServer) {
             resolve();

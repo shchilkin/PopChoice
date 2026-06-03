@@ -178,6 +178,8 @@ DATABASE_URL=postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e npm run ev
 npm run test:e2e:down
 ```
 
+Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live evals are guarded by an explicit cost acknowledgement and confirmation phrase.
+
 ```bash
 npm run eval:recommendations -- --live
 ```

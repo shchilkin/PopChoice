@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_QUEUE_JOB_PAGE_SIZE,
+  DEFAULT_RECOMMENDATION_EVAL_PAGE_SIZE,
   DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE,
   DEFAULT_REPAIR_BATCH_PAGE_SIZE,
   MAX_QUEUE_JOB_PAGE_SIZE,
+  MAX_RECOMMENDATION_EVAL_PAGE_SIZE,
   MAX_REPAIR_BATCH_PAGE_SIZE,
   parseCatalogMaintenanceQueueParams,
+  parseRecommendationEvalListParams,
+  parseRecommendationEvalMode,
   parseRepairBatchItemParams,
   parseRepairBatchListParams,
 } from './backoffice';
@@ -103,5 +107,48 @@ describe('repair batch query params', () => {
     });
 
     expect(parseCatalogMaintenanceQueueParams({ state: 'unknown' }).state).toBe('waiting');
+  });
+});
+
+describe('recommendation eval params and actions', () => {
+  it('defaults eval run pagination', () => {
+    expect(parseRecommendationEvalListParams({})).toEqual({
+      page: 1,
+      pageSize: DEFAULT_RECOMMENDATION_EVAL_PAGE_SIZE,
+      limit: DEFAULT_RECOMMENDATION_EVAL_PAGE_SIZE,
+      offset: 0,
+    });
+  });
+
+  it('clamps eval run pagination', () => {
+    expect(parseRecommendationEvalListParams({ page: '3', pageSize: '999' })).toEqual({
+      page: 3,
+      pageSize: MAX_RECOMMENDATION_EVAL_PAGE_SIZE,
+      limit: MAX_RECOMMENDATION_EVAL_PAGE_SIZE,
+      offset: 200,
+    });
+  });
+
+  it('accepts safe eval modes without live acknowledgement', () => {
+    const formData = new FormData();
+    formData.set('mode', 'real-data');
+
+    expect(parseRecommendationEvalMode(formData)).toBe('real-data');
+  });
+
+  it('requires an explicit guard for live evals', () => {
+    const rejected = new FormData();
+    rejected.set('mode', 'live');
+
+    expect(() => parseRecommendationEvalMode(rejected)).toThrow(
+      'Live recommendation evals require checking the cost acknowledgement',
+    );
+
+    const accepted = new FormData();
+    accepted.set('mode', 'live');
+    accepted.set('acknowledge_live_cost', 'yes');
+    accepted.set('live_confirmation', 'RUN LIVE RECOMMENDATION EVAL');
+
+    expect(parseRecommendationEvalMode(accepted)).toBe('live');
   });
 });

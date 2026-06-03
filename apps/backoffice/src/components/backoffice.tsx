@@ -12,5 +12,10 @@ export {
   RepairBatchListPage,
   RepairBatchNotFoundPage,
 } from './repair-batches';
+export {
+  RecommendationEvalDetailPage,
+  RecommendationEvalListPage,
+  RecommendationEvalNotFoundPage,
+} from './recommendation-evals';
 export { ReviewDetailPage, ReviewListPage } from './tmdb-reviews';
 export type { BackofficeSection } from './backoffice-layout';

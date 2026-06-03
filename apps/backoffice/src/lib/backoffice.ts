@@ -5,4 +5,5 @@ export * from './backofficeMetrics';
 export * from './backofficeRuntime';
 export * from './catalogRepairActions';
 export * from './catalogRepairBatchActions';
+export * from './recommendationEvalActions';
 export * from './tmdbReviewActions';

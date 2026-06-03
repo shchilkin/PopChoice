@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react';
 
-export type BackofficeSection = 'health' | 'queue' | 'repair-batches' | 'reviews';
+export type BackofficeSection =
+  | 'health'
+  | 'queue'
+  | 'repair-batches'
+  | 'reviews'
+  | 'recommendation-evals';
 
 type ShellProps = {
   active: BackofficeSection;
@@ -56,6 +61,12 @@ export function BackofficeLayout({
           </a>
           <a className={active === 'repair-batches' ? 'active' : ''} href="/repair-batches">
             Repair batches
+          </a>
+          <a
+            className={active === 'recommendation-evals' ? 'active' : ''}
+            href="/recommendation-evals"
+          >
+            Recommendation evals
           </a>
         </nav>
         {children}

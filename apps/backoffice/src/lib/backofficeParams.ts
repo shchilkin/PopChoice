@@ -35,6 +35,9 @@ export const MAX_REPAIR_BATCH_PAGE_NUMBER = 4_001;
 export const DEFAULT_QUEUE_JOB_PAGE_SIZE = 25;
 export const MAX_QUEUE_JOB_PAGE_SIZE = 50;
 export const MAX_QUEUE_JOB_PAGE_NUMBER = 4_001;
+export const DEFAULT_RECOMMENDATION_EVAL_PAGE_SIZE = 25;
+export const MAX_RECOMMENDATION_EVAL_PAGE_SIZE = 100;
+export const MAX_RECOMMENDATION_EVAL_PAGE_NUMBER = 4_001;
 
 const REPAIR_BATCH_STATUS_FILTERS = new Set<CatalogRepairBatchStatusFilter>([
   'all',
@@ -201,6 +204,31 @@ export function parseCatalogMaintenanceQueueParams(
 
   return {
     state: isCatalogMaintenanceQueueJobState(stateValue) ? stateValue : 'waiting',
+    page,
+    pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
+}
+
+export function parseRecommendationEvalListParams(
+  params: Record<string, string | string[] | undefined>,
+): {
+  page: number;
+  pageSize: number;
+  limit: number;
+  offset: number;
+} {
+  const pageSize = parsePositiveIntParam(
+    firstSearchParam(params.pageSize),
+    DEFAULT_RECOMMENDATION_EVAL_PAGE_SIZE,
+    { max: MAX_RECOMMENDATION_EVAL_PAGE_SIZE },
+  );
+  const page = parsePositiveIntParam(firstSearchParam(params.page), 1, {
+    max: MAX_RECOMMENDATION_EVAL_PAGE_NUMBER,
+  });
+
+  return {
     page,
     pageSize,
     limit: pageSize,
