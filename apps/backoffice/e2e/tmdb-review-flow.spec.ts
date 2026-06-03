@@ -24,30 +24,46 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
       .getByRole('link', { name: 'PopChoice E2E Space Opera' }),
   ).toBeVisible();
 
-  await page
+  const queueButton = page
     .locator('#issue-missing_poster_url')
     .getByRole('row', { name: /#1 PopChoice E2E Space Opera/ })
-    .getByRole('button', { name: 'Queue backfill' })
-    .click();
+    .getByRole('button', { name: 'Queue backfill' });
+  const [actionResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().includes('/catalog-health/actions') &&
+        response.request().method() === 'POST',
+    ),
+    queueButton.click(),
+  ]);
 
-  await expect(page.getByText('Accepted for worker')).toBeVisible();
+  expect(actionResponse.ok()).toBe(true);
 
   await page.goto('/queue?state=waiting&page=1&pageSize=25');
 
   await expect(page.getByRole('heading', { name: 'Catalog Maintenance Queue' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Waiting jobs' })).toBeVisible();
-  await expect(page.getByText('backfill-movie')).toBeVisible();
-  await expect(page.getByText('Movie: 1')).toBeVisible();
-  await expect(page.getByText('Reason: missing_metadata')).toBeVisible();
+  const queuedJobRow = page
+    .getByRole('row')
+    .filter({ hasText: 'backfill-movie' })
+    .filter({ hasText: 'Movie: 1' })
+    .first();
+  await expect(queuedJobRow).toBeVisible();
+  await expect(queuedJobRow).toContainText('Reason: missing_metadata');
 
   await page.goto('/#repair-audit');
 
   await expect(page.getByRole('heading', { name: 'Recent repair actions' })).toBeVisible();
-  await expect(page.getByText('e2e-operator')).toBeVisible();
-  await expect(page.locator('#repair-audit').getByText('Missing Poster Url')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Movie #1' })).toBeVisible();
-  await expect(page.getByText('Enqueue Backfill')).toBeVisible();
-  await expect(page.getByText('Accepted')).toBeVisible();
+  const auditRow = page
+    .locator('#repair-audit')
+    .getByRole('row')
+    .filter({ hasText: 'Movie #1' })
+    .filter({ hasText: 'Enqueue Backfill' })
+    .first();
+  await expect(auditRow).toBeVisible();
+  await expect(auditRow).toContainText('e2e-operator');
+  await expect(auditRow).toContainText('Missing Poster Url');
+  await expect(auditRow).toContainText('Accepted');
 });
 
 test('operator applies a seeded TMDB review candidate from queue to audit history', async ({
