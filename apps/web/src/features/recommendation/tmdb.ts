@@ -36,6 +36,7 @@ const tmdbDiscoverMovieSchema = z.object({
   overview: z.string(),
   release_date: z.string(),
   vote_average: z.number(),
+  genre_ids: z.array(z.number()).optional(),
   poster_path: z.string().nullable(),
 });
 
@@ -56,12 +57,36 @@ const tmdbDiscoverResponseSchema = z.object({
  * The quiz sends human-readable labels (e.g. "Sci-Fi", "New", "Serious and thought-provoking")
  * which we normalize to stable keys before mapping.
  */
-function extractTMDBParams(allPeopleData: PersonFormData[]): {
-  genre_ids: number[];
-  sort_by: string;
+export type TMDBDiscoverQueryShape = {
+  genreIds: number[];
+  sortBy: string;
+  voteCountGte: number;
+  withoutGenreIds: number[];
   primary_release_date_gte?: string;
   primary_release_date_lte?: string;
-} {
+  with_runtime_lte?: number;
+};
+
+function getPreferenceText(allPeopleData: PersonFormData[]): string {
+  return allPeopleData
+    .flatMap((person) => [
+      person.favoriteMovieWhy,
+      person.newVsClassic,
+      person.tonePreference,
+      ...person.moodPreference,
+    ])
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toLocaleLowerCase('en-US');
+}
+
+function hasAnyPreferenceTerm(text: string, terms: string[]): boolean {
+  return terms.some((term) => text.includes(term));
+}
+
+export function buildTMDBDiscoverQueryShape(
+  allPeopleData: PersonFormData[],
+): TMDBDiscoverQueryShape {
   // Aggregate mood preferences across all people.
   // Normalize labels: "Sci-Fi" → "scifi", "Action" → "action", etc.
   const moodCounts: Record<string, number> = {};
@@ -73,11 +98,20 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
   });
 
   // Top genres (up to 3) mapped to TMDB IDs
-  const genre_ids = Object.entries(moodCounts)
+  const preferenceText = getPreferenceText(allPeopleData);
+  const withoutGenreIds = new Set<number>();
+  if (hasAnyPreferenceTerm(preferenceText, ['avoid: horror', 'avoid horror', 'no horror'])) {
+    withoutGenreIds.add(GENRE_LABEL_TO_TMDB_ID.horror);
+  }
+  if (hasAnyPreferenceTerm(preferenceText, ['avoid: gore', 'avoid gore', 'no gore'])) {
+    withoutGenreIds.add(GENRE_LABEL_TO_TMDB_ID.horror);
+  }
+
+  const genreIds = Object.entries(moodCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 3)
     .map(([key]) => GENRE_LABEL_TO_TMDB_ID[key])
-    .filter((id): id is number => id !== undefined);
+    .filter((id): id is number => id !== undefined && !withoutGenreIds.has(id));
 
   // Era preference: normalize to 'new' | 'classic' | 'both' by keyword matching.
   // Quiz sends e.g. "New", "Classic", "Both new and classic".
@@ -125,10 +159,44 @@ function extractTMDBParams(allPeopleData: PersonFormData[]): {
     toneCounts[key] = (toneCounts[key] ?? 0) + 1;
   });
   const dominantTone = Object.entries(toneCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'light';
-  const sort_by =
+  let sortBy =
     dominantTone === 'serious' || dominantTone === 'dark' ? 'vote_average.desc' : 'popularity.desc';
 
-  return { genre_ids, sort_by, primary_release_date_gte, primary_release_date_lte };
+  let voteCountGte = 100;
+  if (
+    hasAnyPreferenceTerm(preferenceText, [
+      'discovery appetite: safe hit',
+      'proven hits',
+      'familiar crowd-pleasers',
+    ])
+  ) {
+    voteCountGte = 500;
+    sortBy = 'popularity.desc';
+  } else if (
+    hasAnyPreferenceTerm(preferenceText, [
+      'discovery appetite: surprise me',
+      'unexpected picks',
+      'surprise me',
+    ])
+  ) {
+    voteCountGte = 50;
+  }
+
+  if (hasAnyPreferenceTerm(preferenceText, ['slow pacing'])) {
+    voteCountGte = Math.max(voteCountGte, 250);
+  }
+
+  const with_runtime_lte = hasAnyPreferenceTerm(preferenceText, ['long runtime']) ? 125 : undefined;
+
+  return {
+    genreIds,
+    sortBy,
+    voteCountGte,
+    withoutGenreIds: Array.from(withoutGenreIds),
+    primary_release_date_gte,
+    primary_release_date_lte,
+    with_runtime_lte,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -144,14 +212,17 @@ export async function fetchTMDBDiscoverMovies(
   tmdbApiKey: string,
 ): Promise<TMDBDiscoverMovie[]> {
   try {
-    const params = extractTMDBParams(allPeopleData);
+    const params = buildTMDBDiscoverQueryShape(allPeopleData);
 
     const url = new URL(`${TMDB_API_BASE}/discover/movie`);
-    if (params.genre_ids.length > 0) {
-      url.searchParams.set('with_genres', params.genre_ids.join('|'));
+    if (params.genreIds.length > 0) {
+      url.searchParams.set('with_genres', params.genreIds.join('|'));
     }
-    url.searchParams.set('sort_by', params.sort_by);
-    url.searchParams.set('vote_count.gte', '100');
+    if (params.withoutGenreIds.length > 0) {
+      url.searchParams.set('without_genres', params.withoutGenreIds.join('|'));
+    }
+    url.searchParams.set('sort_by', params.sortBy);
+    url.searchParams.set('vote_count.gte', String(params.voteCountGte));
     url.searchParams.set('include_adult', 'false');
     url.searchParams.set('page', '1');
     if (params.primary_release_date_gte) {
@@ -159,6 +230,9 @@ export async function fetchTMDBDiscoverMovies(
     }
     if (params.primary_release_date_lte) {
       url.searchParams.set('primary_release_date.lte', params.primary_release_date_lte);
+    }
+    if (params.with_runtime_lte) {
+      url.searchParams.set('with_runtime.lte', String(params.with_runtime_lte));
     }
 
     const response = await fetch(url.toString(), {
@@ -281,6 +355,7 @@ function tmdbMovieToEnhancedMatch(
     similarity,
     content,
     posterURL,
+    source: 'tmdb-discover',
   };
 }
 

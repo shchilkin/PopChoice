@@ -13,28 +13,67 @@ import {
   markRecommendationProcessing,
 } from './persistence';
 import { runRecommendationPipeline } from './pipeline';
+import { resolveRecommendationSourceStrategy } from './sourceStrategyPolicy';
 
-import type { ApiResponse, PersonFormData, RecommendationRequestBody } from './types';
+import type {
+  ApiResponse,
+  PersonFormData,
+  RecommendationExperienceMode,
+  RecommendationRequestBody,
+  RecommendationSourceStrategy,
+} from './types';
 import type { Locale } from '@/lib/locale';
+
+export type CreateRecommendationRunOptions = {
+  experienceMode?: RecommendationExperienceMode;
+  sourceStrategy?: RecommendationSourceStrategy;
+  userId?: string;
+};
 
 export async function createAndStartRecommendation(
   quizData: RecommendationRequestBody,
   allPeopleData: PersonFormData[],
   locale: Locale,
-  userId?: string,
+  options: CreateRecommendationRunOptions = {},
 ): Promise<{ id: string; slug: string }> {
-  const created = await createRecommendationRecord(quizData, userId);
+  const isDeterministic = usesDeterministicE2ERecommendations();
+  const experienceMode =
+    options.experienceMode ?? (isDeterministic ? 'curated-showcase' : 'normal-match');
+  const sourceStrategy =
+    options.sourceStrategy ??
+    (isDeterministic
+      ? 'curated-showcase'
+      : resolveRecommendationSourceStrategy({
+          experienceMode,
+          people: allPeopleData,
+        }).id);
+  const created = await createRecommendationRecord(
+    quizData,
+    options.userId,
+    sourceStrategy,
+    experienceMode,
+  );
   const recommendationId = created.id;
   const recommendationSlug = created.slug;
 
   setActiveTraceAttributes({
+    'recommendation.experience_mode': experienceMode,
     'recommendation.id': recommendationId,
     'recommendation.slug': recommendationSlug,
+    'recommendation.source_strategy': sourceStrategy,
   });
-  logger.info({ recommendationId, recommendationSlug }, 'Recommendation row created');
+  logger.info(
+    { experienceMode, recommendationId, recommendationSlug, sourceStrategy },
+    'Recommendation row created',
+  );
 
-  if (usesDeterministicE2ERecommendations()) {
-    await completeDeterministicE2ERecommendation(recommendationId, allPeopleData);
+  if (isDeterministic) {
+    await completeDeterministicE2ERecommendation(
+      recommendationId,
+      allPeopleData,
+      experienceMode,
+      sourceStrategy,
+    );
     return created;
   }
 
@@ -48,14 +87,24 @@ export async function createAndStartRecommendation(
             'messaging.system': 'bullmq',
             'messaging.destination.name': 'recommendation',
             'messaging.operation.name': 'enqueue',
+            'recommendation.experience_mode': experienceMode,
             'recommendation.id': recommendationId,
             'recommendation.slug': recommendationSlug,
+            'recommendation.source_strategy': sourceStrategy,
           },
         },
         async (span) => {
           const job = await queue.add(
             'recommendation',
-            { recommendationId, quizData, locale, userId, trace: getTraceCarrier() },
+            {
+              recommendationId,
+              quizData,
+              experienceMode,
+              locale,
+              sourceStrategy,
+              userId: options.userId,
+              trace: getTraceCarrier(),
+            },
             RECOMMENDATION_JOB_OPTIONS,
           );
           span.setAttribute('job.id', String(job.id ?? 'unknown'));
@@ -67,11 +116,19 @@ export async function createAndStartRecommendation(
         { err, recommendationId },
         'Failed to enqueue recommendation job — falling back to inline processing',
       );
-      void processInlineRecommendation(recommendationId, allPeopleData, locale, userId);
+      void processInlineRecommendation(recommendationId, allPeopleData, locale, {
+        experienceMode,
+        sourceStrategy,
+        userId: options.userId,
+      });
     }
   } else {
     logger.warn('Recommendation queue unavailable (no Redis) — processing inline');
-    void processInlineRecommendation(recommendationId, allPeopleData, locale, userId);
+    void processInlineRecommendation(recommendationId, allPeopleData, locale, {
+      experienceMode,
+      sourceStrategy,
+      userId: options.userId,
+    });
   }
 
   return created;
@@ -84,13 +141,17 @@ export function usesDeterministicE2ERecommendations(): boolean {
 async function completeDeterministicE2ERecommendation(
   recommendationId: string,
   allPeopleData: PersonFormData[],
+  experienceMode: RecommendationExperienceMode,
+  sourceStrategy: RecommendationSourceStrategy,
 ): Promise<void> {
   await withTraceSpan(
     'recommendation.process.deterministic_e2e',
     {
       attributes: {
+        'recommendation.experience_mode': experienceMode,
         'recommendation.id': recommendationId,
         'recommendation.mode': 'deterministic_e2e',
+        'recommendation.source_strategy': sourceStrategy,
       },
     },
     async () => {
@@ -100,7 +161,7 @@ async function completeDeterministicE2ERecommendation(
       await markRecommendationStage(recommendationId, 'complete');
       await completeRecommendationRecord(
         recommendationId,
-        buildDeterministicE2EResult(allPeopleData),
+        buildDeterministicE2EResult(allPeopleData, experienceMode, sourceStrategy),
       );
       recordRecommendationCompletion({
         mode: 'deterministic_e2e',
@@ -111,13 +172,19 @@ async function completeDeterministicE2ERecommendation(
   );
 }
 
-function buildDeterministicE2EResult(allPeopleData: PersonFormData[]): ApiResponse {
+function buildDeterministicE2EResult(
+  allPeopleData: PersonFormData[],
+  experienceMode: RecommendationExperienceMode,
+  sourceStrategy: RecommendationSourceStrategy,
+): ApiResponse {
   const primary = allPeopleData[0];
   const reference = primary?.favoriteMovie ? ` after your ${primary.favoriteMovie} cue` : '';
 
   return {
     title: 'PopChoice E2E Space Opera',
     description: `A deterministic e2e recommendation${reference}.`,
+    experienceMode,
+    sourceStrategy,
     usedBroaderSearch: false,
     dbMovieCount: 6,
     similarMovies: [
@@ -169,14 +236,23 @@ async function processInlineRecommendation(
   recommendationId: string,
   allPeopleData: PersonFormData[],
   locale: Locale,
-  userId?: string,
+  options: CreateRecommendationRunOptions = {},
 ): Promise<void> {
+  const sourceStrategy =
+    options.sourceStrategy ??
+    resolveRecommendationSourceStrategy({
+      experienceMode: options.experienceMode,
+      people: allPeopleData,
+    }).id;
+  const experienceMode = options.experienceMode ?? 'normal-match';
   await withTraceSpan(
     'recommendation.process.inline',
     {
       attributes: {
+        'recommendation.experience_mode': experienceMode,
         'recommendation.id': recommendationId,
         'recommendation.mode': 'async_inline',
+        'recommendation.source_strategy': sourceStrategy,
       },
     },
     async (span) => {
@@ -188,7 +264,9 @@ async function processInlineRecommendation(
             setActiveTraceAttributes({ 'recommendation.stage': stage });
             await markRecommendationStage(recommendationId, stage);
           },
-          userId,
+          experienceMode,
+          sourceStrategy,
+          userId: options.userId,
         });
 
         await completeRecommendationRecord(recommendationId, result);

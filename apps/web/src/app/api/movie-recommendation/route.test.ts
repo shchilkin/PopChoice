@@ -86,8 +86,11 @@ import { MIN_HIGH_QUALITY_LOCAL, SIMILARITY_THRESHOLD, shouldFallBackToTMDB } fr
 import { POST } from './route';
 import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
 
+const originalTMDBApiKey = process.env.TMDB_API_KEY;
+
 // Inject the mock OpenAI client before each test and reset after.
 beforeEach(() => {
+  delete process.env.TMDB_API_KEY;
   setOpenAIClient({
     embeddings: {
       create: (...args: Parameters<typeof mockEmbeddingsCreate>) => mockEmbeddingsCreate(...args),
@@ -105,6 +108,11 @@ beforeEach(() => {
 
 afterEach(() => {
   resetOpenAIClient();
+  if (originalTMDBApiKey) {
+    process.env.TMDB_API_KEY = originalTMDBApiKey;
+  } else {
+    delete process.env.TMDB_API_KEY;
+  }
 });
 
 const validBody = {
@@ -875,6 +883,62 @@ describe('POST /api/movie-recommendation — TMDB fallback scoring', () => {
     const embeddingCalls = mockEmbeddingsCreate.mock.calls as unknown as { input: unknown }[][];
     const tmdbBatchCall = embeddingCalls.find((call) => Array.isArray(call[0]?.input));
     expect(tmdbBatchCall).toBeDefined();
+  });
+
+  it('uses TMDB retrieval for normal solo tmdb-first even when local results are strong', async () => {
+    process.env.TMDB_API_KEY = tmdbEnv.TMDB_API_KEY;
+
+    const { getDbClient } = vi.mocked(await import('@/clients/dbClient'));
+    (getDbClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      isConfigured: vi.fn().mockReturnValue(false),
+      rpc: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            name: 'Strong Local Match',
+            age_rating: 'PG',
+            description: 'A strong local match.',
+            duration: 100,
+            score_rating: 8.2,
+            year: 2021,
+            similarity: 0.9,
+            content: 'Strong Local Match (2021)',
+          },
+        ],
+        error: null,
+      }),
+    });
+
+    const queryEmbedding = Array(3072).fill(0);
+    queryEmbedding[0] = 1;
+    const tmdbWeakerEmbedding = Array(3072).fill(0);
+    tmdbWeakerEmbedding[0] = 0.4;
+    const tmdbWeakestEmbedding = Array(3072).fill(0);
+    tmdbWeakestEmbedding[1] = 1;
+
+    mockEmbeddingsCreate
+      .mockResolvedValueOnce({ data: [{ embedding: queryEmbedding }] })
+      .mockResolvedValueOnce({
+        data: [{ embedding: tmdbWeakerEmbedding }, { embedding: tmdbWeakestEmbedding }],
+      })
+      .mockResolvedValue({ data: [{ embedding: Array(3072).fill(0) }] });
+
+    const res = await POST(makeRequest(validPerson));
+    const data = await res.json();
+
+    expect(res.status).not.toBe(500);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/discover/movie'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(data.similarMovies[0]).toMatchObject({
+      name: 'Strong Local Match',
+      source: 'curated',
+    });
+    expect(data.candidateSourceDistribution).toMatchObject({
+      curated: 1,
+      'tmdb-discover': 2,
+    });
   });
 
   it('falls back to similarity 0.35 when the TMDB embeddings call throws', async () => {

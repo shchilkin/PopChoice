@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS recommendations (
   completed_at        timestamptz,
   used_broader_search boolean,
   db_movie_count      integer,
-  more_picks_status   text
+  more_picks_status   text,
+  source_strategy     text        NOT NULL DEFAULT 'hybrid-fast',
+  experience_mode     text        NOT NULL DEFAULT 'normal-match'
 );
 
 -- Idempotent column additions for databases created before slug / more_picks_status were added
@@ -25,6 +27,8 @@ ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS slug             text;
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS user_id          bigint REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS more_picks_status text;
 ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS stage             text;
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS source_strategy   text;
+ALTER TABLE recommendations ADD COLUMN IF NOT EXISTS experience_mode   text;
 
 -- Back-fill slug for any legacy rows that pre-date the column
 UPDATE recommendations
@@ -35,10 +39,22 @@ UPDATE recommendations
    SET stage = 'queued'
  WHERE stage IS NULL;
 
+UPDATE recommendations
+   SET source_strategy = 'hybrid-fast'
+ WHERE source_strategy IS NULL;
+
+UPDATE recommendations
+   SET experience_mode = 'normal-match'
+ WHERE experience_mode IS NULL;
+
 -- Enforce NOT NULL now that every row has a value
 ALTER TABLE recommendations ALTER COLUMN slug SET NOT NULL;
 ALTER TABLE recommendations ALTER COLUMN stage SET DEFAULT 'queued';
 ALTER TABLE recommendations ALTER COLUMN stage SET NOT NULL;
+ALTER TABLE recommendations ALTER COLUMN source_strategy SET DEFAULT 'hybrid-fast';
+ALTER TABLE recommendations ALTER COLUMN source_strategy SET NOT NULL;
+ALTER TABLE recommendations ALTER COLUMN experience_mode SET DEFAULT 'normal-match';
+ALTER TABLE recommendations ALTER COLUMN experience_mode SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_recommendations_slug
   ON recommendations (slug);
@@ -64,7 +80,8 @@ CREATE TABLE IF NOT EXISTS recommendation_movies (
   tmdb_year               integer,
   tmdb_score_rating       float,
   tmdb_duration           integer,
-  tmdb_age_rating         text
+  tmdb_age_rating         text,
+  source                  text       NOT NULL DEFAULT 'local-cache'
 );
 
 ALTER TABLE recommendation_movies
@@ -93,6 +110,19 @@ ALTER TABLE recommendation_movies
 
 ALTER TABLE recommendation_movies
   ADD COLUMN IF NOT EXISTS tmdb_age_rating text;
+
+ALTER TABLE recommendation_movies
+  ADD COLUMN IF NOT EXISTS source text;
+
+UPDATE recommendation_movies
+   SET source = CASE WHEN from_tmdb THEN 'tmdb-discover' ELSE 'local-cache' END
+ WHERE source IS NULL;
+
+ALTER TABLE recommendation_movies
+  ALTER COLUMN source SET DEFAULT 'local-cache';
+
+ALTER TABLE recommendation_movies
+  ALTER COLUMN source SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_recommendation_movies_rec_id
   ON recommendation_movies (recommendation_id);

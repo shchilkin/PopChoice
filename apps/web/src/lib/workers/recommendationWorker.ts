@@ -7,6 +7,7 @@ import {
   markRecommendationProcessing,
 } from '@/features/recommendation/persistence';
 import { runRecommendationPipeline } from '@/features/recommendation/pipeline';
+import { resolveRecommendationSourceStrategy } from '@/features/recommendation/sourceStrategyPolicy';
 import {
   RECOMMENDATION_JOB_OPTIONS,
   RECOMMENDATION_QUEUE_NAME,
@@ -31,6 +32,14 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
     RECOMMENDATION_QUEUE_NAME,
     async (job) => {
       const { recommendationId, quizData, locale, userId } = job.data;
+      const allPeopleData = Array.isArray(quizData) ? quizData : [quizData];
+      const experienceMode = job.data.experienceMode ?? 'normal-match';
+      const sourceStrategy =
+        job.data.sourceStrategy ??
+        resolveRecommendationSourceStrategy({
+          experienceMode,
+          people: allPeopleData,
+        }).id;
 
       await withTraceSpan(
         'recommendation.worker.process',
@@ -42,8 +51,10 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
             'messaging.operation.name': 'process',
             'job.id': String(job.id ?? 'unknown'),
             'job.name': job.name,
+            'recommendation.experience_mode': experienceMode,
             'recommendation.id': recommendationId,
             'recommendation.mode': 'async_worker',
+            'recommendation.source_strategy': sourceStrategy,
           },
         },
         async () => {
@@ -55,14 +66,14 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
           await markRecommendationProcessing(recommendationId);
 
           try {
-            const allPeopleData = Array.isArray(quizData) ? quizData : [quizData];
-
             // Run the full AI pipeline
             const result = await runRecommendationPipeline(allPeopleData, locale, {
               onStageChange: async (stage) => {
                 setActiveTraceAttributes({ 'recommendation.stage': stage });
                 await markRecommendationStage(recommendationId, stage);
               },
+              experienceMode,
+              sourceStrategy,
               userId,
             });
 

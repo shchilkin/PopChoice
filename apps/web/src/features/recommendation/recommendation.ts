@@ -7,6 +7,7 @@ import { recordOpenAIProviderError } from '@/lib/metrics';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
 
+import { getLocalCandidateSource } from './candidateSources';
 import { LOCAL_VECTOR_MATCH_THRESHOLD, MAX_TOTAL_MOVIES } from './config';
 import { combineAllPeopleDataToString } from './embedding';
 import { recommendationResponseJsonSchema, recommendationResponseSchema } from './types';
@@ -58,6 +59,11 @@ IMPORTANT: The "title" field must be returned exactly as it appears in the provi
 
 const movieService = new MovieService();
 
+type LocalMatchRow = EnhancedMovieMatch & {
+  tmdb_id?: number | null;
+  tmdb_match_source?: string | null;
+};
+
 // ---------------------------------------------------------------------------
 // Vector DB search
 // ---------------------------------------------------------------------------
@@ -80,10 +86,14 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
     return null;
   }
 
-  return (data as Array<EnhancedMovieMatch & { tmdb_id?: number | null }>).map((movie) => ({
-    ...movie,
-    tmdbId: movie.tmdb_id ?? movie.tmdbId ?? null,
-  }));
+  return (data as LocalMatchRow[])
+    .map((movie) => ({
+      ...movie,
+      source: getLocalCandidateSource(movie.tmdb_match_source),
+      tmdbId: movie.tmdb_id ?? movie.tmdbId ?? null,
+      tmdbMatchSource: movie.tmdb_match_source ?? movie.tmdbMatchSource ?? null,
+    }))
+    .sort((a, b) => b.similarity - a.similarity);
 }
 
 /** Find similar movies in the local vector store. Returns an empty array if none found or DB unavailable. */
