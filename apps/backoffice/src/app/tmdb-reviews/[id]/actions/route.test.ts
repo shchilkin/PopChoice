@@ -40,11 +40,11 @@ function createReviewRequest({
 } = {}) {
   return createBackofficeFormRequest({
     accept,
+    fetch: requestedWith === 'fetch',
     fields: {
       action: 'apply_candidate',
       candidate_id: '12',
     },
-    requestedWith,
     url: 'https://backoffice.test/tmdb-reviews/review-1/actions',
   });
 }
