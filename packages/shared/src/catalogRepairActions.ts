@@ -682,6 +682,35 @@ export async function createCatalogRepairBatchItem(
   return normalizeBatchItem(result.rows[0]);
 }
 
+export async function getCatalogRepairBatchItem(
+  itemId: string | number,
+): Promise<CatalogRepairBatchItem | null> {
+  const result = await getPool().query<CatalogRepairBatchItemRow>(
+    `SELECT
+        id::text,
+        batch_id::text,
+        movie_id::text,
+        issue_key,
+        status,
+        queue_name,
+        job_name,
+        job_id,
+        language,
+        reason,
+        error_message,
+        movie_snapshot,
+        result,
+        created_at::text,
+        updated_at::text,
+        completed_at::text
+       FROM catalog_repair_batch_items
+      WHERE id = $1`,
+    [itemId],
+  );
+
+  return result.rows[0] ? normalizeBatchItem(result.rows[0]) : null;
+}
+
 export async function updateCatalogRepairBatchItemEnqueueResult(
   input: UpdateCatalogRepairBatchItemEnqueueInput,
 ): Promise<CatalogRepairBatchItem> {
@@ -697,6 +726,7 @@ export async function updateCatalogRepairBatchItemEnqueueResult(
             updated_at = now(),
             completed_at = CASE
               WHEN $2 IN ('unavailable', 'enqueue_failed') THEN now()
+              WHEN $2 IN ('queued', 'deduped') THEN NULL
               ELSE completed_at
             END
       WHERE id = $1

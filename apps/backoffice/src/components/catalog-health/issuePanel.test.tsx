@@ -1,29 +1,20 @@
-import type { CatalogHealthIssue, CatalogMovieSample } from '@pop-choice/shared';
+import type { CatalogHealthIssue } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
+import { catalogHealthIssue, catalogMovieSample } from '../../test/backofficeFixtures';
 import { CatalogIssuePanel, buildCatalogIssuePageHref, catalogIssueHint } from './issuePanel';
 
-const sampleMovie: CatalogMovieSample = {
+const sampleMovie = catalogMovieSample({
   age_rating: 'NR',
   duration: 0,
   id: '331',
-  localized_name: null,
   name: 'Mock Movie',
-  poster_url: null,
-  tmdb_id: null,
-  tmdb_matched_at: null,
   year: 2026,
-};
+});
 
 function issue(overrides: Partial<CatalogHealthIssue> = {}): CatalogHealthIssue {
-  return {
-    count: 42,
-    key: 'missing_poster_url',
-    label: 'Missing poster_url',
-    samples: [sampleMovie],
-    ...overrides,
-  };
+  return catalogHealthIssue({ samples: [sampleMovie], ...overrides });
 }
 
 describe('catalog health issue panel presentation', () => {

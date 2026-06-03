@@ -32,6 +32,8 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 - `npm run format:package` - Sort and format package.json
 - `npm run type-check` - Run TypeScript type checking
 - `npm run fix` - Run all fixes (lint, format, package.json)
+- `npm run check:backoffice` - Build shared code, run the backoffice structure
+  guard, type-check `apps/backoffice`, and run the backoffice Vitest suite
 - `npm run quality:backoffice` - Run the backoffice structural module-size
   guard used to keep operator UI/routes split into reviewable files
 - `$impeccable critique <target>` - Run before publishing UI PRs, then address
@@ -166,6 +168,12 @@ isolated database and Redis services:
 
 ```bash
 npm run test:e2e:backoffice
+```
+
+For local backoffice PR validation before browser e2e, run:
+
+```bash
+npm run check:backoffice
 ```
 
 Stop and remove the e2e services with:

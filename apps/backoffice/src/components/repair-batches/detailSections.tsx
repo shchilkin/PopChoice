@@ -13,10 +13,40 @@ import {
   truncateText,
 } from './helpers';
 
+const RETRIABLE_ITEM_STATUSES = new Set<CatalogRepairBatchItem['status']>([
+  'failed',
+  'enqueue_failed',
+  'unavailable',
+]);
+
+function canRetryRepairBatchItem(item: CatalogRepairBatchItem): boolean {
+  return RETRIABLE_ITEM_STATUSES.has(item.status);
+}
+
+function RepairBatchItemAction({ item }: { item: CatalogRepairBatchItem }) {
+  if (!canRetryRepairBatchItem(item)) return <span className="muted">Inspect</span>;
+
+  return (
+    <form action={`/repair-batches/${encodeURIComponent(item.batchId)}/actions`} method="post">
+      <input type="hidden" name="action" value="retry_item" />
+      <input type="hidden" name="batch_id" value={item.batchId} />
+      <input type="hidden" name="item_id" value={item.id} />
+      <input
+        type="hidden"
+        name="return_to"
+        value={`/repair-batches/${encodeURIComponent(item.batchId)}?status=needs_review`}
+      />
+      <button className="button small secondary" type="submit">
+        Retry item
+      </button>
+    </form>
+  );
+}
+
 export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[] }) {
   if (items.length === 0) {
     return (
-      <TableEmptyRow colSpan={10}>No item rows were recorded for this repair batch.</TableEmptyRow>
+      <TableEmptyRow colSpan={11}>No item rows were recorded for this repair batch.</TableEmptyRow>
     );
   }
 
@@ -69,6 +99,9 @@ export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[]
               </div>
             </td>
             <td>{formatBackofficeDateTime(item.updatedAt)}</td>
+            <td>
+              <RepairBatchItemAction item={item} />
+            </td>
           </tr>
         );
       })}

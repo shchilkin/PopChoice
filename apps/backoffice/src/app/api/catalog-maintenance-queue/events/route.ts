@@ -24,14 +24,11 @@ export async function GET(request: Request) {
 
     const redisUrl = config.redisUrl;
 
-    if (!redisUrl) {
-      return new Response('Catalog maintenance queue events require REDIS_URL.', { status: 503 });
-    }
-
     const queueParams = parseCatalogMaintenanceQueueParams(
       getSearchParamsRecord(requestUrl.searchParams),
     );
     const stream = createBackofficeQueueEventStream({
+      connectedPayload: (mode) => ({ mode }),
       errorEvent: 'queue-error',
       logError: logBackofficeError,
       logOpenErrorMessage: 'Failed to open catalog maintenance queue event stream',
@@ -57,6 +54,7 @@ export async function GET(request: Request) {
       }),
       redisUrl,
       request,
+      sendSnapshotWhenRedisUnavailable: true,
       streamOpenErrorMessage: 'Failed to open queue event stream.',
       streamQueueErrorMessage: 'Queue events stream error.',
       streamRedisErrorMessage: 'Redis connection error.',

@@ -12,12 +12,12 @@ import {
   getQueueJobLinks,
   getQueueStateClass,
   getQueueStateCount,
+  queueRealtimeDetailCopy,
   QUEUE_STATES,
   queueRealtimeCopy,
   STATE_LABELS,
+  type QueueRealtimeStatus as QueueRealtimeStatusValue,
 } from './helpers';
-
-export type RealtimeStatus = 'connecting' | 'connected' | 'error';
 
 export function QueueCommandStrip({
   bullBoardUrl,
@@ -279,25 +279,41 @@ function QueueJobLinks({ job }: { job: CatalogMaintenanceQueueJobSummary }) {
 }
 
 export function QueueRealtimeStatus({
+  isRefreshing = false,
   lastEventAt,
+  onRefresh,
   status,
 }: {
+  isRefreshing?: boolean;
   lastEventAt: string | null;
-  status: RealtimeStatus;
+  onRefresh?: () => void;
+  status: QueueRealtimeStatusValue;
 }) {
   const copy = queueRealtimeCopy(status);
+  const detailCopy = queueRealtimeDetailCopy(status);
   const lastEvent = lastEventAt ? formatLiveSyncTime(lastEventAt) : null;
+  const dotState =
+    status === 'connecting' || isRefreshing ? 'pending' : status === 'connected' ? '' : 'error';
+  const showFallbackControls = status !== 'connected' && status !== 'connecting';
 
   return (
     <div className={`live-refresh realtime-refresh ${status}`} aria-live="polite">
-      <span
-        className={`live-refresh-dot ${status === 'connecting' ? 'pending' : status === 'error' ? 'error' : ''}`}
-        aria-hidden="true"
-      />
+      <span className={`live-refresh-dot ${dotState}`} aria-hidden="true" />
       <span>{copy}</span>
       <span className="live-refresh-meta">
         {lastEvent ? `Updated ${lastEvent}` : 'Waiting for the first update'}
       </span>
+      {detailCopy ? <span className="live-refresh-error">{detailCopy}</span> : null}
+      {showFallbackControls && onRefresh ? (
+        <button
+          className="button small quiet"
+          disabled={isRefreshing}
+          onClick={onRefresh}
+          type="button"
+        >
+          {isRefreshing ? 'Refreshing' : 'Refresh'}
+        </button>
+      ) : null}
     </div>
   );
 }

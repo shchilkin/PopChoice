@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { catalogMaintenanceQueueJobPage } from '../../../test/backofficeFixtures';
+
 const mocks = vi.hoisted(() => ({
   ensureBackofficeReady: vi.fn(),
   listCatalogMaintenanceQueueJobs: vi.fn(),
@@ -31,8 +33,7 @@ describe('catalog maintenance queue API route', () => {
   });
 
   it('returns a no-store queue page JSON response', async () => {
-    const jobPage = {
-      available: true,
+    const jobPage = catalogMaintenanceQueueJobPage({
       counts: {
         active: 0,
         completed: 0,
@@ -42,15 +43,10 @@ describe('catalog maintenance queue API route', () => {
         waiting: 1,
         waitingChildren: 0,
       },
-      jobs: [],
-      limit: 25,
-      offset: 0,
       openJobs: 1,
-      queueName: 'catalog-maintenance',
-      state: 'waiting',
       totalCount: 1,
       updatedAt: '2026-06-03T00:00:00.000Z',
-    };
+    });
     mocks.listCatalogMaintenanceQueueJobs.mockResolvedValue(jobPage);
 
     const response = await GET(

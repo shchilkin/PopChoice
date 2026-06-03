@@ -146,6 +146,7 @@ export function RepairBatchDetailPage({
                 <th>Error</th>
                 <th>Pressure</th>
                 <th>Updated</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>

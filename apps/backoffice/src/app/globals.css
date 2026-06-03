@@ -478,7 +478,11 @@ input:disabled {
 .live-refresh-error {
   color: var(--warn);
 }
-.realtime-refresh.error {
+.realtime-refresh.error,
+.realtime-refresh.reconnecting,
+.realtime-refresh.fallback,
+.realtime-refresh.stale,
+.realtime-refresh.unavailable {
   border-color: color-mix(in srgb, var(--bad), var(--border) 55%);
 }
 .queue-status {
@@ -1469,6 +1473,21 @@ input:disabled {
   gap: 8px;
   border-top: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.018);
+}
+.review-risk.medium,
+.review-risk.high {
+  border-color: color-mix(in srgb, var(--warn), var(--border) 48%);
+}
+.review-risk.high {
+  border-color: color-mix(in srgb, var(--bad), var(--border) 48%);
+}
+.evidence-list {
+  margin: 0;
+  padding: 14px 18px 14px 28px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
 }
 .facts,
 .candidate dl {
