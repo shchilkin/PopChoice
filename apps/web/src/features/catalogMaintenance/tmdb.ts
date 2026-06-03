@@ -10,6 +10,8 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 const TMDB_FETCH_TIMEOUT_MS = 8_000;
 const MAX_CAST_CREDITS = 12;
 const MAX_KEYWORDS = 20;
+const SUPPORTED_PROVIDER_REGIONS = ['US', 'FI', 'RU'] as const;
+const WATCH_PROVIDER_TYPES = ['flatrate', 'rent', 'buy', 'ads', 'free'] as const;
 
 type TMDBGenre = {
   id: number;
@@ -41,14 +43,38 @@ type TMDBKeyword = {
   name: string;
 };
 
+type TMDBWatchProvider = {
+  provider_id: number;
+  provider_name: string;
+  logo_path?: string | null;
+  display_priority?: number | null;
+};
+
+type TMDBWatchProviderRegion = {
+  link?: string | null;
+} & Partial<Record<(typeof WATCH_PROVIDER_TYPES)[number], TMDBWatchProvider[]>>;
+
 export type TMDBMovieDetails = {
   id: number;
   title: string;
+  original_title?: string | null;
+  original_language?: string | null;
   overview: string;
   release_date: string;
   vote_average: number;
+  vote_count?: number | null;
+  popularity?: number | null;
   runtime: number | null;
   poster_path: string | null;
+  spoken_languages?: Array<{
+    english_name?: string | null;
+    iso_639_1?: string | null;
+    name?: string | null;
+  }>;
+  production_countries?: Array<{
+    iso_3166_1?: string | null;
+    name?: string | null;
+  }>;
   genres?: TMDBGenre[];
   credits?: {
     cast?: TMDBCastCredit[];
@@ -65,6 +91,9 @@ export type TMDBMovieDetails = {
         type: number;
       }>;
     }>;
+  };
+  'watch/providers'?: {
+    results?: Record<string, TMDBWatchProviderRegion>;
   };
 };
 
@@ -92,6 +121,18 @@ export type TMDBCatalogMetadata = {
     name: string;
     rawMetadata: Record<string, unknown>;
   }>;
+  providers: Array<{
+    providerId: number;
+    providerName: string;
+    logoPath: string | null;
+    displayPriority: number | null;
+    region: string;
+    availabilityType: (typeof WATCH_PROVIDER_TYPES)[number];
+    link: string | null;
+    rawMetadata: Record<string, unknown>;
+  }>;
+  qualityFlags: string[];
+  qualityScore: number;
   snapshot: Record<string, unknown>;
 };
 
@@ -152,7 +193,7 @@ export async function fetchMovieDetails(
 ): Promise<TMDBMovieDetails | null> {
   try {
     const response = await tmdbGet(apiKey, `/movie/${movieId}`, {
-      append_to_response: 'release_dates,credits,keywords',
+      append_to_response: 'release_dates,credits,keywords,watch/providers',
       language,
     });
 
@@ -372,6 +413,87 @@ export function extractUSCertification(details: TMDBMovieDetails): string {
   return (theatrical ?? any)?.certification || 'NR';
 }
 
+function extractWatchProviders(details: TMDBMovieDetails): TMDBCatalogMetadata['providers'] {
+  const results = details['watch/providers']?.results ?? {};
+  return SUPPORTED_PROVIDER_REGIONS.flatMap((region) => {
+    const regionProviders = results[region];
+    if (!regionProviders) return [];
+    const link = regionProviders.link ?? null;
+
+    return WATCH_PROVIDER_TYPES.flatMap((availabilityType) =>
+      (regionProviders[availabilityType] ?? [])
+        .filter(
+          (provider) =>
+            Number.isFinite(provider.provider_id) && provider.provider_name.trim().length > 0,
+        )
+        .map((provider) => ({
+          availabilityType,
+          displayPriority: provider.display_priority ?? null,
+          link,
+          logoPath: provider.logo_path ?? null,
+          providerId: provider.provider_id,
+          providerName: provider.provider_name,
+          rawMetadata: provider as unknown as Record<string, unknown>,
+          region,
+        })),
+    );
+  });
+}
+
+function getMetadataQualityFlags(input: {
+  ageRating: string;
+  details: TMDBMovieDetails;
+  genres: TMDBCatalogMetadata['genres'];
+  keywords: TMDBCatalogMetadata['keywords'];
+  people: TMDBCatalogMetadata['people'];
+  providers: TMDBCatalogMetadata['providers'];
+}): string[] {
+  const flags: string[] = [];
+  if (!input.details.runtime || input.details.runtime <= 0) flags.push('missing_runtime');
+  if (!input.ageRating || input.ageRating === 'NR') flags.push('missing_certification');
+  if (!input.details.poster_path) flags.push('missing_poster');
+  if (!input.details.overview?.trim()) flags.push('missing_overview');
+  if (!input.details.original_language?.trim()) flags.push('missing_original_language');
+  if (!Number.isFinite(input.details.vote_count) || Number(input.details.vote_count ?? 0) <= 0) {
+    flags.push('missing_vote_count');
+  }
+  if (!Number.isFinite(input.details.popularity) || Number(input.details.popularity ?? 0) <= 0) {
+    flags.push('missing_popularity');
+  }
+  if (input.genres.length === 0) flags.push('missing_genres');
+  if (input.keywords.length === 0) flags.push('missing_keywords');
+  if (!input.people.some((person) => person.role === 'cast')) flags.push('missing_cast');
+  if (!input.people.some((person) => person.role === 'director')) flags.push('missing_director');
+  for (const region of SUPPORTED_PROVIDER_REGIONS) {
+    if (!input.providers.some((provider) => provider.region === region)) {
+      flags.push(`missing_provider_${region.toLowerCase()}`);
+    }
+  }
+  return flags;
+}
+
+export function getMetadataQualityScore(flags: string[]): number {
+  const penaltyByFlag: Record<string, number> = {
+    missing_runtime: 15,
+    missing_certification: 12,
+    missing_poster: 8,
+    missing_overview: 12,
+    missing_original_language: 4,
+    missing_vote_count: 8,
+    missing_popularity: 6,
+    missing_genres: 12,
+    missing_keywords: 8,
+    missing_cast: 6,
+    missing_director: 6,
+    missing_provider_us: 1,
+    missing_provider_fi: 1,
+    missing_provider_ru: 1,
+  };
+
+  const penalty = flags.reduce((sum, flag) => sum + (penaltyByFlag[flag] ?? 4), 0);
+  return Math.max(0, Math.min(100, 100 - penalty));
+}
+
 export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMetadata {
   const genres = (details.genres ?? [])
     .filter((genre) => Number.isFinite(genre.id) && genre.name)
@@ -429,18 +551,39 @@ export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMe
       name: keyword.name,
       rawMetadata: keyword as unknown as Record<string, unknown>,
     }));
-
-  return {
-    people: [...cast, ...directors],
+  const providers = extractWatchProviders(details);
+  const people = [...cast, ...directors];
+  const ageRating = extractUSCertification(details);
+  const qualityFlags = getMetadataQualityFlags({
+    ageRating,
+    details,
     genres,
     keywords,
+    people,
+    providers,
+  });
+
+  return {
+    people,
+    genres,
+    keywords,
+    providers,
+    qualityFlags,
+    qualityScore: getMetadataQualityScore(qualityFlags),
     snapshot: {
       id: details.id,
       title: details.title,
+      original_title: details.original_title ?? null,
+      original_language: details.original_language ?? null,
       release_date: details.release_date,
       runtime: details.runtime,
       vote_average: details.vote_average,
+      vote_count: details.vote_count ?? null,
+      popularity: details.popularity ?? null,
       poster_path: details.poster_path,
+      spoken_languages: details.spoken_languages ?? [],
+      production_countries: details.production_countries ?? [],
+      certification: ageRating,
       genres: genres.map(({ tmdbId, name }) => ({ id: tmdbId, name })),
       cast: cast.map(({ tmdbId, name, characterName, billingOrder }) => ({
         id: tmdbId,
@@ -450,6 +593,17 @@ export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMe
       })),
       directors: directors.map(({ tmdbId, name, job }) => ({ id: tmdbId, name, job })),
       keywords: keywords.map(({ tmdbId, name }) => ({ id: tmdbId, name })),
+      providers: providers.map(
+        ({ providerId, providerName, region, availabilityType, displayPriority }) => ({
+          id: providerId,
+          name: providerName,
+          region,
+          type: availabilityType,
+          display_priority: displayPriority,
+        }),
+      ),
+      metadata_quality_score: getMetadataQualityScore(qualityFlags),
+      metadata_quality_flags: qualityFlags,
     },
   };
 }

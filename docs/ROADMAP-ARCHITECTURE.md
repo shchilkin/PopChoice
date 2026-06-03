@@ -277,9 +277,15 @@ work implementation-sized:
 
 - [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a Playwright e2e harness with an isolated migrated test database and deterministic seed fixtures.
 - [x] [#475](https://github.com/shchilkin/PopChoice/issues/475): cover auth, catalog, quiz, recommendation, and feedback smoke flows through product-level e2e tests.
+- [x] Cover the current recommendation entry matrix in browser smoke tests: Normal Solo, Normal Duo, Normal Group, Fast Pick Solo, Fast Pick Duo, and Fast Pick Group.
 - [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add an AI recommendation eval harness with deterministic fixtures by default and optional live model/provider runs.
 - [x] [#490](https://github.com/shchilkin/PopChoice/issues/490): add a scheduled or manually triggered real-data recommendation eval workflow with seeded database data and real catalog retrieval.
-- Add [#606](https://github.com/shchilkin/PopChoice/issues/606) deterministic recommendation scenarios for Solo/Fast, Solo/Normal, Duo/Fast, Duo/Normal, Group/Fast, and Group/Normal so the next recommendation UX/backend changes can be judged against meaningful-pick behavior, not only response shape.
+- Add [#606](https://github.com/shchilkin/PopChoice/issues/606) deterministic recommendation scenarios that validate audience behavior, match-depth behavior, source-strategy behavior, and meaningful-pick quality, not only response shape.
+- [x] [#618](https://github.com/shchilkin/PopChoice/issues/618): classify and refactor the current seeded `--real-data` checks so they are clearly catalog retrieval/candidate-availability evals and can be reused by worker jobs.
+- [x] [#616](https://github.com/shchilkin/PopChoice/issues/616): persist recommendation eval run/result history for backoffice and worker reports.
+- [x] [#617](https://github.com/shchilkin/PopChoice/issues/617): add bounded non-live BullMQ jobs for environment retrieval and source-strategy evals against the configured database.
+- [x] [#619](https://github.com/shchilkin/PopChoice/issues/619): add a protected backoffice recommendation eval UI for safe runs, status, history, and report details.
+- [x] [#620](https://github.com/shchilkin/PopChoice/issues/620): add guarded, audited live-provider evals only after safe backoffice evals exist.
 - Keep Storybook/component tests separate from full product e2e tests so UI component regressions and app-flow regressions fail with clear ownership.
 - Keep AI evals separate from normal e2e smoke tests because recommendation quality gates need fixture scoring, model controls, and optional API cost.
 
@@ -303,6 +309,7 @@ work implementation-sized:
 - Backfill TMDB ids for existing local movies using exact title/year matches first, then persist ambiguous or low-confidence matches for manual review.
 - Add cast, director, genre, and keyword metadata as first-class catalog data before implementing actor/director/genre search.
 - [x] Move TMDB discovery, backfill, and metadata refresh into shared rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before growing catalog volume. The worker enforces one configurable TMDB request budget across catalog-maintenance jobs, honors `429` with backoff, dedupes jobs by stable `tmdbId`/`movieId` keys, and exposes queue depth/failures in Bull Board.
+- [x] Add the metadata v1 quality contract for recommendations: hot movie columns for identity/language/quality/popularity, normalized watch providers for `US`, `FI`, and `RU`, bounded TMDB details enrichment for top direct TMDB candidates, and catalog-health/eval checks for low-quality metadata.
 - Add a back-office review queue for ambiguous TMDB matches, missing posters, duplicate identities, and metadata conflicts in [#493](https://github.com/shchilkin/PopChoice/issues/493) before applying risky automatic merges.
 - Prefer TMDB ids for all cross-feature identity checks. Fall back to normalized title plus year only when TMDB identity is unavailable.
 - Design future discovery flows around dynamic TMDB candidate sets: "I have watched many films" deck mode, quiz-assisted mode, and later a preference/taste-training mode.
@@ -317,12 +324,15 @@ work implementation-sized:
 
 ### Recommendation Experience Track
 
-- Define Recommendation V2 in [#610](https://github.com/shchilkin/PopChoice/issues/610) around two explicit product axes: audience mode (Solo, Duo, Group) and effort mode (Fast, Normal).
+- Define Recommendation V2 in [#610](https://github.com/shchilkin/PopChoice/issues/610) around three independent axes: audience context, match depth, and candidate source strategy.
 - Treat quiz answers, swipe reactions, account memory, and result feedback as inputs into a shared taste-signal model.
 - Rework the guided quiz around "what do you want tonight?" instead of relying on a favorite movie, broad genre labels, and optional actor input.
-- Build [#609](https://github.com/shchilkin/PopChoice/issues/609) as the Fast Pick guided flow with minimal intent, hard avoids, and discovery appetite.
-- Build [#608](https://github.com/shchilkin/PopChoice/issues/608) as the Normal mode flow with richer positive/negative signals, optional reference movies, and first-class Duo compromise handling.
+- Build [#609](https://github.com/shchilkin/PopChoice/issues/609) as the Fast Pick guided flow with minimal intent, hard avoids, and discovery appetite. The current flow separates audience selection from match depth, supports Solo/Duo/Group, and sends `experienceMode: fast-pick`.
+- Build [#608](https://github.com/shchilkin/PopChoice/issues/608) as the Normal mode flow with richer positive/negative signals, optional reference movies, and first-class Duo compromise handling. The first slices add Normal-mode hard avoids, carry those negative signals through the existing recommendation payload, and expose Duo as a separate two-person entry/results path.
 - Add an alternate taste-swipe mode for users who have watched many films and prefer to react to concrete movie cards instead of answering abstract questions.
+- Start [#612](https://github.com/shchilkin/PopChoice/issues/612) by carrying candidate source provenance through recommendation results, persistence, logs, eval reports, a source-strategy policy, and route/job/pipeline metadata before changing retrieval defaults.
+- Connect [#612](https://github.com/shchilkin/PopChoice/issues/612) to retrieval behavior in stages: bounded `hybrid-fast`/`compromise-hybrid` fallback first, then `tmdb-first` generation with hard-avoid/discovery-aware TMDB query shaping and source/metadata eval thresholds before making it the Normal quality default.
+- Add `experienceMode` as the product-facing selector for this policy layer, defaulting existing traffic to `normal-match` while letting Fast Pick requests choose `fast-pick`.
 - Move toward TMDB-first candidate generation: use TMDB for broad discovery and keep the local database as a cache/enrichment/reranking layer rather than the whole movie universe.
 - Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.
 - See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP) for the staged plan.

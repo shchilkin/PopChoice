@@ -62,6 +62,13 @@ interface SummaryRow {
   missing_age_rating: number;
   missing_tmdb_matched_at: number;
   stale_tmdb_metadata: number;
+  missing_original_language: number;
+  missing_vote_count: number;
+  missing_popularity: number;
+  low_metadata_quality: number;
+  missing_watch_provider_us: number;
+  missing_watch_provider_fi: number;
+  missing_watch_provider_ru: number;
   missing_cast_metadata: number;
   missing_director_metadata: number;
   missing_genre_metadata: number;
@@ -109,7 +116,52 @@ export const CATALOG_HEALTH_ISSUE_DEFINITIONS: CatalogHealthIssueDefinition[] = 
     key: 'stale_tmdb_metadata',
     label: 'Stale TMDB metadata',
     where: (staleAfterDaysParam) =>
-      `tmdb_id IS NOT NULL AND tmdb_matched_at < now() - (${staleAfterDaysParam}::int * interval '1 day')`,
+      `tmdb_id IS NOT NULL AND (
+      tmdb_metadata_refreshed_at IS NULL
+      OR tmdb_metadata_refreshed_at < now() - (${staleAfterDaysParam}::int * interval '1 day')
+    )`,
+  },
+  {
+    key: 'missing_original_language',
+    label: 'Missing original_language',
+    where: () =>
+      "tmdb_id IS NOT NULL AND (original_language IS NULL OR btrim(original_language) = '')",
+  },
+  {
+    key: 'missing_vote_count',
+    label: 'Missing vote_count',
+    where: () => 'tmdb_id IS NOT NULL AND (vote_count IS NULL OR vote_count <= 0)',
+  },
+  {
+    key: 'missing_popularity',
+    label: 'Missing popularity',
+    where: () => 'tmdb_id IS NOT NULL AND (popularity IS NULL OR popularity <= 0)',
+  },
+  {
+    key: 'low_metadata_quality',
+    label: 'Low metadata quality',
+    where: () => 'tmdb_id IS NOT NULL AND metadata_quality_score < 70',
+  },
+  {
+    key: 'missing_watch_provider_us',
+    label: 'Missing US watch providers',
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'US'
+    )`,
+  },
+  {
+    key: 'missing_watch_provider_fi',
+    label: 'Missing FI watch providers',
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'FI'
+    )`,
+  },
+  {
+    key: 'missing_watch_provider_ru',
+    label: 'Missing RU watch providers',
+    where: () => `tmdb_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'RU'
+    )`,
   },
   {
     key: 'missing_cast_metadata',
@@ -314,8 +366,33 @@ async function getSummary(staleAfterDays: number): Promise<SummaryRow> {
         COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND tmdb_matched_at IS NULL)::int AS missing_tmdb_matched_at,
         COUNT(*) FILTER (
           WHERE tmdb_id IS NOT NULL
-            AND tmdb_matched_at < now() - ($1::int * interval '1 day')
+            AND (
+              tmdb_metadata_refreshed_at IS NULL
+              OR tmdb_metadata_refreshed_at < now() - ($1::int * interval '1 day')
+            )
         )::int AS stale_tmdb_metadata,
+        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (original_language IS NULL OR btrim(original_language) = ''))::int AS missing_original_language,
+        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (vote_count IS NULL OR vote_count <= 0))::int AS missing_vote_count,
+        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (popularity IS NULL OR popularity <= 0))::int AS missing_popularity,
+        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND metadata_quality_score < 70)::int AS low_metadata_quality,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'US'
+            )
+        )::int AS missing_watch_provider_us,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'FI'
+            )
+        )::int AS missing_watch_provider_fi,
+        COUNT(*) FILTER (
+          WHERE tmdb_id IS NOT NULL
+            AND NOT EXISTS (
+              SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'RU'
+            )
+        )::int AS missing_watch_provider_ru,
         COUNT(*) FILTER (
           WHERE tmdb_id IS NOT NULL
             AND NOT EXISTS (
@@ -354,6 +431,13 @@ async function getSummary(staleAfterDays: number): Promise<SummaryRow> {
     missing_age_rating: toNumber(row?.missing_age_rating),
     missing_tmdb_matched_at: toNumber(row?.missing_tmdb_matched_at),
     stale_tmdb_metadata: toNumber(row?.stale_tmdb_metadata),
+    missing_original_language: toNumber(row?.missing_original_language),
+    missing_vote_count: toNumber(row?.missing_vote_count),
+    missing_popularity: toNumber(row?.missing_popularity),
+    low_metadata_quality: toNumber(row?.low_metadata_quality),
+    missing_watch_provider_us: toNumber(row?.missing_watch_provider_us),
+    missing_watch_provider_fi: toNumber(row?.missing_watch_provider_fi),
+    missing_watch_provider_ru: toNumber(row?.missing_watch_provider_ru),
     missing_cast_metadata: toNumber(row?.missing_cast_metadata),
     missing_director_metadata: toNumber(row?.missing_director_metadata),
     missing_genre_metadata: toNumber(row?.missing_genre_metadata),

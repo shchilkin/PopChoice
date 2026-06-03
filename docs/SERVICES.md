@@ -90,7 +90,7 @@ Or via Docker Compose (workers.Dockerfile).
 `catalog-maintenance` is the shared BullMQ pacing layer for TMDB catalog work. It owns:
 
 - `discover-tmdb-source-page` jobs that fetch one TMDB source page and enqueue per-movie seed jobs.
-- `seed-tmdb-movie` jobs that fetch details, generate or reuse embeddings, insert new cached catalog rows, and upsert normalized cast/director/genre/keyword metadata.
+- `seed-tmdb-movie` jobs that fetch details, generate or reuse embeddings, insert new cached catalog rows, and upsert normalized cast/director/genre/keyword/provider metadata.
 - `backfill-movie` jobs that refresh an existing movie row by TMDB id or conservative title/year match.
 
 Jobs use deterministic BullMQ-safe ids such as `tmdb-discover-popular-1-en-US`,
@@ -308,9 +308,10 @@ visibility. The shared query logic lives in `packages/shared`, so the CLI report
 and `apps/backoffice` browser overview use the same `SELECT`-only semantics. It
 reports:
 
-- Missing `poster_url`, `localized_name`, `tmdb_id`, runtime, age rating, and TMDB match timestamps.
-- TMDB-backed rows whose `tmdb_matched_at` is older than the stale threshold.
-- Missing cast, director, genre, and keyword coverage for TMDB-backed rows.
+- Missing `poster_url`, `localized_name`, `tmdb_id`, runtime, age rating, original language, vote count, popularity, and TMDB match timestamps.
+- TMDB-backed rows whose `tmdb_metadata_refreshed_at` is older than the stale threshold.
+- Missing cast, director, genre, keyword, and `US`/`FI`/`RU` watch-provider coverage for TMDB-backed rows.
+- Low metadata-quality scores derived from the metadata v1 contract.
 - Likely duplicate identities by repeated `tmdb_id` and normalized title/year groups.
 - Sample movie rows for each issue so local or CI logs point at concrete records.
 

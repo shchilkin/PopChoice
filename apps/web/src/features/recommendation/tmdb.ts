@@ -2,7 +2,14 @@ import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
 import { getOpenAIClient } from '@/clients/openaiClient';
+import {
+  extractCatalogMetadata,
+  extractUSCertification,
+  fetchMovieDetails,
+  getPosterUrl,
+} from '@/features/catalogMaintenance/tmdb';
 import { IMAGE_BASE_URL } from '@/integrations/tmdb';
+import { LOCALE_TO_TMDB_LANG } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { recordOpenAIProviderError, recordTMDBProviderError } from '@/lib/metrics';
 import { MODELS } from '@/lib/models';
@@ -17,6 +24,8 @@ import {
 import { MAX_JIT_SEED_MOVIES, MAX_TOTAL_MOVIES } from './config';
 
 import type { EnhancedMovieMatch, PersonFormData } from './types';
+import type { TMDBMovieDetails } from '@/features/catalogMaintenance/tmdb';
+import type { Locale } from '@/lib/locale';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -29,6 +38,8 @@ const TMDB_API_BASE = 'https://api.themoviedb.org/3';
 
 /** Timeout for TMDB discover requests in the main recommendation route. */
 const TMDB_DISCOVER_FETCH_TIMEOUT_MS = 8_000;
+const MAX_TMDB_DETAILS_ENRICHMENT = 8;
+const MAX_METADATA_QUALITY_SIMILARITY_BOOST = 0.03;
 
 const tmdbDiscoverMovieSchema = z.object({
   id: z.number(),
@@ -36,6 +47,10 @@ const tmdbDiscoverMovieSchema = z.object({
   overview: z.string(),
   release_date: z.string(),
   vote_average: z.number(),
+  vote_count: z.number().optional(),
+  popularity: z.number().optional(),
+  original_language: z.string().optional(),
+  original_title: z.string().optional(),
   genre_ids: z.array(z.number()).optional(),
   poster_path: z.string().nullable(),
 });
@@ -325,6 +340,82 @@ export async function scoreAndConvertTMDBMovies(
   return { matches, embeddings: embeddingsMap };
 }
 
+export async function enrichTMDBMatchesWithDetails(
+  matches: EnhancedMovieMatch[],
+  tmdbApiKey: string,
+  locale: Locale,
+): Promise<EnhancedMovieMatch[]> {
+  const tmdbMatches = matches
+    .filter((movie) => movie.tmdbId && movie.id < 0)
+    .slice(0, MAX_TMDB_DETAILS_ENRICHMENT);
+  if (tmdbMatches.length === 0) return matches;
+
+  const language = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
+  const detailsByTMDBId = new Map(
+    (
+      await Promise.all(
+        tmdbMatches.map(async (movie) => {
+          const tmdbId = movie.tmdbId;
+          if (!tmdbId) return null;
+          const details = await fetchMovieDetails(tmdbApiKey, tmdbId, language);
+          return details ? ([tmdbId, details] as const) : null;
+        }),
+      )
+    ).filter((entry): entry is readonly [number, TMDBMovieDetails] => entry !== null),
+  );
+
+  return matches.map((movie) => {
+    if (!movie.tmdbId || movie.id >= 0) return movie;
+    const details = detailsByTMDBId.get(movie.tmdbId);
+    if (!details) {
+      return {
+        ...movie,
+        metadataQualityFlags: [...(movie.metadataQualityFlags ?? []), 'missing_details'],
+        metadataQualityScore: movie.metadataQualityScore ?? 0,
+      };
+    }
+
+    const metadata = extractCatalogMetadata(details);
+    const ageRating = extractUSCertification(details);
+    const runtime = details.runtime ?? movie.duration;
+    const scoreRating = Number((details.vote_average ?? movie.score_rating ?? 0).toFixed(1));
+    const qualityBoost = (metadata.qualityScore / 100) * MAX_METADATA_QUALITY_SIMILARITY_BOOST;
+
+    return {
+      ...movie,
+      age_rating: ageRating,
+      content: [
+        `${details.title} (${parseTMDBReleaseYear(details.release_date)}) | ${ageRating}`,
+        `Duration: ${runtime || 'unknown'} min | TMDB Score: ${scoreRating}/10`,
+        details.overview || movie.description || '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      description: details.overview || movie.description,
+      duration: runtime,
+      metadataQualityFlags: metadata.qualityFlags,
+      metadataQualityScore: metadata.qualityScore,
+      name: details.title || movie.name,
+      originalLanguage: details.original_language ?? null,
+      popularity: details.popularity ?? null,
+      posterURL: getPosterUrl(details.poster_path) ?? movie.posterURL,
+      score_rating: scoreRating,
+      similarity: Number((movie.similarity + qualityBoost).toFixed(6)),
+      voteCount: details.vote_count ?? null,
+      watchProviders: metadata.providers.map(
+        ({ availabilityType, displayPriority, providerId, providerName, region }) => ({
+          availabilityType,
+          displayPriority,
+          providerId,
+          providerName,
+          region,
+        }),
+      ),
+      year: parseTMDBReleaseYear(details.release_date) || movie.year,
+    };
+  });
+}
+
 /**
  * Convert a TMDB discover result to the EnhancedMovieMatch shape used by the rest of the route.
  * Uses a negative TMDB ID so it is distinct from positive local DB IDs.
@@ -354,8 +445,11 @@ function tmdbMovieToEnhancedMatch(
     year,
     similarity,
     content,
+    originalLanguage: movie.original_language ?? null,
+    popularity: movie.popularity ?? null,
     posterURL,
     source: 'tmdb-discover',
+    voteCount: movie.vote_count ?? null,
   };
 }
 

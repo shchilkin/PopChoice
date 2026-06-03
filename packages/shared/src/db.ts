@@ -13,6 +13,13 @@ export interface MovieRecord {
   description: string;
   duration: number;
   score_rating: number;
+  original_title?: string | null;
+  original_language?: string | null;
+  release_date?: string | null;
+  vote_count?: number | null;
+  popularity?: number | null;
+  metadata_quality_score?: number | null;
+  metadata_quality_flags?: string[] | Record<string, unknown> | null;
   poster_url?: string | null;
   localized_name?: string | null;
   tmdb_id?: number | null;
@@ -82,6 +89,19 @@ export interface CatalogKeywordInput {
   rawMetadata?: Record<string, unknown>;
 }
 
+export type WatchProviderAvailabilityType = 'flatrate' | 'rent' | 'buy' | 'ads' | 'free';
+
+export interface MovieWatchProviderInput {
+  providerId: number;
+  providerName: string;
+  logoPath?: string | null;
+  displayPriority?: number | null;
+  region: string;
+  availabilityType: WatchProviderAvailabilityType;
+  link?: string | null;
+  rawMetadata?: Record<string, unknown>;
+}
+
 export interface MoviePersonCreditInput extends CatalogPersonInput {
   creditId: string;
   role: MoviePersonRole;
@@ -97,6 +117,7 @@ export interface MovieCatalogMetadataInput {
   people?: MoviePersonCreditInput[];
   genres?: CatalogGenreInput[];
   keywords?: CatalogKeywordInput[];
+  providers?: MovieWatchProviderInput[];
   source?: CatalogMetadataSource;
 }
 
@@ -126,6 +147,14 @@ export function getPool(): InstanceType<typeof Pool> {
 
 function getMovieKey(name: string, year: number): string {
   return `${name}\u0000${year}`;
+}
+
+function serializeMetadataQualityFlags(
+  flags: MovieRecord['metadata_quality_flags'],
+): Record<string, unknown> | string[] {
+  if (!flags) return [];
+  if (Array.isArray(flags)) return flags;
+  return flags;
 }
 
 async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>> {
@@ -202,6 +231,13 @@ export async function ensureSchema(): Promise<void> {
       duration integer NOT NULL,
       score_rating float NOT NULL,
       year int NOT NULL,
+      original_title text,
+      original_language text,
+      release_date date,
+      vote_count integer,
+      popularity float,
+      metadata_quality_score integer NOT NULL DEFAULT 0,
+      metadata_quality_flags jsonb NOT NULL DEFAULT '[]'::jsonb,
       poster_url text,
       localized_name text,
       tmdb_id bigint,
@@ -237,6 +273,27 @@ export async function ensureSchema(): Promise<void> {
 
     ALTER TABLE movies
       ADD COLUMN IF NOT EXISTS tmdb_metadata_refreshed_at timestamptz;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS original_title text;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS original_language text;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS release_date date;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS vote_count integer;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS popularity float;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS metadata_quality_score integer NOT NULL DEFAULT 0;
+
+    ALTER TABLE movies
+      ADD COLUMN IF NOT EXISTS metadata_quality_flags jsonb NOT NULL DEFAULT '[]'::jsonb;
 
     ALTER TABLE movies
       DROP CONSTRAINT IF EXISTS movies_tmdb_match_source_check;
@@ -501,6 +558,12 @@ export async function ensureSchema(): Promise<void> {
       score_rating float,
       year int,
       tmdb_id bigint,
+      tmdb_match_source text,
+      original_language text,
+      vote_count integer,
+      popularity float,
+      metadata_quality_score integer,
+      metadata_quality_flags jsonb,
       similarity float,
       content text
     )
@@ -514,6 +577,12 @@ export async function ensureSchema(): Promise<void> {
         movies.score_rating,
         movies.year,
         movies.tmdb_id,
+        movies.tmdb_match_source,
+        movies.original_language,
+        movies.vote_count,
+        movies.popularity,
+        movies.metadata_quality_score,
+        movies.metadata_quality_flags,
         1 - (movies.embedding <=> query_embedding) AS similarity,
         format(
           '%s (%s) | %s | Duration: %s min | Rating: %s/10%s%s',
@@ -655,6 +724,45 @@ export async function ensureCatalogMetadataSchema(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_movie_keywords_keyword_id
       ON movie_keywords (keyword_id);
+
+    CREATE TABLE IF NOT EXISTS catalog_watch_providers (
+      id bigserial PRIMARY KEY,
+      tmdb_id int,
+      provider_name text NOT NULL,
+      logo_path text,
+      raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS catalog_watch_providers_tmdb_id_unique
+      ON catalog_watch_providers (tmdb_id)
+      WHERE tmdb_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_catalog_watch_providers_name_lower
+      ON catalog_watch_providers (lower(provider_name));
+
+    CREATE TABLE IF NOT EXISTS movie_watch_providers (
+      movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+      provider_id bigint NOT NULL REFERENCES catalog_watch_providers(id) ON DELETE CASCADE,
+      region text NOT NULL,
+      availability_type text NOT NULL,
+      display_priority int,
+      link text,
+      raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      CONSTRAINT movie_watch_providers_availability_type_check CHECK (
+        availability_type IN ('flatrate', 'rent', 'buy', 'ads', 'free')
+      ),
+      PRIMARY KEY (movie_id, provider_id, region, availability_type)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_movie_watch_providers_region_type
+      ON movie_watch_providers (region, availability_type);
+
+    CREATE INDEX IF NOT EXISTS idx_movie_watch_providers_provider_id
+      ON movie_watch_providers (provider_id);
   `);
 }
 
@@ -670,9 +778,11 @@ export async function upsertMovieCatalogMetadata(input: MovieCatalogMetadataInpu
   const shouldRefreshPeople = input.people !== undefined;
   const shouldRefreshGenres = input.genres !== undefined;
   const shouldRefreshKeywords = input.keywords !== undefined;
+  const shouldRefreshProviders = input.providers !== undefined;
   const people = input.people ?? [];
   const genres = input.genres ?? [];
   const keywords = input.keywords ?? [];
+  const providers = input.providers ?? [];
 
   try {
     await client.query('BEGIN');
@@ -706,6 +816,9 @@ export async function upsertMovieCatalogMetadata(input: MovieCatalogMetadataInpu
         movieId,
         source,
       ]);
+    }
+    if (shouldRefreshProviders) {
+      await client.query(`DELETE FROM movie_watch_providers WHERE movie_id = $1`, [movieId]);
     }
 
     for (const person of shouldRefreshPeople ? people : []) {
@@ -807,6 +920,51 @@ export async function upsertMovieCatalogMetadata(input: MovieCatalogMetadataInpu
       );
     }
 
+    for (const provider of shouldRefreshProviders ? providers : []) {
+      const providerResult = await client.query<{ id: string }>(
+        `INSERT INTO catalog_watch_providers (
+           tmdb_id, provider_name, logo_path, raw_metadata, updated_at
+         )
+         VALUES ($1, $2, $3, $4::jsonb, now())
+         ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
+           SET provider_name = EXCLUDED.provider_name,
+               logo_path = COALESCE(EXCLUDED.logo_path, catalog_watch_providers.logo_path),
+               raw_metadata = EXCLUDED.raw_metadata,
+               updated_at = now()
+         RETURNING id::text`,
+        [
+          provider.providerId,
+          provider.providerName,
+          provider.logoPath ?? null,
+          JSON.stringify(provider.rawMetadata ?? {}),
+        ],
+      );
+      const providerRowId = providerResult.rows[0]?.id;
+      if (!providerRowId) continue;
+
+      await client.query(
+        `INSERT INTO movie_watch_providers (
+           movie_id, provider_id, region, availability_type, display_priority,
+           link, raw_metadata, updated_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
+         ON CONFLICT (movie_id, provider_id, region, availability_type) DO UPDATE
+           SET display_priority = EXCLUDED.display_priority,
+               link = EXCLUDED.link,
+               raw_metadata = EXCLUDED.raw_metadata,
+               updated_at = now()`,
+        [
+          movieId,
+          providerRowId,
+          provider.region,
+          provider.availabilityType,
+          provider.displayPriority ?? null,
+          provider.link ?? null,
+          JSON.stringify(provider.rawMetadata ?? {}),
+        ],
+      );
+    }
+
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -832,15 +990,20 @@ export async function insertMovies(
       const result = await getPool().query<InsertedMovieRecord>(
         `INSERT INTO movies (
            name, year, age_rating, description, duration, score_rating,
-           poster_url, localized_name, tmdb_id, tmdb_match_confidence,
-           tmdb_match_source, tmdb_matched_at, embedding
+           original_title, original_language, release_date, vote_count, popularity,
+           metadata_quality_score, metadata_quality_flags, poster_url, localized_name, tmdb_id,
+           tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
          )
-         SELECT n, y, ar, d, du, sr, poster, localized, tid, conf, src,
+         SELECT n, y, ar, d, du, sr, original, lang, release_dt, votes, pop,
+                quality_score, quality_flags::jsonb, poster, localized, tid, conf, src,
                 CASE WHEN tid IS NULL THEN NULL ELSE now() END, e::vector
          FROM unnest(
            $1::text[], $2::int[], $3::text[], $4::text[], $5::int[], $6::float8[],
-           $7::text[], $8::text[], $9::bigint[], $10::float8[], $11::text[], $12::text[]
-         ) AS t(n, y, ar, d, du, sr, poster, localized, tid, conf, src, e)
+           $7::text[], $8::text[], $9::date[], $10::int[], $11::float8[], $12::int[],
+           $13::text[], $14::text[], $15::text[], $16::bigint[], $17::float8[],
+           $18::text[], $19::text[]
+         ) AS t(n, y, ar, d, du, sr, original, lang, release_dt, votes, pop, quality_score,
+                quality_flags, poster, localized, tid, conf, src, e)
          ON CONFLICT (name, year) DO NOTHING
          RETURNING id::text, tmdb_id`,
         [
@@ -850,6 +1013,13 @@ export async function insertMovies(
           batch.map((m) => m.description),
           batch.map((m) => m.duration),
           batch.map((m) => m.score_rating),
+          batch.map((m) => m.original_title ?? null),
+          batch.map((m) => m.original_language ?? null),
+          batch.map((m) => m.release_date ?? null),
+          batch.map((m) => m.vote_count ?? null),
+          batch.map((m) => m.popularity ?? null),
+          batch.map((m) => m.metadata_quality_score ?? 0),
+          batch.map((m) => JSON.stringify(serializeMetadataQualityFlags(m.metadata_quality_flags))),
           batch.map((m) => m.poster_url ?? null),
           batch.map((m) => m.localized_name ?? null),
           batch.map((m) => m.tmdb_id ?? null),
@@ -880,13 +1050,15 @@ export async function insertMovies(
           const result = await getPool().query<InsertedMovieRecord>(
             `INSERT INTO movies (
                name, year, age_rating, description, duration, score_rating,
-               poster_url, localized_name, tmdb_id, tmdb_match_confidence,
-               tmdb_match_source, tmdb_matched_at, embedding
+               original_title, original_language, release_date, vote_count, popularity,
+               metadata_quality_score, metadata_quality_flags, poster_url, localized_name, tmdb_id,
+               tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
              )
              VALUES (
-               $1, $2, $3, $4, $5, $6, $7::text, $8::text, $9::bigint,
-               $10::float8, $11::text, CASE WHEN $9 IS NULL THEN NULL ELSE now() END,
-               $12::vector
+               $1, $2, $3, $4, $5, $6, $7::text, $8::text, $9::date, $10::int, $11::float8,
+               $12::int, $13::jsonb, $14::text, $15::text, $16::bigint,
+               $17::float8, $18::text, CASE WHEN $16 IS NULL THEN NULL ELSE now() END,
+               $19::vector
              )
              ON CONFLICT (name, year) DO NOTHING
              RETURNING id::text, tmdb_id`,
@@ -897,6 +1069,13 @@ export async function insertMovies(
               movie.description,
               movie.duration,
               movie.score_rating,
+              movie.original_title ?? null,
+              movie.original_language ?? null,
+              movie.release_date ?? null,
+              movie.vote_count ?? null,
+              movie.popularity ?? null,
+              movie.metadata_quality_score ?? 0,
+              JSON.stringify(serializeMetadataQualityFlags(movie.metadata_quality_flags)),
               movie.poster_url ?? null,
               movie.localized_name ?? null,
               movie.tmdb_id ?? null,

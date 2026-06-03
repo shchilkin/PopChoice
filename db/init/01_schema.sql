@@ -11,6 +11,13 @@ CREATE TABLE IF NOT EXISTS movies (
   duration integer NOT NULL,
   score_rating float NOT NULL,
   year int NOT NULL,
+  original_title text,
+  original_language text,
+  release_date date,
+  vote_count integer,
+  popularity float,
+  metadata_quality_score integer NOT NULL DEFAULT 0,
+  metadata_quality_flags jsonb NOT NULL DEFAULT '[]'::jsonb,
   tmdb_id bigint,
   poster_url text,
   localized_name text,
@@ -44,6 +51,27 @@ ALTER TABLE movies
 
 ALTER TABLE movies
   ADD COLUMN IF NOT EXISTS tmdb_metadata_refreshed_at timestamptz;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS original_title text;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS original_language text;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS release_date date;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS vote_count integer;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS popularity float;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS metadata_quality_score integer NOT NULL DEFAULT 0;
+
+ALTER TABLE movies
+  ADD COLUMN IF NOT EXISTS metadata_quality_flags jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 ALTER TABLE movies
   DROP CONSTRAINT IF EXISTS movies_tmdb_match_source_check;
@@ -173,6 +201,45 @@ ALTER TABLE movie_keywords
 
 CREATE INDEX IF NOT EXISTS idx_movie_keywords_keyword_id
   ON movie_keywords (keyword_id);
+
+CREATE TABLE IF NOT EXISTS catalog_watch_providers (
+  id bigserial PRIMARY KEY,
+  tmdb_id int,
+  provider_name text NOT NULL,
+  logo_path text,
+  raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS catalog_watch_providers_tmdb_id_unique
+  ON catalog_watch_providers (tmdb_id)
+  WHERE tmdb_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_catalog_watch_providers_name_lower
+  ON catalog_watch_providers (lower(provider_name));
+
+CREATE TABLE IF NOT EXISTS movie_watch_providers (
+  movie_id bigint NOT NULL REFERENCES movies(id) ON DELETE CASCADE,
+  provider_id bigint NOT NULL REFERENCES catalog_watch_providers(id) ON DELETE CASCADE,
+  region text NOT NULL,
+  availability_type text NOT NULL,
+  display_priority int,
+  link text,
+  raw_metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT movie_watch_providers_availability_type_check CHECK (
+    availability_type IN ('flatrate', 'rent', 'buy', 'ads', 'free')
+  ),
+  PRIMARY KEY (movie_id, provider_id, region, availability_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_movie_watch_providers_region_type
+  ON movie_watch_providers (region, availability_type);
+
+CREATE INDEX IF NOT EXISTS idx_movie_watch_providers_provider_id
+  ON movie_watch_providers (provider_id);
 
 CREATE TABLE IF NOT EXISTS tmdb_match_reviews (
   id bigserial PRIMARY KEY,

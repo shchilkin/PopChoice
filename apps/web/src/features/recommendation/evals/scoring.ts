@@ -365,7 +365,9 @@ function getQualityThresholdResult(
         movie.year > 0 &&
         movie.duration > 0 &&
         movie.score_rating > 0 &&
-        movie.age_rating.trim().length > 0,
+        movie.age_rating.trim().length > 0 &&
+        typeof movie.metadataQualityScore === 'number' &&
+        movie.metadataQualityScore >= 70,
     ).length ?? 0;
   const metadataPassed = metadataCompleteCount >= minMetadataComplete;
 

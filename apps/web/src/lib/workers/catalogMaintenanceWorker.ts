@@ -278,6 +278,7 @@ async function processSeedTMDBMovie(job: Job<CatalogSeedTMDBMovieJobData>): Prom
         people: metadata.people,
         genres: metadata.genres,
         keywords: metadata.keywords,
+        providers: metadata.providers,
       });
     }
     logger.debug({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed skipped existing movie');
@@ -288,6 +289,7 @@ async function processSeedTMDBMovie(job: Job<CatalogSeedTMDBMovieJobData>): Prom
   const runtime = details?.runtime ?? 0;
   const description = details?.overview || movie.overview || 'No description available.';
   const scoreRating = Number((details?.vote_average ?? movie.vote_average ?? 0).toFixed(1));
+  const metadata = details ? extractCatalogMetadata(details) : null;
   let embedding = job.data.embedding;
 
   if (!embedding) {
@@ -321,6 +323,13 @@ async function processSeedTMDBMovie(job: Job<CatalogSeedTMDBMovieJobData>): Prom
     description,
     duration: runtime,
     score_rating: scoreRating,
+    original_title: details?.original_title ?? null,
+    original_language: details?.original_language ?? null,
+    release_date: details?.release_date ?? movie.release_date,
+    vote_count: details?.vote_count ?? movie.vote_count ?? null,
+    popularity: details?.popularity ?? null,
+    metadata_quality_score: metadata?.qualityScore ?? 0,
+    metadata_quality_flags: metadata?.qualityFlags ?? ['missing_details'],
     poster_url: getPosterUrl(details?.poster_path ?? movie.poster_path),
     localized_name: details?.title && details.title !== movie.title ? details.title : null,
     tmdb_id: movie.id,
@@ -336,14 +345,14 @@ async function processSeedTMDBMovie(job: Job<CatalogSeedTMDBMovieJobData>): Prom
     return;
   }
 
-  if (details) {
-    const metadata = extractCatalogMetadata(details);
+  if (details && metadata) {
     await upsertMovieCatalogMetadata({
       movieId: insertedMovie.id,
       tmdbMetadata: metadata.snapshot,
       people: metadata.people,
       genres: metadata.genres,
       keywords: metadata.keywords,
+      providers: metadata.providers,
     });
   }
 
@@ -661,6 +670,7 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
 
   const runtime = details.runtime ?? movie.duration;
   const ageRating = extractUSCertification(details);
+  const metadata = extractCatalogMetadata(details);
   const embeddingText = movieToEmbeddingText({
     title: movie.name,
     year: movie.year,
@@ -685,8 +695,15 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
             tmdb_matched_at = now(),
             poster_url = COALESCE($5, poster_url),
             localized_name = COALESCE($6, localized_name),
-            embedding = $7::vector
-      WHERE id = $8`,
+            embedding = $7::vector,
+            original_title = $8,
+            original_language = $9,
+            release_date = $10::date,
+            vote_count = $11,
+            popularity = $12,
+            metadata_quality_score = $13,
+            metadata_quality_flags = $14::jsonb
+      WHERE id = $15`,
     [
       runtime,
       ageRating,
@@ -695,17 +712,24 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
       getPosterUrl(details.poster_path),
       details.title && details.title !== movie.name ? details.title : null,
       JSON.stringify(embedding),
+      details.original_title ?? null,
+      details.original_language ?? null,
+      details.release_date || null,
+      details.vote_count ?? null,
+      details.popularity ?? null,
+      metadata.qualityScore,
+      JSON.stringify(metadata.qualityFlags),
       movie.id,
     ],
   );
 
-  const metadata = extractCatalogMetadata(details);
   await upsertMovieCatalogMetadata({
     movieId: movie.id,
     tmdbMetadata: metadata.snapshot,
     people: metadata.people,
     genres: metadata.genres,
     keywords: metadata.keywords,
+    providers: metadata.providers,
   });
 
   logger.info(

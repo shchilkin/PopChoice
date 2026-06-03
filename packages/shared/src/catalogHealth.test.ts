@@ -93,6 +93,7 @@ describe('catalog health issue movie pages', () => {
     expect(poolMock.query.mock.calls[1][1]).toEqual([90, 25, 50]);
     expect(String(poolMock.query.mock.calls[1][0])).toContain('LIMIT $2');
     expect(String(poolMock.query.mock.calls[1][0])).toContain('OFFSET $3');
+    expect(String(poolMock.query.mock.calls[1][0])).toContain('tmdb_metadata_refreshed_at');
   });
 
   it('re-checks whether one movie still matches the original issue predicate', async () => {
@@ -125,11 +126,15 @@ describe('catalog health issue movie pages', () => {
     ).resolves.toBe(false);
 
     expect(String(poolMock.query.mock.calls[0][0])).toContain('WHERE id = $2');
+    expect(String(poolMock.query.mock.calls[0][0])).toContain('tmdb_metadata_refreshed_at');
     expect(poolMock.query.mock.calls[0][1]).toEqual([90, '334']);
   });
 
   it('rejects unknown issue keys before building SQL', async () => {
     expect(isCatalogHealthIssueKey('missing_poster_url')).toBe(true);
+    expect(isCatalogHealthIssueKey('missing_original_language')).toBe(true);
+    expect(isCatalogHealthIssueKey('missing_watch_provider_us')).toBe(true);
+    expect(isCatalogHealthIssueKey('low_metadata_quality')).toBe(true);
     expect(isCatalogHealthIssueKey('drop table movies')).toBe(false);
 
     await expect(

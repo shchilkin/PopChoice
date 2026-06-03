@@ -85,20 +85,40 @@ Target behavior:
 
 This avoids pretending that a few hundred embedded titles can power a real app, while still preserving the value of local ranking, memory, and generated explanations.
 
+## Candidate Source Strategy
+
+Recommendation V2 should treat candidate source as a separate decision from audience size and match depth.
+
+| Strategy             | Primary use                                          | Candidate mix                                                              |
+| -------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------- |
+| Curated showcase     | Demo/showcase surfaces and safe regression fixtures. | `curated` local seed records only.                                         |
+| Hybrid fast          | Fast Pick when latency matters.                      | `local-cache` first, then bounded `tmdb-discover` if local quality is low. |
+| Memory-aware local   | Signed-in fast/normal recommendations with history.  | `local-cache` plus memory exclusions/down-ranks.                           |
+| TMDB-first normal    | Normal Match and later Taste Swipe.                  | `tmdb-discover`/`tmdb-search`, enriched by local cache and JIT seeding.    |
+| Compromise group/duo | Duo and group results where overlap matters.         | Same source mix as selected depth, but scored against participant overlap. |
+
+[#612](https://github.com/shchilkin/PopChoice/issues/612) tracks carrying these source decisions through code, persistence, logs, eval reports, and optional UI badges.
+The current code now has a first policy module, persisted `experienceMode`, and route/job/pipeline metadata bridge for these defaults:
+
+- Curated showcase -> `curated-showcase`.
+- Fast Pick solo -> `hybrid-fast`.
+- Normal Match and Taste Swipe solo -> `tmdb-first`.
+- Duo and Group -> `compromise-hybrid`, regardless of fast/normal entry point.
+- Signed-in solo Fast Pick with existing memory can temporarily use `memory-aware-local` until TMDB-first memory reranking is implemented.
+
 ## Experience Modes
 
-### 1. Quick Pick
+### 1. Fast Pick
 
-Short guided mode for users who want a result fast.
+Short guided mode for users who want a result fast. The current flow asks for audience, intent, hard avoids, and discovery appetite, then sends `experienceMode: fast-pick` through the recommendation API.
 
-Possible questions:
+Target questions:
 
-- Who is watching: solo or group?
 - What kind of night is this: easy, funny, gripping, emotional, weird, cozy, dark?
 - What should PopChoice avoid: horror, gore, slow pacing, subtitles, long runtime, already-seen movies?
 - Discovery level: safe hit, balanced, surprise me?
 
-This should become the default replacement for the current long quiz.
+Duo/group Fast Pick reuses the same short question set per participant after audience-specific setup, then runs the same `hybrid-fast` source strategy.
 
 ### 2. Taste Swipe
 
@@ -198,6 +218,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
   - [x] [#471](https://github.com/shchilkin/PopChoice/issues/471) schema/model for cast, directors, genres, and keywords.
   - [x] [#472](https://github.com/shchilkin/PopChoice/issues/472) TMDB backfill and refresh for that metadata.
   - [x] [#473](https://github.com/shchilkin/PopChoice/issues/473) available-movies partial `ILIKE` search over titles, actors, directors, and genres, combined with exact/ranged catalog filters.
+  - [x] Metadata v1 quality contract: hot identity/quality/language columns, normalized watch providers for `US`, `FI`, and `RU`, bounded TMDB details enrichment for top direct TMDB candidates, and catalog-health/eval visibility for low-quality metadata.
 - Track TMDB API failures, timeout behavior, and fallback quality.
 - Keep [#493](https://github.com/shchilkin/PopChoice/issues/493) as the epic for admin/back-office review of ambiguous title matches and catalog-health issues.
 
@@ -205,9 +226,29 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 - [x] [#474](https://github.com/shchilkin/PopChoice/issues/474): add a full Playwright e2e harness with an isolated migrated test database.
 - [x] [#475](https://github.com/shchilkin/PopChoice/issues/475): add product smoke flows for auth, catalog, quiz, recommendation, and feedback.
+- [x] Extend recommendation browser smoke coverage across current Normal/Fast and Solo/Duo/Group entry paths in `apps/web/e2e/recommendation.spec.ts`.
 - [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add recommendation eval fixtures and scoring so AI behavior can be changed with more control.
 - [x] [#490](https://github.com/shchilkin/PopChoice/issues/490): add scheduled or manually triggered real-data recommendation evals for seeded DB and catalog-retrieval changes. The backoffice can now queue mock and real-data evals, persist run summaries/results, and expose guarded live eval enqueueing for explicit operator checks.
 - Keep live-model evals optional. The default path should be deterministic, cheap, and safe for CI.
+
+### Stage 5.6: Backoffice eval operations
+
+The eval stack should be layered instead of treated as one overloaded "real data" command:
+
+| Eval layer                        | Purpose                                                                                                                                                             | Where it runs                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Deterministic fixture eval        | Prompt/output shape, repeat avoidance, explanation quality, and basic scenario scoring without external services.                                                   | Per-PR CI.                                       |
+| Seeded catalog retrieval eval     | Migrations, seeded catalog connectivity, fixture candidate availability, and catalog search.                                                                        | Scheduled/manual GitHub Actions.                 |
+| Environment retrieval/source eval | Current environment DB health for recommendation scenarios: candidate counts, source distribution, metadata quality/provider gaps, and hard-constraint feasibility. | Backoffice-triggered BullMQ job.                 |
+| Live provider eval                | Full provider-sensitive check with OpenAI/TMDB calls for intentional pre-launch validation.                                                                         | Manual, guarded, audited backoffice action only. |
+
+Implementation should be split in this order:
+
+1. [x] [#618](https://github.com/shchilkin/PopChoice/issues/618): classify and refactor the current seeded `--real-data` checks so the runner is importable by jobs and docs do not imply it is a full live recommendation eval.
+2. [x] [#616](https://github.com/shchilkin/PopChoice/issues/616): persist eval run and result history so reports are not trapped in CLI logs or GitHub artifacts.
+3. [x] [#617](https://github.com/shchilkin/PopChoice/issues/617): add bounded BullMQ jobs for environment retrieval and source-strategy evals against the configured DB.
+4. [x] [#619](https://github.com/shchilkin/PopChoice/issues/619): add a protected backoffice UI for safe eval runs, history, status, and report details.
+5. [x] [#620](https://github.com/shchilkin/PopChoice/issues/620): add a guarded live-provider eval action only after safe non-live backoffice evals exist.
 
 ### Stage 6: Long-term personalization
 
@@ -222,11 +263,29 @@ Good next PRs, in order:
 
 1. [x] [#484](https://github.com/shchilkin/PopChoice/issues/484): refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
 2. [x] [#492](https://github.com/shchilkin/PopChoice/issues/492): move TMDB discovery/backfill/enrichment into a shared rate-limited BullMQ catalog worker before scaling catalog volume.
-3. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
-4. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
-5. Add TMDB-backed candidate-card sourcing for swipe mode.
-6. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
-7. Add manual-review logging for ambiguous TMDB/local identity matches.
+3. [x] [#618](https://github.com/shchilkin/PopChoice/issues/618): classify/refactor current seeded real-data checks before adding backoffice eval execution.
+4. [x] [#616](https://github.com/shchilkin/PopChoice/issues/616): persist eval run/result history for backoffice and worker reports.
+5. [x] [#617](https://github.com/shchilkin/PopChoice/issues/617): add non-live environment retrieval/source-strategy eval jobs.
+6. [x] [#619](https://github.com/shchilkin/PopChoice/issues/619): expose recommendation eval runs in backoffice.
+7. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
+8. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
+9. Add TMDB-backed candidate-card sourcing for swipe mode.
+10. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
+11. [x] [#620](https://github.com/shchilkin/PopChoice/issues/620): add guarded live-provider evals after safe backoffice evals exist.
+12. [x] Start [#612](https://github.com/shchilkin/PopChoice/issues/612) with first-class candidate source provenance, source-strategy policy, route/job/pipeline metadata, and eval assertions for curated showcase, hybrid fast, and TMDB-first behavior.
+13. [x] Connect [#612](https://github.com/shchilkin/PopChoice/issues/612) source strategy to initial retrieval behavior: `hybrid-fast` and `compromise-hybrid` use bounded TMDB fallback, while curated/local-only strategies block external lookup.
+14. [x] Add `experienceMode` request/job/pipeline metadata so `fast-pick` can select `hybrid-fast` while current requests default to `normal-match`.
+15. [x] Add a first Fast Pick quiz intro entry that sends the `fast-pick` wrapper into the existing recommendation API.
+16. [x] Add the first short solo Fast Pick guided flow for intent, hard avoids, and discovery appetite under [#609](https://github.com/shchilkin/PopChoice/issues/609).
+17. [x] Extend Fast Pick to Duo/Group by adding an audience layer before the short question flow.
+18. [x] Start [#608](https://github.com/shchilkin/PopChoice/issues/608) by adding an optional Normal-mode hard-avoids step and carrying those negative signals into the current recommendation payload.
+19. [x] Make Duo first-class in the guided UI: separate Normal/Fast audience entry, two-person setup copy, Duo result copy, and deterministic e2e coverage.
+20. [x] Connect the first `tmdb-first` retrieval slice: Normal solo now attempts TMDB discover as a primary candidate-discovery path, then score-ranks TMDB and strong local matches together.
+21. [x] Deepen the first `tmdb-first` query-shaping slice: Normal/Fast hard avoids and discovery appetite now shape TMDB discover params, and eval fixtures include source/metadata quality thresholds.
+22. [x] Deepen `tmdb-first` JIT enrichment before making it the Normal quality default: fetch richer TMDB details for strong direct candidates, persist/cache useful runtime/rating/provider metadata, and calibrate backoffice real-data thresholds.
+23. [#655](https://github.com/shchilkin/PopChoice/issues/655): add provider-aware result UI and user-facing availability copy once product behavior decides whether availability is informational, a soft preference, or a hard constraint.
+24. [#656](https://github.com/shchilkin/PopChoice/issues/656): evaluate a movie embedding text v2 contract before adding metadata such as genres, keywords, cast, director, language, popularity, or certification to retrieval embeddings.
+25. Add manual-review logging for ambiguous TMDB/local identity matches.
 
 ## Non-Goals For Now
 
