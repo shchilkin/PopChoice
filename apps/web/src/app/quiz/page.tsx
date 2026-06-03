@@ -12,6 +12,10 @@ import { getCsrfToken } from '@/lib/csrfClient';
 import {
   BetweenPersons,
   EraStep,
+  FastAudience,
+  FastAvoidsStep,
+  FastDiscoveryStep,
+  FastIntentStep,
   FavoriteActorStep,
   FavoriteMovieStep,
   GroupSetup,
@@ -21,13 +25,22 @@ import {
   QuizSubmittingState,
   ToneStep,
 } from './components';
-import { slideVariants, toApiFormat } from './constants';
+import { slideVariants, toApiFormat, toFastPickApiFormat } from './constants';
 import { quizMachine } from './quiz.machine';
 
 import type { PersonAnswers } from './types';
 
-const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'favoriteActor'] as const;
+const STEP_KEYS = ['favoriteMovie', 'era', 'mood', 'tone', 'avoids', 'favoriteActor'] as const;
 type StepKey = (typeof STEP_KEYS)[number];
+const FAST_STEP_KEYS = ['intent', 'avoids', 'discovery'] as const;
+type FastStepKey = (typeof FAST_STEP_KEYS)[number];
+const MIN_GROUP_PEOPLE = 3;
+
+function ensureGroupSlots(names: string[]) {
+  return names.length >= MIN_GROUP_PEOPLE
+    ? names
+    : [...names, ...Array.from({ length: MIN_GROUP_PEOPLE - names.length }, () => '')];
+}
 
 export default function QuizPage() {
   return (
@@ -55,18 +68,25 @@ function QuizSession() {
   const submittingRef = useRef(false);
   const navigationStartedRef = useRef(false);
 
-  const { people, currentPersonIdx, dir, mode, recommendationId } = state.context;
+  const { people, currentPersonIdx, dir, mode, flow, audience, recommendationId } = state.context;
   const currentPerson = people[currentPersonIdx];
   const isSubmitting = state.matches('submitting');
   const isNavigatingToResults = state.matches('navigatingToResults');
+  const isFastFlow = flow === 'fast';
+  const experienceMode = isFastFlow ? 'fast-pick' : 'normal-match';
 
   // Derive which step we're on from the state value (no counter in context)
   const questionsStep =
     typeof state.value === 'object' && 'questions' in state.value
       ? (state.value as { questions: StepKey }).questions
       : null;
+  const fastStep =
+    typeof state.value === 'object' && 'fastQuestions' in state.value
+      ? (state.value as { fastQuestions: FastStepKey }).fastQuestions
+      : null;
   const currentStepIdx = questionsStep ? STEP_KEYS.indexOf(questionsStep) : -1;
-  const isLastStep = questionsStep === 'favoriteActor';
+  const currentFastStepIdx = fastStep ? FAST_STEP_KEYS.indexOf(fastStep) : -1;
+  const isLastStep = questionsStep === 'favoriteActor' || fastStep === 'discovery';
 
   // Trigger submit side-effect when machine reaches the final state
   useEffect(() => {
@@ -80,8 +100,12 @@ function QuizSession() {
         mode === 'solo'
           ? people.map((p, i) => (i === 0 ? { ...p, name: t.quiz.intro.youLabel } : p))
           : people;
-      const apiData = resolved.map(toApiFormat);
+      const apiData = resolved.map((person) =>
+        isFastFlow ? toFastPickApiFormat(person) : toApiFormat(person),
+      );
       const dataToSend = apiData.length === 1 ? apiData[0] : apiData;
+      const requestBody =
+        experienceMode === 'fast-pick' ? { experienceMode, people: dataToSend } : dataToSend;
 
       try {
         const res = await fetch('/api/recommendations', {
@@ -90,7 +114,7 @@ function QuizSession() {
             'Content-Type': 'application/json',
             'X-CSRF-Token': getCsrfToken(),
           },
-          body: JSON.stringify(dataToSend),
+          body: JSON.stringify(requestBody),
         });
 
         if (!res.ok) {
@@ -109,7 +133,7 @@ function QuizSession() {
     }
 
     void submit();
-  }, [isSubmitting, mode, people, t.quiz.intro.youLabel, send]);
+  }, [experienceMode, isFastFlow, isSubmitting, mode, people, t.quiz.intro.youLabel, send]);
 
   useEffect(() => {
     if (!isNavigatingToResults || !recommendationId) return;
@@ -123,6 +147,38 @@ function QuizSession() {
     send({ type: 'UPDATE_PERSON', updates });
   }
 
+  function startFastPick() {
+    send({ type: 'START_FAST_PICK', youLabel: t.quiz.intro.youLabel });
+  }
+
+  function startFastSolo() {
+    send({ type: 'START_FAST_SOLO', youLabel: t.quiz.intro.youLabel });
+  }
+
+  function startFastDuo() {
+    setGroupNames(['', '']);
+    send({ type: 'START_FAST_DUO' });
+  }
+
+  function startFastGroup() {
+    setGroupNames(ensureGroupSlots);
+    send({ type: 'START_FAST_GROUP' });
+  }
+
+  function startSolo() {
+    send({ type: 'START_SOLO', youLabel: t.quiz.intro.youLabel });
+  }
+
+  function startDuo() {
+    setGroupNames(['', '']);
+    send({ type: 'START_DUO' });
+  }
+
+  function startGroup() {
+    setGroupNames(ensureGroupSlots);
+    send({ type: 'START_GROUP' });
+  }
+
   function canProceed(): boolean {
     if (!currentPerson) return false;
     switch (questionsStep) {
@@ -134,8 +190,21 @@ function QuizSession() {
         return currentPerson.moods.length >= 1;
       case 'tone':
         return currentPerson.tone !== '';
+      case 'avoids':
+        return true;
       case 'favoriteActor':
         return true;
+      default:
+        break;
+    }
+
+    switch (fastStep) {
+      case 'intent':
+        return currentPerson.fastIntent.length >= 1;
+      case 'avoids':
+        return true;
+      case 'discovery':
+        return currentPerson.fastDiscovery !== '';
       default:
         return false;
     }
@@ -213,8 +282,21 @@ function QuizSession() {
   if (state.matches('intro')) {
     return (
       <QuizIntro
-        onStartSolo={() => send({ type: 'START_SOLO', youLabel: t.quiz.intro.youLabel })}
-        onStartGroup={() => send({ type: 'START_GROUP' })}
+        onStartFastPick={startFastPick}
+        onStartSolo={startSolo}
+        onStartDuo={startDuo}
+        onStartGroup={startGroup}
+      />
+    );
+  }
+
+  if (state.matches('fastAudience')) {
+    return (
+      <FastAudience
+        onBack={() => send({ type: 'BACK' })}
+        onStartSolo={startFastSolo}
+        onStartDuo={startFastDuo}
+        onStartGroup={startFastGroup}
       />
     );
   }
@@ -223,6 +305,7 @@ function QuizSession() {
   if (state.matches('groupSetup')) {
     return (
       <GroupSetup
+        audience={audience === 'duo' ? 'duo' : 'group'}
         groupNames={groupNames}
         onGroupNamesChange={setGroupNames}
         onBack={() => send({ type: 'BACK' })}
@@ -253,12 +336,17 @@ function QuizSession() {
   const personLabel =
     totalPeople > 1 ? t.quiz.nav.personTurn.replace('{name}', currentPerson.name) : null;
   const isLastPerson = currentPersonIdx === people.length - 1;
+  const activeStepIdx = isFastFlow ? currentFastStepIdx : currentStepIdx;
+  const activeStepTotal = isFastFlow ? FAST_STEP_KEYS.length : STEP_KEYS.length;
+  const activeStepLabel = isFastFlow
+    ? t.quiz.fast.labels[currentFastStepIdx]
+    : t.quiz.labels[currentStepIdx];
 
   return (
     <div className="flex-1 overflow-hidden">
       <AnimatePresence mode="wait" custom={dir}>
         <motion.div
-          key={`${currentPersonIdx}-${questionsStep}`}
+          key={`${currentPersonIdx}-${questionsStep ?? fastStep}`}
           custom={dir}
           variants={slideVariants}
           initial="enter"
@@ -298,11 +386,11 @@ function QuizSession() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <ProgressDots current={currentStepIdx} total={5} />
+                <ProgressDots current={activeStepIdx} total={activeStepTotal} />
                 <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>
                   {t.quiz.nav.ofTotal
-                    .replace('{current}', String(currentStepIdx + 1))
-                    .replace('{total}', '5')}
+                    .replace('{current}', String(activeStepIdx + 1))
+                    .replace('{total}', String(activeStepTotal))}
                 </span>
               </div>
               {personLabel && (
@@ -318,7 +406,7 @@ function QuizSession() {
                 textTransform: 'uppercase',
               }}
             >
-              {t.quiz.labels[currentStepIdx]}
+              {activeStepLabel}
             </div>
           </div>
 
@@ -341,12 +429,24 @@ function QuizSession() {
             {questionsStep === 'tone' && (
               <ToneStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
+            {questionsStep === 'avoids' && (
+              <FastAvoidsStep person={currentPerson} onUpdate={updateCurrentPerson} />
+            )}
             {questionsStep === 'favoriteActor' && (
               <FavoriteActorStep
                 person={currentPerson}
                 onUpdate={updateCurrentPerson}
                 onSubmit={() => send({ type: 'NEXT' })}
               />
+            )}
+            {fastStep === 'intent' && (
+              <FastIntentStep person={currentPerson} onUpdate={updateCurrentPerson} />
+            )}
+            {fastStep === 'avoids' && (
+              <FastAvoidsStep person={currentPerson} onUpdate={updateCurrentPerson} />
+            )}
+            {fastStep === 'discovery' && (
+              <FastDiscoveryStep person={currentPerson} onUpdate={updateCurrentPerson} />
             )}
           </div>
 

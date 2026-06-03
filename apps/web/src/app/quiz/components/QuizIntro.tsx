@@ -1,18 +1,27 @@
 'use client';
 
-import { ChevronRight, User, Users } from 'lucide-react';
+import { User, Users, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { Mascot } from '@/components/Mascot';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
+import { AudienceChoiceButton } from './AudienceChoiceButton';
+
 interface QuizIntroProps {
+  onStartFastPick: () => void;
   onStartSolo: () => void;
+  onStartDuo: () => void;
   onStartGroup: () => void;
 }
 
-export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
+export function QuizIntro({
+  onStartFastPick,
+  onStartSolo,
+  onStartDuo,
+  onStartGroup,
+}: QuizIntroProps) {
   const { t } = useLanguage();
 
   return (
@@ -42,89 +51,45 @@ export function QuizIntro({ onStartSolo, onStartGroup }: QuizIntroProps) {
         </div>
 
         <div className="flex flex-col gap-4">
-          {/* Solo */}
-          <button
-            onClick={onStartSolo}
-            className="group flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
-            style={{
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-gold-bd-strong)';
-              (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';
-              (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface)';
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: 'rgba(245,197,24,0.15)',
-                color: 'var(--pc-gold-text)',
-              }}
-            >
-              <User size={22} />
-            </div>
-            <div>
-              <div
-                style={{
-                  color: 'var(--pc-t1)',
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                }}
-              >
-                {t.quiz.intro.soloTitle}
-              </div>
-              <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                {t.quiz.intro.soloDesc}
-              </div>
-            </div>
-            <ChevronRight
-              size={18}
-              className="ml-auto shrink-0"
-              style={{ color: 'var(--pc-t4)' }}
-            />
-          </button>
+          <AudienceChoiceButton
+            onClick={onStartFastPick}
+            icon={Zap}
+            iconBackground="rgba(245,197,24,0.15)"
+            iconColor="var(--pc-gold-text)"
+            hoverBorderColor="var(--pc-gold-bd-strong)"
+            title={t.quiz.intro.fastPickTitle}
+            description={t.quiz.intro.fastPickDesc}
+          />
 
-          <button
+          <AudienceChoiceButton
+            onClick={onStartSolo}
+            icon={User}
+            iconBackground="rgba(245,197,24,0.15)"
+            iconColor="var(--pc-gold-text)"
+            hoverBorderColor="var(--pc-gold-bd-strong)"
+            title={t.quiz.intro.soloTitle}
+            description={t.quiz.intro.soloDesc}
+          />
+
+          <AudienceChoiceButton
+            onClick={onStartDuo}
+            icon={Users}
+            iconBackground={`${palette.teal}26`}
+            iconColor={palette.teal}
+            hoverBorderColor={`${palette.teal}66`}
+            title={t.quiz.intro.duoTitle}
+            description={t.quiz.intro.duoDesc}
+          />
+
+          <AudienceChoiceButton
             onClick={onStartGroup}
-            className="group flex items-center gap-5 p-5 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
-            style={{
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = `${palette.purple}66`;
-              (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface-hover)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--pc-bd2)';
-              (e.currentTarget as HTMLElement).style.background = 'var(--pc-surface)';
-            }}
-          >
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: `${palette.purple}26`, color: palette.purple }}
-            >
-              <Users size={22} />
-            </div>
-            <div>
-              <div style={{ color: 'var(--pc-t1)', fontWeight: 600, fontSize: '1rem' }}>
-                {t.quiz.intro.groupTitle}
-              </div>
-              <div style={{ color: 'var(--pc-t4)', fontSize: '0.85rem' }}>
-                {t.quiz.intro.groupDesc}
-              </div>
-            </div>
-            <ChevronRight
-              size={18}
-              className="ml-auto shrink-0"
-              style={{ color: 'var(--pc-t4)' }}
-            />
-          </button>
+            icon={Users}
+            iconBackground={`${palette.purple}26`}
+            iconColor={palette.purple}
+            hoverBorderColor={`${palette.purple}66`}
+            title={t.quiz.intro.groupTitle}
+            description={t.quiz.intro.groupDesc}
+          />
         </div>
       </motion.div>
     </div>

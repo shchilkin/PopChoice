@@ -29,6 +29,10 @@ export const TwoPeople: Story = {
   args: { groupNames: ['Alice', 'Bob'] },
 };
 
+export const Duo: Story = {
+  args: { audience: 'duo', groupNames: ['Alice', 'Bob'] },
+};
+
 export const Empty: Story = {
   args: { groupNames: ['', ''] },
 };
