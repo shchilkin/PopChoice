@@ -6,8 +6,10 @@ export interface CatalogMaintenanceQueueSnapshotMessage {
     type?: string;
   };
   receivedAt: string;
-  trigger: 'connected' | 'queue-event';
+  trigger: 'connected' | 'queue-event' | 'redis-unavailable';
 }
+
+export type CatalogMaintenanceQueueStreamMode = 'live' | 'snapshot-only';
 
 const QUEUE_STATES = new Set(['active', 'completed', 'delayed', 'failed', 'waiting']);
 
@@ -87,7 +89,10 @@ export function parseCatalogMaintenanceQueueSnapshotMessage(
     if (!isRecord(message) || !isCatalogMaintenanceQueueJobPage(message.jobPage)) return null;
 
     const receivedAt = typeof message.receivedAt === 'string' ? message.receivedAt : null;
-    const trigger = message.trigger === 'connected' ? 'connected' : 'queue-event';
+    const trigger =
+      message.trigger === 'connected' || message.trigger === 'redis-unavailable'
+        ? message.trigger
+        : 'queue-event';
     const queueEvent = isRecord(message.queueEvent)
       ? {
           type: typeof message.queueEvent.type === 'string' ? message.queueEvent.type : undefined,
@@ -102,5 +107,16 @@ export function parseCatalogMaintenanceQueueSnapshotMessage(
     };
   } catch {
     return null;
+  }
+}
+
+export function parseCatalogMaintenanceQueueConnectedMode(
+  value: string,
+): CatalogMaintenanceQueueStreamMode {
+  try {
+    const message = JSON.parse(value) as unknown;
+    return isRecord(message) && message.mode === 'snapshot-only' ? 'snapshot-only' : 'live';
+  } catch {
+    return 'live';
   }
 }

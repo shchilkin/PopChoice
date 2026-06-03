@@ -1,6 +1,5 @@
 import {
   createCatalogRepairBatch,
-  getCatalogRepairMovieSnapshot,
   listCatalogHealthIssueMoviePage,
   recordCatalogRepairAction,
   refreshCatalogRepairBatchCounts,
@@ -14,12 +13,10 @@ import {
 import {
   catalogRepairMessage,
   getAsyncBulkRepairPageSize,
-  getBackfillReasonForIssue,
   getBulkRepairStatus,
   parseAsyncBulkRepairLimit,
   parseBulkRepairLimit,
   parseCatalogIssueKey,
-  parseMovieId,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
   type CatalogRepairActionStatus,
 } from './catalogRepairActionHelpers';
@@ -33,6 +30,8 @@ import {
   ensureBackofficeReady,
   parseOperatorActor,
 } from './backofficeRuntime';
+import { logCatalogRepairActionResult } from './catalogRepairActionLog';
+import { performSingleCatalogRepairAction } from './catalogSingleRepairAction';
 
 export { catalogRepairMessage, REPAIRABLE_CATALOG_ISSUE_KEYS };
 
@@ -297,52 +296,44 @@ export async function performCatalogRepairAction(
   headers: Headers,
 ): Promise<CatalogRepairActionResult> {
   const config = await ensureBackofficeReady();
+  const actor = parseOperatorActor(headers);
+  const startedAt = Date.now();
+  const requestedAction =
+    typeof formData.get('action') === 'string' ? String(formData.get('action')) : 'unknown';
 
   if (formData.get('action') === 'bulk_enqueue_backfill') {
-    return performBulkCatalogRepairAction(formData, headers);
+    const result = await performBulkCatalogRepairAction(formData, headers);
+    logCatalogRepairActionResult({
+      action: requestedAction,
+      actor,
+      durationMs: Date.now() - startedAt,
+      result,
+    });
+    return result;
   }
 
   if (formData.get('action') === 'bulk_enqueue_backfill_async') {
-    return performAsyncBulkCatalogRepairAction(formData, headers);
+    const result = await performAsyncBulkCatalogRepairAction(formData, headers);
+    logCatalogRepairActionResult({
+      action: requestedAction,
+      actor,
+      durationMs: Date.now() - startedAt,
+      result,
+    });
+    return result;
   }
 
   if (formData.get('action') !== 'enqueue_backfill') {
     throw backofficeActionError('Unsupported catalog-health action.');
   }
 
-  const movieId = parseMovieId(formData.get('movie_id'));
-  const issueKey = parseCatalogIssueKey(formData.get('issue_key'));
-  const snapshot = await getCatalogRepairMovieSnapshot(movieId);
-
-  if (!snapshot) {
-    throw backofficeActionError('Movie not found.', 404);
-  }
-
-  const job = await enqueueCatalogBackfillMovieFromBackoffice(
-    {
-      movieId,
-      reason: getBackfillReasonForIssue(issueKey),
-      language: config.tmdbLanguage,
-    },
-    config.redisUrl,
-  );
-
-  await recordCatalogRepairAction({
-    action: 'enqueue_backfill',
-    actor: parseOperatorActor(headers),
-    issueKey,
-    targetType: 'movie',
-    targetId: movieId,
-    note: typeof formData.get('note') === 'string' ? String(formData.get('note')) : undefined,
-    previousState: { ...snapshot },
-    result: job ? { ...job } : { status: 'queue_unavailable', queueName: 'catalog-maintenance' },
+  const result = await performSingleCatalogRepairAction({ config, formData, headers });
+  logCatalogRepairActionResult({
+    action: requestedAction,
+    actor,
+    durationMs: Date.now() - startedAt,
+    result,
   });
 
-  return {
-    mode: 'single',
-    status: job ? 'queued' : 'unavailable',
-    issueKey,
-    movieId,
-    job,
-  };
+  return result;
 }

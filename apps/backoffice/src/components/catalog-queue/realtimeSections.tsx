@@ -4,7 +4,7 @@ import type {
   CatalogMaintenanceQueueJobSummary,
 } from '../../catalogMaintenanceQueue';
 import { formatLiveSyncTime } from '../liveRefreshTime';
-import { SimplePaginationControls } from '../shared';
+import { PanelHeader, SimplePaginationControls, TableEmptyRow, TableScroll } from '../shared';
 import {
   buildQueueHref,
   getLastQueueEvent,
@@ -12,12 +12,12 @@ import {
   getQueueJobLinks,
   getQueueStateClass,
   getQueueStateCount,
+  queueRealtimeDetailCopy,
   QUEUE_STATES,
   queueRealtimeCopy,
   STATE_LABELS,
+  type QueueRealtimeStatus as QueueRealtimeStatusValue,
 } from './helpers';
-
-export type RealtimeStatus = 'connecting' | 'connected' | 'error';
 
 export function QueueCommandStrip({
   bullBoardUrl,
@@ -76,19 +76,21 @@ export function QueueCommandStrip({
 export function QueueJobsPanel({ jobPage }: { jobPage: CatalogMaintenanceQueueJobPage }) {
   return (
     <section className="panel queue-panel">
-      <div className="panel-header">
-        <div>
-          <h2>{STATE_LABELS[jobPage.state]} jobs</h2>
+      <PanelHeader
+        title={<h2>{STATE_LABELS[jobPage.state]} jobs</h2>}
+        hint={
           <p className="small-note">
             Shown fields are reduced to movie, reason, batch, and timing. Full job details stay in
             Bull Board.
           </p>
-        </div>
-        <div className="panel-actions">
-          <QueuePageSizeLinks jobPage={jobPage} />
-          <span className="count">{jobPage.totalCount}</span>
-        </div>
-      </div>
+        }
+        actions={
+          <div className="panel-actions">
+            <QueuePageSizeLinks jobPage={jobPage} />
+            <span className="count">{jobPage.totalCount}</span>
+          </div>
+        }
+      />
       <QueueStateTabs jobPage={jobPage} />
       <QueueStateGuide />
       <SimplePaginationControls
@@ -102,7 +104,7 @@ export function QueueJobsPanel({ jobPage }: { jobPage: CatalogMaintenanceQueueJo
           buildQueueHref({ page, pageSize: jobPage.limit, state: jobPage.state })
         }
       />
-      <div className="table-scroll">
+      <TableScroll>
         <table className="queue-jobs-table">
           <thead>
             <tr>
@@ -118,7 +120,7 @@ export function QueueJobsPanel({ jobPage }: { jobPage: CatalogMaintenanceQueueJo
             <QueueJobRows jobs={jobPage.jobs} state={jobPage.state} />
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </section>
   );
 }
@@ -195,12 +197,10 @@ function QueueJobRows({
 }) {
   if (jobs.length === 0) {
     return (
-      <tr>
-        <td colSpan={6} className="empty">
-          No {STATE_LABELS[state].toLowerCase()} jobs. Check another queue state or open Bull Board
-          for full internals.
-        </td>
-      </tr>
+      <TableEmptyRow colSpan={6}>
+        No {STATE_LABELS[state].toLowerCase()} jobs. Check another queue state or open Bull Board
+        for full internals.
+      </TableEmptyRow>
     );
   }
 
@@ -279,25 +279,41 @@ function QueueJobLinks({ job }: { job: CatalogMaintenanceQueueJobSummary }) {
 }
 
 export function QueueRealtimeStatus({
+  isRefreshing = false,
   lastEventAt,
+  onRefresh,
   status,
 }: {
+  isRefreshing?: boolean;
   lastEventAt: string | null;
-  status: RealtimeStatus;
+  onRefresh?: () => void;
+  status: QueueRealtimeStatusValue;
 }) {
   const copy = queueRealtimeCopy(status);
+  const detailCopy = queueRealtimeDetailCopy(status);
   const lastEvent = lastEventAt ? formatLiveSyncTime(lastEventAt) : null;
+  const dotState =
+    status === 'connecting' || isRefreshing ? 'pending' : status === 'connected' ? '' : 'error';
+  const showFallbackControls = status !== 'connected' && status !== 'connecting';
 
   return (
     <div className={`live-refresh realtime-refresh ${status}`} aria-live="polite">
-      <span
-        className={`live-refresh-dot ${status === 'connecting' ? 'pending' : status === 'error' ? 'error' : ''}`}
-        aria-hidden="true"
-      />
+      <span className={`live-refresh-dot ${dotState}`} aria-hidden="true" />
       <span>{copy}</span>
       <span className="live-refresh-meta">
         {lastEvent ? `Updated ${lastEvent}` : 'Waiting for the first update'}
       </span>
+      {detailCopy ? <span className="live-refresh-error">{detailCopy}</span> : null}
+      {showFallbackControls && onRefresh ? (
+        <button
+          className="button small quiet"
+          disabled={isRefreshing}
+          onClick={onRefresh}
+          type="button"
+        >
+          {isRefreshing ? 'Refreshing' : 'Refresh'}
+        </button>
+      ) : null}
     </div>
   );
 }
