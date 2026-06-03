@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   ensureBackofficeReady: vi.fn(),
   getCatalogRepairBatchItem: vi.fn(),
   loggerError: vi.fn(),
+  loggerInfo: vi.fn(),
   parseOperatorActor: vi.fn(),
   recordCatalogRepairAction: vi.fn(),
   refreshCatalogRepairBatchCounts: vi.fn(),
@@ -16,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@pop-choice/shared', () => ({
   createCatalogRepairBatchItem: mocks.createCatalogRepairBatchItem,
   getCatalogRepairBatchItem: mocks.getCatalogRepairBatchItem,
-  logger: { error: mocks.loggerError },
+  logger: { error: mocks.loggerError, info: mocks.loggerInfo },
   recordCatalogRepairAction: mocks.recordCatalogRepairAction,
   refreshCatalogRepairBatchCounts: mocks.refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemEnqueueResult: mocks.updateCatalogRepairBatchItemEnqueueResult,
@@ -192,6 +193,17 @@ describe('catalog repair batch actions', () => {
         targetType: 'movie',
       }),
     );
+    expect(mocks.loggerInfo).toHaveBeenCalledWith('Backoffice operator action', {
+      action: 'retry_item',
+      actor: 'operator@example.test',
+      durationMs: expect.any(Number),
+      issueKey: 'missing_poster_url',
+      repairBatchId: 'batch-1',
+      repairBatchItemId: 'item-1',
+      resultStatus: 'queued',
+      targetId: '42',
+      targetType: 'movie',
+    });
   });
 
   it('marks retried items unavailable when the queue is disabled', async () => {

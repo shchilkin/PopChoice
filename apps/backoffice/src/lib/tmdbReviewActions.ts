@@ -6,6 +6,7 @@ import {
   ensureBackofficeReady,
   parseOperatorActor,
 } from './backofficeRuntime';
+import { logBackofficeAction } from './backofficeActionLog';
 
 export type TMDBReviewFormActionResult = {
   action: TMDBMatchReviewAction;
@@ -88,6 +89,8 @@ export async function applyTMDBReviewFormAction(
   headers: Headers,
 ): Promise<TMDBReviewFormActionResult> {
   await ensureBackofficeReady();
+  const startedAt = Date.now();
+  const actor = parseOperatorActor(headers);
 
   const action = parseAction(formData.get('action'));
   const candidateId = parseCandidateId(formData.get('candidate_id'));
@@ -98,9 +101,18 @@ export async function applyTMDBReviewFormAction(
   const review = await applyTMDBMatchReviewAction({
     reviewId,
     action,
-    actor: parseOperatorActor(headers),
+    actor,
     candidateId,
     note: typeof note === 'string' ? note : undefined,
+  });
+  logBackofficeAction({
+    action,
+    actor,
+    durationMs: Date.now() - startedAt,
+    resultStatus: review.status,
+    reviewId,
+    targetId: reviewId,
+    targetType: 'tmdb_match_review',
   });
   const redirectTo = isNextReviewRequested(formData.get('next_review'))
     ? await getNextOpenReviewPath(review.id)
