@@ -8,6 +8,8 @@ PopChoice backoffice work is tracked under
 [#493](https://github.com/shchilkin/PopChoice/issues/493). The backoffice is an
 operational app for catalog health, TMDB match review, and later manual data
 repair. It must not be implemented inside the user-facing `apps/web` app.
+Post-MVP operator hardening is tracked under
+[#660](https://github.com/shchilkin/PopChoice/issues/660).
 
 ## Boundary Decision
 

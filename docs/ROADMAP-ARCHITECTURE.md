@@ -219,6 +219,44 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Make seed, discovery, and backfill responsibilities explicit enough that data-quality fixes do not duplicate or fight each other.
 - Define migration/versioning expectations for schema changes in [#494](https://github.com/shchilkin/PopChoice/issues/494), including production migration safety, rollback notes, and seed/backfill coordination.
 
+### Backoffice Operator Maturity Track
+
+Continue post-MVP backoffice work under the follow-up epic
+[#660](https://github.com/shchilkin/PopChoice/issues/660), linked back to the
+original backoffice/catalog-health epic [#493](https://github.com/shchilkin/PopChoice/issues/493).
+The original epic established the dedicated app, catalog-health review, safe
+repair actions, durable repair batches, queue visibility, realtime updates, and
+duplicate-merge foundations. The maturity track keeps the next operator-console
+work implementation-sized:
+
+- [#661](https://github.com/shchilkin/PopChoice/issues/661): add deterministic
+  e2e coverage for core operator flows such as catalog-health repair enqueueing,
+  repair-batch triage, realtime queue state, TMDB review actions, and duplicate
+  merge preview/submit once the UI exists.
+- [#662](https://github.com/shchilkin/PopChoice/issues/662): extract shared
+  backoffice operator UI primitives for repeated page headers, toolbars, panels,
+  status badges, data tables, empty states, error states, and action affordances.
+- [#663](https://github.com/shchilkin/PopChoice/issues/663): standardize
+  backoffice action route contracts for same-origin/auth failures, validation
+  errors, progressive-enhanced redirects, JSON responses, and public operator
+  error messages.
+- [#664](https://github.com/shchilkin/PopChoice/issues/664): improve bulk repair
+  recovery UX so operators can understand partial, failed, skipped,
+  unavailable, and unresolved work, then retry only the failed or unavailable
+  items.
+- [#665](https://github.com/shchilkin/PopChoice/issues/665): harden realtime
+  queue resilience with visible live/stale/reconnecting/unavailable states,
+  last successful snapshot timestamps, and manual refresh or polling fallback.
+- [#666](https://github.com/shchilkin/PopChoice/issues/666): complete TMDB
+  review workflow follow-ups such as next-review navigation, clearer risk
+  summaries, decision history, safe bulk affordances, and richer filters.
+- [#667](https://github.com/shchilkin/PopChoice/issues/667): add backoffice
+  observability and security guardrails for operator action logs, metrics,
+  same-origin/CSRF coverage, and secret-safe public error responses.
+- [#668](https://github.com/shchilkin/PopChoice/issues/668): improve backoffice
+  developer experience with reusable fixtures, deterministic realtime/action
+  test helpers, and clearer local validation docs.
+
 ### Account Platform Track
 
 - Add a user profile model for display name, avatar, and account settings metadata.
