@@ -11,7 +11,7 @@ const meta: Meta<typeof SimilarityBadge> = {
     docs: {
       description: {
         component:
-          'A colored badge showing the match percentage. Color changes based on similarity: teal (95%+), gold (90%+), amber (85%+), or purple (below 85%).',
+          'A colored badge showing a calibrated match tier. The exact experimental similarity percentage is available in the hover tooltip.',
       },
     },
   },
@@ -26,18 +26,18 @@ const meta: Meta<typeof SimilarityBadge> = {
 export default meta;
 type Story = StoryObj<typeof SimilarityBadge>;
 
-export const Excellent: Story = {
+export const Strong: Story = {
   args: { similarity: 0.97 },
 };
 
-export const Great: Story = {
-  args: { similarity: 0.92 },
-};
-
 export const Good: Story = {
-  args: { similarity: 0.87 },
+  args: { similarity: 0.44 },
 };
 
-export const Moderate: Story = {
-  args: { similarity: 0.78 },
+export const Possible: Story = {
+  args: { similarity: 0.32 },
+};
+
+export const Wildcard: Story = {
+  args: { similarity: 0.18 },
 };

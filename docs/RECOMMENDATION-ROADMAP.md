@@ -47,8 +47,8 @@ This creates a usable first recommendation, but the data is coarse. It asks user
 
 ## Recent Product QA Notes
 
-- Fast Pick match percentages are not yet user-trustworthy. A result can show about `30% match` even when the recommendation may still be plausible, while older `70%` values effectively read as near-perfect. Treat raw percentage display as uncalibrated until [#680](https://github.com/shchilkin/PopChoice/issues/680) decides whether to recalibrate scores, bucket them into confidence tiers, rename the label, or replace raw percentages with clearer result copy.
-- The quiz entry flow is currently confusing because Fast Pick appears beside `Just me`, `Duo night`, and `Group mode`, then asks for audience afterward. Product direction is to choose match depth first (`Fast Pick` vs `Normal Match`), then audience (`Solo`, `Duo`, `Group`), then enter the corresponding short or normal flow. Track this in [#681](https://github.com/shchilkin/PopChoice/issues/681).
+- [#680](https://github.com/shchilkin/PopChoice/issues/680) replaced user-facing raw match percentages with calibrated confidence tiers. The exact experimental percentage remains available in hover/accessibility copy for debugging, but the primary UI should not imply false precision.
+- [#681](https://github.com/shchilkin/PopChoice/issues/681) reordered quiz entry into three layers: match depth first (`Fast Pick` vs `Normal Match`), then audience (`Solo`, `Duo`, `Group`), then the corresponding short or normal question flow.
 - Normal Match is producing promising qualitative results for specific intent prompts. A Russian dystopian/post-apocalyptic survival prompt returned a strong `Blade Runner`-style selection and explanation.
 - Duo and Group need more manual product QA after the entry-flow ordering is fixed, especially to verify whether compromise results feel meaningfully different from solo recommendations.
 
@@ -292,8 +292,8 @@ Good next PRs, in order:
 22. [x] Deepen `tmdb-first` JIT enrichment before making it the Normal quality default: fetch richer TMDB details for strong direct candidates, persist/cache useful runtime/rating/provider metadata, and calibrate backoffice real-data thresholds.
 23. [#655](https://github.com/shchilkin/PopChoice/issues/655): add provider-aware result UI and user-facing availability copy once product behavior decides whether availability is informational, a soft preference, or a hard constraint.
 24. [#656](https://github.com/shchilkin/PopChoice/issues/656): evaluate a movie embedding text v2 contract before adding metadata such as genres, keywords, cast, director, language, popularity, or certification to retrieval embeddings.
-25. [#680](https://github.com/shchilkin/PopChoice/issues/680): calibrate recommendation match percentages and user-facing score copy before treating raw percentages as precise quality claims.
-26. [#681](https://github.com/shchilkin/PopChoice/issues/681): rework the quiz entry flow so users choose match depth first, then Solo/Duo/Group audience, then answer the matching short or normal question set.
+25. [x] [#680](https://github.com/shchilkin/PopChoice/issues/680): calibrate recommendation match percentages and user-facing score copy before treating raw percentages as precise quality claims.
+26. [x] [#681](https://github.com/shchilkin/PopChoice/issues/681): rework the quiz entry flow so users choose match depth first, then Solo/Duo/Group audience, then answer the matching short or normal question set.
 27. Add manual-review logging for ambiguous TMDB/local identity matches.
 
 ## Non-Goals For Now

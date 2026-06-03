@@ -24,6 +24,7 @@ const model = createTestModel(quizMachine);
 
 const EVENTS = [
   { type: 'START_FAST_PICK' as const, youLabel: 'You' },
+  { type: 'START_NORMAL_MATCH' as const, youLabel: 'You' },
   { type: 'START_FAST_SOLO' as const, youLabel: 'You' },
   { type: 'START_FAST_DUO' as const },
   { type: 'START_FAST_GROUP' as const },
@@ -60,6 +61,10 @@ describe('quiz machine – forward paths (model-based)', () => {
 
           fastAudience: () => {
             expect(actor.getSnapshot().value).toBe('fastAudience');
+          },
+
+          normalAudience: () => {
+            expect(actor.getSnapshot().value).toBe('normalAudience');
           },
 
           fastQuestions: () => {
@@ -138,6 +143,7 @@ describe('quiz machine – forward paths (model-based)', () => {
 
         events: {
           START_FAST_PICK: () => actor.send({ type: 'START_FAST_PICK', youLabel: 'You' }),
+          START_NORMAL_MATCH: () => actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' }),
           START_FAST_SOLO: () => actor.send({ type: 'START_FAST_SOLO', youLabel: 'You' }),
           START_FAST_DUO: () => actor.send({ type: 'START_FAST_DUO' }),
           START_FAST_GROUP: () => actor.send({ type: 'START_FAST_GROUP' }),
@@ -168,6 +174,7 @@ describe('quiz machine – forward paths (model-based)', () => {
 describe('quiz machine – BACK navigation', () => {
   it('BACK from any step > favoriteMovie goes to previous step', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
     actor.send({ type: 'NEXT' }); // favoriteMovie → era
 
@@ -179,6 +186,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('BACK from favoriteActor returns to the Normal avoids step', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
@@ -188,22 +196,24 @@ describe('quiz machine – BACK navigation', () => {
     expect(actor.getSnapshot().context.dir).toBe(-1);
   });
 
-  it('BACK from favoriteMovie (solo) returns to intro', () => {
+  it('BACK from favoriteMovie (solo) returns to Normal audience choice', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     actor.send({ type: 'BACK' });
 
-    expect(actor.getSnapshot().value).toBe('intro');
+    expect(actor.getSnapshot().value).toBe('normalAudience');
   });
 
-  it('BACK from the first Fast Pick step returns to intro', () => {
+  it('BACK from the first Fast Pick step returns to Fast audience choice', () => {
     const actor = makeActor();
     actor.send({ type: 'START_FAST_PICK', youLabel: 'You' });
+    actor.send({ type: 'START_FAST_SOLO', youLabel: 'You' });
 
     actor.send({ type: 'BACK' });
 
-    expect(actor.getSnapshot().value).toBe('intro');
+    expect(actor.getSnapshot().value).toBe('fastAudience');
   });
 
   it('Fast Pick solo starts the short question flow', () => {
@@ -234,6 +244,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('Duo starts normal group setup with duo audience', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_DUO' });
 
     let snapshot = actor.getSnapshot();
@@ -282,6 +293,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('BACK from favoriteMovie (group, first person) returns to groupSetup', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob', 'Charlie'] });
 
@@ -318,6 +330,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('BACK from favoriteMovie (group, second person) returns to betweenPersons', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob', 'Charlie'] });
 
@@ -333,6 +346,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('BACK from betweenPersons returns to favoriteActor of current person', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob', 'Charlie'] });
 
@@ -362,6 +376,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('RESET from submitting returns to a fresh intro state', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
@@ -391,6 +406,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('successful submission waits in navigatingToResults instead of resetting to intro', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
@@ -404,6 +420,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('navigatingToResults is final for the current quiz session', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
@@ -419,6 +436,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('failed submission preserves answers and can retry', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     actor.send({ type: 'UPDATE_PERSON', updates: { favoriteMovie: 'Heat' } });
@@ -440,6 +458,7 @@ describe('quiz machine – BACK navigation', () => {
 
   it('failed submission can return to the final quiz step', () => {
     const actor = makeActor();
+    actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });

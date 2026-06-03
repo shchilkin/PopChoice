@@ -3,18 +3,20 @@ import { FastAudience } from './FastAudience';
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 const meta: Meta<typeof FastAudience> = {
-  title: 'Quiz/FastAudience',
+  title: 'Quiz/AudienceChoice',
   component: FastAudience,
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'Audience selection screen for Fast Pick before the short question flow starts.',
+        component:
+          'Audience selection screen shown after users choose Fast Pick or Normal Match depth.',
       },
     },
   },
   args: {
+    flow: 'fast',
     onBack: () => {},
     onStartSolo: () => {},
     onStartDuo: () => {},
@@ -25,4 +27,8 @@ const meta: Meta<typeof FastAudience> = {
 export default meta;
 type Story = StoryObj<typeof FastAudience>;
 
-export const Default: Story = {};
+export const FastPick: Story = {};
+
+export const NormalMatch: Story = {
+  args: { flow: 'normal' },
+};

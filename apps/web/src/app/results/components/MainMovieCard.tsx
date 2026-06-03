@@ -7,7 +7,7 @@ import { useState } from 'react';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
-import { scaleSimilarity } from '@/utils/ui';
+import { getSimilarityTier } from '@/utils/ui';
 
 import { AgeRatingPill } from './AgeRatingPill';
 import { MarkdownText } from './MarkdownText';
@@ -26,7 +26,9 @@ export function MainMovieCard({
   const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);
   const score = movie.score_rating ?? 0;
-  const pct = scaleSimilarity(movie.similarity);
+  const { pct, tier } = getSimilarityTier(movie.similarity);
+  const matchLabel = t.results.matchTiers[tier];
+  const matchExactLabel = t.results.matchTierExact.replace('{pct}', String(pct));
   const hasRating = !!movie.age_rating && movie.age_rating !== 'NR';
 
   return (
@@ -189,8 +191,8 @@ export function MainMovieCard({
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Clapperboard size={13} style={{ color: 'var(--pc-t3)' }} />
-            <span style={{ color: 'var(--pc-t3)', fontSize: '0.82rem' }}>
-              {movie.year} · {pct}% {t.results.match}
+            <span title={matchExactLabel} style={{ color: 'var(--pc-t3)', fontSize: '0.82rem' }}>
+              {movie.year} · {matchLabel}
             </span>
           </div>
           {hasRating && <AgeRatingPill label={movie.age_rating!} />}

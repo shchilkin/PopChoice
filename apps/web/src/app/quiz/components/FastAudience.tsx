@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, User, Users, Zap } from 'lucide-react';
+import { ArrowLeft, SlidersHorizontal, User, Users, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { useLanguage } from '@/i18n';
@@ -9,14 +9,25 @@ import { palette } from '@/styles/designTokens';
 import { AudienceChoiceButton } from './AudienceChoiceButton';
 
 interface FastAudienceProps {
+  flow: 'fast' | 'normal';
   onBack: () => void;
   onStartSolo: () => void;
   onStartDuo: () => void;
   onStartGroup: () => void;
 }
 
-export function FastAudience({ onBack, onStartSolo, onStartDuo, onStartGroup }: FastAudienceProps) {
+export function FastAudience({
+  flow,
+  onBack,
+  onStartSolo,
+  onStartDuo,
+  onStartGroup,
+}: FastAudienceProps) {
   const { t } = useLanguage();
+  const copy = flow === 'fast' ? t.quiz.fastAudience : t.quiz.normalAudience;
+  const iconBackground = flow === 'fast' ? 'rgba(245,197,24,0.15)' : `${palette.teal}26`;
+  const iconColor = flow === 'fast' ? 'var(--pc-gold-text)' : palette.teal;
+  const HeaderIcon = flow === 'fast' ? Zap : SlidersHorizontal;
 
   return (
     <div className="flex min-h-[80vh] flex-1 flex-col items-center justify-center px-5 py-12">
@@ -44,11 +55,11 @@ export function FastAudience({ onBack, onStartSolo, onStartDuo, onStartGroup }: 
           <div
             className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
             style={{
-              background: 'rgba(245,197,24,0.15)',
-              color: 'var(--pc-gold-text)',
+              background: iconBackground,
+              color: iconColor,
             }}
           >
-            <Zap size={26} />
+            <HeaderIcon size={26} />
           </div>
           <h2
             style={{
@@ -60,11 +71,9 @@ export function FastAudience({ onBack, onStartSolo, onStartDuo, onStartGroup }: 
               color: 'var(--pc-t1)',
             }}
           >
-            {t.quiz.fastAudience.title}
+            {copy.title}
           </h2>
-          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem', marginTop: 6 }}>
-            {t.quiz.fastAudience.subtitle}
-          </p>
+          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem', marginTop: 6 }}>{copy.subtitle}</p>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -74,8 +83,8 @@ export function FastAudience({ onBack, onStartSolo, onStartDuo, onStartGroup }: 
             iconBackground="rgba(245,197,24,0.15)"
             iconColor="var(--pc-gold-text)"
             hoverBorderColor="var(--pc-gold-bd-strong)"
-            title={t.quiz.fastAudience.soloTitle}
-            description={t.quiz.fastAudience.soloDesc}
+            title={copy.soloTitle}
+            description={copy.soloDesc}
           />
 
           <AudienceChoiceButton
@@ -84,8 +93,8 @@ export function FastAudience({ onBack, onStartSolo, onStartDuo, onStartGroup }: 
             iconBackground={`${palette.teal}26`}
             iconColor={palette.teal}
             hoverBorderColor={`${palette.teal}66`}
-            title={t.quiz.fastAudience.duoTitle}
-            description={t.quiz.fastAudience.duoDesc}
+            title={copy.duoTitle}
+            description={copy.duoDesc}
           />
 
           <AudienceChoiceButton
@@ -94,8 +103,8 @@ export function FastAudience({ onBack, onStartSolo, onStartDuo, onStartGroup }: 
             iconBackground={`${palette.purple}26`}
             iconColor={palette.purple}
             hoverBorderColor={`${palette.purple}66`}
-            title={t.quiz.fastAudience.groupTitle}
-            description={t.quiz.fastAudience.groupDesc}
+            title={copy.groupTitle}
+            description={copy.groupDesc}
           />
         </div>
       </motion.div>

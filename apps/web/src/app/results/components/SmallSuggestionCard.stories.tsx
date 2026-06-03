@@ -23,7 +23,7 @@ const meta: Meta<typeof SmallSuggestionCard> = {
     docs: {
       description: {
         component:
-          'A compact movie suggestion card used in the horizontal carousel. Shows poster, title, metadata, and match percentage.',
+          'A compact movie suggestion card used in the horizontal carousel. Shows poster, title, metadata, and a match tier with exact score in the tooltip.',
       },
     },
   },

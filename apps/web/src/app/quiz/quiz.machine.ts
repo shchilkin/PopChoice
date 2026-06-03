@@ -17,6 +17,7 @@ type QuizContext = {
 
 type QuizEvent =
   | { type: 'START_FAST_PICK'; youLabel: string }
+  | { type: 'START_NORMAL_MATCH'; youLabel: string }
   | { type: 'START_FAST_SOLO'; youLabel: string }
   | { type: 'START_FAST_DUO' }
   | { type: 'START_FAST_GROUP' }
@@ -179,9 +180,15 @@ export const quizMachine = setup({
     intro: {
       on: {
         START_FAST_PICK: { target: 'fastAudience' },
+        START_NORMAL_MATCH: { target: 'normalAudience' },
+      },
+    },
+    normalAudience: {
+      on: {
         START_SOLO: { target: 'questions', actions: 'setupSolo' },
         START_DUO: { target: 'groupSetup', actions: 'setupDuo' },
         START_GROUP: { target: 'groupSetup', actions: 'setupGroup' },
+        BACK: { target: 'intro', actions: 'setDirBackward' },
       },
     },
     fastAudience: {
@@ -249,7 +256,7 @@ export const quizMachine = setup({
         ],
         BACK: [
           { guard: 'isFastFlow', target: 'fastAudience', actions: 'setDirBackward' },
-          { target: 'intro' },
+          { target: 'normalAudience', actions: 'setDirBackward' },
         ],
       },
     },
@@ -270,7 +277,7 @@ export const quizMachine = setup({
                 target: '#quiz.groupSetup',
                 actions: 'setDirBackward',
               },
-              { target: '#quiz.intro', actions: 'setDirBackward' },
+              { target: '#quiz.normalAudience', actions: 'setDirBackward' },
             ],
           },
         },

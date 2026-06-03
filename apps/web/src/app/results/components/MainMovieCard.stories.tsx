@@ -25,7 +25,7 @@ const meta: Meta<typeof MainMovieCard> = {
     docs: {
       description: {
         component:
-          'The hero recommendation card shown for the top match. Displays poster with gradient overlay, title, metadata, score, similarity badge, and AI-generated description.',
+          'The hero recommendation card shown for the top match. Displays poster with gradient overlay, title, metadata, score, match tier badge, and AI-generated description.',
       },
     },
   },

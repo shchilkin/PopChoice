@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Users, Zap } from 'lucide-react';
+import { SlidersHorizontal, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { Mascot } from '@/components/Mascot';
@@ -11,17 +11,10 @@ import { AudienceChoiceButton } from './AudienceChoiceButton';
 
 interface QuizIntroProps {
   onStartFastPick: () => void;
-  onStartSolo: () => void;
-  onStartDuo: () => void;
-  onStartGroup: () => void;
+  onStartNormalMatch: () => void;
 }
 
-export function QuizIntro({
-  onStartFastPick,
-  onStartSolo,
-  onStartDuo,
-  onStartGroup,
-}: QuizIntroProps) {
+export function QuizIntro({ onStartFastPick, onStartNormalMatch }: QuizIntroProps) {
   const { t } = useLanguage();
 
   return (
@@ -62,33 +55,13 @@ export function QuizIntro({
           />
 
           <AudienceChoiceButton
-            onClick={onStartSolo}
-            icon={User}
-            iconBackground="rgba(245,197,24,0.15)"
-            iconColor="var(--pc-gold-text)"
-            hoverBorderColor="var(--pc-gold-bd-strong)"
-            title={t.quiz.intro.soloTitle}
-            description={t.quiz.intro.soloDesc}
-          />
-
-          <AudienceChoiceButton
-            onClick={onStartDuo}
-            icon={Users}
+            onClick={onStartNormalMatch}
+            icon={SlidersHorizontal}
             iconBackground={`${palette.teal}26`}
             iconColor={palette.teal}
             hoverBorderColor={`${palette.teal}66`}
-            title={t.quiz.intro.duoTitle}
-            description={t.quiz.intro.duoDesc}
-          />
-
-          <AudienceChoiceButton
-            onClick={onStartGroup}
-            icon={Users}
-            iconBackground={`${palette.purple}26`}
-            iconColor={palette.purple}
-            hoverBorderColor={`${palette.purple}66`}
-            title={t.quiz.intro.groupTitle}
-            description={t.quiz.intro.groupDesc}
+            title={t.quiz.intro.normalMatchTitle}
+            description={t.quiz.intro.normalMatchDesc}
           />
         </div>
       </motion.div>
