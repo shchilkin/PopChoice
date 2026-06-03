@@ -1,12 +1,21 @@
 import {
   createCatalogRepairBatchItem,
+  getCatalogRepairBatchItem,
   logger,
+  recordCatalogRepairAction,
+  refreshCatalogRepairBatchCounts,
   updateCatalogRepairBatchItemEnqueueResult,
+  type CatalogRepairBatchItem,
   type CatalogMovieSample,
 } from '@pop-choice/shared';
 
 import { enqueueCatalogBackfillMovieFromBackoffice } from '../catalogMaintenanceQueue';
 import { getBackfillReasonForIssue } from './catalogRepairActionHelpers';
+import {
+  backofficeActionError,
+  ensureBackofficeReady,
+  parseOperatorActor,
+} from './backofficeRuntime';
 
 export type CatalogBulkRepairSummary = {
   batchId?: string;
@@ -26,6 +35,16 @@ export type CatalogBulkRepairSummary = {
     status: 'queued' | 'deduped' | 'failed' | 'unavailable';
   }>;
 };
+
+export type CatalogRepairBatchItemRetryResult = {
+  batchId: string;
+  issueKey: string;
+  item: CatalogRepairBatchItem;
+  job: Awaited<ReturnType<typeof enqueueCatalogBackfillMovieFromBackoffice>>;
+  status: 'queued' | 'deduped' | 'unavailable' | 'failed';
+};
+
+const RETRIABLE_REPAIR_ITEM_STATUSES = new Set(['failed', 'enqueue_failed', 'unavailable']);
 
 export function createCatalogBulkRepairSummary({
   issueKey,
@@ -151,5 +170,144 @@ export async function enqueueCatalogRepairBatchItems({
         movieId: movie.id,
       });
     }
+  }
+}
+
+function parseRepairBatchItemId(value: FormDataEntryValue | null): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw backofficeActionError('Repair batch item id is required.');
+  }
+
+  return value.trim();
+}
+
+function parseOptionalRepairBatchId(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
+export async function retryCatalogRepairBatchItem(
+  formData: FormData,
+  headers: Headers,
+): Promise<CatalogRepairBatchItemRetryResult> {
+  const config = await ensureBackofficeReady();
+  if (formData.get('action') !== 'retry_item') {
+    throw backofficeActionError('Unsupported repair batch action.');
+  }
+
+  const itemId = parseRepairBatchItemId(formData.get('item_id'));
+  const expectedBatchId = parseOptionalRepairBatchId(formData.get('batch_id'));
+  const item = await getCatalogRepairBatchItem(itemId);
+
+  if (!item) {
+    throw backofficeActionError('Repair batch item not found.', 404);
+  }
+
+  if (expectedBatchId && expectedBatchId !== item.batchId) {
+    throw backofficeActionError('Repair batch item does not belong to this batch.', 409);
+  }
+
+  if (!RETRIABLE_REPAIR_ITEM_STATUSES.has(item.status)) {
+    throw backofficeActionError(
+      'Only failed, enqueue-failed, or unavailable items can be retried.',
+    );
+  }
+
+  const actor = parseOperatorActor(headers);
+  const reason = getBackfillReasonForIssue(item.issueKey);
+  const language = item.language ?? config.tmdbLanguage;
+  const previousState = { repairBatchItem: item };
+  const note = typeof formData.get('note') === 'string' ? String(formData.get('note')) : undefined;
+
+  try {
+    const job = await enqueueCatalogBackfillMovieFromBackoffice(
+      {
+        movieId: item.movieId,
+        reason,
+        language,
+        repairBatchId: item.batchId,
+        repairBatchItemId: item.id,
+      },
+      config.redisUrl,
+    );
+
+    const updatedItem = job
+      ? await updateCatalogRepairBatchItemEnqueueResult({
+          itemId: item.id,
+          status: job.status,
+          queueName: job.queueName,
+          jobName: job.jobName,
+          jobId: job.jobId,
+          language: job.language,
+          result: { ...job, retry: true },
+        })
+      : await updateCatalogRepairBatchItemEnqueueResult({
+          itemId: item.id,
+          status: 'unavailable',
+          errorMessage: 'REDIS_URL is unavailable or the catalog-maintenance queue is disabled.',
+          result: { status: 'queue_unavailable', queueName: 'catalog-maintenance', retry: true },
+        });
+
+    await refreshCatalogRepairBatchCounts(item.batchId);
+    await recordCatalogRepairAction({
+      action: 'enqueue_backfill',
+      actor,
+      issueKey: item.issueKey,
+      targetType: 'movie',
+      targetId: item.movieId,
+      note,
+      previousState,
+      result: job
+        ? { ...job, retry: true }
+        : { status: 'queue_unavailable', queueName: 'catalog-maintenance', retry: true },
+      repairBatchId: item.batchId,
+      repairBatchItemId: item.id,
+    });
+
+    return {
+      batchId: item.batchId,
+      issueKey: item.issueKey,
+      item: updatedItem,
+      job,
+      status: job ? job.status : 'unavailable',
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const updatedItem = await updateCatalogRepairBatchItemEnqueueResult({
+      itemId: item.id,
+      status: 'enqueue_failed',
+      errorMessage,
+      result: { status: 'enqueue_failed', retry: true },
+    });
+
+    await refreshCatalogRepairBatchCounts(item.batchId);
+    await recordCatalogRepairAction({
+      action: 'enqueue_backfill',
+      actor,
+      issueKey: item.issueKey,
+      targetType: 'movie',
+      targetId: item.movieId,
+      note,
+      previousState,
+      result: { status: 'enqueue_failed', errorMessage, retry: true },
+      repairBatchId: item.batchId,
+      repairBatchItemId: item.id,
+    });
+
+    logger.error('Failed to retry catalog repair batch item', {
+      err: error,
+      itemId: item.id,
+      issueKey: item.issueKey,
+      movieId: item.movieId,
+    });
+
+    return {
+      batchId: item.batchId,
+      issueKey: item.issueKey,
+      item: updatedItem,
+      job: null,
+      status: 'failed',
+    };
   }
 }

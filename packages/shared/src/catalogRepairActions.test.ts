@@ -8,6 +8,7 @@ import {
   createCatalogRepairBatchItem,
   ensureCatalogRepairActionSchema,
   getCatalogRepairBatchDetail,
+  getCatalogRepairBatchItem,
   listCatalogRepairAuditPage,
   listCatalogRepairBatchPage,
   refreshCatalogRepairBatchCounts,
@@ -221,7 +222,43 @@ describe('catalog repair audit pages', () => {
       null,
       JSON.stringify({ issueKey: 'missing_poster_url' }),
     ]);
+    expect(poolMock.query.mock.calls[2][0]).toContain("WHEN $2 IN ('queued', 'deduped') THEN NULL");
     expect(poolMock.query.mock.calls[2][1][7]).toBe(JSON.stringify({ status: 'queued' }));
+  });
+
+  it('loads a durable repair batch item by id', async () => {
+    poolMock.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: '11',
+          batch_id: '7',
+          movie_id: '334',
+          issue_key: 'missing_poster_url',
+          status: 'failed',
+          queue_name: 'catalog-maintenance',
+          job_name: 'backfill-movie',
+          job_id: 'backfill-334',
+          language: 'en-US',
+          reason: 'missing_metadata',
+          error_message: 'worker failed',
+          movie_snapshot: { id: '334' },
+          result: { status: 'failed' },
+          created_at: '2026-05-28 09:00:01+00',
+          updated_at: '2026-05-28 09:00:02+00',
+          completed_at: '2026-05-28 09:00:03+00',
+        },
+      ],
+    });
+
+    const item = await getCatalogRepairBatchItem('11');
+
+    expect(item).toMatchObject({
+      id: '11',
+      batchId: '7',
+      errorMessage: 'worker failed',
+      status: 'failed',
+    });
+    expect(poolMock.query.mock.calls[0][1]).toEqual(['11']);
   });
 
   it('refreshes batch counts from durable item statuses', async () => {
