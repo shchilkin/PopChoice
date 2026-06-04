@@ -21,6 +21,130 @@ type FeedbackOption = {
   icon: typeof Check;
 };
 
+type ResultsCopy = ReturnType<typeof useLanguage>['t']['results'];
+
+function getFeedbackOptions(results: ResultsCopy): FeedbackOption[] {
+  return [
+    { kind: 'useful', label: results.feedbackUseful, icon: Check },
+    { kind: 'already_watched', label: results.feedbackSeen, icon: Eye },
+    { kind: 'wrong_mood', label: results.feedbackWrongMood, icon: Frown },
+    { kind: 'too_obvious', label: results.feedbackTooObvious, icon: Lightbulb },
+    { kind: 'too_obscure', label: results.feedbackTooObscure, icon: Sparkles },
+    { kind: 'close', label: results.feedbackClose, icon: RotateCcw },
+  ];
+}
+
+function FeedbackStatusText({
+  feedbackState,
+  results,
+}: {
+  feedbackState: FeedbackState;
+  results: ResultsCopy;
+}) {
+  if (feedbackState === 'saved') return results.feedbackThanks;
+  if (feedbackState === 'error') return results.feedbackError;
+  return results.feedbackHint;
+}
+
+function SharedFeedbackHint({
+  isSharedResult,
+  results,
+}: {
+  isSharedResult: boolean;
+  results: ResultsCopy;
+}) {
+  if (!isSharedResult) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: 0.2 }}
+      className="mb-10 rounded-2xl px-4 py-4 text-center"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+        color: 'var(--pc-t4)',
+        fontSize: '0.78rem',
+      }}
+    >
+      {results.sharedFeedbackHint}
+    </motion.div>
+  );
+}
+
+function isFeedbackOptionBusy(feedbackState: FeedbackState, isSelected: boolean) {
+  return feedbackState === 'saving' && isSelected;
+}
+
+function isFeedbackOptionDisabled(feedbackState: FeedbackState, recommendationSlug?: string) {
+  if (feedbackState === 'saving') return true;
+  return !recommendationSlug;
+}
+
+function getFeedbackButtonStyle({
+  disabled,
+  isSelected,
+}: {
+  disabled: boolean;
+  isSelected: boolean;
+}) {
+  const baseStyle = isSelected
+    ? {
+        background: 'var(--pc-gold-subtle)',
+        color: 'var(--pc-gold-text)',
+      }
+    : {
+        background: 'transparent',
+        color: 'var(--pc-t3)',
+      };
+
+  return {
+    ...baseStyle,
+    border: '1px solid var(--pc-bd2)',
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    cursor: disabled ? 'wait' : 'pointer',
+  };
+}
+
+function FeedbackOptionIcon({ Icon, isBusy }: { Icon: FeedbackOption['icon']; isBusy: boolean }) {
+  if (isBusy) return <Loader2 size={12} className="animate-spin" />;
+  return <Icon size={12} />;
+}
+
+function FeedbackOptionButton({
+  feedbackState,
+  option,
+  onFeedback,
+  recommendationSlug,
+  selectedFeedback,
+}: {
+  feedbackState: FeedbackState;
+  option: FeedbackOption;
+  onFeedback: (kind: FeedbackKind) => Promise<void>;
+  recommendationSlug?: string;
+  selectedFeedback: FeedbackKind | null;
+}) {
+  const { icon: Icon, kind, label } = option;
+  const isSelected = selectedFeedback === kind;
+  const isBusy = isFeedbackOptionBusy(feedbackState, isSelected);
+  const disabled = isFeedbackOptionDisabled(feedbackState, recommendationSlug);
+
+  return (
+    <button
+      type="button"
+      onClick={() => void onFeedback(kind)}
+      disabled={disabled}
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-200 active:scale-95"
+      style={getFeedbackButtonStyle({ disabled, isSelected })}
+    >
+      <FeedbackOptionIcon Icon={Icon} isBusy={isBusy} />
+      {label}
+    </button>
+  );
+}
+
 export function RecommendationFeedbackPanel({
   feedbackState,
   isSharedResult,
@@ -37,34 +161,10 @@ export function RecommendationFeedbackPanel({
   viewerCanRate: boolean;
 }) {
   const { t } = useLanguage();
-  const feedbackOptions: FeedbackOption[] = [
-    { kind: 'useful', label: t.results.feedbackUseful, icon: Check },
-    { kind: 'already_watched', label: t.results.feedbackSeen, icon: Eye },
-    { kind: 'wrong_mood', label: t.results.feedbackWrongMood, icon: Frown },
-    { kind: 'too_obvious', label: t.results.feedbackTooObvious, icon: Lightbulb },
-    { kind: 'too_obscure', label: t.results.feedbackTooObscure, icon: Sparkles },
-    { kind: 'close', label: t.results.feedbackClose, icon: RotateCcw },
-  ];
+  const feedbackOptions = getFeedbackOptions(t.results);
 
   if (!viewerCanRate) {
-    if (!isSharedResult) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="mb-10 rounded-2xl px-4 py-4 text-center"
-        style={{
-          background: 'var(--pc-ghost)',
-          border: '1px solid var(--pc-bd2)',
-          color: 'var(--pc-t4)',
-          fontSize: '0.78rem',
-        }}
-      >
-        {t.results.sharedFeedbackHint}
-      </motion.div>
-    );
+    return <SharedFeedbackHint isSharedResult={isSharedResult} results={t.results} />;
   }
 
   return (
@@ -87,38 +187,20 @@ export function RecommendationFeedbackPanel({
             {t.results.feedbackPrompt}
           </p>
           <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.78rem' }}>
-            {feedbackState === 'saved'
-              ? t.results.feedbackThanks
-              : feedbackState === 'error'
-                ? t.results.feedbackError
-                : t.results.feedbackHint}
+            <FeedbackStatusText feedbackState={feedbackState} results={t.results} />
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {feedbackOptions.map(({ kind, label, icon: Icon }) => {
-            const isSelected = selectedFeedback === kind;
-            const isBusy = feedbackState === 'saving' && isSelected;
-            return (
-              <button
-                key={kind}
-                type="button"
-                onClick={() => void onFeedback(kind)}
-                disabled={feedbackState === 'saving' || !recommendationSlug}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-200 active:scale-95"
-                style={{
-                  background: isSelected ? 'var(--pc-gold-subtle)' : 'transparent',
-                  border: '1px solid var(--pc-bd2)',
-                  color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  cursor: feedbackState === 'saving' || !recommendationSlug ? 'wait' : 'pointer',
-                }}
-              >
-                {isBusy ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
-                {label}
-              </button>
-            );
-          })}
+          {feedbackOptions.map((option) => (
+            <FeedbackOptionButton
+              key={option.kind}
+              feedbackState={feedbackState}
+              option={option}
+              onFeedback={onFeedback}
+              recommendationSlug={recommendationSlug}
+              selectedFeedback={selectedFeedback}
+            />
+          ))}
         </div>
       </div>
     </motion.div>

@@ -7,6 +7,150 @@ import { useLanguage } from '@/i18n';
 
 export type ShareState = 'idle' | 'copied';
 
+type ResultsCopy = ReturnType<typeof useLanguage>['t']['results'];
+
+function formatAudienceSubtitle({
+  copy,
+  count,
+  people,
+  locale,
+}: {
+  copy: string;
+  count?: number;
+  people: number;
+  locale: string;
+}) {
+  const numberFormatter = new Intl.NumberFormat(locale);
+  const formattedCount = count == null ? '…' : numberFormatter.format(count);
+
+  return copy
+    .replace('{people}', numberFormatter.format(people))
+    .replace('{count}', formattedCount);
+}
+
+function AudienceBadgeIcon({ isGroupResult }: { isGroupResult: boolean }) {
+  return isGroupResult ? <Users size={11} /> : <Sparkles size={11} />;
+}
+
+function ShareResultButton({
+  onShare,
+  shareState,
+  results,
+}: {
+  onShare: () => Promise<void>;
+  shareState: ShareState;
+  results: ResultsCopy;
+}) {
+  const didCopy = shareState === 'copied';
+
+  return (
+    <button
+      type="button"
+      onClick={() => void onShare()}
+      className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 active:scale-95"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+        color: didCopy ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+        fontSize: '0.78rem',
+        fontWeight: 600,
+      }}
+    >
+      {didCopy ? <Check size={13} /> : <Share2 size={13} />}
+      {didCopy ? results.shareCopied : results.shareResult}
+    </button>
+  );
+}
+
+function SharedResultNotice({
+  isSharedResult,
+  results,
+}: {
+  isSharedResult: boolean;
+  results: ResultsCopy;
+}) {
+  if (!isSharedResult) return null;
+
+  return (
+    <div className="mt-3 flex justify-center">
+      <div
+        className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
+        style={{
+          background: 'var(--pc-ghost)',
+          border: '1px solid var(--pc-bd2)',
+          color: 'var(--pc-t3)',
+        }}
+      >
+        <Share2 size={12} />
+        {results.sharedResultNotice}
+      </div>
+    </div>
+  );
+}
+
+function DecisionNoteIcon({ isGroupResult }: { isGroupResult: boolean }) {
+  return isGroupResult ? <Users size={14} /> : <Sparkles size={14} />;
+}
+
+function DecisionNoteCard({
+  decisionNote,
+  isGroupResult,
+  results,
+  usedBroaderSearch,
+}: {
+  decisionNote: string;
+  isGroupResult: boolean;
+  results: ResultsCopy;
+  usedBroaderSearch: boolean;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.12 }}
+      className="mx-auto mt-5 max-w-xl rounded-2xl px-4 py-3 text-left"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+          style={{
+            background: 'var(--pc-gold-subtle)',
+            color: 'var(--pc-gold-text)',
+          }}
+        >
+          <DecisionNoteIcon isGroupResult={isGroupResult} />
+        </div>
+        <div>
+          <div
+            className="uppercase tracking-widest"
+            style={{ color: 'var(--pc-gold-text)', fontSize: '0.62rem' }}
+          >
+            {results.decisionNoteLabel}
+          </div>
+          <p
+            className="mt-1"
+            style={{ color: 'var(--pc-t2)', fontSize: '0.86rem', lineHeight: 1.6 }}
+          >
+            {decisionNote}
+          </p>
+          {usedBroaderSearch && (
+            <p
+              className="mt-2"
+              style={{ color: 'var(--pc-t4)', fontSize: '0.76rem', lineHeight: 1.55 }}
+            >
+              {results.expandedDecisionNote}
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export function ResultsHeader({
   audienceBadge,
   audienceTitle,
@@ -33,15 +177,12 @@ export function ResultsHeader({
   usedBroaderSearch: boolean;
 }) {
   const { t, locale } = useLanguage();
-  const numberFormatter = new Intl.NumberFormat(locale);
-  const subtitle = audienceSubtitle
-    .replace('{people}', numberFormatter.format(peopleCount))
-    .replace(
-      '{count}',
-      dbMovieCount !== null && dbMovieCount !== undefined
-        ? numberFormatter.format(dbMovieCount)
-        : '…',
-    );
+  const subtitle = formatAudienceSubtitle({
+    copy: audienceSubtitle,
+    count: dbMovieCount,
+    people: peopleCount,
+    locale,
+  });
 
   return (
     <motion.div
@@ -59,7 +200,7 @@ export function ResultsHeader({
           color: 'var(--pc-gold-text)',
         }}
       >
-        {isGroupResult ? <Users size={11} /> : <Sparkles size={11} />}
+        <AudienceBadgeIcon isGroupResult={isGroupResult} />
         {audienceBadge}
       </div>
       <h1
@@ -79,81 +220,15 @@ export function ResultsHeader({
         {subtitle}
       </p>
       <div className="mt-5 flex justify-center">
-        <button
-          type="button"
-          onClick={() => void onShare()}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 active:scale-95"
-          style={{
-            background: 'var(--pc-ghost)',
-            border: '1px solid var(--pc-bd2)',
-            color: shareState === 'copied' ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-            fontSize: '0.78rem',
-            fontWeight: 600,
-          }}
-        >
-          {shareState === 'copied' ? <Check size={13} /> : <Share2 size={13} />}
-          {shareState === 'copied' ? t.results.shareCopied : t.results.shareResult}
-        </button>
+        <ShareResultButton onShare={onShare} shareState={shareState} results={t.results} />
       </div>
-      {isSharedResult && (
-        <div className="mt-3 flex justify-center">
-          <div
-            className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
-            style={{
-              background: 'var(--pc-ghost)',
-              border: '1px solid var(--pc-bd2)',
-              color: 'var(--pc-t3)',
-            }}
-          >
-            <Share2 size={12} />
-            {t.results.sharedResultNotice}
-          </div>
-        </div>
-      )}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, delay: 0.12 }}
-        className="mx-auto mt-5 max-w-xl rounded-2xl px-4 py-3 text-left"
-        style={{
-          background: 'var(--pc-ghost)',
-          border: '1px solid var(--pc-bd2)',
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-            style={{
-              background: 'var(--pc-gold-subtle)',
-              color: 'var(--pc-gold-text)',
-            }}
-          >
-            {isGroupResult ? <Users size={14} /> : <Sparkles size={14} />}
-          </div>
-          <div>
-            <div
-              className="uppercase tracking-widest"
-              style={{ color: 'var(--pc-gold-text)', fontSize: '0.62rem' }}
-            >
-              {t.results.decisionNoteLabel}
-            </div>
-            <p
-              className="mt-1"
-              style={{ color: 'var(--pc-t2)', fontSize: '0.86rem', lineHeight: 1.6 }}
-            >
-              {decisionNote}
-            </p>
-            {usedBroaderSearch && (
-              <p
-                className="mt-2"
-                style={{ color: 'var(--pc-t4)', fontSize: '0.76rem', lineHeight: 1.55 }}
-              >
-                {t.results.expandedDecisionNote}
-              </p>
-            )}
-          </div>
-        </div>
-      </motion.div>
+      <SharedResultNotice isSharedResult={isSharedResult} results={t.results} />
+      <DecisionNoteCard
+        decisionNote={decisionNote}
+        isGroupResult={isGroupResult}
+        results={t.results}
+        usedBroaderSearch={usedBroaderSearch}
+      />
     </motion.div>
   );
 }
