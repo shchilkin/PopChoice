@@ -16,6 +16,7 @@ import {
   OptionalCatalogValue,
   SimplePaginationControls,
 } from '../shared';
+import { buildCatalogIssuePageHref } from '../shared/hrefs';
 
 export function catalogIssueHint(issueKey: string): string {
   const hints: Record<string, string> = {
@@ -35,21 +36,7 @@ export function catalogIssueHint(issueKey: string): string {
   return hints[issueKey] ?? 'Review affected catalog records.';
 }
 
-export function buildCatalogIssuePageHref({
-  issueKey,
-  page,
-  pageSize,
-}: {
-  issueKey: string;
-  page: number;
-  pageSize: number;
-}) {
-  const params = new URLSearchParams();
-  params.set('issue', issueKey);
-  params.set('issuePage', String(page));
-  params.set('issuePageSize', String(pageSize));
-  return `/?${params.toString()}#issue-${encodeURIComponent(issueKey)}`;
-}
+export { buildCatalogIssuePageHref };
 
 function SampleRows({
   emptyLabel = 'No sample records returned.',
@@ -181,6 +168,34 @@ function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
   );
 }
 
+function CatalogIssuePagination({
+  ariaLabel,
+  issue,
+  page,
+}: {
+  ariaLabel: string;
+  issue: CatalogHealthIssue;
+  page: CatalogHealthIssueMoviePage;
+}) {
+  return (
+    <SimplePaginationControls
+      ariaLabel={ariaLabel}
+      emptyLabel="No affected movies"
+      itemLabel="affected movies"
+      limit={page.limit}
+      offset={page.offset}
+      totalCount={page.totalCount}
+      hrefForPage={(nextPage) =>
+        buildCatalogIssuePageHref({
+          issueKey: issue.key,
+          page: nextPage,
+          pageSize: page.limit,
+        })
+      }
+    />
+  );
+}
+
 export function CatalogIssuePanel({
   issue,
   issuePage,
@@ -233,20 +248,10 @@ export function CatalogIssuePanel({
       ) : (
         <>
           {activePage ? (
-            <SimplePaginationControls
+            <CatalogIssuePagination
               ariaLabel={`${issue.label} affected movie pagination`}
-              emptyLabel="No affected movies"
-              itemLabel="affected movies"
-              limit={activePage.limit}
-              offset={activePage.offset}
-              totalCount={activePage.totalCount}
-              hrefForPage={(page) =>
-                buildCatalogIssuePageHref({
-                  issueKey: issue.key,
-                  page,
-                  pageSize: activePage.limit,
-                })
-              }
+              issue={issue}
+              page={activePage}
             />
           ) : null}
           <SampleRows
@@ -255,20 +260,10 @@ export function CatalogIssuePanel({
             emptyLabel={activePage ? 'No affected movies on this page.' : undefined}
           />
           {activePage ? (
-            <SimplePaginationControls
+            <CatalogIssuePagination
               ariaLabel={`${issue.label} affected movie pagination bottom`}
-              emptyLabel="No affected movies"
-              itemLabel="affected movies"
-              limit={activePage.limit}
-              offset={activePage.offset}
-              totalCount={activePage.totalCount}
-              hrefForPage={(page) =>
-                buildCatalogIssuePageHref({
-                  issueKey: issue.key,
-                  page,
-                  pageSize: activePage.limit,
-                })
-              }
+              issue={issue}
+              page={activePage}
             />
           ) : issue.count > issue.samples.length ? (
             <div className="panel-footer">
