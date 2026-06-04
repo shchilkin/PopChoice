@@ -38,7 +38,7 @@ export function backofficeActionError(
   return error;
 }
 
-export function getBackofficeConfig(): BackofficeRuntimeConfig {
+function getBackofficeConfig(): BackofficeRuntimeConfig {
   cachedConfig ??= readBackofficeRuntimeConfig();
   return cachedConfig;
 }

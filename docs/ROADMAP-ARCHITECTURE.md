@@ -142,6 +142,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Reuse config packages where duplication exists across app/services.
 - Align CI checks to the new boundaries and ownership model.
 - Adopt Fallow code-quality analysis in [#684](https://github.com/shchilkin/PopChoice/issues/684), starting advisory with PR-local findings before making it a required gate.
+- Extend Fallow cleanup beyond `apps/web` through [#697](https://github.com/shchilkin/PopChoice/issues/697) for backoffice/docs and [#698](https://github.com/shchilkin/PopChoice/issues/698) for shared/services.
 
 ### CI/CD and Deployment Track
 

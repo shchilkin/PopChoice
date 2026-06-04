@@ -3,8 +3,8 @@ import { Redis } from 'ioredis';
 
 import { recordBackofficeSseLifecycle } from './backofficeMetrics';
 
-export const BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS = 25_000;
-export const BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS = 350;
+const BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS = 25_000;
+const BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS = 350;
 
 export type QueueEventPayload = Record<string, unknown> | string | number | null | undefined;
 export type SnapshotQueueEvent = { payload: Record<string, unknown>; type: string };

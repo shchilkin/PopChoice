@@ -7,7 +7,7 @@ export function humanizeBackofficeIdentifier(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function formatCompactBackofficeDateTime(value: string): string {
+function formatCompactBackofficeDateTime(value: string): string {
   const formatted = formatBackofficeDateTime(value);
   return formatted.replace(/,\s*/g, ' ').replace(/\sUTC$/, ' UTC');
 }

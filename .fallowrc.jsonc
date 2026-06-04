@@ -5,6 +5,7 @@
     "**/.next/**",
     "**/dist/**",
     "**/coverage/**",
+    "**/e2e/**",
     "**/playwright-report/**",
     "**/test-results/**",
     ".turbo/**",
@@ -16,6 +17,7 @@
     "@pop-choice/shared",
     "pino-pretty",
   ],
+  "ignoreUnresolvedImports": ["collections/server"],
   "duplicates": {
     "mode": "mild",
     "minTokens": 50,

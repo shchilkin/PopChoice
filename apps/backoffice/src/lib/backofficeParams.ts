@@ -31,13 +31,13 @@ export const DEFAULT_ASYNC_BULK_REPAIR_CHUNK_SIZE = DEFAULT_BULK_REPAIR_LIMIT;
 export const DEFAULT_REPAIR_BATCH_PAGE_SIZE = 25;
 export const DEFAULT_REPAIR_BATCH_ITEM_PAGE_SIZE = 100;
 export const MAX_REPAIR_BATCH_PAGE_SIZE = 100;
-export const MAX_REPAIR_BATCH_PAGE_NUMBER = 4_001;
+const MAX_REPAIR_BATCH_PAGE_NUMBER = 4_001;
 export const DEFAULT_QUEUE_JOB_PAGE_SIZE = 25;
 export const MAX_QUEUE_JOB_PAGE_SIZE = 50;
-export const MAX_QUEUE_JOB_PAGE_NUMBER = 4_001;
+const MAX_QUEUE_JOB_PAGE_NUMBER = 4_001;
 export const DEFAULT_RECOMMENDATION_EVAL_PAGE_SIZE = 25;
 export const MAX_RECOMMENDATION_EVAL_PAGE_SIZE = 100;
-export const MAX_RECOMMENDATION_EVAL_PAGE_NUMBER = 4_001;
+const MAX_RECOMMENDATION_EVAL_PAGE_NUMBER = 4_001;
 
 const REPAIR_BATCH_STATUS_FILTERS = new Set<CatalogRepairBatchStatusFilter>([
   'all',
@@ -101,7 +101,7 @@ export function parsePositiveIntParam(
   return Math.min(parsed, max);
 }
 
-export function firstSearchParam(value: string | string[] | undefined): string | null {
+function firstSearchParam(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
 }

@@ -19,13 +19,6 @@ import type { RecommendationEvalRunMode } from '@pop-choice/shared';
 
 const LIVE_RECOMMENDATION_EVAL_CONFIRMATION = 'RUN LIVE RECOMMENDATION EVAL';
 
-export function parseSafeRecommendationEvalMode(
-  value: FormDataEntryValue | string | null,
-): BackofficeRecommendationEvalMode {
-  if (value === 'mock' || value === 'real-data') return value;
-  throw backofficeActionError('Unsupported recommendation eval mode.');
-}
-
 export function parseRecommendationEvalMode(formData: FormData): BackofficeRecommendationEvalMode {
   const value = formData.get('mode');
   if (value === 'mock' || value === 'real-data') return value;
