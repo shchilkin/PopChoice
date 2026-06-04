@@ -48,6 +48,26 @@ npm run pretest:storybook --workspace=apps/web
 npm run test:storybook
 ```
 
+## E2E Workflow
+
+Run browser e2e tests through the isolated Docker harness unless the user explicitly says the
+e2e services are already running:
+
+```bash
+npm run test:e2e:setup
+npm run test:e2e:run
+npm run test:e2e:down
+```
+
+- `npm run test:e2e:setup` starts `docker-compose.e2e.yml`, waits for PostgreSQL on
+  `127.0.0.1:55432` and Redis on `127.0.0.1:56379`, applies migrations, and seeds deterministic
+  fixtures.
+- `npm run test:e2e:run` alone assumes that setup already happened. If it fails with
+  `ECONNREFUSED 127.0.0.1:56379`, the e2e Redis service is not running; run
+  `npm run test:e2e:setup` and retry before treating it as an app regression.
+- Always run `npm run test:e2e:down` after local e2e runs to remove the disposable containers,
+  network, and volumes.
+
 ## Environment Notes
 
 - The root `.env` is the source of truth for local development.
