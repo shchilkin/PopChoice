@@ -14,14 +14,10 @@ import logger from '@/lib/logger';
 import { recordOpenAIProviderError, recordTMDBProviderError } from '@/lib/metrics';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
-import {
-  GENRE_LABEL_TO_TMDB_ID,
-  cosineSimilarity,
-  normalizeGenreLabel,
-  parseTMDBReleaseYear,
-} from '@/lib/tmdb';
+import { GENRE_LABEL_TO_TMDB_ID, cosineSimilarity, parseTMDBReleaseYear } from '@/lib/tmdb';
 
 import { MAX_JIT_SEED_MOVIES, MAX_TOTAL_MOVIES } from './config';
+import { formatTMDBMovieEmbeddingText, getTopTMDBGenreIds } from './tmdbDiscoverHelpers';
 
 import type { EnhancedMovieMatch, PersonFormData } from './types';
 import type { TMDBMovieDetails } from '@/features/catalogMaintenance/tmdb';
@@ -102,16 +98,6 @@ function hasAnyPreferenceTerm(text: string, terms: string[]): boolean {
 export function buildTMDBDiscoverQueryShape(
   allPeopleData: PersonFormData[],
 ): TMDBDiscoverQueryShape {
-  // Aggregate mood preferences across all people.
-  // Normalize labels: "Sci-Fi" → "scifi", "Action" → "action", etc.
-  const moodCounts: Record<string, number> = {};
-  allPeopleData.forEach((p) => {
-    p.moodPreference.forEach((mood) => {
-      const key = normalizeGenreLabel(mood);
-      moodCounts[key] = (moodCounts[key] ?? 0) + 1;
-    });
-  });
-
   // Top genres (up to 3) mapped to TMDB IDs
   const preferenceText = getPreferenceText(allPeopleData);
   const withoutGenreIds = new Set<number>();
@@ -122,11 +108,10 @@ export function buildTMDBDiscoverQueryShape(
     withoutGenreIds.add(GENRE_LABEL_TO_TMDB_ID.horror);
   }
 
-  const genreIds = Object.entries(moodCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([key]) => GENRE_LABEL_TO_TMDB_ID[key])
-    .filter((id): id is number => id !== undefined && !withoutGenreIds.has(id));
+  const genreIds = getTopTMDBGenreIds(
+    allPeopleData.flatMap((person) => person.moodPreference),
+    { withoutGenreIds },
+  );
 
   // Era preference: normalize to 'new' | 'classic' | 'both' by keyword matching.
   // Quiz sends e.g. "New", "Classic", "Both new and classic".
@@ -301,13 +286,7 @@ export async function scoreAndConvertTMDBMovies(
 ): Promise<{ matches: EnhancedMovieMatch[]; embeddings: Map<number, number[]> }> {
   if (movies.length === 0) return { matches: [], embeddings: new Map() };
 
-  const texts = movies.map((m) => {
-    const year = parseTMDBReleaseYear(m.release_date);
-    const score = Number(m.vote_average?.toFixed(1)) || 0;
-    return [`${m.title} (${year}) | TMDB Score: ${score}/10`, m.overview || '']
-      .filter(Boolean)
-      .join('\n');
-  });
+  const texts = movies.map(formatTMDBMovieEmbeddingText);
 
   let rawEmbeddings: number[][] = [];
   try {
@@ -351,69 +330,124 @@ export async function enrichTMDBMatchesWithDetails(
   if (tmdbMatches.length === 0) return matches;
 
   const language = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
-  const detailsByTMDBId = new Map(
-    (
-      await Promise.all(
-        tmdbMatches.map(async (movie) => {
-          const tmdbId = movie.tmdbId;
-          if (!tmdbId) return null;
-          const details = await fetchMovieDetails(tmdbApiKey, tmdbId, language);
-          return details ? ([tmdbId, details] as const) : null;
-        }),
-      )
-    ).filter((entry): entry is readonly [number, TMDBMovieDetails] => entry !== null),
+  const detailsByTMDBId = await fetchTMDBDetailsById(tmdbMatches, tmdbApiKey, language);
+  return matches.map((movie) =>
+    enrichTMDBMatchWithDetails(movie, detailsByTMDBId.get(movie.tmdbId ?? 0)),
+  );
+}
+
+async function fetchTMDBDetailsById(
+  tmdbMatches: EnhancedMovieMatch[],
+  tmdbApiKey: string,
+  language: string,
+): Promise<Map<number, TMDBMovieDetails>> {
+  const entries = await Promise.all(
+    tmdbMatches.map(async (movie) => {
+      const tmdbId = movie.tmdbId;
+      if (!tmdbId) return null;
+      const details = await fetchMovieDetails(tmdbApiKey, tmdbId, language);
+      return details ? ([tmdbId, details] as const) : null;
+    }),
   );
 
-  return matches.map((movie) => {
-    if (!movie.tmdbId || movie.id >= 0) return movie;
-    const details = detailsByTMDBId.get(movie.tmdbId);
-    if (!details) {
-      return {
-        ...movie,
-        metadataQualityFlags: [...(movie.metadataQualityFlags ?? []), 'missing_details'],
-        metadataQualityScore: movie.metadataQualityScore ?? 0,
-      };
-    }
+  return new Map(
+    entries.filter((entry): entry is readonly [number, TMDBMovieDetails] => entry !== null),
+  );
+}
 
-    const metadata = extractCatalogMetadata(details);
-    const ageRating = extractUSCertification(details);
-    const runtime = details.runtime ?? movie.duration;
-    const scoreRating = Number((details.vote_average ?? movie.score_rating ?? 0).toFixed(1));
-    const qualityBoost = (metadata.qualityScore / 100) * MAX_METADATA_QUALITY_SIMILARITY_BOOST;
+function markMissingTMDBDetails(movie: EnhancedMovieMatch): EnhancedMovieMatch {
+  return {
+    ...movie,
+    metadataQualityFlags: [...(movie.metadataQualityFlags ?? []), 'missing_details'],
+    metadataQualityScore: movie.metadataQualityScore ?? 0,
+  };
+}
 
-    return {
-      ...movie,
-      age_rating: ageRating,
-      content: [
-        `${details.title} (${parseTMDBReleaseYear(details.release_date)}) | ${ageRating}`,
-        `Duration: ${runtime || 'unknown'} min | TMDB Score: ${scoreRating}/10`,
-        details.overview || movie.description || '',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      description: details.overview || movie.description,
-      duration: runtime,
-      metadataQualityFlags: metadata.qualityFlags,
-      metadataQualityScore: metadata.qualityScore,
-      name: details.title || movie.name,
-      originalLanguage: details.original_language ?? null,
-      popularity: details.popularity ?? null,
-      posterURL: getPosterUrl(details.poster_path) ?? movie.posterURL,
-      score_rating: scoreRating,
-      similarity: Number((movie.similarity + qualityBoost).toFixed(6)),
-      voteCount: details.vote_count ?? null,
-      watchProviders: metadata.providers.map(
-        ({ availabilityType, displayPriority, providerId, providerName, region }) => ({
-          availabilityType,
-          displayPriority,
-          providerId,
-          providerName,
-          region,
-        }),
-      ),
-      year: parseTMDBReleaseYear(details.release_date) || movie.year,
-    };
-  });
+function mapTMDBWatchProviders(metadata: ReturnType<typeof extractCatalogMetadata>) {
+  return metadata.providers.map(
+    ({ availabilityType, displayPriority, providerId, providerName, region }) => ({
+      availabilityType,
+      displayPriority,
+      providerId,
+      providerName,
+      region,
+    }),
+  );
+}
+
+function shouldEnrichTMDBMatch(movie: EnhancedMovieMatch): boolean {
+  return Boolean(movie.tmdbId) && movie.id < 0;
+}
+
+function getTMDBDetailsDescription(details: TMDBMovieDetails, movie: EnhancedMovieMatch): string {
+  return details.overview || movie.description;
+}
+
+function getTMDBDetailsRuntime(details: TMDBMovieDetails, movie: EnhancedMovieMatch): number {
+  return details.runtime ?? movie.duration;
+}
+
+function getTMDBDetailsScore(details: TMDBMovieDetails, movie: EnhancedMovieMatch): number {
+  return Number((details.vote_average ?? movie.score_rating ?? 0).toFixed(1));
+}
+
+function buildTMDBDetailsContent(input: {
+  title: string;
+  releaseYear: number;
+  ageRating: string;
+  runtime: number;
+  scoreRating: number;
+  description: string;
+}): string {
+  const runtimeLabel = input.runtime ? input.runtime : 'unknown';
+  const lines = [
+    `${input.title} (${input.releaseYear}) | ${input.ageRating}`,
+    `Duration: ${runtimeLabel} min | TMDB Score: ${input.scoreRating}/10`,
+  ];
+  if (input.description) lines.push(input.description);
+  return lines.join('\n');
+}
+
+function enrichTMDBMatchWithDetails(
+  movie: EnhancedMovieMatch,
+  details?: TMDBMovieDetails,
+): EnhancedMovieMatch {
+  if (!shouldEnrichTMDBMatch(movie)) return movie;
+  if (!details) return markMissingTMDBDetails(movie);
+
+  const metadata = extractCatalogMetadata(details);
+  const ageRating = extractUSCertification(details);
+  const runtime = getTMDBDetailsRuntime(details, movie);
+  const scoreRating = getTMDBDetailsScore(details, movie);
+  const releaseYear = parseTMDBReleaseYear(details.release_date);
+  const description = getTMDBDetailsDescription(details, movie);
+  const qualityBoost = (metadata.qualityScore / 100) * MAX_METADATA_QUALITY_SIMILARITY_BOOST;
+
+  return {
+    ...movie,
+    age_rating: ageRating,
+    content: buildTMDBDetailsContent({
+      title: details.title,
+      releaseYear,
+      ageRating,
+      runtime,
+      scoreRating,
+      description,
+    }),
+    description,
+    duration: runtime,
+    metadataQualityFlags: metadata.qualityFlags,
+    metadataQualityScore: metadata.qualityScore,
+    name: details.title || movie.name,
+    originalLanguage: details.original_language ?? null,
+    popularity: details.popularity ?? null,
+    posterURL: getPosterUrl(details.poster_path) ?? movie.posterURL,
+    score_rating: scoreRating,
+    similarity: Number((movie.similarity + qualityBoost).toFixed(6)),
+    voteCount: details.vote_count ?? null,
+    watchProviders: mapTMDBWatchProviders(metadata),
+    year: releaseYear || movie.year,
+  };
 }
 
 /**
@@ -490,6 +524,182 @@ export function deserializeTMDBEmbeddings(
   return new Map(entries);
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return String(error);
+}
+
+function isDuplicateEntryErrorMessage(message: string): boolean {
+  const normalizedMessage = message.toLowerCase();
+  return (
+    normalizedMessage.includes('unique') ||
+    normalizedMessage.includes('duplicate') ||
+    normalizedMessage.includes('already exists')
+  );
+}
+
+function logJITSeedingError(input: { error: unknown; movieTitle: string; warnMessage: string }) {
+  if (isDuplicateEntryErrorMessage(getErrorMessage(input.error))) {
+    logger.debug(
+      { movieTitle: input.movieTitle },
+      'JIT seeding skipped — movie already in database',
+    );
+    return;
+  }
+
+  logger.warn({ err: input.error, movieTitle: input.movieTitle }, input.warnMessage);
+}
+
+function getTMDBSeedMovieKey(movie: TMDBDiscoverMovie): string {
+  return `${movie.title.toLowerCase()}|${parseTMDBReleaseYear(movie.release_date)}`;
+}
+
+function getJITSeedCandidates(
+  tmdbMovies: TMDBDiscoverMovie[],
+  existingLocalKeys: Set<string>,
+): TMDBDiscoverMovie[] {
+  return tmdbMovies
+    .filter((movie) => !existingLocalKeys.has(getTMDBSeedMovieKey(movie)))
+    .slice(0, MAX_JIT_SEED_MOVIES);
+}
+
+async function getExistingMovieKeys(
+  db: ReturnType<typeof getDbClient>,
+  candidateMovies: TMDBDiscoverMovie[],
+): Promise<Set<string>> {
+  const existingMovieKeys = new Set<string>();
+
+  try {
+    const movieNames = candidateMovies.map((movie) => movie.title);
+    const { data: existingMovies, error } = await db
+      .from<{ name: string; year: number }>('movies')
+      .select('name, year')
+      .in('name', movieNames);
+
+    if (error) {
+      logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
+      return existingMovieKeys;
+    }
+
+    for (const row of existingMovies ?? []) {
+      existingMovieKeys.add(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`);
+    }
+  } catch (err) {
+    logger.warn({ err }, 'JIT seeding existence pre-check failed with unexpected error');
+  }
+
+  return existingMovieKeys;
+}
+
+async function getTMDBSeedEmbedding(
+  movie: TMDBDiscoverMovie,
+  precomputedEmbeddings?: Map<number, number[]>,
+): Promise<number[] | undefined> {
+  const precomputed = precomputedEmbeddings?.get(movie.id);
+  if (precomputed) return precomputed;
+
+  const embeddingResponse = await getOpenAIClient().embeddings.create(
+    {
+      model: MODELS.EMBEDDING,
+      input: formatTMDBMovieEmbeddingText(movie),
+    },
+    openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
+  );
+  return embeddingResponse.data[0]?.embedding;
+}
+
+function isZeroMagnitudeEmbedding(embedding: number[]): boolean {
+  return embedding.every((value) => value === 0);
+}
+
+async function insertTMDBSeedMovie(input: {
+  db: ReturnType<typeof getDbClient>;
+  movie: TMDBDiscoverMovie;
+  year: number;
+  score: number;
+  embedding: number[];
+}) {
+  return input.db.from('movies').insert({
+    tmdb_id: input.movie.id,
+    name: input.movie.title,
+    year: input.year,
+    age_rating: 'NR',
+    description: input.movie.overview || '',
+    duration: 0,
+    score_rating: input.score,
+    embedding: input.embedding,
+  });
+}
+
+async function seedOneTMDBMovie(input: {
+  db: ReturnType<typeof getDbClient>;
+  movie: TMDBDiscoverMovie;
+  existingMovieKeys: Set<string>;
+  precomputedEmbeddings?: Map<number, number[]>;
+}): Promise<void> {
+  const year = parseTMDBReleaseYear(input.movie.release_date);
+  const movieKey = getTMDBSeedMovieKey(input.movie);
+
+  if (input.existingMovieKeys.has(movieKey)) {
+    logger.debug(
+      { movieTitle: input.movie.title, year },
+      'JIT seeding skipped — movie already in database',
+    );
+    return;
+  }
+
+  const score = Number(input.movie.vote_average?.toFixed(1)) || 0;
+  const embedding = await getTMDBSeedEmbedding(input.movie, input.precomputedEmbeddings);
+  if (!embedding) return;
+
+  if (isZeroMagnitudeEmbedding(embedding)) {
+    logger.warn(
+      { movieTitle: input.movie.title, year },
+      'JIT seeding skipped — zero-magnitude embedding',
+    );
+    return;
+  }
+
+  const { error: insertError } = await insertTMDBSeedMovie({
+    db: input.db,
+    movie: input.movie,
+    year,
+    score,
+    embedding,
+  });
+
+  if (insertError) {
+    logJITSeedingError({
+      error: insertError,
+      movieTitle: input.movie.title,
+      warnMessage: 'JIT seeding insert failed',
+    });
+    return;
+  }
+
+  logger.info({ movieTitle: input.movie.title, year }, 'JIT seeded TMDB movie into database');
+}
+
+async function seedOneTMDBMovieWithLogging(input: {
+  db: ReturnType<typeof getDbClient>;
+  movie: TMDBDiscoverMovie;
+  existingMovieKeys: Set<string>;
+  precomputedEmbeddings?: Map<number, number[]>;
+}): Promise<void> {
+  try {
+    await seedOneTMDBMovie(input);
+  } catch (err) {
+    logJITSeedingError({
+      error: err,
+      movieTitle: input.movie.title,
+      warnMessage: 'JIT seeding failed with unexpected error',
+    });
+  }
+}
+
 /**
  * Seed TMDB movies into the local DB for future local vector search.
  */
@@ -501,134 +711,13 @@ export async function seedMovies(
   const db = getDbClient();
   if (!db.isConfigured()) return;
 
-  // Avoid re-seeding movies already present in the local results for this request
-  const toSeed = tmdbMovies.filter(
-    (m) =>
-      !existingLocalKeys.has(`${m.title.toLowerCase()}|${parseTMDBReleaseYear(m.release_date)}`),
-  );
-  if (toSeed.length === 0) return;
-
-  const candidateMovies = toSeed.slice(0, MAX_JIT_SEED_MOVIES);
+  const candidateMovies = getJITSeedCandidates(tmdbMovies, existingLocalKeys);
   if (candidateMovies.length === 0) return;
 
-  // Bulk DB existence check to avoid wasting OpenAI embedding tokens on rows that already exist.
-  // The DB uniqueness constraint is (name, year). We query by the movies.name column (matching
-  // the TMDB title) only, then filter by year in-memory to build exact composite keys —
-  // avoids a Cartesian product from two .in() clauses.
-  const existingMovieKeys = new Set<string>();
-  try {
-    // TMDB movies use `title`; the DB column is `name` — same value, different field names.
-    const movieNames = candidateMovies.map((m) => m.title);
-    const { data: existingMovies, error } = await db
-      .from<{ name: string; year: number }>('movies')
-      .select('name, year')
-      .in('name', movieNames);
-
-    if (error) {
-      logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
-    } else {
-      for (const row of existingMovies ?? []) {
-        existingMovieKeys.add(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`);
-      }
-    }
-  } catch (err) {
-    logger.warn({ err }, 'JIT seeding existence pre-check failed with unexpected error');
-  }
+  const existingMovieKeys = await getExistingMovieKeys(db, candidateMovies);
 
   for (const movie of candidateMovies) {
-    try {
-      const year = parseTMDBReleaseYear(movie.release_date);
-      const movieKey = `${movie.title.toLowerCase()}|${year}`;
-
-      if (existingMovieKeys.has(movieKey)) {
-        logger.debug(
-          { movieTitle: movie.title, year },
-          'JIT seeding skipped — movie already in database',
-        );
-        continue;
-      }
-
-      const score = Number(movie.vote_average?.toFixed(1)) || 0;
-
-      // Reuse the embedding already computed during similarity scoring if available,
-      // falling back to a fresh API call only for movies not in the precomputed map.
-      let embedding: number[] | undefined = precomputedEmbeddings?.get(movie.id);
-      if (!embedding) {
-        const embeddingText = [
-          `${movie.title} (${year})`,
-          `Rating: NR`,
-          `Duration: 0 min`,
-          `Score: ${score}/10`,
-          `Description: ${movie.overview || ''}`,
-        ].join('\n');
-
-        const embeddingResponse = await getOpenAIClient().embeddings.create(
-          {
-            model: MODELS.EMBEDDING,
-            input: embeddingText,
-          },
-          openAIRequestOptions(OPENAI_TIMEOUTS_MS.embedding),
-        );
-        embedding = embeddingResponse.data[0]?.embedding;
-      }
-      if (!embedding) continue;
-
-      // Reject zero-magnitude embeddings — pgvector cosine distance returns NaN for them
-      if (embedding.every((v) => v === 0)) {
-        logger.warn(
-          { movieTitle: movie.title, year },
-          'JIT seeding skipped — zero-magnitude embedding',
-        );
-        continue;
-      }
-
-      const { error: insertError } = await db.from('movies').insert({
-        tmdb_id: movie.id,
-        name: movie.title,
-        year,
-        age_rating: 'NR',
-        description: movie.overview || '',
-        duration: 0,
-        score_rating: score,
-        embedding,
-      });
-
-      if (insertError) {
-        const errMsg = insertError.message;
-        const isDuplicateEntry =
-          errMsg.toLowerCase().includes('unique') ||
-          errMsg.toLowerCase().includes('duplicate') ||
-          errMsg.toLowerCase().includes('already exists');
-
-        if (isDuplicateEntry) {
-          logger.debug(
-            { movieTitle: movie.title },
-            'JIT seeding skipped — movie already in database',
-          );
-        } else {
-          logger.warn({ err: insertError, movieTitle: movie.title }, 'JIT seeding insert failed');
-        }
-        continue;
-      }
-
-      logger.info({ movieTitle: movie.title, year }, 'JIT seeded TMDB movie into database');
-    } catch (err) {
-      // Catch truly thrown errors (e.g. network failures during embedding)
-      const errMsg = err instanceof Error ? err.message : String(err);
-      const isDuplicateEntry =
-        errMsg.toLowerCase().includes('unique') ||
-        errMsg.toLowerCase().includes('duplicate') ||
-        errMsg.toLowerCase().includes('already exists');
-
-      if (isDuplicateEntry) {
-        logger.debug(
-          { movieTitle: movie.title },
-          'JIT seeding skipped — movie already in database',
-        );
-      } else {
-        logger.warn({ err, movieTitle: movie.title }, 'JIT seeding failed with unexpected error');
-      }
-    }
+    await seedOneTMDBMovieWithLogging({ db, movie, existingMovieKeys, precomputedEmbeddings });
   }
 }
 
