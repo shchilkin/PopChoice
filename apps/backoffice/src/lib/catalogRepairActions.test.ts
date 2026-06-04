@@ -23,6 +23,7 @@ describe('catalog repair actions', () => {
   it('maps repair result statuses to operator-facing messages', () => {
     expect(catalogRepairMessage('orchestration_queued')).toContain('orchestration accepted');
     expect(catalogRepairMessage('queued')).toContain('backfill job queued');
+    expect(catalogRepairMessage('deduped')).toContain('already queued');
     expect(catalogRepairMessage('empty')).toContain('No affected movies');
     expect(catalogRepairMessage('partial')).toContain('partially queued');
     expect(catalogRepairMessage('failed')).toContain('failed to enqueue');

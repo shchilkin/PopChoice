@@ -52,7 +52,7 @@ export async function performSingleCatalogRepairAction({
 
   return {
     mode: 'single',
-    status: job ? 'queued' : 'unavailable',
+    status: job?.status ?? 'unavailable',
     issueKey,
     movieId,
     job,

@@ -151,15 +151,18 @@ export function CatalogRepairEnhancement() {
             };
           } | null;
 
-          if (response.ok && payload?.status === 'queued') {
+          if (response.ok && (payload?.status === 'queued' || payload?.status === 'deduped')) {
             requestCatalogHealthRefresh();
             row?.classList.remove('repair-pending');
             row?.classList.add('repair-accepted');
-            setButton(form, 'Accepted', true);
+            const deduped = payload.status === 'deduped';
+            setButton(form, deduped ? 'Already queued' : 'Accepted', true);
             const bulkSummary = payload.mode === 'bulk' ? payload.summary : null;
             const bulkMessage = bulkSummary
               ? `Accepted ${bulkSummary.queued ?? 0}, already queued ${bulkSummary.deduped ?? 0}`
-              : 'Accepted for worker';
+              : deduped
+                ? 'Already queued for worker'
+                : 'Accepted for worker';
             setMessage(form, bulkMessage, 'accepted');
 
             if (row) {
@@ -216,7 +219,10 @@ export function CatalogRepairEnhancement() {
       cleanups.push(() => form.removeEventListener('submit', submit));
     });
 
+    document.documentElement.dataset.catalogRepairEnhanced = 'true';
+
     return () => {
+      delete document.documentElement.dataset.catalogRepairEnhanced;
       cleanups.forEach((cleanup) => cleanup());
       timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
     };

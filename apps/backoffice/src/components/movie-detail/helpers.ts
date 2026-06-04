@@ -15,6 +15,7 @@ export function normalizeRepairFlashStatus(
 
   if (
     repairStatus === 'queued' ||
+    repairStatus === 'deduped' ||
     repairStatus === 'unavailable' ||
     repairStatus === 'failed' ||
     repairStatus === 'empty' ||
@@ -34,7 +35,11 @@ export function repairFlashMessage(repairStatus: string | null): string | null {
 
 export function repairFlashTone(repairStatus: string | null): 'accepted' | 'warn' {
   const mappedStatus = normalizeRepairFlashStatus(repairStatus);
-  return mappedStatus === 'queued' || mappedStatus === 'orchestration_queued' ? 'accepted' : 'warn';
+  return mappedStatus === 'queued' ||
+    mappedStatus === 'deduped' ||
+    mappedStatus === 'orchestration_queued'
+    ? 'accepted'
+    : 'warn';
 }
 
 export function repairableHealthFlags(flags: CatalogMovieDetailHealthFlag[]) {

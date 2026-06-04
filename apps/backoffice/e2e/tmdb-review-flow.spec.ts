@@ -18,6 +18,7 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
 
   await expect(page.getByRole('heading', { name: 'Catalog Health' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Missing poster_url' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-catalog-repair-enhanced', 'true');
   await expect(
     page
       .locator('#issue-missing_poster_url')
@@ -63,7 +64,7 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
   await expect(auditRow).toBeVisible();
   await expect(auditRow).toContainText('e2e-operator');
   await expect(auditRow).toContainText('Missing Poster Url');
-  await expect(auditRow).toContainText('Accepted');
+  await expect(auditRow).toContainText(/Accepted|Already queued/);
 });
 
 test('operator applies a seeded TMDB review candidate from queue to audit history', async ({

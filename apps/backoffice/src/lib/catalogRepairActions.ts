@@ -38,7 +38,7 @@ export { catalogRepairMessage, REPAIRABLE_CATALOG_ISSUE_KEYS };
 export type CatalogRepairActionResult =
   | {
       mode: 'single';
-      status: 'queued' | 'unavailable';
+      status: 'queued' | 'deduped' | 'unavailable';
       issueKey: string;
       movieId: string;
       job: Awaited<ReturnType<typeof enqueueCatalogBackfillMovieFromBackoffice>>;
@@ -49,6 +49,38 @@ export type CatalogRepairActionResult =
       issueKey: string;
       summary: CatalogBulkRepairSummary;
     };
+
+interface AsyncBulkRepairBatchInput {
+  actor: string;
+  issueKey: string;
+  note: string | undefined;
+  requestedLimit: number;
+  totalCandidates: number;
+}
+
+function asyncBulkRepairPreviousState(input: AsyncBulkRepairBatchInput) {
+  return {
+    async: true,
+    issueKey: input.issueKey,
+    requestedLimit: input.requestedLimit,
+    totalCandidates: input.totalCandidates,
+  };
+}
+
+async function createAsyncBulkRepairBatch(input: AsyncBulkRepairBatchInput) {
+  return createCatalogRepairBatch({
+    action: 'bulk_enqueue_backfill',
+    actor: input.actor,
+    issueKey: input.issueKey,
+    targetType: 'catalog_issue',
+    targetId: input.issueKey,
+    requestedLimit: input.requestedLimit,
+    totalCandidates: input.totalCandidates,
+    attemptedCount: 0,
+    note: input.note,
+    previousState: asyncBulkRepairPreviousState(input),
+  });
+}
 
 async function performAsyncBulkCatalogRepairAction(
   formData: FormData,
@@ -66,6 +98,14 @@ async function performAsyncBulkCatalogRepairAction(
   });
   const limit = parseAsyncBulkRepairLimit(formData.get('batch_limit'), countPage.totalCount);
   const requestedLimit = Math.min(limit, countPage.totalCount);
+  const batchInput = {
+    actor,
+    issueKey,
+    note,
+    requestedLimit,
+    totalCandidates: countPage.totalCount,
+  };
+  const previousState = asyncBulkRepairPreviousState(batchInput);
   const summary = createCatalogBulkRepairSummary({
     issueKey,
     totalCandidates: countPage.totalCount,
@@ -73,23 +113,7 @@ async function performAsyncBulkCatalogRepairAction(
   });
 
   if (requestedLimit === 0) {
-    const batch = await createCatalogRepairBatch({
-      action: 'bulk_enqueue_backfill',
-      actor,
-      issueKey,
-      targetType: 'catalog_issue',
-      targetId: issueKey,
-      requestedLimit,
-      totalCandidates: countPage.totalCount,
-      attemptedCount: 0,
-      note,
-      previousState: {
-        async: true,
-        issueKey,
-        requestedLimit,
-        totalCandidates: countPage.totalCount,
-      },
-    });
+    const batch = await createAsyncBulkRepairBatch(batchInput);
     summary.batchId = batch.id;
     await recordCatalogRepairAction({
       action: 'bulk_enqueue_backfill',
@@ -98,12 +122,7 @@ async function performAsyncBulkCatalogRepairAction(
       targetType: 'catalog_issue',
       targetId: issueKey,
       note,
-      previousState: {
-        async: true,
-        issueKey,
-        requestedLimit,
-        totalCandidates: countPage.totalCount,
-      },
+      previousState,
       result: {
         ...summary,
         status: 'empty',
@@ -119,23 +138,7 @@ async function performAsyncBulkCatalogRepairAction(
     };
   }
 
-  const batch = await createCatalogRepairBatch({
-    action: 'bulk_enqueue_backfill',
-    actor,
-    issueKey,
-    targetType: 'catalog_issue',
-    targetId: issueKey,
-    requestedLimit,
-    totalCandidates: countPage.totalCount,
-    attemptedCount: 0,
-    note,
-    previousState: {
-      async: true,
-      issueKey,
-      requestedLimit,
-      totalCandidates: countPage.totalCount,
-    },
-  });
+  const batch = await createAsyncBulkRepairBatch(batchInput);
   summary.batchId = batch.id;
 
   const orchestrationJob = await enqueueCatalogRepairBatchFromBackoffice(
