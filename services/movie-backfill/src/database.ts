@@ -9,7 +9,6 @@ import {
 } from '@pop-choice/shared';
 
 import type { TMDBSearchCandidate } from './tmdb.js';
-import type { MovieCatalogMetadataInput } from '@pop-choice/shared';
 
 export {
   initDatabase,
@@ -18,7 +17,6 @@ export {
   ensureCatalogMetadataSchema,
   upsertMovieCatalogMetadata,
 };
-export type { MovieCatalogMetadataInput };
 
 export interface IncompleteMovie {
   id: string;
