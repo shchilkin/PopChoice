@@ -33,6 +33,20 @@ export {
   extractTMDBCatalogMetadataCore,
   extractTMDBUSCertification,
 } from './tmdbCatalogMetadata.js';
+export {
+  collectTMDBSearchResults,
+  decideTMDBSearchMatch,
+  normalizeTMDBTitle,
+  rankTMDBSearchCandidates,
+  resolveTMDBSearchMatch,
+  scoreTMDBTitleMatch,
+} from './tmdbSearchMatching.js';
+export type {
+  TMDBScoredSearchCandidate,
+  TMDBSearchMatchDecision,
+  TMDBSearchMatchResult,
+  TMDBTitleMatchCandidate,
+} from './tmdbSearchMatching.js';
 export type {
   ExtractTMDBCatalogMetadataOptions,
   TMDBCatalogCastCreditSource,
