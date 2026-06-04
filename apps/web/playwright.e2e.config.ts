@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url';
+
 import { defineConfig, devices } from 'playwright/test';
 
 const e2ePort = Number.parseInt(process.env.E2E_PORT ?? '3100', 10);
@@ -5,6 +7,7 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${e2ePort}`;
 const databaseUrl =
   process.env.E2E_DATABASE_URL ?? 'postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e';
 const redisUrl = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:56379';
+const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 export default defineConfig({
   testDir: './e2e',
@@ -23,7 +26,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: `npm run dev -- --hostname 127.0.0.1 --port ${e2ePort}`,
+    command: `npm run build --workspace=packages/shared && npm run dev --workspace=apps/web -- --hostname 127.0.0.1 --port ${e2ePort}`,
+    cwd: repoRoot,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

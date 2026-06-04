@@ -1,47 +1,17 @@
+import { extractTMDBCatalogMetadataCore, extractTMDBUSCertification } from '@pop-choice/shared';
 import z from 'zod';
 
 import logger from '@/lib/logger';
 import { recordTMDBProviderError } from '@/lib/metrics';
 
 import type { TMDBCatalogCandidate, TMDBDiscoverySource } from '@/lib/jobQueue';
+import type { TMDBCatalogMetadataCore, TMDBCatalogMovieDetails } from '@pop-choice/shared';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 const TMDB_FETCH_TIMEOUT_MS = 8_000;
-const MAX_CAST_CREDITS = 12;
-const MAX_KEYWORDS = 20;
 const SUPPORTED_PROVIDER_REGIONS = ['US', 'FI', 'RU'] as const;
 const WATCH_PROVIDER_TYPES = ['flatrate', 'rent', 'buy', 'ads', 'free'] as const;
-
-type TMDBGenre = {
-  id: number;
-  name: string;
-};
-
-type TMDBCastCredit = {
-  id: number;
-  name: string;
-  character?: string | null;
-  order?: number | null;
-  profile_path?: string | null;
-  popularity?: number | null;
-  credit_id?: string | null;
-};
-
-type TMDBCrewCredit = {
-  id: number;
-  name: string;
-  job?: string | null;
-  department?: string | null;
-  profile_path?: string | null;
-  popularity?: number | null;
-  credit_id?: string | null;
-};
-
-type TMDBKeyword = {
-  id: number;
-  name: string;
-};
 
 type TMDBWatchProvider = {
   provider_id: number;
@@ -54,17 +24,12 @@ type TMDBWatchProviderRegion = {
   link?: string | null;
 } & Partial<Record<(typeof WATCH_PROVIDER_TYPES)[number], TMDBWatchProvider[]>>;
 
-export type TMDBMovieDetails = {
-  id: number;
-  title: string;
+export type TMDBMovieDetails = TMDBCatalogMovieDetails & {
   original_title?: string | null;
   original_language?: string | null;
   overview: string;
-  release_date: string;
-  vote_average: number;
   vote_count?: number | null;
   popularity?: number | null;
-  runtime: number | null;
   poster_path: string | null;
   spoken_languages?: Array<{
     english_name?: string | null;
@@ -75,52 +40,12 @@ export type TMDBMovieDetails = {
     iso_3166_1?: string | null;
     name?: string | null;
   }>;
-  genres?: TMDBGenre[];
-  credits?: {
-    cast?: TMDBCastCredit[];
-    crew?: TMDBCrewCredit[];
-  };
-  keywords?: {
-    keywords?: TMDBKeyword[];
-  };
-  release_dates?: {
-    results?: Array<{
-      iso_3166_1: string;
-      release_dates: Array<{
-        certification: string;
-        type: number;
-      }>;
-    }>;
-  };
   'watch/providers'?: {
     results?: Record<string, TMDBWatchProviderRegion>;
   };
 };
 
-export type TMDBCatalogMetadata = {
-  people: Array<{
-    tmdbId: number;
-    name: string;
-    profilePath: string | null;
-    popularity: number | null;
-    creditId: string;
-    role: 'cast' | 'director';
-    characterName: string | null;
-    job: string | null;
-    department: string | null;
-    billingOrder: number | null;
-    rawMetadata: Record<string, unknown>;
-  }>;
-  genres: Array<{
-    tmdbId: number;
-    name: string;
-    rawMetadata: Record<string, unknown>;
-  }>;
-  keywords: Array<{
-    tmdbId: number;
-    name: string;
-    rawMetadata: Record<string, unknown>;
-  }>;
+export type TMDBCatalogMetadata = Omit<TMDBCatalogMetadataCore, 'snapshot'> & {
   providers: Array<{
     providerId: number;
     providerName: string;
@@ -133,7 +58,24 @@ export type TMDBCatalogMetadata = {
   }>;
   qualityFlags: string[];
   qualityScore: number;
-  snapshot: Record<string, unknown>;
+  snapshot: TMDBCatalogMetadataCore['snapshot'] & {
+    original_title: string | null;
+    original_language: string | null;
+    vote_count: number | null;
+    popularity: number | null;
+    spoken_languages: TMDBMovieDetails['spoken_languages'];
+    production_countries: TMDBMovieDetails['production_countries'];
+    certification: string;
+    providers: Array<{
+      id: number;
+      name: string;
+      region: string;
+      type: (typeof WATCH_PROVIDER_TYPES)[number];
+      display_priority: number | null;
+    }>;
+    metadata_quality_score: number;
+    metadata_quality_flags: string[];
+  };
 };
 
 export class TMDBRateLimitError extends Error {
@@ -403,14 +345,7 @@ export async function searchMovieMatch(
 }
 
 export function extractUSCertification(details: TMDBMovieDetails): string {
-  const usEntry = details.release_dates?.results?.find((entry) => entry.iso_3166_1 === 'US');
-  if (!usEntry) return 'NR';
-
-  const theatrical = usEntry.release_dates.find(
-    (release) => release.type === 3 && release.certification,
-  );
-  const any = usEntry.release_dates.find((release) => release.certification);
-  return (theatrical ?? any)?.certification || 'NR';
+  return extractTMDBUSCertification(details);
 }
 
 function extractWatchProviders(details: TMDBMovieDetails): TMDBCatalogMetadata['providers'] {
@@ -495,64 +430,9 @@ export function getMetadataQualityScore(flags: string[]): number {
 }
 
 export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMetadata {
-  const genres = (details.genres ?? [])
-    .filter((genre) => Number.isFinite(genre.id) && genre.name)
-    .map((genre) => ({
-      tmdbId: genre.id,
-      name: genre.name,
-      rawMetadata: genre as unknown as Record<string, unknown>,
-    }));
-
-  const cast = (details.credits?.cast ?? [])
-    .filter((credit) => Number.isFinite(credit.id) && credit.name && credit.credit_id)
-    .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
-    .slice(0, MAX_CAST_CREDITS)
-    .map((credit) => ({
-      tmdbId: credit.id,
-      name: credit.name,
-      profilePath: credit.profile_path ?? null,
-      popularity: credit.popularity ?? null,
-      creditId: credit.credit_id as string,
-      role: 'cast' as const,
-      characterName: credit.character ?? null,
-      job: null,
-      department: null,
-      billingOrder: credit.order ?? null,
-      rawMetadata: credit as unknown as Record<string, unknown>,
-    }));
-
-  const directors = (details.credits?.crew ?? [])
-    .filter(
-      (credit) =>
-        Number.isFinite(credit.id) &&
-        credit.name &&
-        credit.credit_id &&
-        credit.job?.toLowerCase() === 'director',
-    )
-    .map((credit) => ({
-      tmdbId: credit.id,
-      name: credit.name,
-      profilePath: credit.profile_path ?? null,
-      popularity: credit.popularity ?? null,
-      creditId: credit.credit_id as string,
-      role: 'director' as const,
-      characterName: null,
-      job: credit.job ?? null,
-      department: credit.department ?? null,
-      billingOrder: null,
-      rawMetadata: credit as unknown as Record<string, unknown>,
-    }));
-
-  const keywords = (details.keywords?.keywords ?? [])
-    .filter((keyword) => Number.isFinite(keyword.id) && keyword.name)
-    .slice(0, MAX_KEYWORDS)
-    .map((keyword) => ({
-      tmdbId: keyword.id,
-      name: keyword.name,
-      rawMetadata: keyword as unknown as Record<string, unknown>,
-    }));
+  const coreMetadata = extractTMDBCatalogMetadataCore(details);
+  const { genres, keywords, people } = coreMetadata;
   const providers = extractWatchProviders(details);
-  const people = [...cast, ...directors];
   const ageRating = extractUSCertification(details);
   const qualityFlags = getMetadataQualityFlags({
     ageRating,
@@ -564,6 +444,7 @@ export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMe
   });
 
   return {
+    ...coreMetadata,
     people,
     genres,
     keywords,
@@ -571,28 +452,14 @@ export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMe
     qualityFlags,
     qualityScore: getMetadataQualityScore(qualityFlags),
     snapshot: {
-      id: details.id,
-      title: details.title,
+      ...coreMetadata.snapshot,
       original_title: details.original_title ?? null,
       original_language: details.original_language ?? null,
-      release_date: details.release_date,
-      runtime: details.runtime,
-      vote_average: details.vote_average,
       vote_count: details.vote_count ?? null,
       popularity: details.popularity ?? null,
-      poster_path: details.poster_path,
       spoken_languages: details.spoken_languages ?? [],
       production_countries: details.production_countries ?? [],
       certification: ageRating,
-      genres: genres.map(({ tmdbId, name }) => ({ id: tmdbId, name })),
-      cast: cast.map(({ tmdbId, name, characterName, billingOrder }) => ({
-        id: tmdbId,
-        name,
-        character: characterName,
-        order: billingOrder,
-      })),
-      directors: directors.map(({ tmdbId, name, job }) => ({ id: tmdbId, name, job })),
-      keywords: keywords.map(({ tmdbId, name }) => ({ id: tmdbId, name })),
       providers: providers.map(
         ({ providerId, providerName, region, availabilityType, displayPriority }) => ({
           id: providerId,

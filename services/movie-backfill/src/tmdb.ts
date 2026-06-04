@@ -1,59 +1,17 @@
 import { logger } from './logger.js';
+import { extractTMDBCatalogMetadataCore, extractTMDBUSCertification } from '@pop-choice/shared';
 import z from 'zod';
+
+import type { TMDBCatalogMetadataCore, TMDBCatalogMovieDetails } from '@pop-choice/shared';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 const TMDB_SEARCH_FETCH_TIMEOUT_MS = 8_000;
 const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 8_000;
-const MAX_CAST_CREDITS = 12;
-const MAX_KEYWORDS = 20;
 
-interface TMDBGenre {
-  id: number;
-  name: string;
-}
-
-interface TMDBCastCredit {
-  id: number;
-  name: string;
-  character?: string | null;
-  order?: number | null;
-  profile_path?: string | null;
-  popularity?: number | null;
-  credit_id?: string | null;
-}
-
-interface TMDBCrewCredit {
-  id: number;
-  name: string;
-  job?: string | null;
-  department?: string | null;
-  profile_path?: string | null;
-  popularity?: number | null;
-  credit_id?: string | null;
-}
-
-interface TMDBKeyword {
-  id: number;
-  name: string;
-}
-
-export interface TMDBMovieDetails {
-  id: number;
-  title: string;
+export type TMDBMovieDetails = TMDBCatalogMovieDetails & {
   overview: string;
-  release_date: string;
-  vote_average: number;
-  runtime: number | null;
   poster_path: string | null;
-  genres?: TMDBGenre[];
-  credits?: {
-    cast?: TMDBCastCredit[];
-    crew?: TMDBCrewCredit[];
-  };
-  keywords?: {
-    keywords?: TMDBKeyword[];
-  };
   release_dates: {
     results: Array<{
       iso_3166_1: string;
@@ -63,34 +21,9 @@ export interface TMDBMovieDetails {
       }>;
     }>;
   };
-}
+};
 
-export interface TMDBCatalogMetadata {
-  people: Array<{
-    tmdbId: number;
-    name: string;
-    profilePath: string | null;
-    popularity: number | null;
-    creditId: string;
-    role: 'cast' | 'director';
-    characterName: string | null;
-    job: string | null;
-    department: string | null;
-    billingOrder: number | null;
-    rawMetadata: Record<string, unknown>;
-  }>;
-  genres: Array<{
-    tmdbId: number;
-    name: string;
-    rawMetadata: Record<string, unknown>;
-  }>;
-  keywords: Array<{
-    tmdbId: number;
-    name: string;
-    rawMetadata: Record<string, unknown>;
-  }>;
-  snapshot: Record<string, unknown>;
-}
+export type TMDBCatalogMetadata = TMDBCatalogMetadataCore;
 
 export function getPosterUrl(posterPath: string | null | undefined): string | null {
   return posterPath ? `${TMDB_IMAGE_BASE_URL}/w500${posterPath}` : null;
@@ -369,102 +302,13 @@ export async function fetchMovieDetails(
   return (await response.json()) as TMDBMovieDetails;
 }
 
-export function extractCatalogMetadata(details: TMDBMovieDetails): TMDBCatalogMetadata {
-  const genres = (details.genres ?? [])
-    .filter((genre) => Number.isFinite(genre.id) && genre.name)
-    .map((genre) => ({
-      tmdbId: genre.id,
-      name: genre.name,
-      rawMetadata: genre as unknown as Record<string, unknown>,
-    }));
-
-  const cast = (details.credits?.cast ?? [])
-    .filter((credit) => Number.isFinite(credit.id) && credit.name && credit.credit_id)
-    .sort((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
-    .slice(0, MAX_CAST_CREDITS)
-    .map((credit) => ({
-      tmdbId: credit.id,
-      name: credit.name,
-      profilePath: credit.profile_path ?? null,
-      popularity: credit.popularity ?? null,
-      creditId: credit.credit_id as string,
-      role: 'cast' as const,
-      characterName: credit.character ?? null,
-      job: null,
-      department: null,
-      billingOrder: credit.order ?? null,
-      rawMetadata: credit as unknown as Record<string, unknown>,
-    }));
-
-  const directors = (details.credits?.crew ?? [])
-    .filter(
-      (credit) =>
-        Number.isFinite(credit.id) &&
-        credit.name &&
-        credit.credit_id &&
-        credit.job?.toLowerCase() === 'director',
-    )
-    .map((credit) => ({
-      tmdbId: credit.id,
-      name: credit.name,
-      profilePath: credit.profile_path ?? null,
-      popularity: credit.popularity ?? null,
-      creditId: credit.credit_id as string,
-      role: 'director' as const,
-      characterName: null,
-      job: credit.job ?? null,
-      department: credit.department ?? null,
-      billingOrder: null,
-      rawMetadata: credit as unknown as Record<string, unknown>,
-    }));
-
-  const keywords = (details.keywords?.keywords ?? [])
-    .filter((keyword) => Number.isFinite(keyword.id) && keyword.name)
-    .slice(0, MAX_KEYWORDS)
-    .map((keyword) => ({
-      tmdbId: keyword.id,
-      name: keyword.name,
-      rawMetadata: keyword as unknown as Record<string, unknown>,
-    }));
-
-  return {
-    people: [...cast, ...directors],
-    genres,
-    keywords,
-    snapshot: {
-      id: details.id,
-      title: details.title,
-      release_date: details.release_date,
-      runtime: details.runtime,
-      vote_average: details.vote_average,
-      poster_path: details.poster_path,
-      genres: genres.map(({ tmdbId, name }) => ({ id: tmdbId, name })),
-      cast: cast.map(({ tmdbId, name, characterName, billingOrder }) => ({
-        id: tmdbId,
-        name,
-        character: characterName,
-        order: billingOrder,
-      })),
-      directors: directors.map(({ tmdbId, name, job }) => ({ id: tmdbId, name, job })),
-      keywords: keywords.map(({ tmdbId, name }) => ({ id: tmdbId, name })),
-    },
-  };
-}
+export const extractCatalogMetadata = extractTMDBCatalogMetadataCore;
 
 /**
  * Extract the US certification from movie details.
  * Falls back to 'NR' if not found.
  */
-export function extractUSCertification(details: TMDBMovieDetails): string {
-  const usEntry = details.release_dates?.results?.find((r) => r.iso_3166_1 === 'US');
-  if (!usEntry) return 'NR';
-
-  // Type 3 = Theatrical, prefer that; otherwise take the first with a certification
-  const theatrical = usEntry.release_dates.find((rd) => rd.type === 3 && rd.certification);
-  const any = usEntry.release_dates.find((rd) => rd.certification);
-  const cert = (theatrical ?? any)?.certification ?? '';
-  return cert || 'NR';
-}
+export const extractUSCertification = extractTMDBUSCertification;
 
 /**
  * Convert movie data into a text description suitable for embedding.
