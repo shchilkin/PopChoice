@@ -17,16 +17,20 @@ import {
 } from './backoffice';
 import { toCatalogHealthLiveData } from './catalogHealthLive';
 
-function getSearchParamValue(params: URLSearchParams, key: string): string | null {
-  return params.get(key)?.trim() ?? null;
+type CatalogHealthSearchParams = URLSearchParams | Record<string, string | string[] | undefined>;
+
+function getSearchParamValue(params: CatalogHealthSearchParams, key: string): string | null {
+  const value = params instanceof URLSearchParams ? params.get(key) : params[key];
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  return firstValue?.trim() ?? null;
 }
 
-export async function readCatalogHealthLiveData({
+export async function readCatalogHealthPageData({
   config,
   searchParams,
 }: {
   config: BackofficeRuntimeConfig;
-  searchParams: URLSearchParams;
+  searchParams: CatalogHealthSearchParams;
 }) {
   const selectedIssueKey = getSearchParamValue(searchParams, 'issue');
   const issuePageSize = parsePositiveIntParam(
@@ -66,5 +70,22 @@ export async function readCatalogHealthLiveData({
     getCatalogMaintenanceQueueSnapshot(config.redisUrl),
   ]);
 
-  return toCatalogHealthLiveData({ auditPage, issueMoviePage, queueSnapshot, report });
+  return {
+    auditPage,
+    issueMoviePage,
+    liveData: toCatalogHealthLiveData({ auditPage, issueMoviePage, queueSnapshot, report }),
+    queueSnapshot,
+    report,
+  };
+}
+
+export async function readCatalogHealthLiveData({
+  config,
+  searchParams,
+}: {
+  config: BackofficeRuntimeConfig;
+  searchParams: CatalogHealthSearchParams;
+}) {
+  const { liveData } = await readCatalogHealthPageData({ config, searchParams });
+  return liveData;
 }

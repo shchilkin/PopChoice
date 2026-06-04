@@ -13,14 +13,8 @@ import { CatalogHealthRealtimeOverview } from '../catalogHealthRealtimeOverview'
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
 import { formatLiveSyncTime } from '../liveRefreshTime';
 import { CountPill, SimplePaginationControls } from '../shared';
+import { buildRepairAuditPageHref } from '../shared/hrefs';
 import { CatalogIssuePanel } from './issuePanel';
-
-function buildRepairAuditPageHref({ page, pageSize }: { page: number; pageSize: number }) {
-  const params = new URLSearchParams();
-  params.set('auditPage', String(page));
-  params.set('auditPageSize', String(pageSize));
-  return `/?${params.toString()}#repair-audit`;
-}
 
 function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
   if (repairStatus === 'queued') {
