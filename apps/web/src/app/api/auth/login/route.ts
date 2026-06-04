@@ -1,59 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import z from 'zod';
 
 import { getDbClient } from '@/clients/dbClient';
 import { verifyPassword } from '@/lib/auth/password';
+import { readEmailPasswordAuthRequest } from '@/lib/auth/request';
 import { createSessionToken, setSessionCookie } from '@/lib/auth/session';
 import logger from '@/lib/logger';
-import { applyRateLimit } from '@/lib/rateLimit';
-import { isSameOriginBrowserRequest } from '@/lib/withAuth';
-
-// ---------------------------------------------------------------------------
-// Input schema
-// ---------------------------------------------------------------------------
-
-const loginSchema = z.object({
-  email: z.string().email().max(254),
-  password: z.string().min(1).max(128),
-});
 
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
 
-// Auth endpoints are expensive (scrypt) — use a tighter limit than the default.
-const AUTH_RATE_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
-const CSRF_COOKIE = '__csrf';
-
 export async function POST(req: NextRequest): Promise<Response> {
-  const rateLimitResponse = await applyRateLimit(req, AUTH_RATE_LIMIT);
-  if (rateLimitResponse) return rateLimitResponse;
+  const request = await readEmailPasswordAuthRequest(req, {
+    csrfFailureLogMessage: 'Login attempt rejected: CSRF check failed',
+  });
+  if (request.response) return request.response;
 
-  // Require a valid same-origin CSRF pair to prevent login CSRF attacks.
-  const csrfHeader = req.headers.get('x-csrf-token');
-  const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
-  if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie || !isSameOriginBrowserRequest(req)) {
-    logger.warn('Login attempt rejected: CSRF check failed');
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
-  }
-
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
-  }
-
-  const parsed = loginSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Validation failed.', details: parsed.error.flatten().fieldErrors },
-      { status: 422 },
-    );
-  }
-
-  const { email, password } = parsed.data;
-  const normalizedEmail = email.toLowerCase().trim();
+  const { normalizedEmail, password } = request.data;
 
   const db = getDbClient();
   if (!db.isConfigured()) {
