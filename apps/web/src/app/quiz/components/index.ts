@@ -3,14 +3,6 @@ export { FastAudience } from './FastAudience';
 export { GroupSetup } from './GroupSetup';
 export { QuizIntro } from './QuizIntro';
 export { QuizNavigation } from './QuizNavigation';
+export { QuizQuestionStage } from './QuizQuestionStage';
+export { QuizSubmitFailedState } from './QuizSubmitFailedState';
 export { QuizSubmittingState } from './QuizSubmittingState';
-export {
-  EraStep,
-  FastAvoidsStep,
-  FastDiscoveryStep,
-  FastIntentStep,
-  FavoriteActorStep,
-  FavoriteMovieStep,
-  MoodStep,
-  ToneStep,
-} from './steps';
