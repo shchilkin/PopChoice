@@ -10,9 +10,8 @@ import {
   sendPasswordResetEmail,
   shouldExposePasswordResetUrl,
 } from '@/lib/auth/passwordReset';
+import { readAuthJsonRequest } from '@/lib/auth/request';
 import logger from '@/lib/logger';
-import { applyRateLimit } from '@/lib/rateLimit';
-import { isSameOriginBrowserRequest } from '@/lib/withAuth';
 
 const forgotPasswordSchema = z.object({
   email: z.preprocess(
@@ -21,36 +20,13 @@ const forgotPasswordSchema = z.object({
   ),
 });
 
-const AUTH_RATE_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
-const CSRF_COOKIE = '__csrf';
-
 export async function POST(req: NextRequest): Promise<Response> {
-  const rateLimitResponse = await applyRateLimit(req, AUTH_RATE_LIMIT);
-  if (rateLimitResponse) return rateLimitResponse;
+  const request = await readAuthJsonRequest(req, forgotPasswordSchema, {
+    csrfFailureLogMessage: 'Password reset request rejected: CSRF check failed',
+  });
+  if (request.response) return request.response;
 
-  const csrfHeader = req.headers.get('x-csrf-token');
-  const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
-  if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie || !isSameOriginBrowserRequest(req)) {
-    logger.warn('Password reset request rejected: CSRF check failed');
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
-  }
-
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
-  }
-
-  const parsed = forgotPasswordSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Validation failed.', details: parsed.error.flatten().fieldErrors },
-      { status: 422 },
-    );
-  }
-
-  const normalizedEmail = parsed.data.email.toLowerCase().trim();
+  const normalizedEmail = request.data.email.toLowerCase().trim();
   const db = getDbClient();
   if (!db.isConfigured()) {
     logger.error('Database not configured — cannot create password reset token.');

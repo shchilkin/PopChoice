@@ -15,18 +15,16 @@ import {
   searchMovieMemoryCatalog,
   searchMovieMemorySchema,
 } from '@/features/movie-memory/service';
+import { hasValidSameOriginCsrfPair } from '@/lib/auth/csrf';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { parseLocaleFromRequest, type Locale } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
-import { isSameOriginBrowserRequest } from '@/lib/withAuth';
 
 const privateResponseHeaders = {
   'Cache-Control': 'no-store',
   Vary: 'Cookie',
 };
-
-const CSRF_COOKIE = '__csrf';
 
 function elapsedMs(startedAt: number): number {
   return Date.now() - startedAt;
@@ -34,14 +32,6 @@ function elapsedMs(startedAt: number): number {
 
 function movieMemoryJson(body: unknown, status: number): Response {
   return NextResponse.json(body, { status, headers: privateResponseHeaders });
-}
-
-function hasValidCsrf(req: NextRequest): boolean {
-  const csrfHeader = req.headers.get('x-csrf-token');
-  const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
-  return Boolean(
-    csrfHeader && csrfCookie && csrfHeader === csrfCookie && isSameOriginBrowserRequest(req),
-  );
 }
 
 function parseRequestedLocale(req: NextRequest): Locale {
@@ -226,7 +216,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return rateLimitResponse;
   }
 
-  if (!hasValidCsrf(req)) {
+  if (!hasValidSameOriginCsrfPair(req)) {
     logger.warn(
       { userId: session.sub, durationMs: elapsedMs(startedAt) },
       'Movie memory creation rejected: CSRF check failed',
@@ -333,7 +323,7 @@ export async function DELETE(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  if (!hasValidCsrf(req)) {
+  if (!hasValidSameOriginCsrfPair(req)) {
     logger.warn({ userId: session.sub }, 'Movie memory deletion rejected: CSRF check failed');
     return movieMemoryJson({ error: 'Forbidden' }, 403);
   }
