@@ -1,4 +1,9 @@
-import { extractTMDBCatalogMetadataCore, extractTMDBUSCertification } from '@pop-choice/shared';
+import {
+  extractTMDBCatalogMetadataCore,
+  extractTMDBUSCertification,
+  resolveTMDBSearchMatch,
+  scoreTMDBTitleMatch,
+} from '@pop-choice/shared';
 import z from 'zod';
 
 import logger from '@/lib/logger';
@@ -245,34 +250,12 @@ export async function fetchTMDBSourcePage(input: {
   }));
 }
 
-function normalizeTitle(title: string): string {
-  return title
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/&/g, ' and ')
-    .replace(/[^\p{Letter}\p{Number}]+/gu, ' ')
-    .trim()
-    .toLowerCase()
-    .replace(/^(the|a|an)\s+/, '')
-    .replace(/\s+/g, ' ');
-}
-
-function titleConfidence(candidate: TMDBSearchResult, targetTitle: string): number {
-  const target = normalizeTitle(targetTitle);
-  const title = normalizeTitle(candidate.title);
-  const originalTitle = candidate.original_title ? normalizeTitle(candidate.original_title) : '';
-
-  if (!target || (!title && !originalTitle)) return 0;
-  if (target === title || target === originalTitle) return 0.75;
-  return 0;
-}
-
 function scoreSearchCandidate(candidate: TMDBSearchResult, title: string, year: number): number {
   const releaseYear = parseTMDBYear(candidate.release_date);
   const yearScore =
     year <= 0 ? 0.1 : releaseYear === 0 ? 0 : Math.abs(releaseYear - year) <= 1 ? 0.25 : -0.5;
 
-  return titleConfidence(candidate, title) + yearScore;
+  return scoreTMDBTitleMatch(candidate, title) + yearScore;
 }
 
 async function tmdbSearch(
@@ -307,40 +290,29 @@ export async function searchMovieMatch(
   title: string,
   year: number,
 ): Promise<TMDBMovieSearchResult> {
-  const collected = new Map<number, TMDBSearchResult>();
-  const scopedResults = year > 0 ? await tmdbSearch(apiKey, title, year) : [];
-  for (const result of scopedResults) collected.set(result.id, result);
-
-  const broadResults = await tmdbSearch(apiKey, title, null);
-  for (const result of broadResults) collected.set(result.id, result);
-
-  const candidates = Array.from(collected.values())
-    .map((candidate) => ({
+  const threshold = year > 0 ? 0.9 : 0.82;
+  const match = await resolveTMDBSearchMatch({
+    title,
+    year,
+    search: (query, searchYear) => tmdbSearch(apiKey, query, searchYear),
+    toCandidate: (candidate) => ({
       id: candidate.id,
       title: candidate.title,
       releaseYear: parseTMDBYear(candidate.release_date) || null,
       confidence: scoreSearchCandidate(candidate, title, year),
-    }))
-    .filter((candidate) => candidate.confidence > 0)
-    .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 5);
+    }),
+    matchThreshold: threshold,
+    ambiguousRunnerUpThreshold: 0.82,
+    ambiguousScoreGap: 0.08,
+  });
 
-  const best = candidates[0];
-  if (!best) return { status: 'not_found', candidates };
-
-  const runnerUp = candidates[1];
-  if (runnerUp && runnerUp.confidence >= 0.82 && best.confidence - runnerUp.confidence <= 0.08) {
-    return { status: 'ambiguous', candidates };
-  }
-
-  const threshold = year > 0 ? 0.9 : 0.82;
-  if (best.confidence < threshold) return { status: 'not_found', candidates };
+  if (match.status !== 'matched') return { status: match.status, candidates: match.candidates };
 
   return {
     status: 'matched',
-    tmdbId: best.id,
-    confidence: best.confidence,
-    candidates,
+    tmdbId: match.best.id,
+    confidence: match.best.confidence,
+    candidates: match.candidates,
   };
 }
 
