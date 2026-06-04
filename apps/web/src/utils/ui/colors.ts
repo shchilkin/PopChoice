@@ -16,8 +16,3 @@ export const COLOR_PAIRS = [
 export const getPersonColors = (personIndex: number) => {
   return COLOR_PAIRS[personIndex % COLOR_PAIRS.length];
 };
-
-export type PersonColors = {
-  first: string;
-  second: string;
-};

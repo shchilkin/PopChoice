@@ -1,1 +1,0 @@
-export { getMovieStats } from './getMovieStats';

@@ -21,31 +21,23 @@ import {
 } from '@/lib/tmdb';
 import { getTraceCarrier, withTraceSpan } from '@/lib/tracing';
 
+import { morePicksPersonFormDataSchema } from './morePicksSchemas';
+
+import type { MorePicksPersonFormData } from './morePicksSchemas';
 import type { TMDBDiscoverMovie } from './tmdb';
 import type { MovieRowToInsert } from '@/lib/db/recommendations';
 import type { Locale } from '@/lib/locale';
+
+export type { MorePicksPersonFormData } from './morePicksSchemas';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const TMDB_API_BASE = 'https://api.themoviedb.org/3';
-export const MORE_PICKS_PAGE_SIZE = 6;
+const MORE_PICKS_PAGE_SIZE = 6;
 const TMDB_DISCOVER_FETCH_TIMEOUT_MS = 8_000;
 const TMDB_MOVIE_DETAILS_FETCH_TIMEOUT_MS = 5_000;
-
-// ---------------------------------------------------------------------------
-// Schemas
-// ---------------------------------------------------------------------------
-
-const personFormDataSchema = z.object({
-  favoriteMovie: z.string(),
-  newVsClassic: z.string().min(1),
-  moodPreference: z.array(z.string()).min(1),
-  tonePreference: z.string().min(1),
-});
-
-export type MorePicksPersonFormData = z.infer<typeof personFormDataSchema>;
 
 const tmdbMovieSchema = z.object({
   id: z.number(),
@@ -183,7 +175,7 @@ export async function runMorePicksPipeline(
 
   // Parse quiz data with the permissive schema (extra fields like favoriteMovieWhy are fine)
   const parsed = z
-    .union([personFormDataSchema, z.array(personFormDataSchema).min(1)])
+    .union([morePicksPersonFormDataSchema, z.array(morePicksPersonFormDataSchema).min(1)])
     .safeParse(quizData);
   if (!parsed.success) throw new Error('Invalid quiz data in recommendation');
   const allPeopleData: MorePicksPersonFormData[] = Array.isArray(parsed.data)

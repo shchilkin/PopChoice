@@ -54,7 +54,7 @@ export const requestBodySchema = z.union([
     .max(10, 'No more than 10 people allowed'), // Multiple people
 ]);
 
-export const recommendationExperienceModeSchema = z.enum([
+const recommendationExperienceModeSchema = z.enum([
   'curated-showcase',
   'fast-pick',
   'normal-match',
@@ -97,7 +97,7 @@ export const recommendationResponseJsonSchema = {
   additionalProperties: false,
 } as const;
 
-export const candidateSourceSchema = z.enum([
+const candidateSourceSchema = z.enum([
   'curated',
   'local-cache',
   'tmdb-discover',
@@ -106,7 +106,7 @@ export const candidateSourceSchema = z.enum([
   'jit-enriched',
 ]);
 
-export const candidateSourceDistributionSchema = z
+const candidateSourceDistributionSchema = z
   .object({
     curated: z.number().optional(),
     'local-cache': z.number().optional(),
@@ -117,7 +117,7 @@ export const candidateSourceDistributionSchema = z
   })
   .optional();
 
-export const recommendationSourceStrategySchema = z.enum([
+const recommendationSourceStrategySchema = z.enum([
   'curated-showcase',
   'hybrid-fast',
   'memory-aware-local',
@@ -229,11 +229,4 @@ export type EnhancedMovieMatch = {
     availabilityType: 'flatrate' | 'rent' | 'buy' | 'ads' | 'free';
     displayPriority?: number | null;
   }>;
-};
-
-/** Minimal movie match returned from the vector DB RPC. */
-export type MovieMatch = {
-  id: number;
-  content: string;
-  similarity: number;
 };

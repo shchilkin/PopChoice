@@ -7,16 +7,11 @@ export * from './types';
 export * from './schemas';
 
 // Data processing and parsing (client-safe functions only)
-export { cleanMovieName } from './data/cleanMovieName';
-export { convertTextToMovieObjects } from './data/convertTextToMovieObjects';
-export { extractYearFromTitleLine } from './data/extractYearFromTitleLine';
-export { parseMovieNameAndYear } from './data/parseMovieNameAndYear';
 
 // AI and machine learning (client-safe functions)
 // Note: Embedding creation requires server-side API calls
 
 // UI utilities
-export { getPersonColors } from './ui/colors';
 
 // Movie enhancement utilities (client-safe with direct TMDB API calls)
 export * from './movieEnhancement';

@@ -1,1 +1,0 @@
-export { cleanMovieName } from './cleanMovieName';

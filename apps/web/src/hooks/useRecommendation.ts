@@ -8,7 +8,7 @@ import { getCsrfToken } from '@/lib/csrfClient';
 import type { RecommendationWithMovies } from '@/lib/db/recommendations';
 
 /** Stop polling for more-picks after 2 minutes — prevents an infinite spinner when workers are down. */
-export const MORE_PICKS_POLL_TIMEOUT_MS = 2 * 60 * 1000;
+const MORE_PICKS_POLL_TIMEOUT_MS = 2 * 60 * 1000;
 
 export class RecommendationFetchError extends Error {
   constructor(

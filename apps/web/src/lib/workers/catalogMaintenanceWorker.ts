@@ -743,6 +743,8 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
   });
 }
 
+// Imported dynamically by startWorkers.ts.
+// fallow-ignore-next-line unused-export
 export function createCatalogMaintenanceWorker(): CatalogWorker | null {
   const connection = createBullMQConnection();
   if (!connection) {

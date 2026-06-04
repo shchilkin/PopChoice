@@ -21,6 +21,8 @@ import type { RecommendationJobData } from '@/lib/jobQueue';
 
 const MAX_RECOMMENDATION_ATTEMPTS = RECOMMENDATION_JOB_OPTIONS.attempts;
 
+// Imported dynamically by startWorkers.ts.
+// fallow-ignore-next-line unused-export
 export function createRecommendationWorker(): Worker<RecommendationJobData> | null {
   const connection = createBullMQConnection();
   if (!connection) {

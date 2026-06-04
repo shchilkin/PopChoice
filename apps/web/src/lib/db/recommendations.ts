@@ -13,7 +13,6 @@ import {
   getQuizPeopleCount,
   hasFavoriteActorSignal,
 } from '@/features/recommendation/groupResultInsights';
-import logger from '@/lib/logger';
 import { getMovieIdentityKey } from '@/lib/movieIdentity';
 
 import type { RecommendationStage } from '@/features/recommendation/stages';
@@ -1243,14 +1242,6 @@ export async function createRecommendationFeedback({
   } finally {
     client.release();
   }
-}
-
-// ---------------------------------------------------------------------------
-// Logging helper for DB errors
-// ---------------------------------------------------------------------------
-
-export function logDbError(context: string, err: unknown): void {
-  logger.error({ err }, context);
 }
 
 // ---------------------------------------------------------------------------

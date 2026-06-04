@@ -38,7 +38,7 @@ export async function runRecommendationEvals(
   return buildRecommendationEvalReport(results, mode);
 }
 
-export async function getRecommendationEvalFixtureResponse(
+async function getRecommendationEvalFixtureResponse(
   fixture: RecommendationEvalFixture,
   mode: RecommendationEvalRunMode,
 ): Promise<ApiResponse> {
@@ -64,7 +64,7 @@ export async function getRecommendationEvalFixtureResponse(
   });
 }
 
-export async function getCatalogRetrievalCandidateAvailabilityChecks(
+async function getCatalogRetrievalCandidateAvailabilityChecks(
   fixture: RecommendationEvalFixture,
 ): Promise<RecommendationEvalCheck[]> {
   if (!process.env.DATABASE_URL) {

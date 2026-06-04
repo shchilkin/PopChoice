@@ -6,7 +6,7 @@ export * from './colors';
  * No query in the current workload produces a score above this value.
  * Update when re-running `npm run calibrate-similarity` with a new model or larger DB.
  */
-export const SIMILARITY_CEILING = 0.62;
+const SIMILARITY_CEILING = 0.62;
 
 /**
  * Scale a raw cosine similarity score to a 0–100 display percentage.

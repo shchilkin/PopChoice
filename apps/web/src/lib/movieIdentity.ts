@@ -4,7 +4,7 @@ export type MovieIdentityInput = {
   year?: number | string | null;
 };
 
-export function normalizeMovieTitle(title: string): string {
+function normalizeMovieTitle(title: string): string {
   return title
     .toLocaleLowerCase()
     .normalize('NFKD')

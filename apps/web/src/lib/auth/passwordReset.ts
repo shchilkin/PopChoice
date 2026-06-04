@@ -2,7 +2,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 
 import logger from '@/lib/logger';
 
-export const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
+const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 const RESEND_EMAILS_ENDPOINT = 'https://api.resend.com/emails';
 const PASSWORD_RESET_SUBJECT = 'Reset your PopChoice password';
 

@@ -14,6 +14,8 @@ import type { MovieSeedJobData } from '@/lib/jobQueue';
 
 const MAX_MOVIE_SEED_ATTEMPTS = MOVIE_SEED_JOB_OPTIONS.attempts;
 
+// Imported dynamically by startWorkers.ts.
+// fallow-ignore-next-line unused-export
 export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
   const connection = createBullMQConnection();
   if (!connection) {

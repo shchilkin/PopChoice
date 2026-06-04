@@ -10,7 +10,7 @@
     "**/test-results/**",
     ".turbo/**",
   ],
-  "entry": ["apps/web/scripts/coolify-runtime-env.cjs"],
+  "entry": ["apps/web/scripts/coolify-runtime-env.cjs", "docs/index.mdx"],
   "ignoreDependencies": [
     "@opentelemetry/instrumentation",
     "@opentelemetry/semantic-conventions",

@@ -8,7 +8,7 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 // Solid-colour SVG placeholders shaped like movie posters (2:3 ratio).
 // Shown instantly before the TMDB fetch resolves — guarantees the background
 // is never blank, even when the API is unreachable.
-export const FALLBACK_POSTERS: string[] = [
+const FALLBACK_POSTERS: string[] = [
   '#1a1a2e',
   '#16213e',
   '#0f3460',

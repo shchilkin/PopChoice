@@ -64,7 +64,7 @@ const CANDIDATE_SOURCE_STRATEGIES: Record<
   },
 };
 
-export function getCandidateSourceStrategyPolicy(
+function getCandidateSourceStrategyPolicy(
   strategyId: CandidateSourceStrategyId,
 ): CandidateSourceStrategyPolicy {
   return CANDIDATE_SOURCE_STRATEGIES[strategyId];

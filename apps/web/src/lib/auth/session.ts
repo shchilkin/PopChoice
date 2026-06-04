@@ -5,7 +5,7 @@ import logger from '@/lib/logger';
 import type { NextRequest, NextResponse } from 'next/server';
 
 export const SESSION_COOKIE = 'pc_session';
-export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export type SessionPayload = {
   sub: string;
@@ -32,7 +32,7 @@ export function createSessionToken(userId: string): string | null {
   return `${encodedPayload}.${signature}`;
 }
 
-export function verifySessionToken(token: string): SessionPayload | null {
+function verifySessionToken(token: string): SessionPayload | null {
   const secret = getSessionSecret();
   if (!secret) {
     return null;
