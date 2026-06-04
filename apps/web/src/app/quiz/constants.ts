@@ -25,6 +25,18 @@ import { palette } from '@/styles/designTokens';
 
 import type { FastAvoid, FastDiscovery, FastIntent, PersonAnswers, Tone } from './types';
 
+export const STEP_KEYS = [
+  'favoriteMovie',
+  'era',
+  'mood',
+  'tone',
+  'avoids',
+  'favoriteActor',
+] as const;
+export type StepKey = (typeof STEP_KEYS)[number];
+export const FAST_STEP_KEYS = ['intent', 'avoids', 'discovery'] as const;
+export type FastStepKey = (typeof FAST_STEP_KEYS)[number];
+
 export const GENRES = [
   { id: 'action', label: 'Action', icon: Zap, color: palette.amber },
   { id: 'comedy', label: 'Comedy', icon: Smile, color: palette.gold },
@@ -141,15 +153,6 @@ const FAST_DISCOVERY_API_LABELS: Record<FastDiscovery, string> = {
   balanced: 'Balanced discovery',
   surprise: 'Surprise me',
 };
-
-export const QUESTION_LABELS = [
-  'Reference point',
-  'Search lane',
-  "Tonight's vibe",
-  'Energy level',
-  'Hard avoids',
-  'Optional actor',
-];
 
 function getAvoidLabels(person: PersonAnswers) {
   return person.fastAvoids.map((avoid) => FAST_AVOID_API_LABELS[avoid]);
