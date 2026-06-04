@@ -38,6 +38,12 @@
     "populate-db": "npm run dev --workspace=services/movie-seed",
     "prepare": "husky || true",
     "quality:backoffice": "npm run quality:structure --workspace=apps/backoffice",
+    "quality:fallow": "fallow",
+    "quality:fallow:audit": "fallow audit",
+    "quality:fallow:dead-code": "fallow dead-code",
+    "quality:fallow:dupes": "fallow dupes",
+    "quality:fallow:health": "fallow health",
+    "quality:fallow:workspaces": "fallow workspaces",
     "setup:local-db": "bash scripts/setup-local-db.sh",
     "start:storybook": "npm run start:storybook --workspace=apps/web",
     "storybook": "npm run storybook --workspace=apps/web",
@@ -56,6 +62,7 @@
     "type-check:docs": "npm run type-check --workspace=apps/docs"
   },
   "devDependencies": {
+    "fallow": "2.88.2",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.7",
     "prettier": "3.8.3",

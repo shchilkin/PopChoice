@@ -29,6 +29,7 @@ This is a solo project for the **Embeddings and Vector Databases** chapter from 
 - **Validation:** Zod
 - **Logging:** Pino
 - **Testing:** Vitest, Storybook 10, Playwright, MSW (Mock Service Worker)
+- **Code Quality:** ESLint, Prettier, Fallow, CodeQL, dependency review
 - **Development:** ESLint, Prettier, Husky, lint-staged
 
 ## 🚀 Quick Start
@@ -185,6 +186,17 @@ npm run eval:recommendations -- --live
 ```
 
 Live runs require configured provider/database environment variables and are intended for manual checks before larger recommendation changes.
+
+### Static code quality
+
+Fallow provides advisory unused-code, duplication, complexity, and PR audit checks:
+
+```bash
+npm run quality:fallow:audit -- --changed-since origin/development
+npm run quality:fallow:health -- --workspace @pop-choice/web --summary
+```
+
+See [Code Quality Checks](docs/QUALITY.md) for adoption notes and current baseline context.
 
 ### Optional — Bull Board queue dashboard
 
