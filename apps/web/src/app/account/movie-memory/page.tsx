@@ -51,6 +51,8 @@ type CandidateState =
   | { status: 'loaded'; movies: MovieMemoryCandidate[]; reviewed: number; total: number }
   | { status: 'error' };
 
+type LoadedCandidateState = Extract<CandidateState, { status: 'loaded' }>;
+
 type ActionState =
   | { status: 'idle' }
   | { status: 'saving'; movieId: number; kind: UserMovieInteractionKind }
@@ -82,13 +84,227 @@ type PosterLookupResult = {
   localizedOverview?: string | null;
 };
 
+type MergedPosterFields = Pick<
+  MovieMemoryCandidate,
+  'posterURL' | 'localizedName' | 'localizedOverview'
+>;
+
+type MovieMemoryLabels = ReturnType<typeof useLanguage>['t']['account'];
+
+type CandidateRemovalEvent = 'missing' | 'empty' | 'removed';
+
+type MovieMemoryDeckView = 'loading' | 'error' | 'completion' | 'deck';
+
+type MovieMemoryDeckStateProps = {
+  action: ActionState;
+  candidates: CandidateState;
+  deckExit: { movieId: number; action: DeckExitAction } | null;
+  deckSessionStats: DeckSessionStats;
+  isSubmittingAnswer: boolean;
+  labels: MovieMemoryLabels;
+  locale: string;
+  onAnswerDeckMovie: (movieId: number, kind: UserMovieInteractionKind) => void;
+  onLoadCandidates: () => void;
+  onOpenManualSearch: () => void;
+  onSkipActiveDeckMovie: (movieId: number) => void;
+};
+
 const MOVIE_MEMORY_FETCH_TIMEOUT_MS = 10000;
 const ANSWER_EXIT_MS = 280;
 const EMPTY_DECK_STATS: DeckSessionStats = { watched: 0, notSeen: 0, unsure: 0 };
+const MOVIE_MEMORY_DECK_VIEW_BY_STATUS = {
+  idle: 'completion',
+  loading: 'loading',
+  error: 'error',
+} satisfies Record<Exclude<CandidateState['status'], 'loaded'>, MovieMemoryDeckView>;
 
 function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+}
+
+function preferExistingMetadata(
+  current: string | null | undefined,
+  fallback: string | null | undefined,
+): string | null {
+  return current ?? fallback ?? null;
+}
+
+function getMergedPosterFields(
+  movie: MovieMemoryCandidate,
+  result: PosterLookupResult,
+): MergedPosterFields {
+  return {
+    posterURL: preferExistingMetadata(movie.posterURL, result.posterURL),
+    localizedName: preferExistingMetadata(movie.localizedName, result.localizedName),
+    localizedOverview: preferExistingMetadata(movie.localizedOverview, result.localizedOverview),
+  };
+}
+
+function hasMatchingPosterFields(movie: MovieMemoryCandidate, fields: MergedPosterFields): boolean {
+  return [
+    fields.posterURL === movie.posterURL,
+    fields.localizedName === movie.localizedName,
+    fields.localizedOverview === movie.localizedOverview,
+  ].every(Boolean);
+}
+
+function mergePosterLookupMovie(
+  movie: MovieMemoryCandidate,
+  result: PosterLookupResult | undefined,
+): { movie: MovieMemoryCandidate; changed: boolean } {
+  if (!result) return { movie, changed: false };
+
+  const fields = getMergedPosterFields(movie, result);
+  return hasMatchingPosterFields(movie, fields)
+    ? { movie, changed: false }
+    : { movie: { ...movie, ...fields }, changed: true };
+}
+
+function mergePosterLookupResults(
+  current: CandidateState,
+  resultsByMovieId: Map<number, PosterLookupResult>,
+): CandidateState;
+function mergePosterLookupResults(
+  current: CatalogSearchState,
+  resultsByMovieId: Map<number, PosterLookupResult>,
+): CatalogSearchState;
+function mergePosterLookupResults(
+  current: CandidateState | CatalogSearchState,
+  resultsByMovieId: Map<number, PosterLookupResult>,
+): CandidateState | CatalogSearchState {
+  if (current.status !== 'loaded') return current;
+
+  const mergedMovies = current.movies.map((movie) =>
+    mergePosterLookupMovie(movie, resultsByMovieId.get(movie.id)),
+  );
+  const changed = mergedMovies.some((result) => result.changed);
+  return changed ? { ...current, movies: mergedMovies.map((result) => result.movie) } : current;
+}
+
+function getCandidateRemoval(current: LoadedCandidateState, movieId: number) {
+  const movies = current.movies.filter((movie) => movie.id !== movieId);
+  return {
+    movies,
+    isEmpty: movies.length === 0,
+    isMissing: movies.length === current.movies.length,
+  };
+}
+
+function getCandidateRemovalEvent(removal: {
+  isEmpty: boolean;
+  isMissing: boolean;
+}): CandidateRemovalEvent {
+  if (removal.isMissing) return 'missing';
+  return removal.isEmpty ? 'empty' : 'removed';
+}
+
+function notifyCandidateRemoval(
+  removal: { isEmpty: boolean; isMissing: boolean },
+  callbacks: { onEmpty?: () => void; onMissing?: () => void },
+) {
+  const callbackByEvent: Record<CandidateRemovalEvent, (() => void) | undefined> = {
+    missing: callbacks.onMissing,
+    empty: callbacks.onEmpty,
+    removed: undefined,
+  };
+  callbackByEvent[getCandidateRemovalEvent(removal)]?.();
+}
+
+function removeMovieFromCandidates(
+  current: CandidateState,
+  movieId: number,
+  callbacks: { onEmpty?: () => void; onMissing?: () => void } = {},
+): CandidateState {
+  if (current.status !== 'loaded') return current;
+
+  const removal = getCandidateRemoval(current, movieId);
+  notifyCandidateRemoval(removal, callbacks);
+  if (removal.isMissing) {
+    return current;
+  }
+
+  return {
+    ...current,
+    movies: removal.movies,
+    reviewed: current.reviewed + 1,
+  };
+}
+
+function removeMovieFromCatalogSearch(
+  current: CatalogSearchState,
+  movieId: number,
+): CatalogSearchState {
+  return current.status === 'loaded'
+    ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
+    : current;
+}
+
+function shouldRequestPosterLookup(
+  movie: MovieMemoryCandidate,
+  locale: string,
+  requestedMoviePosters: Set<number>,
+): boolean {
+  const needsLocalizedName = locale !== 'en' && !movie.localizedName;
+  return (!movie.posterURL || needsLocalizedName) && !requestedMoviePosters.has(movie.id);
+}
+
+function addMissingPosterCandidates(
+  movies: MovieMemoryCandidate[],
+  locale: string,
+  requestedMoviePosters: Set<number>,
+  missingPosters: Map<number, MovieMemoryCandidate>,
+) {
+  for (const movie of movies) {
+    if (shouldRequestPosterLookup(movie, locale, requestedMoviePosters)) {
+      missingPosters.set(movie.id, movie);
+    }
+  }
+}
+
+function collectMissingPosterCandidates(
+  candidates: CandidateState,
+  catalogSearch: CatalogSearchState,
+  locale: string,
+  requestedMoviePosters: Set<number>,
+): Map<number, MovieMemoryCandidate> {
+  const missingPosters = new Map<number, MovieMemoryCandidate>();
+  if (candidates.status === 'loaded') {
+    addMissingPosterCandidates(candidates.movies, locale, requestedMoviePosters, missingPosters);
+  }
+  if (catalogSearch.status === 'loaded') {
+    addMissingPosterCandidates(catalogSearch.movies, locale, requestedMoviePosters, missingPosters);
+  }
+  return missingPosters;
+}
+
+async function fetchPosterLookupResults(
+  locale: string,
+  movies: MovieMemoryCandidate[],
+): Promise<Map<number, PosterLookupResult>> {
+  const response = await fetch('/api/movie-posters', {
+    method: 'POST',
+    cache: 'no-store',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      locale,
+      movies: movies.map((movie) => ({
+        id: movie.id,
+        name: movie.movieName,
+        year: movie.movieYear ?? undefined,
+        tmdbId: movie.tmdbId ?? undefined,
+      })),
+    }),
+  });
+
+  if (!response.ok) return new Map();
+
+  const data = (await response.json()) as { results?: PosterLookupResult[] };
+  const results = Array.isArray(data.results) ? data.results : [];
+  return new Map(results.map((result) => [result.id, result]));
 }
 
 export default function MovieMemoryPage() {
@@ -226,30 +442,12 @@ export default function MovieMemoryPage() {
   );
 
   useEffect(() => {
-    const missingPosters = new Map<number, MovieMemoryCandidate>();
-    if (candidates.status === 'loaded') {
-      for (const movie of candidates.movies) {
-        const needsLocalizedName = locale !== 'en' && !movie.localizedName;
-        if (
-          (!movie.posterURL || needsLocalizedName) &&
-          !requestedMoviePosters.current.has(movie.id)
-        ) {
-          missingPosters.set(movie.id, movie);
-        }
-      }
-    }
-
-    if (catalogSearch.status === 'loaded') {
-      for (const movie of catalogSearch.movies) {
-        const needsLocalizedName = locale !== 'en' && !movie.localizedName;
-        if (
-          (!movie.posterURL || needsLocalizedName) &&
-          !requestedMoviePosters.current.has(movie.id)
-        ) {
-          missingPosters.set(movie.id, movie);
-        }
-      }
-    }
+    const missingPosters = collectMissingPosterCandidates(
+      candidates,
+      catalogSearch,
+      locale,
+      requestedMoviePosters.current,
+    );
 
     if (missingPosters.size === 0) return;
 
@@ -261,84 +459,14 @@ export default function MovieMemoryPage() {
 
     async function loadMissingPosters() {
       try {
-        const response = await fetch('/api/movie-posters', {
-          method: 'POST',
-          cache: 'no-store',
-          credentials: 'same-origin',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            locale,
-            movies: Array.from(missingPosters.values()).map((movie) => ({
-              id: movie.id,
-              name: movie.movieName,
-              year: movie.movieYear ?? undefined,
-              tmdbId: movie.tmdbId ?? undefined,
-            })),
-          }),
-        });
-
-        if (!response.ok) return;
-
-        const data = (await response.json()) as { results?: PosterLookupResult[] };
-        const resultsByMovieId = new Map(
-          (Array.isArray(data.results) ? data.results : []).map((result) => [result.id, result]),
+        const resultsByMovieId = await fetchPosterLookupResults(
+          locale,
+          Array.from(missingPosters.values()),
         );
-
         if (cancelled || resultsByMovieId.size === 0) return;
 
-        setCandidates((current) => {
-          if (current.status !== 'loaded') return current;
-
-          let changed = false;
-          const movies = current.movies.map((movie) => {
-            const result = resultsByMovieId.get(movie.id);
-            if (!result) return movie;
-
-            const posterURL = movie.posterURL ?? result.posterURL;
-            const localizedName = movie.localizedName ?? result.localizedName ?? null;
-            const localizedOverview = movie.localizedOverview ?? result.localizedOverview ?? null;
-            if (
-              posterURL === movie.posterURL &&
-              localizedName === movie.localizedName &&
-              localizedOverview === movie.localizedOverview
-            ) {
-              return movie;
-            }
-
-            changed = true;
-            return { ...movie, posterURL, localizedName, localizedOverview };
-          });
-
-          return changed ? { ...current, movies } : current;
-        });
-
-        setCatalogSearch((current) => {
-          if (current.status !== 'loaded') return current;
-
-          let changed = false;
-          const movies = current.movies.map((movie) => {
-            const result = resultsByMovieId.get(movie.id);
-            if (!result) return movie;
-
-            const posterURL = movie.posterURL ?? result.posterURL;
-            const localizedName = movie.localizedName ?? result.localizedName ?? null;
-            const localizedOverview = movie.localizedOverview ?? result.localizedOverview ?? null;
-            if (
-              posterURL === movie.posterURL &&
-              localizedName === movie.localizedName &&
-              localizedOverview === movie.localizedOverview
-            ) {
-              return movie;
-            }
-
-            changed = true;
-            return { ...movie, posterURL, localizedName, localizedOverview };
-          });
-
-          return changed ? { ...current, movies } : current;
-        });
+        setCandidates((current) => mergePosterLookupResults(current, resultsByMovieId));
+        setCatalogSearch((current) => mergePosterLookupResults(current, resultsByMovieId));
       } catch {
         // Missing posters should not block the movie-memory trainer.
       }
@@ -360,33 +488,18 @@ export default function MovieMemoryPage() {
         { movieId, kind },
       ];
       setAction({ status: 'idle' });
-      setCandidates((current) => {
-        if (current.status !== 'loaded') return current;
-        const hasMovie = current.movies.some((movie) => movie.id === movieId);
-        if (!hasMovie) {
-          handledDeckMovieIds.current.delete(movieId);
-          pendingDeckItems.current = pendingDeckItems.current.filter(
-            (item) => item.movieId !== movieId,
-          );
-          return current;
-        }
-
-        const remainingMovies = current.movies.filter((movie) => movie.id !== movieId);
-        if (remainingMovies.length === 0) {
-          queueMicrotask(() => void flushPendingDeckItems());
-        }
-
-        return {
-          ...current,
-          movies: remainingMovies,
-          reviewed: current.reviewed + 1,
-        };
-      });
-      setCatalogSearch((current) =>
-        current.status === 'loaded'
-          ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
-          : current,
+      setCandidates((current) =>
+        removeMovieFromCandidates(current, movieId, {
+          onEmpty: () => queueMicrotask(() => void flushPendingDeckItems()),
+          onMissing: () => {
+            handledDeckMovieIds.current.delete(movieId);
+            pendingDeckItems.current = pendingDeckItems.current.filter(
+              (item) => item.movieId !== movieId,
+            );
+          },
+        }),
       );
+      setCatalogSearch((current) => removeMovieFromCatalogSearch(current, movieId));
     },
     [flushPendingDeckItems],
   );
@@ -395,25 +508,12 @@ export default function MovieMemoryPage() {
     if (handledDeckMovieIds.current.has(movieId)) return;
     handledDeckMovieIds.current.add(movieId);
     setAction({ status: 'idle' });
-    setCandidates((current) => {
-      if (current.status !== 'loaded') return current;
-      const hasMovie = current.movies.some((movie) => movie.id === movieId);
-      if (!hasMovie) {
-        handledDeckMovieIds.current.delete(movieId);
-        return current;
-      }
-
-      return {
-        ...current,
-        movies: current.movies.filter((movie) => movie.id !== movieId),
-        reviewed: current.reviewed + 1,
-      };
-    });
-    setCatalogSearch((current) =>
-      current.status === 'loaded'
-        ? { ...current, movies: current.movies.filter((movie) => movie.id !== movieId) }
-        : current,
+    setCandidates((current) =>
+      removeMovieFromCandidates(current, movieId, {
+        onMissing: () => handledDeckMovieIds.current.delete(movieId),
+      }),
     );
+    setCatalogSearch((current) => removeMovieFromCatalogSearch(current, movieId));
   }, []);
 
   const startDeckExit = useCallback(
@@ -612,7 +712,69 @@ export default function MovieMemoryPage() {
     );
   }
 
-  const activeMovie = candidates.status === 'loaded' ? candidates.movies[0] : null;
+  return (
+    <AuthenticatedMovieMemoryContent
+      action={action}
+      candidates={candidates}
+      catalogQuery={catalogQuery}
+      catalogSearch={catalogSearch}
+      deckExit={deckExit}
+      deckSessionStats={deckSessionStats}
+      isManualSearchOpen={isManualSearchOpen}
+      isSubmittingAnswer={isSubmittingAnswer}
+      labels={a}
+      locale={locale}
+      onAnswerDeckMovie={answerDeckMovie}
+      onCatalogQueryChange={setCatalogQuery}
+      onCatalogSearch={handleCatalogSearch}
+      onLoadCandidates={loadCandidates}
+      onOpenManualSearch={() => setIsManualSearchOpen(true)}
+      onSaveMovieMemory={saveMovieMemory}
+      onSkipActiveDeckMovie={skipActiveDeckMovie}
+      onToggleManualSearch={() => setIsManualSearchOpen((current) => !current)}
+    />
+  );
+}
+
+function AuthenticatedMovieMemoryContent({
+  action,
+  candidates,
+  catalogQuery,
+  catalogSearch,
+  deckExit,
+  deckSessionStats,
+  isManualSearchOpen,
+  isSubmittingAnswer,
+  labels,
+  locale,
+  onAnswerDeckMovie,
+  onCatalogQueryChange,
+  onCatalogSearch,
+  onLoadCandidates,
+  onOpenManualSearch,
+  onSaveMovieMemory,
+  onSkipActiveDeckMovie,
+  onToggleManualSearch,
+}: {
+  action: ActionState;
+  candidates: CandidateState;
+  catalogQuery: string;
+  catalogSearch: CatalogSearchState;
+  deckExit: { movieId: number; action: DeckExitAction } | null;
+  deckSessionStats: DeckSessionStats;
+  isManualSearchOpen: boolean;
+  isSubmittingAnswer: boolean;
+  labels: MovieMemoryLabels;
+  locale: string;
+  onAnswerDeckMovie: (movieId: number, kind: UserMovieInteractionKind) => void;
+  onCatalogQueryChange: (query: string) => void;
+  onCatalogSearch: (event: FormEvent<HTMLFormElement>) => void;
+  onLoadCandidates: () => void;
+  onOpenManualSearch: () => void;
+  onSaveMovieMemory: (movieId: number, kind: UserMovieInteractionKind) => void;
+  onSkipActiveDeckMovie: (movieId: number) => void;
+  onToggleManualSearch: () => void;
+}) {
   const shouldShowManualSearch =
     isManualSearchOpen || (candidates.status === 'loaded' && candidates.total === 0);
 
@@ -623,113 +785,211 @@ export default function MovieMemoryPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mx-auto max-w-5xl"
       >
-        <Link
-          href="/account"
-          className="mb-5 inline-flex items-center gap-2 text-sm font-semibold"
-          style={{ color: 'var(--pc-t2)' }}
-        >
-          <ArrowLeft size={16} />
-          {a.backToAccount}
-        </Link>
-
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div
-              className="mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]"
-              style={{
-                background: 'var(--pc-gold-subtle)',
-                border: '1px solid var(--pc-gold-bd)',
-                color: 'var(--pc-gold-text)',
-              }}
-            >
-              <Sparkles size={14} />
-              {a.memoryTrainerBadge}
-            </div>
-            <h1
-              className="uppercase"
-              style={{
-                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-                fontSize: 'clamp(1.9rem, 4vw, 3rem)',
-                fontWeight: 600,
-                lineHeight: 1,
-                color: 'var(--pc-t1)',
-              }}
-            >
-              {a.memoryTrainerTitle}
-            </h1>
-          </div>
-          <p className="max-w-xl text-sm sm:text-right" style={{ color: 'var(--pc-t2)' }}>
-            {a.memoryTrainerBody}
-          </p>
-        </div>
-
-        <section className="mx-auto max-w-4xl">
-          {candidates.status === 'loading' ? (
-            <LoadingState label={a.loading} compact />
-          ) : candidates.status === 'error' ? (
-            <ErrorPanel
-              message={a.candidateLoadError}
-              retryLabel={a.candidateRetry}
-              onRetry={loadCandidates}
-            />
-          ) : activeMovie ? (
-            <MovieTrainingCard
-              movie={activeMovie}
-              locale={locale}
-              labels={a}
-              exitAction={deckExit?.movieId === activeMovie.id ? deckExit.action : null}
-              counter={a.memoryDeckCounter
-                .replace('{current}', String(candidates.reviewed + 1))
-                .replace('{total}', String(candidates.total))}
-              progressPercent={((candidates.reviewed + 1) / Math.max(candidates.total, 1)) * 100}
-              action={action}
-              isSubmitting={isSubmittingAnswer}
-              onSave={answerDeckMovie}
-              onSkip={skipActiveDeckMovie}
-            />
-          ) : (
-            <CompletionPanel
-              labels={a}
-              onLoadMore={loadCandidates}
-              onOpenManualSearch={() => setIsManualSearchOpen(true)}
-              stats={deckSessionStats}
-              variant={
-                candidates.status === 'loaded' && candidates.total === 0 ? 'empty' : 'complete'
-              }
-            />
-          )}
-
-          {action.status === 'error' ? (
-            <div
-              className="mt-4 flex items-start gap-3 rounded-2xl p-4 text-sm"
-              style={{
-                background: `${palette.red}14`,
-                border: `1px solid ${palette.red}35`,
-                color: 'var(--pc-t2)',
-              }}
-            >
-              <AlertCircle size={18} style={{ color: palette.red }} />
-              <span>{a.candidateLoadError}</span>
-            </div>
-          ) : null}
-        </section>
-
+        <MovieMemoryHeader labels={labels} />
+        <MovieMemoryTrainingSection
+          action={action}
+          candidates={candidates}
+          deckExit={deckExit}
+          deckSessionStats={deckSessionStats}
+          isSubmittingAnswer={isSubmittingAnswer}
+          labels={labels}
+          locale={locale}
+          onAnswerDeckMovie={onAnswerDeckMovie}
+          onLoadCandidates={onLoadCandidates}
+          onOpenManualSearch={onOpenManualSearch}
+          onSkipActiveDeckMovie={onSkipActiveDeckMovie}
+        />
         {shouldShowManualSearch ? (
           <ManualSearchPanel
             query={catalogQuery}
             search={catalogSearch}
-            labels={a}
+            labels={labels}
             locale={locale}
             action={action}
             isOpen={isManualSearchOpen}
-            onToggle={() => setIsManualSearchOpen((current) => !current)}
-            onQueryChange={setCatalogQuery}
-            onSearch={handleCatalogSearch}
-            onSave={saveMovieMemory}
+            onToggle={onToggleManualSearch}
+            onQueryChange={onCatalogQueryChange}
+            onSearch={onCatalogSearch}
+            onSave={onSaveMovieMemory}
           />
         ) : null}
       </motion.section>
     </MovieMemoryShell>
+  );
+}
+
+function MovieMemoryHeader({ labels }: { labels: MovieMemoryLabels }) {
+  return (
+    <>
+      <Link
+        href="/account"
+        className="mb-5 inline-flex items-center gap-2 text-sm font-semibold"
+        style={{ color: 'var(--pc-t2)' }}
+      >
+        <ArrowLeft size={16} />
+        {labels.backToAccount}
+      </Link>
+
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div
+            className="mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em]"
+            style={{
+              background: 'var(--pc-gold-subtle)',
+              border: '1px solid var(--pc-gold-bd)',
+              color: 'var(--pc-gold-text)',
+            }}
+          >
+            <Sparkles size={14} />
+            {labels.memoryTrainerBadge}
+          </div>
+          <h1
+            className="uppercase"
+            style={{
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontSize: 'clamp(1.9rem, 4vw, 3rem)',
+              fontWeight: 600,
+              lineHeight: 1,
+              color: 'var(--pc-t1)',
+            }}
+          >
+            {labels.memoryTrainerTitle}
+          </h1>
+        </div>
+        <p className="max-w-xl text-sm sm:text-right" style={{ color: 'var(--pc-t2)' }}>
+          {labels.memoryTrainerBody}
+        </p>
+      </div>
+    </>
+  );
+}
+
+function MovieMemoryTrainingSection(props: MovieMemoryDeckStateProps) {
+  return (
+    <section className="mx-auto max-w-4xl">
+      <MovieMemoryDeckState {...props} />
+      {props.action.status === 'error' ? (
+        <MovieMemoryActionError message={props.labels.candidateLoadError} />
+      ) : null}
+    </section>
+  );
+}
+
+function getMovieMemoryDeckView(candidates: CandidateState): MovieMemoryDeckView {
+  if (candidates.status !== 'loaded') return MOVIE_MEMORY_DECK_VIEW_BY_STATUS[candidates.status];
+  return candidates.movies.length === 0 ? 'completion' : 'deck';
+}
+
+function getCompletionPanelVariant(candidates: CandidateState): 'empty' | 'complete' {
+  return candidates.status === 'loaded' && candidates.total === 0 ? 'empty' : 'complete';
+}
+
+function MovieMemoryDeckState({
+  action,
+  candidates,
+  deckExit,
+  deckSessionStats,
+  isSubmittingAnswer,
+  labels,
+  locale,
+  onAnswerDeckMovie,
+  onLoadCandidates,
+  onOpenManualSearch,
+  onSkipActiveDeckMovie,
+}: MovieMemoryDeckStateProps) {
+  const view = getMovieMemoryDeckView(candidates);
+  if (view === 'loading') return <LoadingState label={labels.loading} compact />;
+  if (view === 'error') {
+    return (
+      <ErrorPanel
+        message={labels.candidateLoadError}
+        retryLabel={labels.candidateRetry}
+        onRetry={onLoadCandidates}
+      />
+    );
+  }
+
+  if (view === 'completion') {
+    return (
+      <CompletionPanel
+        labels={labels}
+        onLoadMore={onLoadCandidates}
+        onOpenManualSearch={onOpenManualSearch}
+        stats={deckSessionStats}
+        variant={getCompletionPanelVariant(candidates)}
+      />
+    );
+  }
+
+  return (
+    <LoadedMovieMemoryDeckState
+      action={action}
+      candidates={candidates as LoadedCandidateState}
+      deckExit={deckExit}
+      isSubmittingAnswer={isSubmittingAnswer}
+      labels={labels}
+      locale={locale}
+      onAnswerDeckMovie={onAnswerDeckMovie}
+      onSkipActiveDeckMovie={onSkipActiveDeckMovie}
+    />
+  );
+}
+
+function getDeckExitAction(
+  deckExit: { movieId: number; action: DeckExitAction } | null,
+  movieId: number,
+): DeckExitAction | null {
+  return deckExit?.movieId === movieId ? deckExit.action : null;
+}
+
+function LoadedMovieMemoryDeckState({
+  action,
+  candidates,
+  deckExit,
+  isSubmittingAnswer,
+  labels,
+  locale,
+  onAnswerDeckMovie,
+  onSkipActiveDeckMovie,
+}: Omit<
+  MovieMemoryDeckStateProps,
+  'candidates' | 'deckSessionStats' | 'onLoadCandidates' | 'onOpenManualSearch'
+> & {
+  candidates: LoadedCandidateState;
+}) {
+  const activeMovie = candidates.movies[0];
+
+  return (
+    <MovieTrainingCard
+      movie={activeMovie}
+      locale={locale}
+      labels={labels}
+      exitAction={getDeckExitAction(deckExit, activeMovie.id)}
+      counter={labels.memoryDeckCounter
+        .replace('{current}', String(candidates.reviewed + 1))
+        .replace('{total}', String(candidates.total))}
+      progressPercent={((candidates.reviewed + 1) / Math.max(candidates.total, 1)) * 100}
+      action={action}
+      isSubmitting={isSubmittingAnswer}
+      onSave={onAnswerDeckMovie}
+      onSkip={onSkipActiveDeckMovie}
+    />
+  );
+}
+
+function MovieMemoryActionError({ message }: { message: string }) {
+  return (
+    <div
+      className="mt-4 flex items-start gap-3 rounded-2xl p-4 text-sm"
+      style={{
+        background: `${palette.red}14`,
+        border: `1px solid ${palette.red}35`,
+        color: 'var(--pc-t2)',
+      }}
+    >
+      <AlertCircle size={18} style={{ color: palette.red }} />
+      <span>{message}</span>
+    </div>
   );
 }
 
