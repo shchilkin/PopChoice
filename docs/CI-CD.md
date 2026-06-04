@@ -24,6 +24,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------- |
 | `pr.yml`                             | `changes`                        | Classifies PR as docs-only vs code-changing                                     |
 | `pr.yml`                             | `lint`                           | ESLint code quality + Prettier formatting                                       |
+| `pr.yml`                             | `fallow-audit`                   | Advisory new-only Fallow audit for changed TypeScript/JavaScript quality risks  |
 | `pr.yml`                             | `type-check`                     | TypeScript type safety (`tsc --noEmit`)                                         |
 | `pr.yml`                             | `server-tests`                   | Vitest server tests with coverage collection and artifact upload                |
 | `pr.yml`                             | `recommendation-evals`           | Deterministic recommendation quality fixtures and scoring                       |
@@ -76,6 +77,13 @@ Agents and reviewers should explicitly consider these layers when a PR changes r
 ### Code Coverage
 
 Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (HTML, JSON, LCOV) are uploaded as a GitHub Actions artifact named `coverage-report` and retained for 30 days. Coverage is configured in `vitest.config.ts`.
+
+### Fallow Code Quality Audit
+
+The `fallow-audit` PR job runs `npm run quality:fallow:audit -- --changed-since origin/development --format compact`.
+It is intentionally advisory during the first rollout (`continue-on-error: true`) and is not included in the required
+`PR Validation` aggregate yet. This lets reviewers see newly introduced unused-code, duplication, and complexity
+findings while the project tunes false positives and turns high-confidence baseline findings into focused cleanup work.
 
 ### Google Fonts Build Reliability
 
