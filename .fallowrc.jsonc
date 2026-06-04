@@ -9,6 +9,13 @@
     "**/test-results/**",
     ".turbo/**",
   ],
+  "entry": ["apps/web/scripts/coolify-runtime-env.cjs"],
+  "ignoreDependencies": [
+    "@opentelemetry/instrumentation",
+    "@opentelemetry/semantic-conventions",
+    "@pop-choice/shared",
+    "pino-pretty",
+  ],
   "duplicates": {
     "mode": "mild",
     "minTokens": 50,
