@@ -113,7 +113,7 @@ A separate monitoring UI is available in `apps/bull-board/`. It provides a web i
 
 ```bash
 # From repo root
-npx --prefix apps/bull-board tsx --env-file=.env apps/bull-board/src/index.ts
+npm run bull-board
 ```
 
 Bull Board is an operator surface. Local development can run without operator
@@ -126,10 +126,9 @@ OPERATOR_AUTH_PASSWORD=...
 OPERATOR_AUTH_REALM=PopChoice Operators
 ```
 
-The Coolify/GHCR Bull Board image compiles the app-local
-`apps/web/scripts/bull-board.ts` entrypoint during the image build and starts it
-with plain `node`, so production does not rely on `tsx` to execute TypeScript at
-runtime.
+The Coolify/GHCR Bull Board image compiles the dedicated `apps/bull-board`
+entrypoint during the image build and starts it with plain `node`, so production
+does not rely on `tsx` to execute TypeScript at runtime.
 
 The Coolify service uses `/healthz` for unauthenticated container health checks;
 all Bull Board UI routes are behind the operator login when credentials are set.

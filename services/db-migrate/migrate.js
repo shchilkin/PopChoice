@@ -16,6 +16,8 @@ const __dirname = path.dirname(__filename);
 // Dockerfile copies db/init/ to /app/db/init — two levels above this script.
 const migrationsDir = path.resolve(__dirname, '../../db/init');
 
+// One-shot deployment wrapper; extracted helpers would add little clarity.
+// fallow-ignore-next-line complexity
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {

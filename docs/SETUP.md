@@ -199,7 +199,6 @@ npm run start:workers
 Optional queue monitoring dashboard:
 
 ```bash
-cd apps/web
 npm run bull-board
 ```
 

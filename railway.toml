@@ -8,7 +8,7 @@
 #
 # Services deployed on Railway and their Dockerfiles:
 #   • Web App           — apps/web/Dockerfile
-#   • Bull Dashboard    — apps/web/bull-board.Dockerfile
+#   • Bull Dashboard    — apps/bull-board/Dockerfile
 #   • movie-seed worker — apps/web/workers.Dockerfile
 #   • Storybook         — apps/web/storybook.Dockerfile
 #   • movie-discovery   — services/movie-discovery/Dockerfile

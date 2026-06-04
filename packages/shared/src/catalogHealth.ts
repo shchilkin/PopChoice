@@ -75,6 +75,93 @@ interface SummaryRow {
   missing_keyword_metadata: number;
 }
 
+type SummaryMetricKey = keyof SummaryRow;
+
+const SUMMARY_METRIC_KEYS: SummaryMetricKey[] = [
+  'total_movies',
+  'missing_poster_url',
+  'missing_localized_name',
+  'missing_tmdb_id',
+  'missing_runtime',
+  'missing_age_rating',
+  'missing_tmdb_matched_at',
+  'stale_tmdb_metadata',
+  'missing_original_language',
+  'missing_vote_count',
+  'missing_popularity',
+  'low_metadata_quality',
+  'missing_watch_provider_us',
+  'missing_watch_provider_fi',
+  'missing_watch_provider_ru',
+  'missing_cast_metadata',
+  'missing_director_metadata',
+  'missing_genre_metadata',
+  'missing_keyword_metadata',
+];
+
+const SUMMARY_SQL = `SELECT
+    COUNT(*)::int AS total_movies,
+    COUNT(*) FILTER (WHERE poster_url IS NULL OR btrim(poster_url) = '')::int AS missing_poster_url,
+    COUNT(*) FILTER (WHERE localized_name IS NULL OR btrim(localized_name) = '')::int AS missing_localized_name,
+    COUNT(*) FILTER (WHERE tmdb_id IS NULL)::int AS missing_tmdb_id,
+    COUNT(*) FILTER (WHERE duration <= 0)::int AS missing_runtime,
+    COUNT(*) FILTER (WHERE age_rating IS NULL OR btrim(age_rating) = '')::int AS missing_age_rating,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND tmdb_matched_at IS NULL)::int AS missing_tmdb_matched_at,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND (
+          tmdb_metadata_refreshed_at IS NULL
+          OR tmdb_metadata_refreshed_at < now() - ($1::int * interval '1 day')
+        )
+    )::int AS stale_tmdb_metadata,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (original_language IS NULL OR btrim(original_language) = ''))::int AS missing_original_language,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (vote_count IS NULL OR vote_count <= 0))::int AS missing_vote_count,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (popularity IS NULL OR popularity <= 0))::int AS missing_popularity,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND metadata_quality_score < 70)::int AS low_metadata_quality,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'US'
+        )
+    )::int AS missing_watch_provider_us,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'FI'
+        )
+    )::int AS missing_watch_provider_fi,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'RU'
+        )
+    )::int AS missing_watch_provider_ru,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'cast'
+        )
+    )::int AS missing_cast_metadata,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'director'
+        )
+    )::int AS missing_director_metadata,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_genres WHERE movie_genres.movie_id = movies.id
+        )
+    )::int AS missing_genre_metadata,
+    COUNT(*) FILTER (
+      WHERE tmdb_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM movie_keywords WHERE movie_keywords.movie_id = movies.id
+        )
+    )::int AS missing_keyword_metadata
+   FROM movies`;
+
 export interface CatalogHealthIssueDefinition {
   key: keyof Omit<SummaryRow, 'total_movies'>;
   label: string;
@@ -199,6 +286,14 @@ export const MAX_CATALOG_HEALTH_ISSUE_OFFSET = 100_000;
 function toNumber(value: number | string | null | undefined): number {
   if (value === null || value === undefined) return 0;
   return Number(value);
+}
+
+function normalizeSummaryRow(
+  row: Partial<Record<SummaryMetricKey, number | string | null | undefined>> | undefined,
+): SummaryRow {
+  return Object.fromEntries(
+    SUMMARY_METRIC_KEYS.map((key) => [key, toNumber(row?.[key])]),
+  ) as unknown as SummaryRow;
 }
 
 function normalizeSample(row: CatalogMovieSample): CatalogMovieSample {
@@ -355,94 +450,8 @@ async function getIssueSamples(
 }
 
 async function getSummary(staleAfterDays: number): Promise<SummaryRow> {
-  const result = await getPool().query<SummaryRow>(
-    `SELECT
-        COUNT(*)::int AS total_movies,
-        COUNT(*) FILTER (WHERE poster_url IS NULL OR btrim(poster_url) = '')::int AS missing_poster_url,
-        COUNT(*) FILTER (WHERE localized_name IS NULL OR btrim(localized_name) = '')::int AS missing_localized_name,
-        COUNT(*) FILTER (WHERE tmdb_id IS NULL)::int AS missing_tmdb_id,
-        COUNT(*) FILTER (WHERE duration <= 0)::int AS missing_runtime,
-        COUNT(*) FILTER (WHERE age_rating IS NULL OR btrim(age_rating) = '')::int AS missing_age_rating,
-        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND tmdb_matched_at IS NULL)::int AS missing_tmdb_matched_at,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND (
-              tmdb_metadata_refreshed_at IS NULL
-              OR tmdb_metadata_refreshed_at < now() - ($1::int * interval '1 day')
-            )
-        )::int AS stale_tmdb_metadata,
-        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (original_language IS NULL OR btrim(original_language) = ''))::int AS missing_original_language,
-        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (vote_count IS NULL OR vote_count <= 0))::int AS missing_vote_count,
-        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (popularity IS NULL OR popularity <= 0))::int AS missing_popularity,
-        COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND metadata_quality_score < 70)::int AS low_metadata_quality,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'US'
-            )
-        )::int AS missing_watch_provider_us,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'FI'
-            )
-        )::int AS missing_watch_provider_fi,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_watch_providers WHERE movie_watch_providers.movie_id = movies.id AND region = 'RU'
-            )
-        )::int AS missing_watch_provider_ru,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'cast'
-            )
-        )::int AS missing_cast_metadata,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_people WHERE movie_people.movie_id = movies.id AND role = 'director'
-            )
-        )::int AS missing_director_metadata,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_genres WHERE movie_genres.movie_id = movies.id
-            )
-        )::int AS missing_genre_metadata,
-        COUNT(*) FILTER (
-          WHERE tmdb_id IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM movie_keywords WHERE movie_keywords.movie_id = movies.id
-            )
-        )::int AS missing_keyword_metadata
-       FROM movies`,
-    [staleAfterDays],
-  );
-
-  const row = result.rows[0];
-  return {
-    total_movies: toNumber(row?.total_movies),
-    missing_poster_url: toNumber(row?.missing_poster_url),
-    missing_localized_name: toNumber(row?.missing_localized_name),
-    missing_tmdb_id: toNumber(row?.missing_tmdb_id),
-    missing_runtime: toNumber(row?.missing_runtime),
-    missing_age_rating: toNumber(row?.missing_age_rating),
-    missing_tmdb_matched_at: toNumber(row?.missing_tmdb_matched_at),
-    stale_tmdb_metadata: toNumber(row?.stale_tmdb_metadata),
-    missing_original_language: toNumber(row?.missing_original_language),
-    missing_vote_count: toNumber(row?.missing_vote_count),
-    missing_popularity: toNumber(row?.missing_popularity),
-    low_metadata_quality: toNumber(row?.low_metadata_quality),
-    missing_watch_provider_us: toNumber(row?.missing_watch_provider_us),
-    missing_watch_provider_fi: toNumber(row?.missing_watch_provider_fi),
-    missing_watch_provider_ru: toNumber(row?.missing_watch_provider_ru),
-    missing_cast_metadata: toNumber(row?.missing_cast_metadata),
-    missing_director_metadata: toNumber(row?.missing_director_metadata),
-    missing_genre_metadata: toNumber(row?.missing_genre_metadata),
-    missing_keyword_metadata: toNumber(row?.missing_keyword_metadata),
-  };
+  const result = await getPool().query<SummaryRow>(SUMMARY_SQL, [staleAfterDays]);
+  return normalizeSummaryRow(result.rows[0]);
 }
 
 async function getDuplicateTmdbIds(limit: number): Promise<DuplicateIdentityReport> {

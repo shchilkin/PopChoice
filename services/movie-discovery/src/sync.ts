@@ -18,6 +18,7 @@ import {
 
 import type { Config } from './config.js';
 import type { MovieRecord } from './database.js';
+import type { TMDBMovie, TMDBMovieDetails } from './tmdb.js';
 
 /** Maximum concurrent TMDB detail requests per batch to avoid rate limiting. */
 const DETAIL_BATCH_SIZE = 5;
@@ -25,6 +26,172 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
 function getPosterUrl(posterPath: string | null | undefined): string | null {
   return posterPath ? `${TMDB_IMAGE_BASE_URL}/w500${posterPath}` : null;
+}
+
+function getReleaseYear(movie: Pick<TMDBMovie, 'release_date'>): number {
+  return movie.release_date ? parseInt(movie.release_date.substring(0, 4), 10) : 0;
+}
+
+export function selectCandidatesWithValidYears(movies: TMDBMovie[]): {
+  skipped: number;
+  validYearCandidates: TMDBMovie[];
+} {
+  const validYearCandidates = movies.filter((movie) => {
+    const year = getReleaseYear(movie);
+    return Number.isFinite(year) && year > 1800;
+  });
+
+  return {
+    skipped: movies.length - validYearCandidates.length,
+    validYearCandidates,
+  };
+}
+
+export function toDiscoveryPartialRecord(movie: TMDBMovie): MovieRecord {
+  return {
+    name: movie.title,
+    year: getReleaseYear(movie),
+    age_rating: 'NR',
+    description: movie.overview || 'No description available.',
+    duration: 0,
+    score_rating: movie.vote_average,
+    embedding: [],
+  };
+}
+
+export function selectMoviesToProcess(
+  movies: TMDBMovie[],
+  newIndices: number[],
+  maxMoviesPerRun: number,
+): { cappedIndices: number[]; moviesToProcess: TMDBMovie[] } {
+  const cappedIndices = newIndices.slice(0, maxMoviesPerRun);
+  return {
+    cappedIndices,
+    moviesToProcess: cappedIndices.map((index) => movies[index]),
+  };
+}
+
+function getDryRunSample(movies: TMDBMovie[]): Array<Pick<TMDBMovie, 'title' | 'release_date'>> {
+  return movies.slice(0, 5).map((movie) => ({
+    title: movie.title,
+    release_date: movie.release_date,
+  }));
+}
+
+async function fetchMovieDetailsSafely(
+  config: Pick<Config, 'language' | 'tmdbApiKey'>,
+  movie: TMDBMovie,
+): Promise<TMDBMovieDetails | null> {
+  try {
+    return await fetchMovieDetails(config.tmdbApiKey, movie.id, config.language);
+  } catch (err) {
+    logger.warn('Failed to fetch movie details, using basic data', {
+      movieId: movie.id,
+      title: movie.title,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
+async function fetchMovieDetailsInBatches(
+  config: Pick<Config, 'language' | 'tmdbApiKey'>,
+  movies: TMDBMovie[],
+  batchSize = DETAIL_BATCH_SIZE,
+): Promise<Array<TMDBMovieDetails | null>> {
+  const detailedMovies: Array<TMDBMovieDetails | null> = [];
+
+  for (let batchStart = 0; batchStart < movies.length; batchStart += batchSize) {
+    const batch = movies.slice(batchStart, batchStart + batchSize);
+    const batchResults = await Promise.all(
+      batch.map((movie) => fetchMovieDetailsSafely(config, movie)),
+    );
+    detailedMovies.push(...batchResults);
+  }
+
+  return detailedMovies;
+}
+
+function buildFallbackEmbeddingText(movie: TMDBMovie, ageRating: string): string {
+  const year = getReleaseYear(movie);
+  return [
+    `${movie.title} (${year})`,
+    `Rating: ${ageRating}`,
+    `Score: ${movie.vote_average.toFixed(1)}/10`,
+    'Duration: unknown',
+    `Description: ${movie.overview || 'No description available.'}`,
+  ].join('\n');
+}
+
+export function buildDiscoveryPayload(
+  movies: TMDBMovie[],
+  detailedMovies: Array<TMDBMovieDetails | null>,
+): {
+  catalogMetadataByTmdbId: Map<number, TMDBCatalogMetadata>;
+  embeddingTexts: string[];
+  partialRecords: Array<Omit<MovieRecord, 'embedding'>>;
+} {
+  const partialRecords: Array<Omit<MovieRecord, 'embedding'>> = [];
+  const embeddingTexts: string[] = [];
+  const catalogMetadataByTmdbId = new Map<number, TMDBCatalogMetadata>();
+
+  for (let i = 0; i < movies.length; i++) {
+    const basic = movies[i];
+    const details = detailedMovies[i];
+
+    const ageRating = details ? extractUSCertification(details) : 'NR';
+    const runtime = details?.runtime ?? 0;
+    const year = getReleaseYear(basic);
+    const catalogMetadata = details ? extractCatalogMetadata(details) : null;
+    if (catalogMetadata) {
+      catalogMetadataByTmdbId.set(basic.id, catalogMetadata);
+    }
+
+    partialRecords.push({
+      name: basic.title,
+      year,
+      age_rating: ageRating,
+      description: basic.overview || 'No description available.',
+      duration: runtime,
+      score_rating: basic.vote_average,
+      poster_url: getPosterUrl(basic.poster_path),
+      localized_name: details?.title && details.title !== basic.title ? details.title : null,
+      tmdb_id: basic.id,
+      tmdb_match_confidence: 1,
+      tmdb_match_source: 'tmdb_discovery',
+    });
+    embeddingTexts.push(
+      details
+        ? movieToEmbeddingText(details, ageRating)
+        : buildFallbackEmbeddingText(basic, ageRating),
+    );
+  }
+
+  return { catalogMetadataByTmdbId, embeddingTexts, partialRecords };
+}
+
+async function upsertCatalogMetadataForInsertedMovies(
+  insertedMovies: Awaited<ReturnType<typeof insertMovies>>['insertedMovies'],
+  catalogMetadataByTmdbId: Map<number, TMDBCatalogMetadata>,
+): Promise<number> {
+  let metadataUpdated = 0;
+  for (const insertedMovie of insertedMovies) {
+    if (!insertedMovie.tmdb_id) continue;
+    const catalogMetadata = catalogMetadataByTmdbId.get(insertedMovie.tmdb_id);
+    if (!catalogMetadata) continue;
+
+    await upsertMovieCatalogMetadata({
+      movieId: insertedMovie.id,
+      tmdbMetadata: catalogMetadata.snapshot,
+      people: catalogMetadata.people,
+      genres: catalogMetadata.genres,
+      keywords: catalogMetadata.keywords,
+      source: 'tmdb',
+    });
+    metadataUpdated++;
+  }
+
+  return metadataUpdated;
 }
 
 export async function runSync(config: Config): Promise<void> {
@@ -67,13 +234,10 @@ export async function runSync(config: Config): Promise<void> {
   }
 
   // 3. Filter out movies with missing or invalid release year before deduplication
-  const validYearCandidates = qualified.filter((m) => {
-    const year = m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0;
-    return Number.isFinite(year) && year > 1800;
-  });
-  if (validYearCandidates.length < qualified.length) {
+  const { skipped, validYearCandidates } = selectCandidatesWithValidYears(qualified);
+  if (skipped > 0) {
     logger.warn('Skipped movies with missing or invalid release year', {
-      skipped: qualified.length - validYearCandidates.length,
+      skipped,
     });
   }
 
@@ -83,15 +247,7 @@ export async function runSync(config: Config): Promise<void> {
   }
 
   // 4. Deduplicate against database using partial records (no embedding yet)
-  const partialRecords: MovieRecord[] = validYearCandidates.map((m) => ({
-    name: m.title,
-    year: m.release_date ? parseInt(m.release_date.substring(0, 4), 10) : 0,
-    age_rating: 'NR', // placeholder; real value fetched below
-    description: m.overview || 'No description available.',
-    duration: 0, // placeholder; real value fetched below
-    score_rating: m.vote_average,
-    embedding: [],
-  }));
+  const partialRecords = validYearCandidates.map(toDiscoveryPartialRecord);
 
   const newIndices = await filterNewMovies(partialRecords);
   logger.info('Duplicate check complete', {
@@ -106,7 +262,11 @@ export async function runSync(config: Config): Promise<void> {
   }
 
   // 5. Cap at maxMoviesPerRun
-  const cappedIndices = newIndices.slice(0, config.maxMoviesPerRun);
+  const { cappedIndices, moviesToProcess } = selectMoviesToProcess(
+    validYearCandidates,
+    newIndices,
+    config.maxMoviesPerRun,
+  );
   if (cappedIndices.length < newIndices.length) {
     logger.info('Capped new movies to maxMoviesPerRun', {
       new: newIndices.length,
@@ -115,16 +275,11 @@ export async function runSync(config: Config): Promise<void> {
     });
   }
 
-  const moviesToProcess = cappedIndices.map((i) => validYearCandidates[i]);
-
   // 6. Dry run — stop before details/embeddings/inserts
   if (config.dryRun) {
     logger.info('DRY RUN: would fetch details and insert', {
       moviesToInsert: moviesToProcess.length,
-      sampleMovies: moviesToProcess.slice(0, 5).map((m) => ({
-        title: m.title,
-        release_date: m.release_date,
-      })),
+      sampleMovies: getDryRunSample(moviesToProcess),
     });
     return;
   }
@@ -135,72 +290,14 @@ export async function runSync(config: Config): Promise<void> {
     count: moviesToProcess.length,
     batchSize: DETAIL_BATCH_SIZE,
   });
-  const detailedMovies: (Awaited<ReturnType<typeof fetchMovieDetails>> | null)[] = [];
-
-  for (let batchStart = 0; batchStart < moviesToProcess.length; batchStart += DETAIL_BATCH_SIZE) {
-    const batch = moviesToProcess.slice(batchStart, batchStart + DETAIL_BATCH_SIZE);
-    const batchResults = await Promise.all(
-      batch.map(async (m) => {
-        try {
-          const details = await fetchMovieDetails(config.tmdbApiKey, m.id, config.language);
-          return details;
-        } catch (err) {
-          logger.warn('Failed to fetch movie details, using basic data', {
-            movieId: m.id,
-            title: m.title,
-            error: err instanceof Error ? err.message : String(err),
-          });
-          return null;
-        }
-      }),
-    );
-    detailedMovies.push(...batchResults);
-  }
+  const detailedMovies = await fetchMovieDetailsInBatches(config, moviesToProcess);
 
   // 8. Build records and embedding texts
-  const finalPartialRecords: Omit<MovieRecord, 'embedding'>[] = [];
-  const embeddingTexts: string[] = [];
-  const catalogMetadataByTmdbId = new Map<number, TMDBCatalogMetadata>();
-
-  for (let i = 0; i < moviesToProcess.length; i++) {
-    const basic = moviesToProcess[i];
-    const details = detailedMovies[i];
-
-    const ageRating = details ? extractUSCertification(details) : 'NR';
-    const runtime = details?.runtime ?? 0;
-    const year = basic.release_date ? parseInt(basic.release_date.substring(0, 4), 10) : 0;
-    const catalogMetadata = details ? extractCatalogMetadata(details) : null;
-    if (catalogMetadata) {
-      catalogMetadataByTmdbId.set(basic.id, catalogMetadata);
-    }
-
-    const record: Omit<MovieRecord, 'embedding'> = {
-      name: basic.title,
-      year,
-      age_rating: ageRating,
-      description: basic.overview || 'No description available.',
-      duration: runtime,
-      score_rating: basic.vote_average,
-      poster_url: getPosterUrl(basic.poster_path),
-      localized_name: details?.title && details.title !== basic.title ? details.title : null,
-      tmdb_id: basic.id,
-      tmdb_match_confidence: 1,
-      tmdb_match_source: 'tmdb_discovery',
-    };
-
-    finalPartialRecords.push(record);
-    embeddingTexts.push(
-      details
-        ? movieToEmbeddingText(details, ageRating)
-        : [
-            `${basic.title} (${year})`,
-            `Rating: ${ageRating}`,
-            `Score: ${basic.vote_average.toFixed(1)}/10`,
-            'Duration: unknown',
-            `Description: ${basic.overview || 'No description available.'}`,
-          ].join('\n'),
-    );
-  }
+  const {
+    catalogMetadataByTmdbId,
+    embeddingTexts,
+    partialRecords: finalPartialRecords,
+  } = buildDiscoveryPayload(moviesToProcess, detailedMovies);
 
   // 9. Create embeddings
   const embeddings = await createEmbeddings(config.openaiApiKey, embeddingTexts);
@@ -213,22 +310,10 @@ export async function runSync(config: Config): Promise<void> {
 
   // 11. Insert into database
   const result = await insertMovies(finalRecords);
-  let metadataUpdated = 0;
-  for (const insertedMovie of result.insertedMovies) {
-    if (!insertedMovie.tmdb_id) continue;
-    const catalogMetadata = catalogMetadataByTmdbId.get(insertedMovie.tmdb_id);
-    if (!catalogMetadata) continue;
-
-    await upsertMovieCatalogMetadata({
-      movieId: insertedMovie.id,
-      tmdbMetadata: catalogMetadata.snapshot,
-      people: catalogMetadata.people,
-      genres: catalogMetadata.genres,
-      keywords: catalogMetadata.keywords,
-      source: 'tmdb',
-    });
-    metadataUpdated++;
-  }
+  const metadataUpdated = await upsertCatalogMetadataForInsertedMovies(
+    result.insertedMovies,
+    catalogMetadataByTmdbId,
+  );
 
   const countAfter = await getMovieCount();
   const durationMs = Date.now() - startTime;

@@ -23,7 +23,37 @@
 import { loadConfig } from './config.js';
 import { closeDatabase, ensureSchema, initDatabase } from './database.js';
 import { logger } from './logger.js';
+import { shouldRunOneShot } from './run-mode.js';
 import { guardedSync, startScheduler } from './scheduler.js';
+
+import type { Config } from './config.js';
+
+async function runOneShot(config: Config): Promise<void> {
+  logger.info('Running in one-shot mode');
+  try {
+    await guardedSync(config, 'one-shot');
+  } catch (err) {
+    logger.error('Sync failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    process.exitCode = 1;
+  } finally {
+    await closeDatabase();
+  }
+}
+
+async function runScheduledStartup(config: Config): Promise<void> {
+  startScheduler(config);
+
+  logger.info('Running initial sync on startup');
+  try {
+    await guardedSync(config, 'startup');
+  } catch (err) {
+    logger.error('Initial sync failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -39,35 +69,9 @@ async function main(): Promise<void> {
     maxMoviesPerRun: config.maxMoviesPerRun,
   });
 
-  const oneShot = process.argv.includes('--once') || config.schedule === '';
+  if (shouldRunOneShot(process.argv, config.schedule)) return runOneShot(config);
 
-  if (oneShot) {
-    logger.info('Running in one-shot mode');
-    try {
-      await guardedSync(config, 'one-shot');
-    } catch (err) {
-      logger.error('Sync failed', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      process.exitCode = 1;
-    } finally {
-      await closeDatabase();
-    }
-    return;
-  }
-
-  // Start scheduler (non-blocking)
-  startScheduler(config);
-
-  // Run once immediately on startup as well
-  logger.info('Running initial sync on startup');
-  try {
-    await guardedSync(config, 'startup');
-  } catch (err) {
-    logger.error('Initial sync failed', {
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
+  await runScheduledStartup(config);
 }
 
 main().catch((err) => {

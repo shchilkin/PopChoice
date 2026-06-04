@@ -1,4 +1,4 @@
-import pg from 'pg';
+import pg, { type PoolClient } from 'pg';
 
 import { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 import { logger } from './logger.js';
@@ -126,6 +126,19 @@ export interface InsertedMovieRecord {
   tmdb_id: number | null;
 }
 
+interface CatalogMetadataRefreshPlan {
+  movieId: string;
+  source: CatalogMetadataSource;
+  shouldRefreshPeople: boolean;
+  shouldRefreshGenres: boolean;
+  shouldRefreshKeywords: boolean;
+  shouldRefreshProviders: boolean;
+  people: MoviePersonCreditInput[];
+  genres: CatalogGenreInput[];
+  keywords: CatalogKeywordInput[];
+  providers: MovieWatchProviderInput[];
+}
+
 let pool: InstanceType<typeof Pool> | null = null;
 
 export function initDatabase(databaseUrl: string): void {
@@ -155,6 +168,14 @@ function serializeMetadataQualityFlags(
   if (!flags) return [];
   if (Array.isArray(flags)) return flags;
   return flags;
+}
+
+function valueOrNull<T>(value: T | null | undefined): T | null {
+  return value ?? null;
+}
+
+function metadataJson(value: Record<string, unknown> | undefined): string {
+  return JSON.stringify(value ?? {});
 }
 
 async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>> {
@@ -771,199 +792,257 @@ export async function getMovieCount(): Promise<number> {
   return parseInt(result.rows[0].count, 10);
 }
 
+function createCatalogMetadataRefreshPlan(
+  input: MovieCatalogMetadataInput,
+): CatalogMetadataRefreshPlan {
+  return {
+    movieId: String(input.movieId),
+    source: input.source ?? 'tmdb',
+    shouldRefreshPeople: input.people !== undefined,
+    shouldRefreshGenres: input.genres !== undefined,
+    shouldRefreshKeywords: input.keywords !== undefined,
+    shouldRefreshProviders: input.providers !== undefined,
+    people: input.people ?? [],
+    genres: input.genres ?? [],
+    keywords: input.keywords ?? [],
+    providers: input.providers ?? [],
+  };
+}
+
+async function updateMovieCatalogMetadataSnapshot(
+  client: PoolClient,
+  movieId: string,
+  tmdbMetadata: Record<string, unknown> | undefined,
+): Promise<void> {
+  if (!tmdbMetadata) return;
+
+  await client.query(
+    `UPDATE movies
+        SET tmdb_metadata = $2::jsonb,
+            tmdb_metadata_refreshed_at = now()
+      WHERE id = $1`,
+    [movieId, JSON.stringify(tmdbMetadata)],
+  );
+}
+
+async function deleteRefreshedCatalogMetadata(
+  client: PoolClient,
+  plan: CatalogMetadataRefreshPlan,
+): Promise<void> {
+  if (plan.shouldRefreshPeople) {
+    await client.query(
+      `DELETE FROM movie_people
+        WHERE movie_id = $1
+          AND tmdb_credit_id IS NOT NULL`,
+      [plan.movieId],
+    );
+  }
+  if (plan.shouldRefreshGenres) {
+    await client.query(`DELETE FROM movie_genres WHERE movie_id = $1 AND source = $2`, [
+      plan.movieId,
+      plan.source,
+    ]);
+  }
+  if (plan.shouldRefreshKeywords) {
+    await client.query(`DELETE FROM movie_keywords WHERE movie_id = $1 AND source = $2`, [
+      plan.movieId,
+      plan.source,
+    ]);
+  }
+  if (plan.shouldRefreshProviders) {
+    await client.query(`DELETE FROM movie_watch_providers WHERE movie_id = $1`, [plan.movieId]);
+  }
+}
+
+async function upsertCatalogPersonCredit(
+  client: PoolClient,
+  movieId: string,
+  person: MoviePersonCreditInput,
+): Promise<void> {
+  const personResult = await client.query<{ id: string }>(
+    `INSERT INTO catalog_people (
+       tmdb_id, name, profile_path, popularity, raw_metadata, updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5::jsonb, now())
+     ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
+       SET name = EXCLUDED.name,
+           profile_path = COALESCE(EXCLUDED.profile_path, catalog_people.profile_path),
+           popularity = COALESCE(EXCLUDED.popularity, catalog_people.popularity),
+           raw_metadata = EXCLUDED.raw_metadata,
+           updated_at = now()
+     RETURNING id::text`,
+    [
+      person.tmdbId,
+      person.name,
+      valueOrNull(person.profilePath),
+      valueOrNull(person.popularity),
+      metadataJson(person.rawMetadata),
+    ],
+  );
+  const personId = personResult.rows[0]?.id;
+  if (!personId) return;
+
+  await client.query(
+    `INSERT INTO movie_people (
+       movie_id, person_id, tmdb_credit_id, role, character_name, job,
+       department, billing_order, raw_metadata, updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, now())
+     ON CONFLICT (movie_id, tmdb_credit_id) WHERE tmdb_credit_id IS NOT NULL DO UPDATE
+       SET person_id = EXCLUDED.person_id,
+           role = EXCLUDED.role,
+           character_name = EXCLUDED.character_name,
+           job = EXCLUDED.job,
+           department = EXCLUDED.department,
+           billing_order = EXCLUDED.billing_order,
+           raw_metadata = EXCLUDED.raw_metadata,
+           updated_at = now()`,
+    [
+      movieId,
+      personId,
+      person.creditId,
+      person.role,
+      valueOrNull(person.characterName),
+      valueOrNull(person.job),
+      valueOrNull(person.department),
+      valueOrNull(person.billingOrder),
+      metadataJson(person.rawMetadata),
+    ],
+  );
+}
+
+async function upsertCatalogGenre(
+  client: PoolClient,
+  movieId: string,
+  source: CatalogMetadataSource,
+  genre: CatalogGenreInput,
+): Promise<void> {
+  const genreResult = await client.query<{ id: string }>(
+    `INSERT INTO catalog_genres (tmdb_id, name, raw_metadata, updated_at)
+     VALUES ($1, $2, $3::jsonb, now())
+     ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
+       SET name = EXCLUDED.name,
+           raw_metadata = EXCLUDED.raw_metadata,
+           updated_at = now()
+     RETURNING id::text`,
+    [genre.tmdbId, genre.name, metadataJson(genre.rawMetadata)],
+  );
+  const genreId = genreResult.rows[0]?.id;
+  if (!genreId) return;
+
+  await client.query(
+    `INSERT INTO movie_genres (movie_id, genre_id, source)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (movie_id, genre_id) DO UPDATE
+       SET source = EXCLUDED.source`,
+    [movieId, genreId, source],
+  );
+}
+
+async function upsertCatalogKeyword(
+  client: PoolClient,
+  movieId: string,
+  source: CatalogMetadataSource,
+  keyword: CatalogKeywordInput,
+): Promise<void> {
+  const keywordResult = await client.query<{ id: string }>(
+    `INSERT INTO catalog_keywords (tmdb_id, name, raw_metadata, updated_at)
+     VALUES ($1, $2, $3::jsonb, now())
+     ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
+       SET name = EXCLUDED.name,
+           raw_metadata = EXCLUDED.raw_metadata,
+           updated_at = now()
+     RETURNING id::text`,
+    [keyword.tmdbId, keyword.name, metadataJson(keyword.rawMetadata)],
+  );
+  const keywordId = keywordResult.rows[0]?.id;
+  if (!keywordId) return;
+
+  await client.query(
+    `INSERT INTO movie_keywords (movie_id, keyword_id, source)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (movie_id, keyword_id) DO UPDATE
+       SET source = EXCLUDED.source`,
+    [movieId, keywordId, source],
+  );
+}
+
+async function upsertCatalogWatchProvider(
+  client: PoolClient,
+  movieId: string,
+  provider: MovieWatchProviderInput,
+): Promise<void> {
+  const providerResult = await client.query<{ id: string }>(
+    `INSERT INTO catalog_watch_providers (
+       tmdb_id, provider_name, logo_path, raw_metadata, updated_at
+     )
+     VALUES ($1, $2, $3, $4::jsonb, now())
+     ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
+       SET provider_name = EXCLUDED.provider_name,
+           logo_path = COALESCE(EXCLUDED.logo_path, catalog_watch_providers.logo_path),
+           raw_metadata = EXCLUDED.raw_metadata,
+           updated_at = now()
+     RETURNING id::text`,
+    [
+      provider.providerId,
+      provider.providerName,
+      valueOrNull(provider.logoPath),
+      metadataJson(provider.rawMetadata),
+    ],
+  );
+  const providerRowId = providerResult.rows[0]?.id;
+  if (!providerRowId) return;
+
+  await client.query(
+    `INSERT INTO movie_watch_providers (
+       movie_id, provider_id, region, availability_type, display_priority,
+       link, raw_metadata, updated_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
+     ON CONFLICT (movie_id, provider_id, region, availability_type) DO UPDATE
+       SET display_priority = EXCLUDED.display_priority,
+           link = EXCLUDED.link,
+           raw_metadata = EXCLUDED.raw_metadata,
+           updated_at = now()`,
+    [
+      movieId,
+      providerRowId,
+      provider.region,
+      provider.availabilityType,
+      valueOrNull(provider.displayPriority),
+      valueOrNull(provider.link),
+      metadataJson(provider.rawMetadata),
+    ],
+  );
+}
+
+async function upsertRefreshedCatalogMetadata(
+  client: PoolClient,
+  plan: CatalogMetadataRefreshPlan,
+): Promise<void> {
+  for (const person of plan.shouldRefreshPeople ? plan.people : []) {
+    await upsertCatalogPersonCredit(client, plan.movieId, person);
+  }
+  for (const genre of plan.shouldRefreshGenres ? plan.genres : []) {
+    await upsertCatalogGenre(client, plan.movieId, plan.source, genre);
+  }
+  for (const keyword of plan.shouldRefreshKeywords ? plan.keywords : []) {
+    await upsertCatalogKeyword(client, plan.movieId, plan.source, keyword);
+  }
+  for (const provider of plan.shouldRefreshProviders ? plan.providers : []) {
+    await upsertCatalogWatchProvider(client, plan.movieId, provider);
+  }
+}
+
 export async function upsertMovieCatalogMetadata(input: MovieCatalogMetadataInput): Promise<void> {
   const client = await getPool().connect();
-  const movieId = String(input.movieId);
-  const source = input.source ?? 'tmdb';
-  const shouldRefreshPeople = input.people !== undefined;
-  const shouldRefreshGenres = input.genres !== undefined;
-  const shouldRefreshKeywords = input.keywords !== undefined;
-  const shouldRefreshProviders = input.providers !== undefined;
-  const people = input.people ?? [];
-  const genres = input.genres ?? [];
-  const keywords = input.keywords ?? [];
-  const providers = input.providers ?? [];
+  const plan = createCatalogMetadataRefreshPlan(input);
 
   try {
     await client.query('BEGIN');
-
-    if (input.tmdbMetadata) {
-      await client.query(
-        `UPDATE movies
-            SET tmdb_metadata = $2::jsonb,
-                tmdb_metadata_refreshed_at = now()
-          WHERE id = $1`,
-        [movieId, JSON.stringify(input.tmdbMetadata)],
-      );
-    }
-
-    if (shouldRefreshPeople) {
-      await client.query(
-        `DELETE FROM movie_people
-          WHERE movie_id = $1
-            AND tmdb_credit_id IS NOT NULL`,
-        [movieId],
-      );
-    }
-    if (shouldRefreshGenres) {
-      await client.query(`DELETE FROM movie_genres WHERE movie_id = $1 AND source = $2`, [
-        movieId,
-        source,
-      ]);
-    }
-    if (shouldRefreshKeywords) {
-      await client.query(`DELETE FROM movie_keywords WHERE movie_id = $1 AND source = $2`, [
-        movieId,
-        source,
-      ]);
-    }
-    if (shouldRefreshProviders) {
-      await client.query(`DELETE FROM movie_watch_providers WHERE movie_id = $1`, [movieId]);
-    }
-
-    for (const person of shouldRefreshPeople ? people : []) {
-      const personResult = await client.query<{ id: string }>(
-        `INSERT INTO catalog_people (
-           tmdb_id, name, profile_path, popularity, raw_metadata, updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5::jsonb, now())
-         ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
-           SET name = EXCLUDED.name,
-               profile_path = COALESCE(EXCLUDED.profile_path, catalog_people.profile_path),
-               popularity = COALESCE(EXCLUDED.popularity, catalog_people.popularity),
-               raw_metadata = EXCLUDED.raw_metadata,
-               updated_at = now()
-         RETURNING id::text`,
-        [
-          person.tmdbId,
-          person.name,
-          person.profilePath ?? null,
-          person.popularity ?? null,
-          JSON.stringify(person.rawMetadata ?? {}),
-        ],
-      );
-      const personId = personResult.rows[0]?.id;
-      if (!personId) continue;
-
-      await client.query(
-        `INSERT INTO movie_people (
-           movie_id, person_id, tmdb_credit_id, role, character_name, job,
-           department, billing_order, raw_metadata, updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, now())
-         ON CONFLICT (movie_id, tmdb_credit_id) WHERE tmdb_credit_id IS NOT NULL DO UPDATE
-           SET person_id = EXCLUDED.person_id,
-               role = EXCLUDED.role,
-               character_name = EXCLUDED.character_name,
-               job = EXCLUDED.job,
-               department = EXCLUDED.department,
-               billing_order = EXCLUDED.billing_order,
-               raw_metadata = EXCLUDED.raw_metadata,
-               updated_at = now()`,
-        [
-          movieId,
-          personId,
-          person.creditId,
-          person.role,
-          person.characterName ?? null,
-          person.job ?? null,
-          person.department ?? null,
-          person.billingOrder ?? null,
-          JSON.stringify(person.rawMetadata ?? {}),
-        ],
-      );
-    }
-
-    for (const genre of shouldRefreshGenres ? genres : []) {
-      const genreResult = await client.query<{ id: string }>(
-        `INSERT INTO catalog_genres (tmdb_id, name, raw_metadata, updated_at)
-         VALUES ($1, $2, $3::jsonb, now())
-         ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
-           SET name = EXCLUDED.name,
-               raw_metadata = EXCLUDED.raw_metadata,
-               updated_at = now()
-         RETURNING id::text`,
-        [genre.tmdbId, genre.name, JSON.stringify(genre.rawMetadata ?? {})],
-      );
-      const genreId = genreResult.rows[0]?.id;
-      if (!genreId) continue;
-
-      await client.query(
-        `INSERT INTO movie_genres (movie_id, genre_id, source)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (movie_id, genre_id) DO UPDATE
-           SET source = EXCLUDED.source`,
-        [movieId, genreId, source],
-      );
-    }
-
-    for (const keyword of shouldRefreshKeywords ? keywords : []) {
-      const keywordResult = await client.query<{ id: string }>(
-        `INSERT INTO catalog_keywords (tmdb_id, name, raw_metadata, updated_at)
-         VALUES ($1, $2, $3::jsonb, now())
-         ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
-           SET name = EXCLUDED.name,
-               raw_metadata = EXCLUDED.raw_metadata,
-               updated_at = now()
-         RETURNING id::text`,
-        [keyword.tmdbId, keyword.name, JSON.stringify(keyword.rawMetadata ?? {})],
-      );
-      const keywordId = keywordResult.rows[0]?.id;
-      if (!keywordId) continue;
-
-      await client.query(
-        `INSERT INTO movie_keywords (movie_id, keyword_id, source)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (movie_id, keyword_id) DO UPDATE
-           SET source = EXCLUDED.source`,
-        [movieId, keywordId, source],
-      );
-    }
-
-    for (const provider of shouldRefreshProviders ? providers : []) {
-      const providerResult = await client.query<{ id: string }>(
-        `INSERT INTO catalog_watch_providers (
-           tmdb_id, provider_name, logo_path, raw_metadata, updated_at
-         )
-         VALUES ($1, $2, $3, $4::jsonb, now())
-         ON CONFLICT (tmdb_id) WHERE tmdb_id IS NOT NULL DO UPDATE
-           SET provider_name = EXCLUDED.provider_name,
-               logo_path = COALESCE(EXCLUDED.logo_path, catalog_watch_providers.logo_path),
-               raw_metadata = EXCLUDED.raw_metadata,
-               updated_at = now()
-         RETURNING id::text`,
-        [
-          provider.providerId,
-          provider.providerName,
-          provider.logoPath ?? null,
-          JSON.stringify(provider.rawMetadata ?? {}),
-        ],
-      );
-      const providerRowId = providerResult.rows[0]?.id;
-      if (!providerRowId) continue;
-
-      await client.query(
-        `INSERT INTO movie_watch_providers (
-           movie_id, provider_id, region, availability_type, display_priority,
-           link, raw_metadata, updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, now())
-         ON CONFLICT (movie_id, provider_id, region, availability_type) DO UPDATE
-           SET display_priority = EXCLUDED.display_priority,
-               link = EXCLUDED.link,
-               raw_metadata = EXCLUDED.raw_metadata,
-               updated_at = now()`,
-        [
-          movieId,
-          providerRowId,
-          provider.region,
-          provider.availabilityType,
-          provider.displayPriority ?? null,
-          provider.link ?? null,
-          JSON.stringify(provider.rawMetadata ?? {}),
-        ],
-      );
-    }
+    await updateMovieCatalogMetadataSnapshot(client, plan.movieId, input.tmdbMetadata);
+    await deleteRefreshedCatalogMetadata(client, plan);
+    await upsertRefreshedCatalogMetadata(client, plan);
 
     await client.query('COMMIT');
   } catch (error) {
@@ -972,6 +1051,142 @@ export async function upsertMovieCatalogMetadata(input: MovieCatalogMetadataInpu
   } finally {
     client.release();
   }
+}
+
+function normalizeInsertedMovieRows(rows: InsertedMovieRecord[]): InsertedMovieRecord[] {
+  return rows.map((row) => ({
+    id: String(row.id),
+    tmdb_id: row.tmdb_id === null ? null : Number(row.tmdb_id),
+  }));
+}
+
+function buildMovieBatchInsertParams(batch: MovieRecord[]): unknown[] {
+  return [
+    batch.map((m) => m.name),
+    batch.map((m) => m.year),
+    batch.map((m) => m.age_rating),
+    batch.map((m) => m.description),
+    batch.map((m) => m.duration),
+    batch.map((m) => m.score_rating),
+    batch.map((m) => valueOrNull(m.original_title)),
+    batch.map((m) => valueOrNull(m.original_language)),
+    batch.map((m) => valueOrNull(m.release_date)),
+    batch.map((m) => valueOrNull(m.vote_count)),
+    batch.map((m) => valueOrNull(m.popularity)),
+    batch.map((m) => m.metadata_quality_score ?? 0),
+    batch.map((m) => JSON.stringify(serializeMetadataQualityFlags(m.metadata_quality_flags))),
+    batch.map((m) => valueOrNull(m.poster_url)),
+    batch.map((m) => valueOrNull(m.localized_name)),
+    batch.map((m) => valueOrNull(m.tmdb_id)),
+    batch.map((m) => valueOrNull(m.tmdb_match_confidence)),
+    batch.map((m) => valueOrNull(m.tmdb_match_source)),
+    batch.map((m) => JSON.stringify(m.embedding)),
+  ];
+}
+
+function buildSingleMovieInsertParams(movie: MovieRecord): unknown[] {
+  return [
+    movie.name,
+    movie.year,
+    movie.age_rating,
+    movie.description,
+    movie.duration,
+    movie.score_rating,
+    valueOrNull(movie.original_title),
+    valueOrNull(movie.original_language),
+    valueOrNull(movie.release_date),
+    valueOrNull(movie.vote_count),
+    valueOrNull(movie.popularity),
+    movie.metadata_quality_score ?? 0,
+    JSON.stringify(serializeMetadataQualityFlags(movie.metadata_quality_flags)),
+    valueOrNull(movie.poster_url),
+    valueOrNull(movie.localized_name),
+    valueOrNull(movie.tmdb_id),
+    valueOrNull(movie.tmdb_match_confidence),
+    valueOrNull(movie.tmdb_match_source),
+    JSON.stringify(movie.embedding),
+  ];
+}
+
+async function insertMovieBatch(batch: MovieRecord[]): Promise<{
+  inserted: number;
+  insertedMovies: InsertedMovieRecord[];
+}> {
+  const result = await getPool().query<InsertedMovieRecord>(
+    `INSERT INTO movies (
+       name, year, age_rating, description, duration, score_rating,
+       original_title, original_language, release_date, vote_count, popularity,
+       metadata_quality_score, metadata_quality_flags, poster_url, localized_name, tmdb_id,
+       tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
+     )
+     SELECT n, y, ar, d, du, sr, original, lang, release_dt, votes, pop,
+            quality_score, quality_flags::jsonb, poster, localized, tid, conf, src,
+            CASE WHEN tid IS NULL THEN NULL ELSE now() END, e::vector
+     FROM unnest(
+       $1::text[], $2::int[], $3::text[], $4::text[], $5::int[], $6::float8[],
+       $7::text[], $8::text[], $9::date[], $10::int[], $11::float8[], $12::int[],
+       $13::text[], $14::text[], $15::text[], $16::bigint[], $17::float8[],
+       $18::text[], $19::text[]
+     ) AS t(n, y, ar, d, du, sr, original, lang, release_dt, votes, pop, quality_score,
+            quality_flags, poster, localized, tid, conf, src, e)
+     ON CONFLICT (name, year) DO NOTHING
+     RETURNING id::text, tmdb_id`,
+    buildMovieBatchInsertParams(batch),
+  );
+
+  return {
+    inserted: result.rowCount ?? 0,
+    insertedMovies: normalizeInsertedMovieRows(result.rows),
+  };
+}
+
+async function insertSingleMovie(movie: MovieRecord): Promise<InsertedMovieRecord[]> {
+  const result = await getPool().query<InsertedMovieRecord>(
+    `INSERT INTO movies (
+       name, year, age_rating, description, duration, score_rating,
+       original_title, original_language, release_date, vote_count, popularity,
+       metadata_quality_score, metadata_quality_flags, poster_url, localized_name, tmdb_id,
+       tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
+     )
+     VALUES (
+       $1, $2, $3, $4, $5, $6, $7::text, $8::text, $9::date, $10::int, $11::float8,
+       $12::int, $13::jsonb, $14::text, $15::text, $16::bigint,
+       $17::float8, $18::text, CASE WHEN $16 IS NULL THEN NULL ELSE now() END,
+       $19::vector
+     )
+     ON CONFLICT (name, year) DO NOTHING
+     RETURNING id::text, tmdb_id`,
+    buildSingleMovieInsertParams(movie),
+  );
+
+  return normalizeInsertedMovieRows(result.rows);
+}
+
+async function insertMovieBatchIndividually(batch: MovieRecord[]): Promise<{
+  success: number;
+  errors: number;
+  insertedMovies: InsertedMovieRecord[];
+}> {
+  let success = 0;
+  let errors = 0;
+  const insertedMovies: InsertedMovieRecord[] = [];
+
+  for (const movie of batch) {
+    try {
+      const insertedRows = await insertSingleMovie(movie);
+      success += insertedRows.length;
+      insertedMovies.push(...insertedRows);
+    } catch (singleErr) {
+      errors++;
+      logger.warn('Failed to insert movie', {
+        name: movie.name,
+        year: movie.year,
+        error: singleErr instanceof Error ? singleErr.message : String(singleErr),
+      });
+    }
+  }
+
+  return { success, errors, insertedMovies };
 }
 
 export async function insertMovies(
@@ -987,57 +1202,12 @@ export async function insertMovies(
     const batchNum = Math.floor(i / batchSize) + 1;
 
     try {
-      const result = await getPool().query<InsertedMovieRecord>(
-        `INSERT INTO movies (
-           name, year, age_rating, description, duration, score_rating,
-           original_title, original_language, release_date, vote_count, popularity,
-           metadata_quality_score, metadata_quality_flags, poster_url, localized_name, tmdb_id,
-           tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
-         )
-         SELECT n, y, ar, d, du, sr, original, lang, release_dt, votes, pop,
-                quality_score, quality_flags::jsonb, poster, localized, tid, conf, src,
-                CASE WHEN tid IS NULL THEN NULL ELSE now() END, e::vector
-         FROM unnest(
-           $1::text[], $2::int[], $3::text[], $4::text[], $5::int[], $6::float8[],
-           $7::text[], $8::text[], $9::date[], $10::int[], $11::float8[], $12::int[],
-           $13::text[], $14::text[], $15::text[], $16::bigint[], $17::float8[],
-           $18::text[], $19::text[]
-         ) AS t(n, y, ar, d, du, sr, original, lang, release_dt, votes, pop, quality_score,
-                quality_flags, poster, localized, tid, conf, src, e)
-         ON CONFLICT (name, year) DO NOTHING
-         RETURNING id::text, tmdb_id`,
-        [
-          batch.map((m) => m.name),
-          batch.map((m) => m.year),
-          batch.map((m) => m.age_rating),
-          batch.map((m) => m.description),
-          batch.map((m) => m.duration),
-          batch.map((m) => m.score_rating),
-          batch.map((m) => m.original_title ?? null),
-          batch.map((m) => m.original_language ?? null),
-          batch.map((m) => m.release_date ?? null),
-          batch.map((m) => m.vote_count ?? null),
-          batch.map((m) => m.popularity ?? null),
-          batch.map((m) => m.metadata_quality_score ?? 0),
-          batch.map((m) => JSON.stringify(serializeMetadataQualityFlags(m.metadata_quality_flags))),
-          batch.map((m) => m.poster_url ?? null),
-          batch.map((m) => m.localized_name ?? null),
-          batch.map((m) => m.tmdb_id ?? null),
-          batch.map((m) => m.tmdb_match_confidence ?? null),
-          batch.map((m) => m.tmdb_match_source ?? null),
-          batch.map((m) => JSON.stringify(m.embedding)),
-        ],
-      );
-      success += result.rowCount ?? 0;
-      insertedMovies.push(
-        ...result.rows.map((row) => ({
-          id: String(row.id),
-          tmdb_id: row.tmdb_id === null ? null : Number(row.tmdb_id),
-        })),
-      );
+      const result = await insertMovieBatch(batch);
+      success += result.inserted;
+      insertedMovies.push(...result.insertedMovies);
       logger.info('Batch inserted', {
         batch: batchNum,
-        inserted: result.rowCount ?? 0,
+        inserted: result.inserted,
         total: movies.length,
       });
     } catch (batchErr) {
@@ -1045,61 +1215,10 @@ export async function insertMovies(
         batch: batchNum,
         error: batchErr instanceof Error ? batchErr.message : String(batchErr),
       });
-      for (const movie of batch) {
-        try {
-          const result = await getPool().query<InsertedMovieRecord>(
-            `INSERT INTO movies (
-               name, year, age_rating, description, duration, score_rating,
-               original_title, original_language, release_date, vote_count, popularity,
-               metadata_quality_score, metadata_quality_flags, poster_url, localized_name, tmdb_id,
-               tmdb_match_confidence, tmdb_match_source, tmdb_matched_at, embedding
-             )
-             VALUES (
-               $1, $2, $3, $4, $5, $6, $7::text, $8::text, $9::date, $10::int, $11::float8,
-               $12::int, $13::jsonb, $14::text, $15::text, $16::bigint,
-               $17::float8, $18::text, CASE WHEN $16 IS NULL THEN NULL ELSE now() END,
-               $19::vector
-             )
-             ON CONFLICT (name, year) DO NOTHING
-             RETURNING id::text, tmdb_id`,
-            [
-              movie.name,
-              movie.year,
-              movie.age_rating,
-              movie.description,
-              movie.duration,
-              movie.score_rating,
-              movie.original_title ?? null,
-              movie.original_language ?? null,
-              movie.release_date ?? null,
-              movie.vote_count ?? null,
-              movie.popularity ?? null,
-              movie.metadata_quality_score ?? 0,
-              JSON.stringify(serializeMetadataQualityFlags(movie.metadata_quality_flags)),
-              movie.poster_url ?? null,
-              movie.localized_name ?? null,
-              movie.tmdb_id ?? null,
-              movie.tmdb_match_confidence ?? null,
-              movie.tmdb_match_source ?? null,
-              JSON.stringify(movie.embedding),
-            ],
-          );
-          success += result.rowCount ?? 0;
-          insertedMovies.push(
-            ...result.rows.map((row) => ({
-              id: String(row.id),
-              tmdb_id: row.tmdb_id === null ? null : Number(row.tmdb_id),
-            })),
-          );
-        } catch (singleErr) {
-          errors++;
-          logger.warn('Failed to insert movie', {
-            name: movie.name,
-            year: movie.year,
-            error: singleErr instanceof Error ? singleErr.message : String(singleErr),
-          });
-        }
-      }
+      const fallback = await insertMovieBatchIndividually(batch);
+      success += fallback.success;
+      errors += fallback.errors;
+      insertedMovies.push(...fallback.insertedMovies);
     }
   }
 

@@ -1,3 +1,5 @@
+import type { PoolClient } from 'pg';
+
 import { getPool } from './db.js';
 
 export type TMDBMatchReviewReason = 'ambiguous_match' | 'runtime_mismatch';
@@ -102,6 +104,11 @@ type TMDBMatchReviewAuditRow = {
   candidate: unknown;
   created_at: string;
 };
+
+interface ReviewActionOutcome {
+  newStatus: TMDBMatchReviewStatus;
+  candidate: TMDBReviewCandidate | null;
+}
 
 const VALID_STATUSES: readonly TMDBMatchReviewStatus[] = [
   'open',
@@ -373,6 +380,160 @@ export async function listTMDBMatchReviewAudit(
   return result.rows.map(normalizeAudit);
 }
 
+async function getTMDBMatchReviewForUpdate(
+  client: PoolClient,
+  reviewId: string,
+): Promise<TMDBMatchReview> {
+  const reviewResult = await client.query<TMDBMatchReviewRow>(
+    `${buildReviewSelectClause()}
+      WHERE reviews.id = $1
+      FOR UPDATE OF reviews`,
+    [reviewId],
+  );
+  const review = reviewResult.rows[0] ? normalizeReview(reviewResult.rows[0]) : null;
+  if (!review) {
+    throw reviewActionError(`TMDB match review ${reviewId} was not found.`, 404);
+  }
+  return review;
+}
+
+function assertReviewCanBeActioned(review: TMDBMatchReview): void {
+  if (review.status === 'resolved') {
+    throw reviewActionError(`TMDB match review ${review.id} is already resolved.`, 409);
+  }
+}
+
+function createReviewActionMetadata(review: TMDBMatchReview): Record<string, unknown> {
+  return {
+    movieId: review.movieId,
+    movieName: review.movieName,
+    movieYear: review.movieYear,
+    previousMovie: review.currentMovie,
+  };
+}
+
+function getCandidateForAction(
+  review: TMDBMatchReview,
+  input: ApplyTMDBMatchReviewActionInput,
+): TMDBReviewCandidate {
+  if (!input.candidateId) {
+    throw reviewActionError('Applying a TMDB review requires a candidate id.');
+  }
+
+  const candidate = review.candidates.find((item) => item.id === input.candidateId) ?? null;
+  if (!candidate || candidate.id === null) {
+    throw reviewActionError(`Candidate ${input.candidateId} was not found on review ${review.id}.`);
+  }
+  return candidate;
+}
+
+async function assertCandidateIsUnassigned(
+  client: PoolClient,
+  review: TMDBMatchReview,
+  candidate: TMDBReviewCandidate,
+): Promise<void> {
+  const duplicateResult = await client.query<{ id: string; name: string; year: number }>(
+    `SELECT id::text, name, year
+       FROM movies
+      WHERE tmdb_id = $1
+        AND id <> $2
+      LIMIT 1`,
+    [candidate.id, review.movieId],
+  );
+  const duplicate = duplicateResult.rows[0];
+  if (duplicate) {
+    throw reviewActionError(
+      `TMDB id ${candidate.id} is already assigned to ${duplicate.name} (${duplicate.year}) [movie ${duplicate.id}].`,
+      409,
+    );
+  }
+}
+
+async function applyCandidateToMovie(
+  client: PoolClient,
+  review: TMDBMatchReview,
+  candidate: TMDBReviewCandidate,
+): Promise<void> {
+  await client.query(
+    `UPDATE movies
+        SET tmdb_id = $1,
+            tmdb_match_confidence = $2,
+            tmdb_match_source = 'manual',
+            tmdb_matched_at = now(),
+            localized_name = COALESCE(NULLIF(localized_name, ''), $3)
+      WHERE id = $4`,
+    [candidate.id, candidate.confidence, candidate.title, review.movieId],
+  );
+}
+
+async function resolveReviewActionOutcome(
+  client: PoolClient,
+  review: TMDBMatchReview,
+  input: ApplyTMDBMatchReviewActionInput,
+  metadata: Record<string, unknown>,
+): Promise<ReviewActionOutcome> {
+  if (input.action !== 'apply_candidate') {
+    const newStatus = {
+      reject: 'ignored',
+      defer: 'deferred',
+      reopen: 'open',
+    }[input.action] as TMDBMatchReviewStatus;
+    return { newStatus, candidate: null };
+  }
+
+  const candidate = getCandidateForAction(review, input);
+  await assertCandidateIsUnassigned(client, review, candidate);
+  await applyCandidateToMovie(client, review, candidate);
+  metadata.appliedCandidateId = candidate.id;
+  return { newStatus: 'resolved', candidate };
+}
+
+async function updateReviewStatus(
+  client: PoolClient,
+  reviewId: string,
+  status: TMDBMatchReviewStatus,
+): Promise<void> {
+  await client.query(
+    `UPDATE tmdb_match_reviews
+        SET status = $1,
+            updated_at = now()
+      WHERE id = $2`,
+    [status, reviewId],
+  );
+}
+
+async function insertReviewActionAudit(
+  client: PoolClient,
+  input: ApplyTMDBMatchReviewActionInput,
+  review: TMDBMatchReview,
+  outcome: ReviewActionOutcome,
+  metadata: Record<string, unknown>,
+): Promise<void> {
+  await client.query(
+    `INSERT INTO tmdb_match_review_audit (
+       review_id,
+       action,
+       actor,
+       note,
+       previous_status,
+       new_status,
+       candidate,
+       metadata
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)`,
+    [
+      review.id,
+      input.action,
+      input.actor,
+      input.note?.trim() || null,
+      review.status,
+      outcome.newStatus,
+      outcome.candidate ? JSON.stringify(outcome.candidate.raw) : null,
+      JSON.stringify(metadata),
+    ],
+  );
+}
+
 export async function applyTMDBMatchReviewAction(
   input: ApplyTMDBMatchReviewActionInput,
 ): Promise<TMDBMatchReview> {
@@ -384,109 +545,12 @@ export async function applyTMDBMatchReviewAction(
   try {
     await client.query('BEGIN');
 
-    const reviewResult = await client.query<TMDBMatchReviewRow>(
-      `${buildReviewSelectClause()}
-        WHERE reviews.id = $1
-        FOR UPDATE OF reviews`,
-      [input.reviewId],
-    );
-    const review = reviewResult.rows[0] ? normalizeReview(reviewResult.rows[0]) : null;
-    if (!review) {
-      throw reviewActionError(`TMDB match review ${input.reviewId} was not found.`, 404);
-    }
-
-    if (review.status === 'resolved') {
-      throw reviewActionError(`TMDB match review ${review.id} is already resolved.`, 409);
-    }
-
-    let newStatus: TMDBMatchReviewStatus;
-    let candidate: TMDBReviewCandidate | null = null;
-    const metadata: Record<string, unknown> = {
-      movieId: review.movieId,
-      movieName: review.movieName,
-      movieYear: review.movieYear,
-      previousMovie: review.currentMovie,
-    };
-
-    if (input.action === 'apply_candidate') {
-      if (!input.candidateId) {
-        throw reviewActionError('Applying a TMDB review requires a candidate id.');
-      }
-
-      candidate = review.candidates.find((item) => item.id === input.candidateId) ?? null;
-      if (!candidate || candidate.id === null) {
-        throw reviewActionError(
-          `Candidate ${input.candidateId} was not found on review ${review.id}.`,
-        );
-      }
-
-      const duplicateResult = await client.query<{ id: string; name: string; year: number }>(
-        `SELECT id::text, name, year
-           FROM movies
-          WHERE tmdb_id = $1
-            AND id <> $2
-          LIMIT 1`,
-        [candidate.id, review.movieId],
-      );
-      const duplicate = duplicateResult.rows[0];
-      if (duplicate) {
-        throw reviewActionError(
-          `TMDB id ${candidate.id} is already assigned to ${duplicate.name} (${duplicate.year}) [movie ${duplicate.id}].`,
-          409,
-        );
-      }
-
-      await client.query(
-        `UPDATE movies
-            SET tmdb_id = $1,
-                tmdb_match_confidence = $2,
-                tmdb_match_source = 'manual',
-                tmdb_matched_at = now(),
-                localized_name = COALESCE(NULLIF(localized_name, ''), $3)
-          WHERE id = $4`,
-        [candidate.id, candidate.confidence, candidate.title, review.movieId],
-      );
-      metadata.appliedCandidateId = candidate.id;
-      newStatus = 'resolved';
-    } else if (input.action === 'reject') {
-      newStatus = 'ignored';
-    } else if (input.action === 'defer') {
-      newStatus = 'deferred';
-    } else {
-      newStatus = 'open';
-    }
-
-    await client.query(
-      `UPDATE tmdb_match_reviews
-          SET status = $1,
-              updated_at = now()
-        WHERE id = $2`,
-      [newStatus, review.id],
-    );
-
-    await client.query(
-      `INSERT INTO tmdb_match_review_audit (
-         review_id,
-         action,
-         actor,
-         note,
-         previous_status,
-         new_status,
-         candidate,
-         metadata
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb)`,
-      [
-        review.id,
-        input.action,
-        input.actor,
-        input.note?.trim() || null,
-        review.status,
-        newStatus,
-        candidate ? JSON.stringify(candidate.raw) : null,
-        JSON.stringify(metadata),
-      ],
-    );
+    const review = await getTMDBMatchReviewForUpdate(client, input.reviewId);
+    assertReviewCanBeActioned(review);
+    const metadata = createReviewActionMetadata(review);
+    const outcome = await resolveReviewActionOutcome(client, review, input, metadata);
+    await updateReviewStatus(client, review.id, outcome.newStatus);
+    await insertReviewActionAudit(client, input, review, outcome, metadata);
 
     await client.query('COMMIT');
     const updated = await getTMDBMatchReview(review.id);
