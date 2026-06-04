@@ -154,15 +154,6 @@ const FAST_DISCOVERY_API_LABELS: Record<FastDiscovery, string> = {
   surprise: 'Surprise me',
 };
 
-export const QUESTION_LABELS = [
-  'Reference point',
-  'Search lane',
-  "Tonight's vibe",
-  'Energy level',
-  'Hard avoids',
-  'Optional actor',
-];
-
 function getAvoidLabels(person: PersonAnswers) {
   return person.fastAvoids.map((avoid) => FAST_AVOID_API_LABELS[avoid]);
 }
