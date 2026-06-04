@@ -17,7 +17,11 @@ import logger from '@/lib/logger';
 import { getMovieIdentityKey } from '@/lib/movieIdentity';
 
 import type { RecommendationStage } from '@/features/recommendation/stages';
-import type { PersonFormData } from '@/features/recommendation/types';
+import type {
+  PersonFormData,
+  RecommendationExperienceMode,
+  RecommendationSourceStrategy,
+} from '@/features/recommendation/types';
 
 export type { RecommendationStage };
 
@@ -62,17 +66,6 @@ export type RecommendationCandidateSource =
   | 'tmdb-search'
   | 'memory'
   | 'jit-enriched';
-export type RecommendationSourceStrategy =
-  | 'curated-showcase'
-  | 'hybrid-fast'
-  | 'memory-aware-local'
-  | 'tmdb-first'
-  | 'compromise-hybrid';
-export type RecommendationExperienceMode =
-  | 'curated-showcase'
-  | 'fast-pick'
-  | 'normal-match'
-  | 'taste-swipe';
 
 export interface RecommendationMovie {
   id: number;
