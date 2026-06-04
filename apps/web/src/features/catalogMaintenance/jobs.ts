@@ -15,6 +15,11 @@ import type {
 } from '@/lib/jobQueue';
 
 const DEFAULT_TMDB_LANGUAGE = 'en-US';
+type CatalogMaintenanceJobData =
+  | CatalogSeedTMDBMovieJobData
+  | CatalogDiscoverTMDBSourcePageJobData
+  | CatalogBackfillMovieJobData;
+type TraceAttributeValue = string | number | boolean;
 
 function normalizeLanguage(language?: string): string {
   return (language ?? DEFAULT_TMDB_LANGUAGE).trim() || DEFAULT_TMDB_LANGUAGE;
@@ -24,11 +29,11 @@ function toBullMQJobIdPart(value: string | number): string {
   return String(value).replace(/[^a-zA-Z0-9_.-]/g, '-');
 }
 
-export function getCatalogSeedTMDBMovieJobId(tmdbId: number, language?: string): string {
+function getCatalogSeedTMDBMovieJobId(tmdbId: number, language?: string): string {
   return `tmdb-seed-${tmdbId}-${toBullMQJobIdPart(normalizeLanguage(language))}`;
 }
 
-export function getCatalogDiscoverTMDBSourcePageJobId(
+function getCatalogDiscoverTMDBSourcePageJobId(
   source: CatalogDiscoverTMDBSourcePageJobData['source'],
   page: number,
   language?: string,
@@ -38,23 +43,17 @@ export function getCatalogDiscoverTMDBSourcePageJobId(
   )}`;
 }
 
-export function getCatalogBackfillMovieJobId(movieId: string | number): string {
+function getCatalogBackfillMovieJobId(movieId: string | number): string {
   return `backfill-${toBullMQJobIdPart(movieId)}`;
 }
 
-export async function enqueueCatalogSeedTMDBMovie(
-  input: Omit<CatalogSeedTMDBMovieJobData, 'version'>,
-): Promise<boolean> {
-  if (!catalogMaintenanceQueue) return false;
-  const queue = catalogMaintenanceQueue;
-
-  const data: CatalogSeedTMDBMovieJobData = {
-    version: 1,
-    ...input,
-    language: normalizeLanguage(input.language),
-    trace: getTraceCarrier(),
-  };
-
+async function enqueueCatalogMaintenanceJob(input: {
+  queue: NonNullable<typeof catalogMaintenanceQueue>;
+  name: CatalogMaintenanceJobName;
+  data: CatalogMaintenanceJobData;
+  jobId: string;
+  attributes: Record<string, TraceAttributeValue>;
+}): Promise<void> {
   await withTraceSpan(
     'catalog_maintenance.enqueue',
     {
@@ -62,20 +61,18 @@ export async function enqueueCatalogSeedTMDBMovie(
         'messaging.system': 'bullmq',
         'messaging.destination.name': 'catalog-maintenance',
         'messaging.operation.name': 'enqueue',
-        'job.name': CATALOG_MAINTENANCE_JOB_NAMES.seedTMDBMovie,
-        'tmdb.id': input.movie.id,
+        'job.name': input.name,
+        ...input.attributes,
       },
     },
     async (span) => {
-      const job = await queue.add(CATALOG_MAINTENANCE_JOB_NAMES.seedTMDBMovie, data, {
+      const job = await input.queue.add(input.name, input.data, {
         ...CATALOG_MAINTENANCE_JOB_OPTIONS,
-        jobId: getCatalogSeedTMDBMovieJobId(input.movie.id, data.language),
+        jobId: input.jobId,
       });
       span.setAttribute('job.id', String(job.id ?? 'unknown'));
     },
   );
-
-  return true;
 }
 
 export async function enqueueCatalogSeedTMDBMovies(input: {
@@ -137,26 +134,16 @@ export async function enqueueCatalogDiscoverTMDBSourcePage(
     trace: getTraceCarrier(),
   };
 
-  await withTraceSpan(
-    'catalog_maintenance.enqueue',
-    {
-      attributes: {
-        'messaging.system': 'bullmq',
-        'messaging.destination.name': 'catalog-maintenance',
-        'messaging.operation.name': 'enqueue',
-        'job.name': CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage,
-        'tmdb.source': input.source,
-        'tmdb.page': input.page,
-      },
+  await enqueueCatalogMaintenanceJob({
+    queue,
+    name: CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage,
+    data,
+    jobId: getCatalogDiscoverTMDBSourcePageJobId(input.source, input.page, data.language),
+    attributes: {
+      'tmdb.source': input.source,
+      'tmdb.page': input.page,
     },
-    async (span) => {
-      const job = await queue.add(CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage, data, {
-        ...CATALOG_MAINTENANCE_JOB_OPTIONS,
-        jobId: getCatalogDiscoverTMDBSourcePageJobId(input.source, input.page, data.language),
-      });
-      span.setAttribute('job.id', String(job.id ?? 'unknown'));
-    },
-  );
+  });
 
   logger.info({ source: input.source, page: input.page }, 'Queued catalog discovery page job');
   return true;
@@ -175,25 +162,13 @@ export async function enqueueCatalogBackfillMovie(
     trace: getTraceCarrier(),
   };
 
-  await withTraceSpan(
-    'catalog_maintenance.enqueue',
-    {
-      attributes: {
-        'messaging.system': 'bullmq',
-        'messaging.destination.name': 'catalog-maintenance',
-        'messaging.operation.name': 'enqueue',
-        'job.name': CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
-        'movie.id': String(input.movieId),
-      },
-    },
-    async (span) => {
-      const job = await queue.add(CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie, data, {
-        ...CATALOG_MAINTENANCE_JOB_OPTIONS,
-        jobId: getCatalogBackfillMovieJobId(input.movieId),
-      });
-      span.setAttribute('job.id', String(job.id ?? 'unknown'));
-    },
-  );
+  await enqueueCatalogMaintenanceJob({
+    queue,
+    name: CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
+    data,
+    jobId: getCatalogBackfillMovieJobId(input.movieId),
+    attributes: { 'movie.id': String(input.movieId) },
+  });
 
   logger.info({ movieId: input.movieId, reason: input.reason }, 'Queued catalog backfill job');
   return true;

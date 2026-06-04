@@ -1,11 +1,2 @@
 // Data processing and parsing utilities
 export { analyzeMovieChunks } from './analyzeMovieChunks';
-export { cleanMovieName } from './cleanMovieName';
-export { convertTextToMovieObjects } from './convertTextToMovieObjects';
-export { extractYearFromTitleLine } from './extractYearFromTitleLine';
-export { getMovieFileStats } from './getMovieFileStats';
-export { getMovieStats } from './getMovieStats';
-export { parseMovieChunks } from './parseMovieChunks';
-export { parseMovieNameAndYear } from './parseMovieNameAndYear';
-export { processMoviesFile } from './processMoviesFile';
-export { splitMovieDocument } from './splitMovieDocument';

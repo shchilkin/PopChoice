@@ -30,6 +30,8 @@ function parsePort(value: string | undefined): number {
     : DEFAULT_WORKER_METRICS_PORT;
 }
 
+// Imported dynamically by startWorkers.ts.
+// fallow-ignore-next-line unused-export
 export function startWorkerMetricsServer(): Server | null {
   if (!areMetricsEnabled()) return null;
 

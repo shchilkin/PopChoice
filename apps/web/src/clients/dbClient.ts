@@ -49,12 +49,6 @@ export interface QueryTerminal<T = unknown> extends PromiseLike<QueryResult<T>> 
   order: (column: string, options?: { ascending?: boolean }) => PromiseLike<QueryResult<T>>;
 }
 
-/** Range-able step in the query chain. */
-export interface QueryRange<T = unknown> {
-  range: (from: number, to: number) => QueryTerminal<T>;
-  order: (column: string, options?: { ascending?: boolean }) => PromiseLike<QueryResult<T>>;
-}
-
 /** Filterable step in the query chain. */
 export interface QueryFilter<T = unknown> extends PromiseLike<QueryResult<T>> {
   eq: (column: string, value: unknown) => QueryFilter<T>;

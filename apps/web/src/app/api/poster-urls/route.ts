@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { getPopularPosterUrls } from '@/integrations/tmdb';
 import logger from '@/lib/logger';
 
-export interface PosterUrlsResponse {
+interface PosterUrlsResponse {
   posters: string[];
 }
 

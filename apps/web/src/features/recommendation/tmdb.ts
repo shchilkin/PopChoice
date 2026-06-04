@@ -288,7 +288,7 @@ export async function fetchTMDBDiscoverMovies(
 // ---------------------------------------------------------------------------
 
 // Re-export for backward-compatible imports from this module (e.g. route.ts).
-export { cosineSimilarity, parseTMDBReleaseYear } from '@/lib/tmdb';
+export { parseTMDBReleaseYear } from '@/lib/tmdb';
 
 /**
  * Embed every TMDB movie in a single batched API call, compute real cosine similarity

@@ -13,7 +13,7 @@ export const RECOMMENDATION_STAGES = [
 
 export type RecommendationStage = (typeof RECOMMENDATION_STAGES)[number];
 
-export const RECOMMENDATION_PROGRESS_STAGES = RECOMMENDATION_STAGES.filter(
+const RECOMMENDATION_PROGRESS_STAGES = RECOMMENDATION_STAGES.filter(
   (stage): stage is Exclude<RecommendationStage, 'failed'> => stage !== 'failed',
 );
 

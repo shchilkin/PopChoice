@@ -17,5 +17,3 @@ export interface PersonAnswers {
   fastAvoids: FastAvoid[];
   fastDiscovery: FastDiscovery | '';
 }
-
-export type Phase = 'intro' | 'group-setup' | 'questions' | 'between-persons';

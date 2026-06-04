@@ -9,7 +9,7 @@ export const ageRatings = z.enum(['G', 'PG', 'PG-13', 'R', 'NR', '12+', '15', '1
  * Helper function to convert duration string to minutes
  * This is used in the schema transformation and available for testing
  */
-export function parseDurationToMinutes(duration: string): number {
+function parseDurationToMinutes(duration: string): number {
   if (!duration || typeof duration !== 'string') {
     return 0;
   }
@@ -102,19 +102,6 @@ export const movieChunksArraySchema = z.array(movieChunkSchema);
 export const parsedMovieSchema = z.object({
   name: z.string(),
   year: z.number(),
-});
-
-/**
- * Schema for movie document metadata
- */
-export const movieDocumentSchema = z.object({
-  pageContent: z.string(),
-  metadata: z.object({
-    movieIndex: z.number(),
-    movieName: z.string(),
-    chunkSize: z.number(),
-    source: z.string(),
-  }),
 });
 
 /**

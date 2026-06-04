@@ -181,7 +181,7 @@ export function recordTMDBProviderError(
   });
 }
 
-export function recordProviderError(input: {
+function recordProviderError(input: {
   provider: Provider;
   operation: ProviderOperation;
   reason: ProviderReason;

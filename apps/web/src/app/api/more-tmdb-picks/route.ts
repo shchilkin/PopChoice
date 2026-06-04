@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import z from 'zod';
 
 import { runMorePicksPipeline } from '@/features/recommendation/morePicksPipeline';
+import { morePicksPersonFormDataSchema } from '@/features/recommendation/morePicksSchemas';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import { isOpenAITimeoutError } from '@/lib/openaiTimeout';
 import { applyRateLimit } from '@/lib/rateLimit';
@@ -12,15 +13,8 @@ import {
 } from '@/lib/requestBody';
 import { withAuth } from '@/lib/withAuth';
 
-const personFormDataSchema = z.object({
-  favoriteMovie: z.string(),
-  newVsClassic: z.string().min(1),
-  moodPreference: z.array(z.string()).min(1),
-  tonePreference: z.string().min(1),
-});
-
 const requestBodySchema = z.object({
-  quizData: z.union([personFormDataSchema, z.array(personFormDataSchema).min(1)]),
+  quizData: z.union([morePicksPersonFormDataSchema, z.array(morePicksPersonFormDataSchema).min(1)]),
   /** TMDB discover page number (2 = first "more" page, since page 1 was used in main route). */
   page: z.number().int().min(2).max(10).optional().default(2),
   /** Negative IDs of TMDB movies already shown to the user; used to deduplicate. */

@@ -3,14 +3,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 export const RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES = 16 * 1024;
 export const POSTER_REQUEST_BODY_LIMIT_BYTES = 32 * 1024;
 
-export class RequestBodyTooLargeError extends Error {
+class RequestBodyTooLargeError extends Error {
   constructor(readonly limitBytes: number) {
     super(`Request body exceeds ${limitBytes} bytes`);
     this.name = 'RequestBodyTooLargeError';
   }
 }
 
-export class InvalidRequestBodyError extends Error {
+class InvalidRequestBodyError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'InvalidRequestBodyError';
