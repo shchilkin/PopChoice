@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { closeDatabase, initDatabase } from './db.js';
 import {
+  getCatalogHealthReport,
   isCatalogHealthIssueResolvedForMovie,
   isCatalogHealthIssueKey,
   listCatalogHealthIssueMoviePage,
@@ -154,5 +155,63 @@ describe('catalog health issue movie pages', () => {
         staleAfterDays: 90,
       }),
     ).rejects.toThrow('Unsupported catalog-health issue');
+  });
+
+  it('normalizes summary rows when building the catalog health report', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            total_movies: '12',
+            missing_poster_url: '1',
+            missing_tmdb_id: 0,
+            stale_tmdb_metadata: '2',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: '334',
+            name: 'Memento',
+            year: 2000,
+            tmdb_id: 77,
+            poster_url: null,
+            localized_name: null,
+            duration: 113,
+            age_rating: 'R',
+            tmdb_matched_at: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            identity_key: '77',
+            duplicate_count: '2',
+            total_groups: '1',
+            movies: [{ id: '334', name: 'Memento', year: 2000, tmdb_id: 77 }],
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const report = await getCatalogHealthReport({ sampleLimit: 5, staleAfterDays: 90 });
+
+    expect(report.totalMovies).toBe(12);
+    expect(report.issues.find((issue) => issue.key === 'missing_poster_url')).toMatchObject({
+      count: 1,
+      samples: [{ id: '334', name: 'Memento', tmdb_id: 77 }],
+    });
+    expect(report.issues.find((issue) => issue.key === 'stale_tmdb_metadata')).toMatchObject({
+      count: 2,
+      samples: [],
+    });
+    expect(report.issues.find((issue) => issue.key === 'missing_localized_name')?.count).toBe(0);
+    expect(report.duplicateTmdbIds).toMatchObject({
+      totalGroups: 1,
+      groups: [{ identityKey: '77', count: 2 }],
+    });
   });
 });

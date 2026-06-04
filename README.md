@@ -201,11 +201,10 @@ See [Code Quality Checks](docs/QUALITY.md) for adoption notes and current baseli
 ### Optional — Bull Board queue dashboard
 
 ```bash
-cd apps/web
 npm run bull-board
 ```
 
-Open [http://localhost:3001](http://localhost:3001) to inspect BullMQ queues locally.
+Open [http://localhost:4000](http://localhost:4000) to inspect BullMQ queues locally.
 Set `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` before exposing Bull
 Board outside localhost.
 
@@ -305,7 +304,7 @@ npm run build:storybook             # Build static Storybook
 npm run check:backoffice            # Shared build + backoffice structure/type/test checks
 npm run start --workspace=apps/web  # Start production server (apps/web)
 cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
-cd apps/web && npm run bull-board    # Launch BullMQ dashboard (apps/web)
+npm run bull-board                  # Launch BullMQ dashboard (apps/bull-board)
 
 # Testing
 npm run test            # Run all tests

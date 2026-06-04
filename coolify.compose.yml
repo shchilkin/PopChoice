@@ -137,7 +137,7 @@ services:
       [
         'sh',
         '-lc',
-        'export REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec npm run start:bull-board --workspace=apps/web',
+        'export REDIS_URL="redis://$${SERVICE_NAME_REDIS:-redis}:6379"; exec npm run start --workspace=apps/bull-board',
       ]
     environment:
       SERVICE_NAME_REDIS: ${SERVICE_NAME_REDIS:-redis}

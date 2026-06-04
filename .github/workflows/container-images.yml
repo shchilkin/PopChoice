@@ -29,7 +29,7 @@ jobs:
           - name: workers
             dockerfile: apps/web/workers.Dockerfile
           - name: bull-board
-            dockerfile: apps/web/bull-board.Dockerfile
+            dockerfile: apps/bull-board/Dockerfile
           - name: storybook
             dockerfile: apps/web/storybook.Dockerfile
           - name: backoffice

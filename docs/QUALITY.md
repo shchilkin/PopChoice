@@ -58,14 +58,17 @@ Fallow is configured at the repository root and sees all npm workspaces:
 `packages/shared`, and the service workspaces. PR audit should therefore be
 read as a monorepo gate, even when a cleanup issue focuses on one workspace.
 
-Current focused follow-ups:
+Completed focused follow-ups:
 
 - [#697](https://github.com/shchilkin/PopChoice/issues/697): backoffice/docs
   findings, including generated docs imports, Playwright e2e reachability, and
   backoffice export-surface cleanup.
 - [#698](https://github.com/shchilkin/PopChoice/issues/698): shared/services
-  findings, including package-level health hotspots and service-local unused
-  exports/types.
+  findings, including service orchestration complexity
+  ([#702](https://github.com/shchilkin/PopChoice/issues/702)), Bull Board
+  entrypoint ownership ([#703](https://github.com/shchilkin/PopChoice/issues/703)),
+  and shared package health hotspots
+  ([#704](https://github.com/shchilkin/PopChoice/issues/704)).
 
 The root config intentionally ignores `**/e2e/**` for dead-code reachability and
 `collections/server` as a generated Fumadocs import. Keep those ignores narrow:

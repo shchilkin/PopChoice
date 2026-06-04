@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Build context: repo root
-# docker build -f apps/web/bull-board.Dockerfile .
+# docker build -f apps/bull-board/Dockerfile .
 
 FROM node:24-slim AS builder
 
@@ -8,7 +8,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
-COPY apps/web/package.json ./apps/web/
+COPY apps/bull-board/package.json ./apps/bull-board/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
@@ -17,12 +17,10 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --no-audit --fund
 
 COPY packages/shared/src/ ./packages/shared/src/
 COPY packages/shared/tsconfig.json ./packages/shared/
-COPY apps/web/scripts/bull-board.ts ./apps/web/scripts/
-COPY apps/web/scripts/coolify-runtime-env.cjs ./apps/web/scripts/
-COPY apps/web/tsconfig.json ./apps/web/
-COPY apps/web/tsconfig.bull-board.json ./apps/web/
+COPY apps/bull-board/src/ ./apps/bull-board/src/
+COPY apps/bull-board/tsconfig.json ./apps/bull-board/
 RUN npm run build --workspace=packages/shared \
-  && npm run build:bull-board --workspace=apps/web
+  && npm run build --workspace=apps/bull-board
 
 FROM node:24-slim
 
@@ -60,7 +58,7 @@ ENV BUILD_VERCEL_GIT_COMMIT_REF=$VERCEL_GIT_COMMIT_REF
 
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
-COPY apps/web/package.json ./apps/web/
+COPY apps/bull-board/package.json ./apps/bull-board/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
@@ -68,8 +66,7 @@ COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-audit --fund=false
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/apps/web/dist/bull-board ./apps/web/dist/bull-board
-COPY --from=builder /app/apps/web/scripts/coolify-runtime-env.cjs ./apps/web/scripts/
+COPY --from=builder /app/apps/bull-board/dist ./apps/bull-board/dist
 
 EXPOSE 3000
-CMD ["npm", "run", "start:bull-board", "--workspace=apps/web"]
+CMD ["npm", "run", "start", "--workspace=apps/bull-board"]

@@ -12,111 +12,106 @@ import { logger } from './logger.js';
 
 import type { MovieRecord } from './database.js';
 
+type MovieSeedRecord = Omit<MovieRecord, 'embedding'>;
+
+interface ParseMovieEntryResult {
+  movie: MovieSeedRecord | null;
+  warning?: {
+    context: Record<string, unknown>;
+    message: string;
+  };
+}
+
 /**
  * Parse a duration string like "1h 42m", "2h", "90m", or a bare integer (minutes) into total minutes.
  */
-function parseDuration(duration: string): number {
+export function parseDuration(duration: string): number {
   const trimmed = duration.trim();
-  let total = 0;
+  const hours = Number(trimmed.match(/(\d+)h/)?.[1] ?? 0);
+  const minutes = Number(trimmed.match(/(\d+)m/)?.[1] ?? 0);
+  const total = hours * 60 + minutes;
+  const bareMinutes = trimmed.match(/^(\d+)$/)?.[1];
 
-  const hoursMatch = trimmed.match(/(\d+)h/);
-  if (hoursMatch) total += parseInt(hoursMatch[1], 10) * 60;
+  return total > 0 ? total : Number(bareMinutes ?? 0);
+}
 
-  const minutesMatch = trimmed.match(/(\d+)m/);
-  if (minutesMatch) total += parseInt(minutesMatch[1], 10);
+function invalidEntry(): ParseMovieEntryResult {
+  return { movie: null };
+}
 
-  // Fall back to treating a bare integer as minutes
-  if (total === 0) {
-    const intMatch = trimmed.match(/^(\d+)$/);
-    if (intMatch) total = parseInt(intMatch[1], 10);
+export function parseMovieEntry(entry: string): ParseMovieEntryResult {
+  const lines = entry
+    .trim()
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+
+  if (lines.length < 2) return invalidEntry();
+
+  const firstLine = lines[0];
+  if (!/^[A-Za-z0-9].*: \d{4} \|/.test(firstLine)) return invalidEntry();
+
+  const parts = firstLine.split('|').map((part) => part.trim());
+  if (parts.length < 4) return invalidEntry();
+
+  const [titleAndYear, ageRating, durationStr, scoreStr] = parts;
+  const yearMatch = titleAndYear.match(/:\s*(\d{4})\s*$/);
+  if (!yearMatch) return invalidEntry();
+
+  const duration = parseDuration(durationStr);
+  if (duration <= 0) {
+    return {
+      movie: null,
+      warning: {
+        context: { durationStr, firstLine },
+        message: 'Skipping entry with non-positive duration',
+      },
+    };
   }
 
-  return total;
+  const score = parseFloat(scoreStr.replace(/rating/i, '').trim());
+  if (!Number.isFinite(score)) {
+    return {
+      movie: null,
+      warning: {
+        context: { firstLine, scoreStr },
+        message: 'Skipping entry with unparseable score',
+      },
+    };
+  }
+
+  return {
+    movie: {
+      name: titleAndYear.replace(/:\s*\d{4}\s*$/, '').trim(),
+      year: parseInt(yearMatch[1], 10),
+      age_rating: ageRating,
+      description: lines.slice(1).join(' ').trim(),
+      duration,
+      score_rating: score,
+    },
+  };
 }
 
 /**
  * Read and parse the movies file into partial MovieRecord objects (without embeddings).
  * Skips any entries that do not match the expected format.
  */
-export function readMoviesFile(filePath: string): Omit<MovieRecord, 'embedding'>[] {
+export function readMoviesFile(filePath: string): MovieSeedRecord[] {
   const content = readFileSync(filePath, 'utf-8');
   const chunks = content.split(/(?:\r?\n){2,}/);
-  const movies: Omit<MovieRecord, 'embedding'>[] = [];
+  const movies: MovieSeedRecord[] = [];
   let skipped = 0;
 
   for (const chunk of chunks) {
-    const trimmed = chunk.trim();
-    if (!trimmed) continue;
+    if (!chunk.trim()) continue;
 
-    const lines = trimmed.split(/\r?\n/);
-    if (lines.length < 2) {
+    const result = parseMovieEntry(chunk);
+    if (!result.movie) {
       skipped++;
+      if (result.warning) logger.warn(result.warning.message, result.warning.context);
       continue;
     }
 
-    // Validate header: must start with a letter or digit and contain ": YYYY |"
-    if (!/^[A-Za-z0-9].*: \d{4} \|/.test(lines[0])) {
-      skipped++;
-      continue;
-    }
-
-    try {
-      const parts = lines[0].split('|').map((p) => p.trim());
-
-      // Expect at least 4 pipe-delimited fields
-      if (parts.length < 4) {
-        skipped++;
-        continue;
-      }
-
-      const titleAndYear = parts[0]; // e.g. "Casablanca: 1942"
-      const ageRating = parts[1]; // e.g. "PG"
-      const durationStr = parts[2]; // e.g. "1h 42m"
-      const scoreStr = parts[3]; // e.g. "8.5 rating"
-
-      // Extract year from "Title: Year"
-      const yearMatch = titleAndYear.match(/:\s*(\d{4})\s*$/);
-      if (!yearMatch) {
-        skipped++;
-        continue;
-      }
-
-      const year = parseInt(yearMatch[1], 10);
-      const name = titleAndYear.replace(/:\s*\d{4}\s*$/, '').trim();
-      const duration = parseDuration(durationStr);
-      const score = parseFloat(scoreStr.replace(/rating/i, '').trim());
-      const description = lines.slice(1).join(' ').trim();
-
-      if (duration <= 0) {
-        skipped++;
-        logger.warn('Skipping entry with non-positive duration', {
-          firstLine: lines[0],
-          durationStr,
-        });
-        continue;
-      }
-
-      if (!Number.isFinite(score)) {
-        skipped++;
-        logger.warn('Skipping entry with unparseable score', { firstLine: lines[0], scoreStr });
-        continue;
-      }
-
-      movies.push({
-        name,
-        year,
-        age_rating: ageRating,
-        description,
-        duration,
-        score_rating: score,
-      });
-    } catch (err) {
-      skipped++;
-      logger.warn('Failed to parse movie entry', {
-        firstLine: lines[0],
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+    movies.push(result.movie);
   }
 
   if (skipped > 0) {
