@@ -12,6 +12,18 @@ export interface CatalogMaintenanceQueueSnapshotMessage {
 export type CatalogMaintenanceQueueStreamMode = 'live' | 'snapshot-only';
 
 const QUEUE_STATES = new Set(['active', 'completed', 'delayed', 'failed', 'waiting']);
+const QUEUE_PAGE_STRING_FIELDS = ['queueName', 'updatedAt'] as const;
+const QUEUE_PAGE_NUMBER_FIELDS = ['openJobs', 'totalCount', 'limit', 'offset'] as const;
+const QUEUE_JOB_STRING_FIELDS = ['id', 'name'] as const;
+const QUEUE_JOB_NULLABLE_STRING_FIELDS = [
+  'createdAt',
+  'processedAt',
+  'finishedAt',
+  'failedReason',
+  'repairBatchId',
+  'repairBatchItemId',
+  'movieId',
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -40,45 +52,67 @@ function isPayloadValue(value: unknown): boolean {
   return isRecord(value) && typeof value.label === 'string' && typeof value.value === 'string';
 }
 
+function hasStringFields(value: Record<string, unknown>, fields: readonly string[]): boolean {
+  return fields.every((field) => typeof value[field] === 'string');
+}
+
+function hasFiniteNumberFields(value: Record<string, unknown>, fields: readonly string[]): boolean {
+  return fields.every((field) => hasFiniteNumber(value, field));
+}
+
+function hasNullableStringFields(
+  value: Record<string, unknown>,
+  fields: readonly string[],
+): boolean {
+  return fields.every((field) => {
+    const item = value[field];
+    return typeof item === 'string' || item === null;
+  });
+}
+
+function hasNullableNumberField(value: Record<string, unknown>, key: string): boolean {
+  const item = value[key];
+  return typeof item === 'number' || item === null;
+}
+
+function hasKnownQueueState(value: Record<string, unknown>): boolean {
+  return typeof value.state === 'string' && QUEUE_STATES.has(value.state);
+}
+
+function hasQueueJobPayload(value: Record<string, unknown>): boolean {
+  return Array.isArray(value.payload) && value.payload.every(isPayloadValue);
+}
+
+function hasQueueJobs(value: Record<string, unknown>): boolean {
+  return Array.isArray(value.jobs) && value.jobs.every(isQueueJob);
+}
+
 function isQueueJob(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.name === 'string' &&
-    typeof value.state === 'string' &&
-    QUEUE_STATES.has(value.state) &&
-    hasFiniteNumber(value, 'attemptsMade') &&
-    (typeof value.attemptsConfigured === 'number' || value.attemptsConfigured === null) &&
-    (typeof value.createdAt === 'string' || value.createdAt === null) &&
-    (typeof value.processedAt === 'string' || value.processedAt === null) &&
-    (typeof value.finishedAt === 'string' || value.finishedAt === null) &&
-    (typeof value.failedReason === 'string' || value.failedReason === null) &&
-    Array.isArray(value.payload) &&
-    value.payload.every(isPayloadValue) &&
-    (typeof value.repairBatchId === 'string' || value.repairBatchId === null) &&
-    (typeof value.repairBatchItemId === 'string' || value.repairBatchItemId === null) &&
-    (typeof value.movieId === 'string' || value.movieId === null)
-  );
+  if (!isRecord(value)) return false;
+
+  return [
+    hasStringFields(value, QUEUE_JOB_STRING_FIELDS),
+    hasKnownQueueState(value),
+    hasFiniteNumber(value, 'attemptsMade'),
+    hasNullableNumberField(value, 'attemptsConfigured'),
+    hasNullableStringFields(value, QUEUE_JOB_NULLABLE_STRING_FIELDS),
+    hasQueueJobPayload(value),
+  ].every(Boolean);
 }
 
 export function isCatalogMaintenanceQueueJobPage(
   value: unknown,
 ): value is CatalogMaintenanceQueueJobPage {
-  return (
-    isRecord(value) &&
-    typeof value.queueName === 'string' &&
-    typeof value.available === 'boolean' &&
-    typeof value.state === 'string' &&
-    QUEUE_STATES.has(value.state) &&
-    Array.isArray(value.jobs) &&
-    value.jobs.every(isQueueJob) &&
-    isQueueCounts(value.counts) &&
-    hasFiniteNumber(value, 'openJobs') &&
-    hasFiniteNumber(value, 'totalCount') &&
-    hasFiniteNumber(value, 'limit') &&
-    hasFiniteNumber(value, 'offset') &&
-    typeof value.updatedAt === 'string'
-  );
+  if (!isRecord(value)) return false;
+
+  return [
+    hasStringFields(value, QUEUE_PAGE_STRING_FIELDS),
+    typeof value.available === 'boolean',
+    hasKnownQueueState(value),
+    hasQueueJobs(value),
+    isQueueCounts(value.counts),
+    hasFiniteNumberFields(value, QUEUE_PAGE_NUMBER_FIELDS),
+  ].every(Boolean);
 }
 
 export function parseCatalogMaintenanceQueueSnapshotMessage(
