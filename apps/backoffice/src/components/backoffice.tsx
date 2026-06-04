@@ -1,9 +1,4 @@
-export {
-  BackofficeErrorPage,
-  BackofficeLayout,
-  BackofficeLoadingPage,
-  BackofficeShell,
-} from './backoffice-layout';
+export { BackofficeErrorPage, BackofficeLoadingPage } from './backoffice-layout';
 export { CatalogHealthPage } from './catalog-health';
 export { CatalogMaintenanceQueuePage } from './catalog-queue';
 export { CatalogMovieDetailPage, CatalogMovieNotFoundPage } from './movie-detail';
@@ -18,4 +13,3 @@ export {
   RecommendationEvalNotFoundPage,
 } from './recommendation-evals';
 export { ReviewDetailPage, ReviewListPage } from './tmdb-reviews';
-export type { BackofficeSection } from './backoffice-layout';

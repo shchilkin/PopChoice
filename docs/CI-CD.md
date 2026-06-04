@@ -84,6 +84,7 @@ The `fallow-audit` PR job runs `npm run quality:fallow:audit -- --changed-since 
 It is intentionally advisory during the first rollout (`continue-on-error: true`) and is not included in the required
 `PR Validation` aggregate yet. This lets reviewers see newly introduced unused-code, duplication, and complexity
 findings while the project tunes false positives and turns high-confidence baseline findings into focused cleanup work.
+The audit runs from the repository root, so findings can come from any npm workspace, not only `apps/web`.
 
 ### Google Fonts Build Reliability
 

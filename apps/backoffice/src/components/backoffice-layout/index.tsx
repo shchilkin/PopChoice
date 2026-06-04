@@ -75,8 +75,6 @@ export function BackofficeLayout({
   );
 }
 
-export const BackofficeShell = BackofficeLayout;
-
 export function BackofficeLoadingPage({
   active = 'health',
   title = 'Loading backoffice',

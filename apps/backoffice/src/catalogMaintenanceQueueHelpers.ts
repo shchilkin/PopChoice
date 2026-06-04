@@ -2,7 +2,7 @@ const DEFAULT_TMDB_LANGUAGE = 'en-US';
 
 export const CATALOG_BACKFILL_MOVIE_JOB_NAME = 'backfill-movie';
 export const CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME = 'enqueue-catalog-repair-batch';
-export const CATALOG_MAINTENANCE_QUEUE_JOB_STATES = [
+const CATALOG_MAINTENANCE_QUEUE_JOB_STATES = [
   'waiting',
   'active',
   'delayed',

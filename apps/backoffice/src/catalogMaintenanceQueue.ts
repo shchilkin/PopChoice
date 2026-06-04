@@ -9,7 +9,6 @@ import {
   CATALOG_BACKFILL_MOVIE_JOB_NAME,
   CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
   CATALOG_MAINTENANCE_JOB_OPTIONS,
-  CATALOG_MAINTENANCE_QUEUE_JOB_STATES,
   EMPTY_CATALOG_MAINTENANCE_QUEUE_COUNTS,
   compactJobValue,
   getCatalogBackfillMovieJobId,
@@ -28,7 +27,6 @@ import {
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
 
 export {
-  CATALOG_MAINTENANCE_QUEUE_JOB_STATES,
   getCatalogBackfillMovieJobId,
   getCatalogRepairBatchJobId,
   isCatalogMaintenanceQueueJobState,
