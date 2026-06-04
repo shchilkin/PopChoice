@@ -13,15 +13,11 @@ import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
-import {
-  GENRE_LABEL_TO_TMDB_ID,
-  cosineSimilarity,
-  normalizeGenreLabel,
-  parseTMDBReleaseYear,
-} from '@/lib/tmdb';
+import { cosineSimilarity, parseTMDBReleaseYear } from '@/lib/tmdb';
 import { getTraceCarrier, withTraceSpan } from '@/lib/tracing';
 
 import { morePicksPersonFormDataSchema } from './morePicksSchemas';
+import { formatTMDBMovieEmbeddingText, getTopTMDBGenreIds } from './tmdbDiscoverHelpers';
 
 import type { MorePicksPersonFormData } from './morePicksSchemas';
 import type { TMDBDiscoverMovie } from './tmdb';
@@ -65,66 +61,72 @@ const tmdbMovieDetailSchema = z.object({
 // Helpers (exported for unit testing; callers should prefer runMorePicksPipeline)
 // ---------------------------------------------------------------------------
 
-export function extractTMDBParams(allPeopleData: MorePicksPersonFormData[]) {
-  const moodCounts: Record<string, number> = {};
-  allPeopleData.forEach((p) => {
-    p.moodPreference.forEach((mood) => {
-      const key = normalizeGenreLabel(mood);
-      moodCounts[key] = (moodCounts[key] ?? 0) + 1;
-    });
-  });
+type MorePicksEraPreference = 'new' | 'classic' | 'both';
+type MorePicksTonePreference = 'serious' | 'dark' | 'balanced' | 'light';
 
-  const genre_ids = Object.entries(moodCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([key]) => GENRE_LABEL_TO_TMDB_ID[key])
-    .filter((id): id is number => id !== undefined);
+function getDominantValue<TValue extends string>(values: TValue[], fallback: TValue): TValue {
+  const counts = new Map<TValue, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return Array.from(counts.entries()).sort(([, a], [, b]) => b - a)[0]?.[0] ?? fallback;
+}
 
-  const eraCounts: Record<string, number> = {};
-  allPeopleData.forEach((p) => {
-    const era = p.newVsClassic.toLowerCase();
-    let key: string;
-    if (era.includes('both')) {
-      key = 'both';
-    } else if (era.includes('classic')) {
-      key = 'classic';
-    } else if (era.includes('new')) {
-      key = 'new';
-    } else {
-      key = 'both';
-    }
-    eraCounts[key] = (eraCounts[key] ?? 0) + 1;
-  });
-  const dominantEra = Object.entries(eraCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'both';
+function getTopGenreIds(allPeopleData: MorePicksPersonFormData[]): number[] {
+  return getTopTMDBGenreIds(allPeopleData.flatMap((person) => person.moodPreference));
+}
+
+function normalizeEraPreference(value: string): MorePicksEraPreference {
+  const era = value.toLowerCase();
+  if (era.includes('both')) return 'both';
+  if (era.includes('classic')) return 'classic';
+  if (era.includes('new')) return 'new';
+  return 'both';
+}
+
+function getReleaseDateFilters(dominantEra: MorePicksEraPreference): {
+  primary_release_date_gte?: string;
+  primary_release_date_lte?: string;
+} {
   const currentYear = new Date().getFullYear();
-  let primary_release_date_gte: string | undefined;
-  let primary_release_date_lte: string | undefined;
   if (dominantEra === 'new') {
-    primary_release_date_gte = `${currentYear - 10}-01-01`;
-  } else if (dominantEra === 'classic') {
-    primary_release_date_lte = `${currentYear - 20}-12-31`;
+    return { primary_release_date_gte: `${currentYear - 10}-01-01` };
   }
 
-  const toneCounts: Record<string, number> = {};
-  allPeopleData.forEach((p) => {
-    const tone = p.tonePreference.toLowerCase();
-    let key: string;
-    if (tone.includes('serious')) {
-      key = 'serious';
-    } else if (tone.includes('dark')) {
-      key = 'dark';
-    } else if (tone.includes('balanced')) {
-      key = 'balanced';
-    } else {
-      key = 'light';
-    }
-    toneCounts[key] = (toneCounts[key] ?? 0) + 1;
-  });
-  const dominantTone = Object.entries(toneCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'light';
-  const sort_by =
-    dominantTone === 'serious' || dominantTone === 'dark' ? 'vote_average.desc' : 'popularity.desc';
+  if (dominantEra === 'classic') {
+    return { primary_release_date_lte: `${currentYear - 20}-12-31` };
+  }
 
-  return { genre_ids, sort_by, primary_release_date_gte, primary_release_date_lte };
+  return {};
+}
+
+function normalizeTonePreference(value: string): MorePicksTonePreference {
+  const tone = value.toLowerCase();
+  if (tone.includes('serious')) return 'serious';
+  if (tone.includes('dark')) return 'dark';
+  if (tone.includes('balanced')) return 'balanced';
+  return 'light';
+}
+
+function getSortBy(dominantTone: MorePicksTonePreference): string {
+  return dominantTone === 'serious' || dominantTone === 'dark'
+    ? 'vote_average.desc'
+    : 'popularity.desc';
+}
+
+export function extractTMDBParams(allPeopleData: MorePicksPersonFormData[]) {
+  const dominantEra = getDominantValue(
+    allPeopleData.map((person) => normalizeEraPreference(person.newVsClassic)),
+    'both',
+  );
+  const dominantTone = getDominantValue(
+    allPeopleData.map((person) => normalizeTonePreference(person.tonePreference)),
+    'light',
+  );
+
+  return {
+    genre_ids: getTopGenreIds(allPeopleData),
+    sort_by: getSortBy(dominantTone),
+    ...getReleaseDateFilters(dominantEra),
+  };
 }
 
 function combineAllPeopleDataToString(allPeopleData: MorePicksPersonFormData[]): string {
@@ -267,13 +269,7 @@ export async function runMorePicksPipeline(
 
   // Compute cosine similarity scores
   const queryText = combineAllPeopleDataToString(allPeopleData);
-  const candidateTexts = candidates.map((m) => {
-    const year = parseTMDBReleaseYear(m.release_date);
-    const score = Number(m.vote_average?.toFixed(1)) || 0;
-    return [`${m.title} (${year}) | TMDB Score: ${score}/10`, m.overview || '']
-      .filter(Boolean)
-      .join('\n');
-  });
+  const candidateTexts = candidates.map(formatTMDBMovieEmbeddingText);
 
   const similarityMap = new Map<number, number>();
   try {
