@@ -88,6 +88,32 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+  fallow-audit:
+    name: Fallow Audit
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run advisory Fallow audit
+        run: npm run quality:fallow:audit -- --changed-since origin/development --format compact
+
   server-tests:
     name: Server Tests
     needs: changes
