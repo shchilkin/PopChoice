@@ -30,6 +30,22 @@ export type {
 } from './db.js';
 export { createEmbeddings } from './embeddings.js';
 export {
+  extractTMDBCatalogMetadataCore,
+  extractTMDBUSCertification,
+} from './tmdbCatalogMetadata.js';
+export type {
+  ExtractTMDBCatalogMetadataOptions,
+  TMDBCatalogCastCreditSource,
+  TMDBCatalogCrewCreditSource,
+  TMDBCatalogGenreMetadata,
+  TMDBCatalogGenreSource,
+  TMDBCatalogKeywordMetadata,
+  TMDBCatalogKeywordSource,
+  TMDBCatalogMetadataCore,
+  TMDBCatalogMovieDetails,
+  TMDBCatalogPersonMetadata,
+} from './tmdbCatalogMetadata.js';
+export {
   parsePositiveInt,
   parseNonNegativeInt,
   parsePositiveFloat,

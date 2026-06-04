@@ -13,6 +13,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(dirname, './src'),
+      '@pop-choice/shared': path.resolve(dirname, '../../packages/shared/src/index.ts'),
     },
   },
   test: {
