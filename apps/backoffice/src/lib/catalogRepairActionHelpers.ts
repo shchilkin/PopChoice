@@ -24,6 +24,7 @@ export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
 
 export type CatalogRepairActionStatus =
   | 'queued'
+  | 'deduped'
   | 'orchestration_queued'
   | 'partial'
   | 'failed'
@@ -71,6 +72,9 @@ export function catalogRepairMessage(status: CatalogRepairActionStatus): string 
   }
   if (status === 'queued') {
     return 'Catalog backfill job queued. Workers will process it through the existing rate-limited TMDB path.';
+  }
+  if (status === 'deduped') {
+    return 'Catalog backfill job is already queued. Workers will process the existing job.';
   }
   if (status === 'empty') {
     return 'No affected movies are currently available for this repair action.';

@@ -128,6 +128,31 @@ describe('catalog health repair action route', () => {
     );
   });
 
+  it('returns an ok JSON contract for already queued single repairs', async () => {
+    mocks.performCatalogRepairAction.mockResolvedValue({
+      issueKey: 'missing_poster_url',
+      job: { jobId: 'backfill-42', status: 'deduped' },
+      mode: 'single',
+      movieId: '42',
+      status: 'deduped',
+    });
+
+    const response = await POST(createRepairRequest({ requestedWith: 'fetch' }) as never);
+
+    await expectBackofficeActionJson(response, {
+      body: {
+        issueKey: 'missing_poster_url',
+        job: { jobId: 'backfill-42', status: 'deduped' },
+        message: 'message:deduped',
+        mode: 'single',
+        movieId: '42',
+        ok: true,
+        status: 'deduped',
+      },
+      status: 200,
+    });
+  });
+
   it('returns a partial JSON status for partially queued bulk repairs', async () => {
     const summary = {
       attempted: 25,

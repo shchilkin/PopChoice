@@ -26,6 +26,15 @@ function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
     );
   }
 
+  if (repairStatus === 'deduped') {
+    return (
+      <div className="notice neutral">
+        Catalog backfill work was already queued. Workers will process the existing job through the
+        rate-limited TMDB path.
+      </div>
+    );
+  }
+
   if (repairStatus === 'bulk-queued') {
     return (
       <div className="notice neutral">

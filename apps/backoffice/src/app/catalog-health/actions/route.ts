@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic';
 
 function repairRedirectStatus(result: Awaited<ReturnType<typeof performCatalogRepairAction>>) {
   if (result.status === 'queued') return result.mode === 'bulk' ? 'bulk-queued' : 'queued';
+  if (result.status === 'deduped') return 'deduped';
   if (result.status === 'orchestration_queued') return 'bulk-orchestration-queued';
   if (result.status === 'partial') return 'bulk-partial';
   if (result.status === 'empty') return 'empty';
@@ -53,7 +54,10 @@ export async function POST(request: NextRequest) {
     const result = await performCatalogRepairAction(formData, request.headers);
 
     if (wantsBackofficeJsonResponse(request)) {
-      const ok = result.status === 'queued' || result.status === 'orchestration_queued';
+      const ok =
+        result.status === 'queued' ||
+        result.status === 'deduped' ||
+        result.status === 'orchestration_queued';
       return NextResponse.json(
         {
           ok,
