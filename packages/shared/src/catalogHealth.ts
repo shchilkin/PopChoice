@@ -75,6 +75,13 @@ interface SummaryRow {
   missing_keyword_metadata: number;
 }
 
+interface DuplicateIdentityRow {
+  identity_key: string;
+  duplicate_count: number | string;
+  total_groups: number | string;
+  movies: string | Pick<CatalogMovieSample, 'id' | 'name' | 'year' | 'tmdb_id'>[];
+}
+
 type SummaryMetricKey = keyof SummaryRow;
 
 const SUMMARY_METRIC_KEYS: SummaryMetricKey[] = [
@@ -454,25 +461,8 @@ async function getSummary(staleAfterDays: number): Promise<SummaryRow> {
   return normalizeSummaryRow(result.rows[0]);
 }
 
-async function getDuplicateTmdbIds(limit: number): Promise<DuplicateIdentityReport> {
-  const result = await getPool().query<{
-    identity_key: string;
-    duplicate_count: number | string;
-    total_groups: number | string;
-    movies: string | Pick<CatalogMovieSample, 'id' | 'name' | 'year' | 'tmdb_id'>[];
-  }>(
-    `WITH ranked_movies AS (
-        SELECT
-          id,
-          name,
-          year,
-          tmdb_id,
-          tmdb_id::text AS identity_key,
-          COUNT(*) OVER (PARTITION BY tmdb_id)::int AS duplicate_count,
-          ROW_NUMBER() OVER (PARTITION BY tmdb_id ORDER BY id)::int AS sample_rank
-        FROM movies
-        WHERE tmdb_id IS NOT NULL
-      ),
+function buildDuplicateIdentityQuery(rankedMoviesCte: string): string {
+  return `${rankedMoviesCte},
       duplicate_groups AS (
         SELECT
           identity_key,
@@ -489,7 +479,15 @@ async function getDuplicateTmdbIds(limit: number): Promise<DuplicateIdentityRepo
       SELECT identity_key, duplicate_count, movies, COUNT(*) OVER()::int AS total_groups
       FROM duplicate_groups
       ORDER BY duplicate_count DESC, identity_key
-      LIMIT $1`,
+      LIMIT $1`;
+}
+
+async function queryDuplicateIdentityReport(
+  rankedMoviesCte: string,
+  limit: number,
+): Promise<DuplicateIdentityReport> {
+  const result = await getPool().query<DuplicateIdentityRow>(
+    buildDuplicateIdentityQuery(rankedMoviesCte),
     [limit],
   );
 
@@ -503,13 +501,26 @@ async function getDuplicateTmdbIds(limit: number): Promise<DuplicateIdentityRepo
   };
 }
 
+async function getDuplicateTmdbIds(limit: number): Promise<DuplicateIdentityReport> {
+  return queryDuplicateIdentityReport(
+    `WITH ranked_movies AS (
+        SELECT
+          id,
+          name,
+          year,
+          tmdb_id,
+          tmdb_id::text AS identity_key,
+          COUNT(*) OVER (PARTITION BY tmdb_id)::int AS duplicate_count,
+          ROW_NUMBER() OVER (PARTITION BY tmdb_id ORDER BY id)::int AS sample_rank
+        FROM movies
+        WHERE tmdb_id IS NOT NULL
+      )`,
+    limit,
+  );
+}
+
 async function getDuplicateNormalizedTitleYears(limit: number): Promise<DuplicateIdentityReport> {
-  const result = await getPool().query<{
-    identity_key: string;
-    duplicate_count: number | string;
-    total_groups: number | string;
-    movies: string | Pick<CatalogMovieSample, 'id' | 'name' | 'year' | 'tmdb_id'>[];
-  }>(
+  return queryDuplicateIdentityReport(
     `WITH keyed_movies AS (
         SELECT
           id,
@@ -519,41 +530,16 @@ async function getDuplicateNormalizedTitleYears(limit: number): Promise<Duplicat
           concat(lower(regexp_replace(btrim(name), '[^[:alnum:]]+', '', 'g')), ':', year) AS identity_key
         FROM movies
       ),
-      duplicate_groups AS (
+      ranked_movies AS (
         SELECT
-          identity_key,
-          MAX(duplicate_count)::int AS duplicate_count,
-          json_agg(
-            json_build_object('id', id::text, 'name', name, 'year', year, 'tmdb_id', tmdb_id)
-            ORDER BY id
-          ) AS movies
-        FROM (
-          SELECT
-            *,
-            COUNT(*) OVER (PARTITION BY identity_key)::int AS duplicate_count,
-            ROW_NUMBER() OVER (PARTITION BY identity_key ORDER BY id)::int AS sample_rank
-          FROM keyed_movies
-          WHERE identity_key <> concat(':', year)
-        ) ranked_movies
-        WHERE duplicate_count > 1
-          AND sample_rank <= $1
-        GROUP BY identity_key
-      )
-      SELECT identity_key, duplicate_count, movies, COUNT(*) OVER()::int AS total_groups
-      FROM duplicate_groups
-      ORDER BY duplicate_count DESC, identity_key
-      LIMIT $1`,
-    [limit],
+          *,
+          COUNT(*) OVER (PARTITION BY identity_key)::int AS duplicate_count,
+          ROW_NUMBER() OVER (PARTITION BY identity_key ORDER BY id)::int AS sample_rank
+        FROM keyed_movies
+        WHERE identity_key <> concat(':', year)
+      )`,
+    limit,
   );
-
-  return {
-    totalGroups: toNumber(result.rows[0]?.total_groups),
-    groups: result.rows.map((row) => ({
-      identityKey: row.identity_key,
-      count: toNumber(row.duplicate_count),
-      movies: parseMovies(row.movies),
-    })),
-  };
 }
 
 export async function getCatalogHealthReport(
