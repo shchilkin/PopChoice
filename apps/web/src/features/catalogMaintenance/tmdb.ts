@@ -347,6 +347,75 @@ function extractWatchProviders(details: TMDBMovieDetails): TMDBCatalogMetadata['
   });
 }
 
+type MetadataQualityInput = {
+  ageRating: string;
+  details: TMDBMovieDetails;
+  genres: TMDBCatalogMetadata['genres'];
+  keywords: TMDBCatalogMetadata['keywords'];
+  people: TMDBCatalogMetadata['people'];
+  providers: TMDBCatalogMetadata['providers'];
+};
+
+type MetadataQualityRule = {
+  flag: string;
+  isMissing: (input: MetadataQualityInput) => boolean;
+};
+
+const CORE_METADATA_QUALITY_RULES = [
+  {
+    flag: 'missing_runtime',
+    isMissing: ({ details }) => !details.runtime || details.runtime <= 0,
+  },
+  {
+    flag: 'missing_certification',
+    isMissing: ({ ageRating }) => !ageRating || ageRating === 'NR',
+  },
+  {
+    flag: 'missing_poster',
+    isMissing: ({ details }) => !details.poster_path,
+  },
+  {
+    flag: 'missing_overview',
+    isMissing: ({ details }) => !details.overview?.trim(),
+  },
+  {
+    flag: 'missing_original_language',
+    isMissing: ({ details }) => !details.original_language?.trim(),
+  },
+  {
+    flag: 'missing_vote_count',
+    isMissing: ({ details }) =>
+      !Number.isFinite(details.vote_count) || Number(details.vote_count ?? 0) <= 0,
+  },
+  {
+    flag: 'missing_popularity',
+    isMissing: ({ details }) =>
+      !Number.isFinite(details.popularity) || Number(details.popularity ?? 0) <= 0,
+  },
+  {
+    flag: 'missing_genres',
+    isMissing: ({ genres }) => genres.length === 0,
+  },
+  {
+    flag: 'missing_keywords',
+    isMissing: ({ keywords }) => keywords.length === 0,
+  },
+  {
+    flag: 'missing_cast',
+    isMissing: ({ people }) => !people.some((person) => person.role === 'cast'),
+  },
+  {
+    flag: 'missing_director',
+    isMissing: ({ people }) => !people.some((person) => person.role === 'director'),
+  },
+] satisfies MetadataQualityRule[];
+
+function getMissingProviderFlags(input: MetadataQualityInput): string[] {
+  return SUPPORTED_PROVIDER_REGIONS.filter(
+    (region) => !input.providers.some((provider) => provider.region === region),
+  ).map((region) => `missing_provider_${region.toLowerCase()}`);
+}
+
 function getMetadataQualityFlags(input: {
   ageRating: string;
   details: TMDBMovieDetails;
@@ -355,28 +424,10 @@ function getMetadataQualityFlags(input: {
   people: TMDBCatalogMetadata['people'];
   providers: TMDBCatalogMetadata['providers'];
 }): string[] {
-  const flags: string[] = [];
-  if (!input.details.runtime || input.details.runtime <= 0) flags.push('missing_runtime');
-  if (!input.ageRating || input.ageRating === 'NR') flags.push('missing_certification');
-  if (!input.details.poster_path) flags.push('missing_poster');
-  if (!input.details.overview?.trim()) flags.push('missing_overview');
-  if (!input.details.original_language?.trim()) flags.push('missing_original_language');
-  if (!Number.isFinite(input.details.vote_count) || Number(input.details.vote_count ?? 0) <= 0) {
-    flags.push('missing_vote_count');
-  }
-  if (!Number.isFinite(input.details.popularity) || Number(input.details.popularity ?? 0) <= 0) {
-    flags.push('missing_popularity');
-  }
-  if (input.genres.length === 0) flags.push('missing_genres');
-  if (input.keywords.length === 0) flags.push('missing_keywords');
-  if (!input.people.some((person) => person.role === 'cast')) flags.push('missing_cast');
-  if (!input.people.some((person) => person.role === 'director')) flags.push('missing_director');
-  for (const region of SUPPORTED_PROVIDER_REGIONS) {
-    if (!input.providers.some((provider) => provider.region === region)) {
-      flags.push(`missing_provider_${region.toLowerCase()}`);
-    }
-  }
-  return flags;
+  return [
+    ...CORE_METADATA_QUALITY_RULES.filter((rule) => rule.isMissing(input)).map((rule) => rule.flag),
+    ...getMissingProviderFlags(input),
+  ];
 }
 
 export function getMetadataQualityScore(flags: string[]): number {

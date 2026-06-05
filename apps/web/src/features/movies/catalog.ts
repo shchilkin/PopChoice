@@ -34,6 +34,18 @@ interface CountRow {
   count: number | string;
 }
 
+type QueryFilterApplier<T extends Movie> = (
+  query: QuerySelect<T> | QueryFilter<T>,
+  filters: MoviesPageFilters,
+) => QuerySelect<T> | QueryFilter<T>;
+
+type SqlClauseBuilder = (clauses: string[], values: unknown[], filters: MoviesPageFilters) => void;
+
+interface DurationBounds {
+  min?: number;
+  max?: number;
+}
+
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
 }
@@ -43,37 +55,76 @@ function normalizeQuery(query: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function getDurationBounds(duration: MovieDurationFilter | undefined): DurationBounds | undefined {
+  if (duration === 'under-90') return { max: 89 };
+  if (duration === '90-120') return { min: 90, max: 120 };
+  if (duration === 'over-120') return { min: 121 };
+  return undefined;
+}
+
+function applyTitleQueryFilter<T extends Movie>(
+  query: QuerySelect<T> | QueryFilter<T>,
+  filters: MoviesPageFilters,
+): QuerySelect<T> | QueryFilter<T> {
+  const titleQuery = normalizeQuery(filters.query);
+  return titleQuery ? query.ilike('name', `%${escapeLikePattern(titleQuery)}%`) : query;
+}
+
+function applyRangeQueryFilter<T extends Movie>(
+  query: QuerySelect<T> | QueryFilter<T>,
+  column: keyof Movie & string,
+  range: DurationBounds | undefined,
+): QuerySelect<T> | QueryFilter<T> {
+  let nextQuery = query;
+  if (typeof range?.min === 'number') nextQuery = nextQuery.gte(column, range.min);
+  if (typeof range?.max === 'number') nextQuery = nextQuery.lte(column, range.max);
+  return nextQuery;
+}
+
+function applyYearQueryFilter<T extends Movie>(
+  query: QuerySelect<T> | QueryFilter<T>,
+  filters: MoviesPageFilters,
+): QuerySelect<T> | QueryFilter<T> {
+  return applyRangeQueryFilter(query, 'year', { min: filters.yearFrom, max: filters.yearTo });
+}
+
+function applyDurationQueryFilter<T extends Movie>(
+  query: QuerySelect<T> | QueryFilter<T>,
+  filters: MoviesPageFilters,
+): QuerySelect<T> | QueryFilter<T> {
+  return applyRangeQueryFilter(query, 'duration', getDurationBounds(filters.duration));
+}
+
+function applyScoreQueryFilter<T extends Movie>(
+  query: QuerySelect<T> | QueryFilter<T>,
+  filters: MoviesPageFilters,
+): QuerySelect<T> | QueryFilter<T> {
+  return typeof filters.minScore === 'number' ? query.gte('score_rating', filters.minScore) : query;
+}
+
+function applyAgeRatingQueryFilter<T extends Movie>(
+  query: QuerySelect<T> | QueryFilter<T>,
+  filters: MoviesPageFilters,
+): QuerySelect<T> | QueryFilter<T> {
+  return filters.ageRatings?.length ? query.in('age_rating', filters.ageRatings) : query;
+}
+
+const QUERY_FILTER_APPLIERS = [
+  applyTitleQueryFilter,
+  applyYearQueryFilter,
+  applyDurationQueryFilter,
+  applyScoreQueryFilter,
+  applyAgeRatingQueryFilter,
+] satisfies QueryFilterApplier<Movie>[];
+
 function applyMovieFilters<T extends Movie>(
   select: QuerySelect<T>,
   filters: MoviesPageFilters,
 ): QuerySelect<T> | QueryFilter<T> {
-  let query: QuerySelect<T> | QueryFilter<T> = select;
-  const titleQuery = normalizeQuery(filters.query);
-
-  if (titleQuery) {
-    query = query.ilike('name', `%${escapeLikePattern(titleQuery)}%`);
-  }
-  if (typeof filters.yearFrom === 'number') {
-    query = query.gte('year', filters.yearFrom);
-  }
-  if (typeof filters.yearTo === 'number') {
-    query = query.lte('year', filters.yearTo);
-  }
-  if (filters.duration === 'under-90') {
-    query = query.lte('duration', 89);
-  } else if (filters.duration === '90-120') {
-    query = query.gte('duration', 90).lte('duration', 120);
-  } else if (filters.duration === 'over-120') {
-    query = query.gte('duration', 121);
-  }
-  if (typeof filters.minScore === 'number') {
-    query = query.gte('score_rating', filters.minScore);
-  }
-  if (filters.ageRatings && filters.ageRatings.length > 0) {
-    query = query.in('age_rating', filters.ageRatings);
-  }
-
-  return query;
+  return QUERY_FILTER_APPLIERS.reduce<QuerySelect<T> | QueryFilter<T>>(
+    (query, applyFilter) => applyFilter(query, filters),
+    select,
+  );
 }
 
 function addSqlParam(values: unknown[], value: unknown): string {
@@ -81,14 +132,12 @@ function addSqlParam(values: unknown[], value: unknown): string {
   return `$${values.length}`;
 }
 
-function buildMoviesWhereSql(filters: MoviesPageFilters): { whereSql: string; values: unknown[] } {
-  const clauses: string[] = [];
-  const values: unknown[] = [];
+function addTitleSqlClause(clauses: string[], values: unknown[], filters: MoviesPageFilters): void {
   const searchQuery = normalizeQuery(filters.query);
+  if (!searchQuery) return;
 
-  if (searchQuery) {
-    const patternParam = addSqlParam(values, `%${escapeLikePattern(searchQuery)}%`);
-    clauses.push(`(
+  const patternParam = addSqlParam(values, `%${escapeLikePattern(searchQuery)}%`);
+  clauses.push(`(
       movies.name ILIKE ${patternParam} ESCAPE '\\'
       OR EXISTS (
         SELECT 1
@@ -105,28 +154,70 @@ function buildMoviesWhereSql(filters: MoviesPageFilters): { whereSql: string; va
           AND catalog_genres.name ILIKE ${patternParam} ESCAPE '\\'
       )
     )`);
-  }
-  if (typeof filters.yearFrom === 'number') {
-    clauses.push(`movies.year >= ${addSqlParam(values, filters.yearFrom)}`);
-  }
-  if (typeof filters.yearTo === 'number') {
-    clauses.push(`movies.year <= ${addSqlParam(values, filters.yearTo)}`);
-  }
-  if (filters.duration === 'under-90') {
-    clauses.push(`movies.duration <= ${addSqlParam(values, 89)}`);
-  } else if (filters.duration === '90-120') {
+}
+
+function addRangeSqlClause(
+  clauses: string[],
+  values: unknown[],
+  column: keyof Movie & string,
+  range: DurationBounds | undefined,
+): void {
+  if (typeof range?.min === 'number' && typeof range.max === 'number') {
     clauses.push(
-      `movies.duration BETWEEN ${addSqlParam(values, 90)} AND ${addSqlParam(values, 120)}`,
+      `movies.${column} BETWEEN ${addSqlParam(values, range.min)} AND ${addSqlParam(
+        values,
+        range.max,
+      )}`,
     );
-  } else if (filters.duration === 'over-120') {
-    clauses.push(`movies.duration >= ${addSqlParam(values, 121)}`);
+    return;
   }
+
+  if (typeof range?.min === 'number')
+    clauses.push(`movies.${column} >= ${addSqlParam(values, range.min)}`);
+  if (typeof range?.max === 'number')
+    clauses.push(`movies.${column} <= ${addSqlParam(values, range.max)}`);
+}
+
+function addYearSqlClause(clauses: string[], values: unknown[], filters: MoviesPageFilters): void {
+  addRangeSqlClause(clauses, values, 'year', { min: filters.yearFrom, max: filters.yearTo });
+}
+
+function addDurationSqlClause(
+  clauses: string[],
+  values: unknown[],
+  filters: MoviesPageFilters,
+): void {
+  addRangeSqlClause(clauses, values, 'duration', getDurationBounds(filters.duration));
+}
+
+function addScoreSqlClause(clauses: string[], values: unknown[], filters: MoviesPageFilters): void {
   if (typeof filters.minScore === 'number') {
     clauses.push(`movies.score_rating >= ${addSqlParam(values, filters.minScore)}`);
   }
-  if (filters.ageRatings && filters.ageRatings.length > 0) {
+}
+
+function addAgeRatingSqlClause(
+  clauses: string[],
+  values: unknown[],
+  filters: MoviesPageFilters,
+): void {
+  if (filters.ageRatings?.length) {
     clauses.push(`movies.age_rating = ANY(${addSqlParam(values, filters.ageRatings)}::text[])`);
   }
+}
+
+const SQL_CLAUSE_BUILDERS = [
+  addTitleSqlClause,
+  addYearSqlClause,
+  addDurationSqlClause,
+  addScoreSqlClause,
+  addAgeRatingSqlClause,
+] satisfies SqlClauseBuilder[];
+
+function buildMoviesWhereSql(filters: MoviesPageFilters): { whereSql: string; values: unknown[] } {
+  const clauses: string[] = [];
+  const values: unknown[] = [];
+  SQL_CLAUSE_BUILDERS.forEach((buildClause) => buildClause(clauses, values, filters));
 
   return {
     whereSql: clauses.length > 0 ? `WHERE ${clauses.join('\n  AND ')}` : '',
@@ -187,34 +278,27 @@ async function getMoviesPageFromSql(
 
 function filterMockMovies(movies: Movie[], filters: MoviesPageFilters): Movie[] {
   const titleQuery = normalizeQuery(filters.query)?.toLocaleLowerCase();
-  return movies.filter((movie) => {
-    const matchesTitle = titleQuery ? movie.name.toLocaleLowerCase().includes(titleQuery) : true;
-    const matchesYearFrom =
-      typeof filters.yearFrom === 'number' ? movie.year >= filters.yearFrom : true;
-    const matchesYearTo = typeof filters.yearTo === 'number' ? movie.year <= filters.yearTo : true;
-    const matchesDuration =
-      filters.duration === 'under-90'
-        ? movie.duration < 90
-        : filters.duration === '90-120'
-          ? movie.duration >= 90 && movie.duration <= 120
-          : filters.duration === 'over-120'
-            ? movie.duration > 120
-            : true;
-    const matchesScore =
-      typeof filters.minScore === 'number' ? movie.score_rating >= filters.minScore : true;
-    const matchesAgeRating =
-      filters.ageRatings && filters.ageRatings.length > 0
-        ? filters.ageRatings.includes(movie.age_rating)
-        : true;
-    return (
-      matchesTitle &&
-      matchesYearFrom &&
-      matchesYearTo &&
-      matchesDuration &&
-      matchesScore &&
-      matchesAgeRating
-    );
-  });
+  return movies.filter((movie) => movieMatchesFilters(movie, filters, titleQuery));
+}
+
+function isInRange(value: number, range: DurationBounds | undefined): boolean {
+  if (typeof range?.min === 'number' && value < range.min) return false;
+  if (typeof range?.max === 'number' && value > range.max) return false;
+  return true;
+}
+
+function movieMatchesFilters(
+  movie: Movie,
+  filters: MoviesPageFilters,
+  titleQuery: string | undefined,
+): boolean {
+  return (
+    (!titleQuery || movie.name.toLocaleLowerCase().includes(titleQuery)) &&
+    isInRange(movie.year, { min: filters.yearFrom, max: filters.yearTo }) &&
+    isInRange(movie.duration, getDurationBounds(filters.duration)) &&
+    (typeof filters.minScore !== 'number' || movie.score_rating >= filters.minScore) &&
+    (!filters.ageRatings?.length || filters.ageRatings.includes(movie.age_rating))
+  );
 }
 
 export async function getMoviesPage(

@@ -48,38 +48,56 @@ type PosterProxySuccess = {
 
 export type PosterProxyResult = PosterProxyFailure | PosterProxySuccess;
 
-export async function proxyPosterImage(url: string | null): Promise<PosterProxyResult> {
+function posterProxyFailure(status: number, message: string): PosterProxyFailure {
+  return { ok: false, status, message };
+}
+
+function parsePosterUrl(url: string | null): URL | PosterProxyFailure {
   if (!url) {
-    return { ok: false, status: 400, message: 'Missing url' };
+    return posterProxyFailure(400, 'Missing url');
   }
 
-  let parsed: URL;
   try {
-    parsed = new URL(url);
+    return new URL(url);
   } catch {
-    return { ok: false, status: 400, message: 'Invalid url' };
+    return posterProxyFailure(400, 'Invalid url');
   }
+}
 
+function validatePosterOrigin(parsed: URL): PosterProxyFailure | undefined {
   if (parsed.hostname !== TMDB_IMAGE_HOST || parsed.protocol !== 'https:') {
-    return { ok: false, status: 403, message: 'Forbidden' };
+    return posterProxyFailure(403, 'Forbidden');
   }
+  return undefined;
+}
 
-  let normalizedPathname: string;
+function decodePosterPathname(pathname: string): string | PosterProxyFailure {
   try {
-    normalizedPathname = decodeURIComponent(parsed.pathname);
+    return decodeURIComponent(pathname);
   } catch {
-    return { ok: false, status: 400, message: 'Invalid url' };
+    return posterProxyFailure(400, 'Invalid url');
   }
+}
 
+function validatePosterPath(parsed: URL): PosterProxyFailure | undefined {
+  const normalizedPathname = decodePosterPathname(parsed.pathname);
+  if (isPosterProxyFailure(normalizedPathname)) return normalizedPathname;
   if (
     !ALLOWED_PATHNAME.test(parsed.pathname) ||
     normalizedPathname.includes('..') ||
     normalizedPathname.includes('\\') ||
     normalizedPathname.includes('//')
   ) {
-    return { ok: false, status: 403, message: 'Forbidden' };
+    return posterProxyFailure(403, 'Forbidden');
   }
+  return undefined;
+}
 
+function isPosterProxyFailure(value: unknown): value is PosterProxyFailure {
+  return Boolean(value && typeof value === 'object' && 'ok' in value && value.ok === false);
+}
+
+function buildSafePosterUrl(parsed: URL): URL {
   const safeSearchParams = new URLSearchParams();
   for (const [key, value] of parsed.searchParams.entries()) {
     if (!ALLOWED_QUERY_KEYS.has(key)) continue;
@@ -90,6 +108,19 @@ export async function proxyPosterImage(url: string | null): Promise<PosterProxyR
 
   const safeUrl = new URL(`https://${TMDB_IMAGE_HOST}${parsed.pathname}`);
   safeUrl.search = safeSearchParams.toString();
+  return safeUrl;
+}
+
+function validatePosterUrl(url: string | null): URL | PosterProxyFailure {
+  const parsed = parsePosterUrl(url);
+  if (isPosterProxyFailure(parsed)) return parsed;
+
+  return validatePosterOrigin(parsed) ?? validatePosterPath(parsed) ?? buildSafePosterUrl(parsed);
+}
+
+export async function proxyPosterImage(url: string | null): Promise<PosterProxyResult> {
+  const safeUrl = validatePosterUrl(url);
+  if (isPosterProxyFailure(safeUrl)) return safeUrl;
 
   const res = await fetch(safeUrl, {
     next: { revalidate: 86400 },
@@ -97,7 +128,7 @@ export async function proxyPosterImage(url: string | null): Promise<PosterProxyR
   });
 
   if (!res.ok) {
-    return { ok: false, status: res.status, message: 'Upstream error' };
+    return posterProxyFailure(res.status, 'Upstream error');
   }
 
   const upstreamType = res.headers.get('Content-Type')?.split(';')[0].trim() ?? '';
