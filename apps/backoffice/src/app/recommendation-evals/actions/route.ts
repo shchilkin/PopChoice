@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
+  buildRecommendationEvalActionBody,
+  getRecommendationEvalActionStatusCode,
   getBackofficeErrorStatus,
   logBackofficeError,
   performRecommendationEvalAction,
-  recommendationEvalMessage,
 } from '../../../lib/backoffice';
 import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
 
@@ -36,21 +37,9 @@ export async function POST(request: NextRequest) {
     const result = await performRecommendationEvalAction(formData, request.headers);
 
     if (wantsJsonResponse(request)) {
-      return NextResponse.json(
-        {
-          ok: result.status === 'queued',
-          message: recommendationEvalMessage(result.status),
-          mode: result.mode,
-          runId: result.runId,
-          status: result.status,
-          ...(result.status === 'queued'
-            ? { jobId: result.jobId }
-            : { errorMessage: result.errorMessage }),
-        },
-        {
-          status: result.status === 'unavailable' ? 503 : result.status === 'failed' ? 500 : 200,
-        },
-      );
+      return NextResponse.json(buildRecommendationEvalActionBody(result), {
+        status: getRecommendationEvalActionStatusCode(result.status),
+      });
     }
 
     return NextResponse.redirect(

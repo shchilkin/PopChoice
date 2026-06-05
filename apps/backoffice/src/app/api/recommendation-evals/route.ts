@@ -3,26 +3,32 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import {
   ensureBackofficeReady,
+  buildRecommendationEvalActionBody,
+  buildRecommendationEvalFormDataFromJsonBody,
+  getRecommendationEvalActionStatusCode,
   getBackofficeErrorStatus,
   logBackofficeError,
   parseRecommendationEvalListParams,
   performRecommendationEvalAction,
-  recommendationEvalMessage,
 } from '../../../lib/backoffice';
 import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+async function readRecommendationEvalRunPage(request: Request) {
+  const searchParams = Object.fromEntries(new URL(request.url).searchParams.entries());
+  const pagination = parseRecommendationEvalListParams(searchParams);
+  return listRecommendationEvalRunPage({
+    limit: pagination.limit,
+    offset: pagination.offset,
+  });
+}
+
 export async function GET(request: Request) {
   try {
     await ensureBackofficeReady();
-    const searchParams = Object.fromEntries(new URL(request.url).searchParams.entries());
-    const pagination = parseRecommendationEvalListParams(searchParams);
-    const runPage = await listRecommendationEvalRunPage({
-      limit: pagination.limit,
-      offset: pagination.offset,
-    });
+    const runPage = await readRecommendationEvalRunPage(request);
 
     return NextResponse.json(runPage, {
       headers: {
@@ -47,37 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const formData = new FormData();
-    if (typeof body.mode === 'string') {
-      formData.set('mode', body.mode);
-    }
-    if (body.acknowledgeLiveCost === true || body.acknowledge_live_cost === 'yes') {
-      formData.set('acknowledge_live_cost', 'yes');
-    }
-    if (typeof body.liveConfirmation === 'string') {
-      formData.set('live_confirmation', body.liveConfirmation);
-    }
-    if (typeof body.live_confirmation === 'string') {
-      formData.set('live_confirmation', body.live_confirmation);
-    }
+    const formData = buildRecommendationEvalFormDataFromJsonBody(
+      (await request.json().catch(() => ({}))) as Record<string, unknown>,
+    );
     const result = await performRecommendationEvalAction(formData, request.headers);
 
-    return NextResponse.json(
-      {
-        ok: result.status === 'queued',
-        message: recommendationEvalMessage(result.status),
-        mode: result.mode,
-        runId: result.runId,
-        status: result.status,
-        ...(result.status === 'queued'
-          ? { jobId: result.jobId }
-          : { errorMessage: result.errorMessage }),
-      },
-      {
-        status: result.status === 'unavailable' ? 503 : result.status === 'failed' ? 500 : 200,
-      },
-    );
+    return NextResponse.json(buildRecommendationEvalActionBody(result), {
+      status: getRecommendationEvalActionStatusCode(result.status),
+    });
   } catch (error) {
     logBackofficeError('Failed to enqueue recommendation eval run', error);
     return NextResponse.json(
