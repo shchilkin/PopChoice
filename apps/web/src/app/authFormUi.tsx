@@ -6,8 +6,14 @@ import Link from 'next/link';
 
 import { palette } from '@/styles/designTokens';
 
-import type { AuthFieldErrors, ResetPasswordFormState } from './authFormLogic';
-import type { ReactNode } from 'react';
+import type {
+  AuthFieldErrors,
+  EmailPasswordFormState,
+  ResetPasswordFormState,
+} from './authFormLogic';
+import type { FormEvent, ReactNode } from 'react';
+
+type AuthTone = 'gold' | 'red';
 
 type AuthPanelProps = {
   children: ReactNode;
@@ -18,6 +24,7 @@ type AuthHeaderProps = {
   icon: ReactNode;
   subtitle: string;
   title: string;
+  tone?: AuthTone;
 };
 
 type AuthSuccessPanelProps = {
@@ -34,11 +41,13 @@ type AuthTextFieldProps = {
   label: string;
   onChange: (value: string) => void;
   placeholder: string;
+  trailingLabel?: ReactNode;
   type: 'email' | 'password';
   value: string;
 };
 
 type AuthSubmitButtonProps = {
+  danger?: boolean;
   disabled?: boolean;
   label: string;
   submitting: boolean;
@@ -73,6 +82,48 @@ type AuthLoginLinkProps = {
   linkLabel: string;
 };
 
+type EmailPasswordCopy = {
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  passwordPlaceholder: string;
+};
+
+type AuthEmailPasswordFieldsProps<TForm extends EmailPasswordFormState> = {
+  copy: EmailPasswordCopy;
+  errors: AuthFieldErrors;
+  form: TForm;
+  passwordTrailingLabel?: ReactNode;
+  setForm: (next: TForm) => void;
+};
+
+type AuthEmailPasswordFormProps<TForm extends EmailPasswordFormState> = {
+  copy: EmailPasswordCopy & { submitButton: string; submitting: string };
+  danger?: boolean;
+  errors: AuthFieldErrors;
+  footer?: ReactNode;
+  form: TForm;
+  header: ReactNode;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  passwordTrailingLabel?: ReactNode;
+  setForm: (next: TForm) => void;
+  submitting: boolean;
+};
+
+const titleStyle = {
+  color: 'var(--pc-t1)',
+  fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+  fontSize: '2rem',
+  fontWeight: '600',
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+} as const;
+
+const authToneColor: Record<AuthTone, string> = {
+  gold: 'var(--pc-gold-text)',
+  red: palette.red,
+};
+
 export function AuthPanel({ children, mode = 'form' }: AuthPanelProps) {
   return (
     <div className="flex flex-col items-center justify-center flex-1 px-5 py-16">
@@ -92,26 +143,18 @@ export function AuthPanel({ children, mode = 'form' }: AuthPanelProps) {
   );
 }
 
-export function AuthHeader({ icon, subtitle, title }: AuthHeaderProps) {
+export function AuthHeader({ icon, subtitle, title, tone = 'gold' }: AuthHeaderProps) {
+  const color = authToneColor[tone];
+
   return (
     <div className="text-center mb-8">
       <div
         className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
-        style={{ background: `${palette.gold}20`, color: 'var(--pc-gold-text)' }}
+        style={{ background: `${color}20`, color }}
       >
         {icon}
       </div>
-      <h1
-        className="mb-2"
-        style={{
-          color: 'var(--pc-t1)',
-          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-          fontSize: '2rem',
-          fontWeight: '600',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-        }}
-      >
+      <h1 className="mb-2" style={titleStyle}>
         {title}
       </h1>
       <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem' }}>{subtitle}</p>
@@ -128,17 +171,7 @@ export function AuthSuccessPanel({ body, ctaHref, ctaLabel, title }: AuthSuccess
       >
         <CheckCircle size={32} />
       </div>
-      <h1
-        className="mb-3"
-        style={{
-          color: 'var(--pc-t1)',
-          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-          fontSize: '2rem',
-          fontWeight: '600',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-        }}
-      >
+      <h1 className="mb-3" style={titleStyle}>
         {title}
       </h1>
       <p style={{ color: 'var(--pc-t2)', marginBottom: '2rem' }}>{body}</p>
@@ -179,14 +212,18 @@ export function AuthTextField({
   label,
   onChange,
   placeholder,
+  trailingLabel,
   type,
   value,
 }: AuthTextFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium" style={{ color: 'var(--pc-t2)' }}>
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-3">
+        <label htmlFor={id} className="text-sm font-medium" style={{ color: 'var(--pc-t2)' }}>
+          {label}
+        </label>
+        {trailingLabel}
+      </div>
       <input
         id={id}
         type={type}
@@ -207,6 +244,76 @@ export function AuthTextField({
         </p>
       )}
     </div>
+  );
+}
+
+function AuthEmailPasswordFields<TForm extends EmailPasswordFormState>({
+  copy,
+  errors,
+  form,
+  passwordTrailingLabel,
+  setForm,
+}: AuthEmailPasswordFieldsProps<TForm>) {
+  return (
+    <>
+      <AuthTextField
+        autoComplete="email"
+        error={errors.email}
+        id="email"
+        label={copy.emailLabel}
+        onChange={(email) => setForm({ ...form, email })}
+        placeholder={copy.emailPlaceholder}
+        type="email"
+        value={form.email}
+      />
+      <AuthTextField
+        autoComplete="current-password"
+        error={errors.password}
+        id="password"
+        label={copy.passwordLabel}
+        onChange={(password) => setForm({ ...form, password })}
+        placeholder={copy.passwordPlaceholder}
+        trailingLabel={passwordTrailingLabel}
+        type="password"
+        value={form.password}
+      />
+    </>
+  );
+}
+
+export function AuthEmailPasswordForm<TForm extends EmailPasswordFormState>({
+  copy,
+  danger,
+  errors,
+  footer,
+  form,
+  header,
+  onSubmit,
+  passwordTrailingLabel,
+  setForm,
+  submitting,
+}: AuthEmailPasswordFormProps<TForm>) {
+  return (
+    <>
+      {header}
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
+        <AuthGeneralError errors={errors} />
+        <AuthEmailPasswordFields
+          copy={copy}
+          errors={errors}
+          form={form}
+          passwordTrailingLabel={passwordTrailingLabel}
+          setForm={setForm}
+        />
+        <AuthSubmitButton
+          danger={danger}
+          label={copy.submitButton}
+          submitting={submitting}
+          submittingLabel={copy.submitting}
+        />
+      </form>
+      {footer}
+    </>
   );
 }
 
@@ -243,6 +350,7 @@ export function AuthPasswordConfirmationFields<TForm extends ResetPasswordFormSt
 }
 
 export function getAuthSubmitButtonPresentation({
+  danger,
   disabled,
   label,
   submitting,
@@ -268,6 +376,16 @@ export function getAuthSubmitButtonPresentation({
     };
   }
 
+  if (danger) {
+    return {
+      background: palette.red,
+      color: '#F8F8FF',
+      cursor: 'pointer',
+      disabled: false,
+      text: label,
+    };
+  }
+
   return {
     background: 'var(--pc-cta)',
     color: 'var(--pc-cta-text)',
@@ -278,12 +396,14 @@ export function getAuthSubmitButtonPresentation({
 }
 
 export function AuthSubmitButton({
+  danger,
   disabled,
   label,
   submitting,
   submittingLabel,
 }: AuthSubmitButtonProps) {
   const presentation = getAuthSubmitButtonPresentation({
+    danger,
     disabled,
     label,
     submitting,
@@ -302,6 +422,75 @@ export function AuthSubmitButton({
       }}
     >
       {presentation.text}
+    </button>
+  );
+}
+
+export function AuthPrimaryLink({
+  fullWidth,
+  href,
+  label,
+}: {
+  fullWidth?: boolean;
+  href: string;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`${fullWidth ? 'block w-full text-center' : 'inline-block'} px-6 py-3 rounded-xl text-sm font-semibold transition-colors duration-200`}
+      style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function AuthInlineLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="font-medium transition-colors duration-200"
+      style={{ color: 'var(--pc-gold-text)' }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function AuthStandaloneTextLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="text-center text-sm font-semibold transition-colors duration-200"
+      style={{ color: 'var(--pc-gold-text)' }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function AuthTrailingLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="text-xs font-medium transition-colors duration-200"
+      style={{ color: 'var(--pc-gold-text)' }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function AuthTextButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-center text-sm font-semibold transition-colors duration-200"
+      style={{ color: 'var(--pc-gold-text)' }}
+    >
+      {label}
     </button>
   );
 }

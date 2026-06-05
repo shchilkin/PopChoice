@@ -18,6 +18,22 @@ export type ResetPasswordFormState = {
   confirmPassword: string;
 };
 
+export type EmailPasswordFormState = {
+  email: string;
+  password: string;
+};
+
+export type EmailErrorCopy = {
+  emailRequired: string;
+  emailInvalid: string;
+  generic: string;
+};
+
+export type EmailPasswordErrorCopy = EmailErrorCopy & {
+  invalidCredentials: string;
+  passwordRequired: string;
+};
+
 export type RegisterErrorCopy = {
   emailRequired: string;
   emailInvalid: string;
@@ -45,6 +61,15 @@ export type SubmitResult = {
 
 type ErrorResponse = {
   error?: string;
+};
+
+type ForgotPasswordResponse = {
+  resetUrl?: string;
+};
+
+type AuthPostResponse<TData> = {
+  data: TData;
+  status: number;
 };
 
 type ErrorRule<TForm, TField extends keyof AuthFieldErrors> = {
@@ -138,6 +163,38 @@ export function validateResetPasswordForm(
   ]);
 }
 
+export function validateEmailForm(email: string, messages: EmailErrorCopy): AuthFieldErrors {
+  const trimmedEmail = email.trim();
+
+  return collectErrors({ email: trimmedEmail }, [
+    { field: 'email', message: messages.emailRequired, when: (value) => !value.email },
+    {
+      field: 'email',
+      message: messages.emailInvalid,
+      when: (value) => Boolean(value.email) && !EMAIL_PATTERN.test(value.email),
+    },
+  ]);
+}
+
+export function validateEmailPasswordForm(
+  form: EmailPasswordFormState,
+  messages: EmailPasswordErrorCopy,
+): AuthFieldErrors {
+  return collectErrors({ ...form, email: form.email.trim() }, [
+    { field: 'email', message: messages.emailRequired, when: (value) => !value.email },
+    {
+      field: 'email',
+      message: messages.emailInvalid,
+      when: (value) => Boolean(value.email) && !EMAIL_PATTERN.test(value.email),
+    },
+    {
+      field: 'password',
+      message: messages.passwordRequired,
+      when: (value) => !value.password,
+    },
+  ]);
+}
+
 export function registerErrorsForResponse(
   status: number,
   data: ErrorResponse,
@@ -158,6 +215,16 @@ export function resetPasswordErrorsForResponse(
     : { general: messages.generic };
 }
 
+function credentialsErrorsForResponse(
+  status: number,
+  data: ErrorResponse,
+  messages: EmailPasswordErrorCopy,
+): AuthFieldErrors {
+  return status === 401 || data.error === 'invalid_credentials'
+    ? { general: messages.invalidCredentials }
+    : { general: messages.generic };
+}
+
 export function applyAuthSubmitResult(
   result: SubmitResult,
   fallbackMessage: string,
@@ -174,6 +241,51 @@ export function applyAuthSubmitResult(
 
 async function readErrorResponse(response: Response): Promise<ErrorResponse> {
   return (await response.json().catch(() => ({}))) as ErrorResponse;
+}
+
+async function postAuthJson<TData>(url: string, body: unknown): Promise<AuthPostResponse<TData>> {
+  const response = await fetch(url, {
+    body: JSON.stringify(body),
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': getCsrfToken(),
+    },
+    method: 'POST',
+  });
+
+  return { data: (await response.json().catch(() => ({}))) as TData, status: response.status };
+}
+
+async function submitEmailPasswordAuthForm({
+  form,
+  messages,
+  onSuccess,
+  url,
+}: {
+  form: EmailPasswordFormState;
+  messages: EmailPasswordErrorCopy;
+  onSuccess: () => Promise<unknown>;
+  url: string;
+}): Promise<SubmitResult> {
+  try {
+    const response = await postAuthJson<ErrorResponse>(url, {
+      email: form.email.trim(),
+      password: form.password,
+    });
+
+    if (response.status === 200) {
+      await onSuccess();
+      return { success: true };
+    }
+
+    return {
+      errors: credentialsErrorsForResponse(response.status, response.data, messages),
+      success: false,
+    };
+  } catch {
+    return { errors: { general: messages.generic }, success: false };
+  }
 }
 
 export async function submitRegisterForm(
@@ -204,6 +316,49 @@ export async function submitRegisterForm(
     };
   } catch {
     return { errors: { general: messages.generic }, success: false };
+  }
+}
+
+export function submitLoginForm(
+  form: EmailPasswordFormState,
+  messages: EmailPasswordErrorCopy,
+  refreshSession: () => Promise<unknown>,
+): Promise<SubmitResult> {
+  return submitEmailPasswordAuthForm({
+    form,
+    messages,
+    onSuccess: refreshSession,
+    url: '/api/auth/login',
+  });
+}
+
+export function submitDeleteAccountForm(
+  form: EmailPasswordFormState,
+  messages: EmailPasswordErrorCopy,
+  refreshSession: () => Promise<unknown>,
+): Promise<SubmitResult> {
+  return submitEmailPasswordAuthForm({
+    form,
+    messages,
+    onSuccess: refreshSession,
+    url: '/api/auth/delete-account',
+  });
+}
+
+export async function submitForgotPasswordForm(
+  email: string,
+  fallbackMessage: string,
+): Promise<SubmitResult & ForgotPasswordResponse> {
+  try {
+    const response = await postAuthJson<ForgotPasswordResponse>('/api/auth/forgot-password', {
+      email: email.trim(),
+    });
+
+    return response.status === 202
+      ? { resetUrl: response.data.resetUrl, success: true }
+      : { errors: { general: fallbackMessage }, success: false };
+  } catch {
+    return { errors: { general: fallbackMessage }, success: false };
   }
 }
 
