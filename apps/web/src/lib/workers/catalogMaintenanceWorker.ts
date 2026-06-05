@@ -39,6 +39,7 @@ import logger from '@/lib/logger';
 import { recordQueueJobEvent, recordTMDBProviderError } from '@/lib/metrics';
 import { withTraceSpan } from '@/lib/tracing';
 
+import type { TMDBCatalogMetadata, TMDBMovieDetails } from '@/features/catalogMaintenance/tmdb';
 import type {
   CatalogBackfillMovieJobData,
   CatalogDiscoverTMDBSourcePageJobData,
@@ -69,6 +70,35 @@ type BackfillMovieRow = {
   score_rating: number;
   tmdb_id: number | null;
 };
+
+type BackfillMovieMatch = Extract<
+  Awaited<ReturnType<typeof searchMovieMatch>>,
+  { status: 'matched' }
+>;
+type BackfillMovieMatchResult = Awaited<ReturnType<typeof searchMovieMatch>>;
+
+type PreparedBackfillMovie =
+  | {
+      status: 'ready';
+      details: TMDBMovieDetails;
+      match: BackfillMovieMatch;
+      movie: BackfillMovieRow;
+    }
+  | {
+      status: 'movie_not_found';
+      movieId: string | number;
+    }
+  | {
+      status: 'tmdb_details_missing';
+      movie: BackfillMovieRow;
+      tmdbId: number;
+    }
+  | {
+      status: 'tmdb_match_not_confident';
+      candidateCount: number;
+      matchStatus: Exclude<BackfillMovieMatchResult['status'], 'matched'>;
+      movie: BackfillMovieRow;
+    };
 
 const MAX_CATALOG_ATTEMPTS = CATALOG_MAINTENANCE_JOB_OPTIONS.attempts;
 const DEFAULT_CONCURRENCY = 1;
@@ -132,29 +162,64 @@ async function updateRepairBatchItem(
   >,
   options: { errorMessage?: string; result?: Record<string, unknown> } = {},
 ): Promise<CatalogRepairBatchItem | null> {
-  const repairBatchItemId =
-    job?.data && 'repairBatchItemId' in job.data ? job.data.repairBatchItemId : undefined;
+  const repairBatchItemId = getRepairBatchItemId(job);
   if (!repairBatchItemId) return null;
 
   const item = await updateCatalogRepairBatchItemStatus({
     itemId: repairBatchItemId,
     status,
     errorMessage: options.errorMessage,
-    result: {
-      jobId: String(job?.id ?? 'unknown'),
-      jobName: job?.name ?? 'unknown',
-      attemptsMade: job?.attemptsMade ?? 0,
-      ...options.result,
-    },
+    result: getRepairBatchItemStatusResult(job, options.result),
   });
 
-  const repairBatchId =
-    job?.data && 'repairBatchId' in job.data ? job.data.repairBatchId : undefined;
+  const repairBatchId = getRepairBatchId(job);
   if (repairBatchId) {
     await refreshCatalogRepairBatchCounts(repairBatchId);
   }
 
   return item;
+}
+
+function getRepairBatchItemId(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): string | number | undefined {
+  return job?.data && 'repairBatchItemId' in job.data ? job.data.repairBatchItemId : undefined;
+}
+
+function getRepairBatchId(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): string | number | undefined {
+  return job?.data && 'repairBatchId' in job.data ? job.data.repairBatchId : undefined;
+}
+
+function getRepairBatchItemStatusResult(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+  result: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  return {
+    jobId: getWorkerJobId(job),
+    jobName: getWorkerJobName(job),
+    attemptsMade: getWorkerJobAttemptsMade(job),
+    ...result,
+  };
+}
+
+function getWorkerJobId(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): string {
+  return String(job?.id ?? 'unknown');
+}
+
+function getWorkerJobName(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): string {
+  return job?.name ?? 'unknown';
+}
+
+function getWorkerJobAttemptsMade(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): number {
+  return job?.attemptsMade ?? 0;
 }
 
 async function completeRepairBatchItemAfterBackfill({
@@ -246,117 +311,350 @@ async function findExistingMovieId(input: {
   return result.rows[0]?.id ?? null;
 }
 
+function getSeedMovieLocalKey(movie: CatalogSeedTMDBMovieJobData['movie']): string {
+  return `${movie.title.toLowerCase()}|${parseTMDBYear(movie.release_date)}`;
+}
+
+function hasLocalSeedDuplicate(jobData: CatalogSeedTMDBMovieJobData): boolean {
+  return jobData.localKeys?.includes(getSeedMovieLocalKey(jobData.movie)) ?? false;
+}
+
+async function fetchSeedMovieDetails(
+  movieId: number,
+  language: string | undefined,
+): Promise<TMDBMovieDetails | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+  return apiKey ? fetchMovieDetails(apiKey, movieId, language) : null;
+}
+
+function getSeedMovieYear(
+  movie: CatalogSeedTMDBMovieJobData['movie'],
+  details: TMDBMovieDetails | null,
+): number {
+  return parseTMDBYear(details?.release_date ?? movie.release_date);
+}
+
+async function upsertSeedCatalogMetadata(
+  movieId: string,
+  metadata: TMDBCatalogMetadata,
+): Promise<void> {
+  await upsertMovieCatalogMetadata({
+    movieId,
+    tmdbMetadata: metadata.snapshot,
+    people: metadata.people,
+    genres: metadata.genres,
+    keywords: metadata.keywords,
+    providers: metadata.providers,
+  });
+}
+
+async function refreshExistingSeedMovieMetadata(
+  movieId: string,
+  details: TMDBMovieDetails | null,
+): Promise<void> {
+  if (!details) return;
+  await upsertSeedCatalogMetadata(movieId, extractCatalogMetadata(details));
+}
+
+type SeedMovieRecordInput = {
+  ageRating: string;
+  description: string;
+  details: TMDBMovieDetails | null;
+  embedding: number[];
+  metadata: TMDBCatalogMetadata | null;
+  movie: CatalogSeedTMDBMovieJobData['movie'];
+  runtime: number;
+  scoreRating: number;
+  year: number;
+};
+
+type SeedMovieRecordDraftInput = Omit<SeedMovieRecordInput, 'embedding'> & {
+  embedding: number[] | undefined;
+};
+
+type SeedMovieCandidate = {
+  details: TMDBMovieDetails | null;
+  year: number;
+};
+
+type SeedMovieSkipReason =
+  | 'existing_movie'
+  | 'insert_noop'
+  | 'invalid_embedding'
+  | 'local_duplicate'
+  | 'missing_year';
+
+type PreparedSeedMovie =
+  | {
+      status: 'ready';
+      metadata: TMDBCatalogMetadata | null;
+      movie: CatalogSeedTMDBMovieJobData['movie'];
+      record: MovieRecord;
+    }
+  | {
+      status: 'skip';
+      movie: CatalogSeedTMDBMovieJobData['movie'];
+      reason: SeedMovieSkipReason;
+    };
+
+async function resolveSeedMovieEmbedding(
+  jobData: CatalogSeedTMDBMovieJobData,
+  input: Omit<SeedMovieRecordInput, 'embedding' | 'metadata'>,
+): Promise<number[] | undefined> {
+  if (jobData.embedding) return jobData.embedding;
+
+  const openAIKey = process.env.OPENAI_API_KEY;
+  if (!openAIKey) {
+    throw new Error('OPENAI_API_KEY is required to embed catalog seed movies');
+  }
+
+  const embeddings = await createEmbeddings(openAIKey, [
+    movieToEmbeddingText({
+      title: input.details?.title ?? input.movie.title,
+      year: input.year,
+      ageRating: input.ageRating,
+      runtime: input.runtime,
+      description: input.description,
+      scoreRating: input.scoreRating,
+    }),
+  ]);
+  return embeddings[0];
+}
+
+function isValidSeedEmbedding(embedding: number[] | undefined): embedding is number[] {
+  if (!embedding) return false;
+  return embedding.some((value) => value !== 0);
+}
+
+function getSeedMovieName(input: SeedMovieRecordInput): string {
+  return input.details?.title ?? input.movie.title;
+}
+
+function getSeedMoviePosterUrl(input: SeedMovieRecordInput): string | null {
+  return getPosterUrl(input.details?.poster_path ?? input.movie.poster_path);
+}
+
+function getSeedMovieLocalizedName(input: SeedMovieRecordInput): string | null {
+  const title = input.details?.title;
+  return title && title !== input.movie.title ? title : null;
+}
+
+function getSeedMovieVoteCount(input: SeedMovieRecordInput): number | null {
+  return input.details?.vote_count ?? input.movie.vote_count ?? null;
+}
+
+function getSeedMoviePopularity(input: SeedMovieRecordInput): number | null {
+  return input.details?.popularity ?? null;
+}
+
+function getSeedMovieReleaseDate(input: SeedMovieRecordInput): string {
+  return input.details?.release_date ?? input.movie.release_date;
+}
+
+function getSeedMovieQualityFlags(input: SeedMovieRecordInput): string[] {
+  return input.metadata?.qualityFlags ?? ['missing_details'];
+}
+
+function getSeedMovieOriginalTitle(input: SeedMovieRecordInput): string | null {
+  return input.details?.original_title ?? null;
+}
+
+function getSeedMovieOriginalLanguage(input: SeedMovieRecordInput): string | null {
+  return input.details?.original_language ?? null;
+}
+
+function getSeedMovieQualityScore(input: SeedMovieRecordInput): number {
+  return input.metadata?.qualityScore ?? 0;
+}
+
+function buildSeedMovieRecord(input: SeedMovieRecordInput): MovieRecord {
+  return {
+    name: getSeedMovieName(input),
+    year: input.year,
+    age_rating: input.ageRating,
+    description: input.description,
+    duration: input.runtime,
+    score_rating: input.scoreRating,
+    original_title: getSeedMovieOriginalTitle(input),
+    original_language: getSeedMovieOriginalLanguage(input),
+    release_date: getSeedMovieReleaseDate(input),
+    vote_count: getSeedMovieVoteCount(input),
+    popularity: getSeedMoviePopularity(input),
+    metadata_quality_score: getSeedMovieQualityScore(input),
+    metadata_quality_flags: getSeedMovieQualityFlags(input),
+    poster_url: getSeedMoviePosterUrl(input),
+    localized_name: getSeedMovieLocalizedName(input),
+    tmdb_id: input.movie.id,
+    tmdb_match_confidence: 1,
+    tmdb_match_source: 'tmdb_discovery',
+    embedding: input.embedding,
+  };
+}
+
+async function insertSeedMovie(record: MovieRecord): Promise<string | null> {
+  const result = await insertMovies([record]);
+  return result.insertedMovies[0]?.id ?? null;
+}
+
+function getSeedMovieAgeRating(details: TMDBMovieDetails | null): string {
+  return details ? extractUSCertification(details) : 'NR';
+}
+
+function getSeedMovieRuntime(details: TMDBMovieDetails | null): number {
+  return details?.runtime ?? 0;
+}
+
+function getSeedMovieDescription(
+  movie: CatalogSeedTMDBMovieJobData['movie'],
+  details: TMDBMovieDetails | null,
+): string {
+  return details?.overview || movie.overview || 'No description available.';
+}
+
+function getSeedMovieScoreRating(
+  movie: CatalogSeedTMDBMovieJobData['movie'],
+  details: TMDBMovieDetails | null,
+): number {
+  return Number((details?.vote_average ?? movie.vote_average ?? 0).toFixed(1));
+}
+
+function getSeedMovieMetadata(details: TMDBMovieDetails | null): TMDBCatalogMetadata | null {
+  return details ? extractCatalogMetadata(details) : null;
+}
+
+async function buildSeedMovieRecordDraftInput(
+  jobData: CatalogSeedTMDBMovieJobData,
+  candidate: SeedMovieCandidate,
+): Promise<SeedMovieRecordDraftInput> {
+  const movie = jobData.movie;
+  const details = candidate.details;
+  const ageRating = getSeedMovieAgeRating(details);
+  const runtime = getSeedMovieRuntime(details);
+  const description = getSeedMovieDescription(movie, details);
+  const scoreRating = getSeedMovieScoreRating(movie, details);
+  const metadata = getSeedMovieMetadata(details);
+  const embedding = await resolveSeedMovieEmbedding(jobData, {
+    ageRating,
+    description,
+    details,
+    movie,
+    runtime,
+    scoreRating,
+    year: candidate.year,
+  });
+
+  return {
+    ageRating,
+    description,
+    details,
+    embedding,
+    metadata,
+    movie,
+    runtime,
+    scoreRating,
+    year: candidate.year,
+  };
+}
+
+async function getReadySeedMovieRecordInput(
+  jobData: CatalogSeedTMDBMovieJobData,
+  candidate: SeedMovieCandidate,
+): Promise<SeedMovieRecordInput | null> {
+  const draft = await buildSeedMovieRecordDraftInput(jobData, candidate);
+  if (!isValidSeedEmbedding(draft.embedding)) return null;
+  return { ...draft, embedding: draft.embedding };
+}
+
+async function getSeedMovieCandidate(
+  jobData: CatalogSeedTMDBMovieJobData,
+): Promise<SeedMovieCandidate | null> {
+  const details = await fetchSeedMovieDetails(jobData.movie.id, jobData.language);
+  const year = getSeedMovieYear(jobData.movie, details);
+  return year > 0 ? { details, year } : null;
+}
+
+async function seedMovieAlreadyExists(
+  jobData: CatalogSeedTMDBMovieJobData,
+  candidate: SeedMovieCandidate,
+): Promise<boolean> {
+  const existingMovieId = await findExistingMovieId({
+    tmdbId: jobData.movie.id,
+    title: jobData.movie.title,
+    year: candidate.year,
+  });
+  if (!existingMovieId) return false;
+
+  await refreshExistingSeedMovieMetadata(existingMovieId, candidate.details);
+  return true;
+}
+
+async function prepareSeedMovie(jobData: CatalogSeedTMDBMovieJobData): Promise<PreparedSeedMovie> {
+  const movie = jobData.movie;
+  if (hasLocalSeedDuplicate(jobData)) return { status: 'skip', movie, reason: 'local_duplicate' };
+
+  const candidate = await getSeedMovieCandidate(jobData);
+  if (!candidate) return { status: 'skip', movie, reason: 'missing_year' };
+
+  const alreadyExists = await seedMovieAlreadyExists(jobData, candidate);
+  if (alreadyExists) return { status: 'skip', movie, reason: 'existing_movie' };
+
+  const recordInput = await getReadySeedMovieRecordInput(jobData, candidate);
+  if (!recordInput) return { status: 'skip', movie, reason: 'invalid_embedding' };
+
+  return {
+    status: 'ready',
+    metadata: recordInput.metadata,
+    movie,
+    record: buildSeedMovieRecord(recordInput),
+  };
+}
+
+function logSeedMovieSkip(job: Job<CatalogSeedTMDBMovieJobData>, outcome: PreparedSeedMovie): void {
+  if (outcome.status === 'ready') return;
+
+  const context = { jobId: job.id, tmdbId: outcome.movie.id };
+  const messages: Record<SeedMovieSkipReason, string> = {
+    existing_movie: 'Catalog seed skipped existing movie',
+    insert_noop: 'Catalog seed produced no inserted row',
+    invalid_embedding: 'Catalog seed skipped invalid embedding',
+    local_duplicate: 'Catalog seed skipped local duplicate',
+    missing_year: 'Catalog seed skipped movie without year',
+  };
+  const log =
+    outcome.reason === 'missing_year' || outcome.reason === 'invalid_embedding'
+      ? logger.warn.bind(logger)
+      : logger.debug.bind(logger);
+  log(context, messages[outcome.reason]);
+}
+
+async function insertPreparedSeedMovie(
+  job: Job<CatalogSeedTMDBMovieJobData>,
+  prepared: Extract<PreparedSeedMovie, { status: 'ready' }>,
+): Promise<PreparedSeedMovie> {
+  const insertedMovieId = await insertSeedMovie(prepared.record);
+  if (!insertedMovieId) {
+    return { status: 'skip', movie: prepared.movie, reason: 'insert_noop' };
+  }
+
+  if (prepared.metadata) {
+    await upsertSeedCatalogMetadata(insertedMovieId, prepared.metadata);
+  }
+
+  logger.info({ jobId: job.id, tmdbId: prepared.movie.id }, 'Catalog seed movie completed');
+  return prepared;
+}
+
 async function processSeedTMDBMovie(job: Job<CatalogSeedTMDBMovieJobData>): Promise<void> {
   await ensureCatalogSchema();
 
-  const apiKey = process.env.TMDB_API_KEY;
-  const { movie, language } = job.data;
-  const localKey = `${movie.title.toLowerCase()}|${parseTMDBYear(movie.release_date)}`;
-  if (job.data.localKeys?.includes(localKey)) {
-    logger.debug({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed skipped local duplicate');
+  const prepared = await prepareSeedMovie(job.data);
+  if (prepared.status === 'skip') {
+    logSeedMovieSkip(job, prepared);
     return;
   }
 
-  const details = apiKey ? await fetchMovieDetails(apiKey, movie.id, language) : null;
-  const year = parseTMDBYear(details?.release_date ?? movie.release_date);
-  if (year <= 0) {
-    logger.warn({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed skipped movie without year');
-    return;
-  }
-
-  const existingMovieId = await findExistingMovieId({
-    tmdbId: movie.id,
-    title: movie.title,
-    year,
-  });
-  if (existingMovieId) {
-    if (details) {
-      const metadata = extractCatalogMetadata(details);
-      await upsertMovieCatalogMetadata({
-        movieId: existingMovieId,
-        tmdbMetadata: metadata.snapshot,
-        people: metadata.people,
-        genres: metadata.genres,
-        keywords: metadata.keywords,
-        providers: metadata.providers,
-      });
-    }
-    logger.debug({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed skipped existing movie');
-    return;
-  }
-
-  const ageRating = details ? extractUSCertification(details) : 'NR';
-  const runtime = details?.runtime ?? 0;
-  const description = details?.overview || movie.overview || 'No description available.';
-  const scoreRating = Number((details?.vote_average ?? movie.vote_average ?? 0).toFixed(1));
-  const metadata = details ? extractCatalogMetadata(details) : null;
-  let embedding = job.data.embedding;
-
-  if (!embedding) {
-    const openAIKey = process.env.OPENAI_API_KEY;
-    if (!openAIKey) {
-      throw new Error('OPENAI_API_KEY is required to embed catalog seed movies');
-    }
-
-    const embeddings = await createEmbeddings(openAIKey, [
-      movieToEmbeddingText({
-        title: details?.title ?? movie.title,
-        year,
-        ageRating,
-        runtime,
-        description,
-        scoreRating,
-      }),
-    ]);
-    embedding = embeddings[0];
-  }
-
-  if (!embedding || embedding.every((value) => value === 0)) {
-    logger.warn({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed skipped invalid embedding');
-    return;
-  }
-
-  const record: MovieRecord = {
-    name: details?.title ?? movie.title,
-    year,
-    age_rating: ageRating,
-    description,
-    duration: runtime,
-    score_rating: scoreRating,
-    original_title: details?.original_title ?? null,
-    original_language: details?.original_language ?? null,
-    release_date: details?.release_date ?? movie.release_date,
-    vote_count: details?.vote_count ?? movie.vote_count ?? null,
-    popularity: details?.popularity ?? null,
-    metadata_quality_score: metadata?.qualityScore ?? 0,
-    metadata_quality_flags: metadata?.qualityFlags ?? ['missing_details'],
-    poster_url: getPosterUrl(details?.poster_path ?? movie.poster_path),
-    localized_name: details?.title && details.title !== movie.title ? details.title : null,
-    tmdb_id: movie.id,
-    tmdb_match_confidence: 1,
-    tmdb_match_source: 'tmdb_discovery',
-    embedding,
-  };
-
-  const result = await insertMovies([record]);
-  const insertedMovie = result.insertedMovies[0];
-  if (!insertedMovie?.id) {
-    logger.debug({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed produced no inserted row');
-    return;
-  }
-
-  if (details && metadata) {
-    await upsertMovieCatalogMetadata({
-      movieId: insertedMovie.id,
-      tmdbMetadata: metadata.snapshot,
-      people: metadata.people,
-      genres: metadata.genres,
-      keywords: metadata.keywords,
-      providers: metadata.providers,
-    });
-  }
-
-  logger.info({ jobId: job.id, tmdbId: movie.id }, 'Catalog seed movie completed');
+  const result = await insertPreparedSeedMovie(job, prepared);
+  logSeedMovieSkip(job, result);
 }
 
 async function processDiscoverTMDBSourcePage(
@@ -450,148 +748,286 @@ async function enqueueBackfillJobForRepairBatchItem(input: {
   return { jobId: String(job.id ?? jobId), status: 'queued' };
 }
 
+type CatalogHealthIssueMovie = Awaited<
+  ReturnType<typeof listCatalogHealthIssueMoviePage>
+>['movies'][number];
+type RepairBatchEnqueueResult = Awaited<ReturnType<typeof enqueueBackfillJobForRepairBatchItem>>;
+
+type RepairBatchOrchestrationParams = {
+  batchId: string | number;
+  issueKey: string;
+  language?: string;
+  limit: number;
+  pageSize: number;
+  reason: NonNullable<CatalogBackfillMovieJobData['reason']>;
+  staleAfterDays: number;
+};
+
+type RepairBatchCounters = {
+  attempted: number;
+  queued: number;
+  deduped: number;
+  failed: number;
+  unavailable: number;
+};
+
+function normalizeRepairBatchLimit(limit: number): number {
+  return Math.max(0, Number.isFinite(limit) ? Math.floor(limit) : 0);
+}
+
+function normalizeRepairBatchPageSize(pageSize: number): number {
+  const normalized = Number.isFinite(pageSize)
+    ? Math.floor(pageSize)
+    : DEFAULT_REPAIR_ORCHESTRATION_CHUNK_SIZE;
+  return Math.min(Math.max(1, normalized), MAX_REPAIR_ORCHESTRATION_CHUNK_SIZE);
+}
+
+function normalizeRepairBatchStaleDays(staleAfterDays: number | undefined): number {
+  const normalized = Number.isFinite(staleAfterDays)
+    ? Math.floor(staleAfterDays ?? DEFAULT_CATALOG_HEALTH_STALE_DAYS)
+    : DEFAULT_CATALOG_HEALTH_STALE_DAYS;
+  return Math.max(1, normalized);
+}
+
+function getRepairBatchOrchestrationParams(
+  jobData: CatalogEnqueueRepairBatchJobData,
+): RepairBatchOrchestrationParams {
+  return {
+    batchId: jobData.batchId,
+    issueKey: jobData.issueKey,
+    language: jobData.language,
+    limit: normalizeRepairBatchLimit(jobData.limit),
+    pageSize: normalizeRepairBatchPageSize(jobData.pageSize),
+    reason: getBackfillReasonForIssue(jobData.issueKey),
+    staleAfterDays: normalizeRepairBatchStaleDays(jobData.staleAfterDays),
+  };
+}
+
+function createRepairBatchCounters(): RepairBatchCounters {
+  return {
+    attempted: 0,
+    queued: 0,
+    deduped: 0,
+    failed: 0,
+    unavailable: 0,
+  };
+}
+
+function getRepairBatchOrchestrationStatus(counters: RepairBatchCounters): 'failed' | 'enqueueing' {
+  return counters.failed + counters.unavailable > 0 && counters.queued + counters.deduped === 0
+    ? 'failed'
+    : 'enqueueing';
+}
+
+function getRepairBatchOrchestrationResult(
+  job: Job<CatalogEnqueueRepairBatchJobData>,
+  params: RepairBatchOrchestrationParams,
+  counters: RepairBatchCounters,
+): Record<string, unknown> {
+  return {
+    jobId: String(job.id ?? 'unknown'),
+    jobName: job.name,
+    attempted: counters.attempted,
+    queued: counters.queued,
+    deduped: counters.deduped,
+    unavailable: counters.unavailable,
+    failed: counters.failed,
+    issueKey: params.issueKey,
+    limit: params.limit,
+    pageSize: params.pageSize,
+  };
+}
+
+function getFailedRepairBatchOrchestrationResult(
+  job: Job<CatalogEnqueueRepairBatchJobData>,
+  params: RepairBatchOrchestrationParams,
+  counters: RepairBatchCounters,
+  error: unknown,
+): Record<string, unknown> {
+  return {
+    jobId: String(job.id ?? 'unknown'),
+    jobName: job.name,
+    error: error instanceof Error ? error.message : String(error),
+    attempted: counters.attempted,
+    queued: counters.queued,
+    deduped: counters.deduped,
+    unavailable: counters.unavailable,
+    failed: counters.failed,
+    issueKey: params.issueKey,
+  };
+}
+
+async function createRepairBatchItemForMovie(
+  params: RepairBatchOrchestrationParams,
+  movie: CatalogHealthIssueMovie,
+): Promise<CatalogRepairBatchItem> {
+  return createCatalogRepairBatchItem({
+    batchId: params.batchId,
+    issueKey: params.issueKey,
+    language: params.language,
+    movieId: movie.id,
+    movieSnapshot: { ...movie },
+    reason: params.reason,
+  });
+}
+
+async function markRepairQueueUnavailable(itemId: string | number): Promise<void> {
+  await updateCatalogRepairBatchItemEnqueueResult({
+    itemId,
+    status: 'unavailable',
+    errorMessage: 'catalog-maintenance queue is unavailable in the worker process.',
+    result: { status: 'queue_unavailable', queueName: CATALOG_MAINTENANCE_QUEUE_NAME },
+  });
+}
+
+async function markRepairItemEnqueued(input: {
+  itemId: string | number;
+  language?: string;
+  result: RepairBatchEnqueueResult;
+}): Promise<void> {
+  await updateCatalogRepairBatchItemEnqueueResult({
+    itemId: input.itemId,
+    status: input.result.status,
+    queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+    jobName: CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
+    jobId: input.result.jobId,
+    language: input.language,
+    result: {
+      status: input.result.status,
+      queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+    },
+  });
+}
+
+async function markRepairItemEnqueueFailed(itemId: string | number, error: unknown): Promise<void> {
+  await updateCatalogRepairBatchItemEnqueueResult({
+    itemId,
+    status: 'enqueue_failed',
+    errorMessage: error instanceof Error ? error.message : String(error),
+    result: { status: 'enqueue_failed' },
+  });
+}
+
+function recordRepairBatchEnqueueResult(
+  counters: RepairBatchCounters,
+  result: RepairBatchEnqueueResult,
+): void {
+  if (result.status === 'unavailable') counters.unavailable += 1;
+  else if (result.status === 'deduped') counters.deduped += 1;
+  else counters.queued += 1;
+}
+
+async function enqueueRepairBatchMovie(input: {
+  counters: RepairBatchCounters;
+  movie: CatalogHealthIssueMovie;
+  params: RepairBatchOrchestrationParams;
+}): Promise<void> {
+  const item = await createRepairBatchItemForMovie(input.params, input.movie);
+
+  try {
+    const result = await enqueueBackfillJobForRepairBatchItem({
+      batchId: input.params.batchId,
+      itemId: item.id,
+      language: input.params.language,
+      movieId: input.movie.id,
+      reason: input.params.reason,
+    });
+
+    recordRepairBatchEnqueueResult(input.counters, result);
+    if (result.status === 'unavailable') {
+      await markRepairQueueUnavailable(item.id);
+      return;
+    }
+
+    await markRepairItemEnqueued({
+      itemId: item.id,
+      language: input.params.language,
+      result,
+    });
+  } catch (error) {
+    input.counters.failed += 1;
+    await markRepairItemEnqueueFailed(item.id, error);
+    logger.error(
+      {
+        err: error,
+        batchId: input.params.batchId,
+        issueKey: input.params.issueKey,
+        movieId: input.movie.id,
+      },
+      'Catalog repair batch orchestration failed to enqueue item',
+    );
+  }
+}
+
+async function processRepairBatchPage(input: {
+  counters: RepairBatchCounters;
+  offset: number;
+  params: RepairBatchOrchestrationParams;
+}): Promise<{ chunkLimit: number; movieCount: number }> {
+  const chunkLimit = Math.min(input.params.pageSize, input.params.limit - input.counters.attempted);
+  const page = await listCatalogHealthIssueMoviePage({
+    issueKey: input.params.issueKey,
+    limit: chunkLimit,
+    offset: input.offset,
+    staleAfterDays: input.params.staleAfterDays,
+  });
+
+  for (const movie of page.movies) {
+    await enqueueRepairBatchMovie({
+      counters: input.counters,
+      movie,
+      params: input.params,
+    });
+  }
+
+  return { chunkLimit, movieCount: page.movies.length };
+}
+
+async function processRepairBatchPages(
+  params: RepairBatchOrchestrationParams,
+  counters: RepairBatchCounters,
+): Promise<void> {
+  let offset = 0;
+
+  while (counters.attempted < params.limit) {
+    const { chunkLimit, movieCount } = await processRepairBatchPage({
+      counters,
+      offset,
+      params,
+    });
+
+    if (movieCount === 0) break;
+
+    counters.attempted += movieCount;
+    offset += movieCount;
+    await refreshCatalogRepairBatchCounts(params.batchId);
+
+    if (movieCount < chunkLimit) break;
+  }
+}
+
 async function processEnqueueRepairBatch(
   job: Job<CatalogEnqueueRepairBatchJobData>,
 ): Promise<void> {
   await ensureCatalogSchema();
 
-  const issueKey = job.data.issueKey;
-  const batchId = job.data.batchId;
-  const limit = Math.max(0, Number.isFinite(job.data.limit) ? Math.floor(job.data.limit) : 0);
-  const pageSize = Math.min(
-    Math.max(
-      1,
-      Number.isFinite(job.data.pageSize)
-        ? Math.floor(job.data.pageSize)
-        : DEFAULT_REPAIR_ORCHESTRATION_CHUNK_SIZE,
-    ),
-    MAX_REPAIR_ORCHESTRATION_CHUNK_SIZE,
-  );
-  const staleAfterDays = Math.max(
-    1,
-    Number.isFinite(job.data.staleAfterDays)
-      ? Math.floor(job.data.staleAfterDays ?? DEFAULT_CATALOG_HEALTH_STALE_DAYS)
-      : DEFAULT_CATALOG_HEALTH_STALE_DAYS,
-  );
-  const reason = getBackfillReasonForIssue(issueKey);
-  let offset = 0;
-  let attempted = 0;
-  let queued = 0;
-  let deduped = 0;
-  let failed = 0;
-  let unavailable = 0;
+  const params = getRepairBatchOrchestrationParams(job.data);
+  const counters = createRepairBatchCounters();
 
   try {
-    while (attempted < limit) {
-      const chunkLimit = Math.min(pageSize, limit - attempted);
-      const page = await listCatalogHealthIssueMoviePage({
-        issueKey,
-        limit: chunkLimit,
-        offset,
-        staleAfterDays,
-      });
-
-      if (page.movies.length === 0) break;
-
-      for (const movie of page.movies) {
-        const item = await createCatalogRepairBatchItem({
-          batchId,
-          issueKey,
-          language: job.data.language,
-          movieId: movie.id,
-          movieSnapshot: { ...movie },
-          reason,
-        });
-
-        try {
-          const enqueueResult = await enqueueBackfillJobForRepairBatchItem({
-            batchId,
-            itemId: item.id,
-            language: job.data.language,
-            movieId: movie.id,
-            reason,
-          });
-
-          if (enqueueResult.status === 'unavailable') {
-            unavailable += 1;
-            await updateCatalogRepairBatchItemEnqueueResult({
-              itemId: item.id,
-              status: 'unavailable',
-              errorMessage: 'catalog-maintenance queue is unavailable in the worker process.',
-              result: { status: 'queue_unavailable', queueName: CATALOG_MAINTENANCE_QUEUE_NAME },
-            });
-            continue;
-          }
-
-          if (enqueueResult.status === 'deduped') deduped += 1;
-          else queued += 1;
-
-          await updateCatalogRepairBatchItemEnqueueResult({
-            itemId: item.id,
-            status: enqueueResult.status,
-            queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
-            jobName: CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
-            jobId: enqueueResult.jobId,
-            language: job.data.language,
-            result: {
-              status: enqueueResult.status,
-              queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
-            },
-          });
-        } catch (error) {
-          failed += 1;
-          await updateCatalogRepairBatchItemEnqueueResult({
-            itemId: item.id,
-            status: 'enqueue_failed',
-            errorMessage: error instanceof Error ? error.message : String(error),
-            result: { status: 'enqueue_failed' },
-          });
-          logger.error(
-            { err: error, batchId, issueKey, movieId: movie.id },
-            'Catalog repair batch orchestration failed to enqueue item',
-          );
-        }
-      }
-
-      attempted += page.movies.length;
-      offset += page.movies.length;
-      await refreshCatalogRepairBatchCounts(batchId);
-
-      if (page.movies.length < chunkLimit) break;
-    }
+    await processRepairBatchPages(params, counters);
 
     await updateCatalogRepairBatchOrchestrationResult({
-      batchId,
-      status: failed + unavailable > 0 && queued + deduped === 0 ? 'failed' : 'enqueueing',
-      result: {
-        jobId: String(job.id ?? 'unknown'),
-        jobName: job.name,
-        attempted,
-        queued,
-        deduped,
-        unavailable,
-        failed,
-        issueKey,
-        limit,
-        pageSize,
-      },
+      batchId: params.batchId,
+      status: getRepairBatchOrchestrationStatus(counters),
+      result: getRepairBatchOrchestrationResult(job, params, counters),
     });
-    await refreshCatalogRepairBatchCounts(batchId);
+    await refreshCatalogRepairBatchCounts(params.batchId);
   } catch (error) {
     await updateCatalogRepairBatchOrchestrationResult({
-      batchId,
+      batchId: params.batchId,
       status: 'failed',
-      result: {
-        jobId: String(job.id ?? 'unknown'),
-        jobName: job.name,
-        error: error instanceof Error ? error.message : String(error),
-        attempted,
-        queued,
-        deduped,
-        unavailable,
-        failed,
-        issueKey,
-      },
+      result: getFailedRepairBatchOrchestrationResult(job, params, counters, error),
     });
     throw error;
   }
@@ -609,81 +1045,169 @@ async function loadBackfillMovie(movieId: string | number): Promise<BackfillMovi
   return result.rows[0] ?? null;
 }
 
-async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Promise<void> {
-  await ensureCatalogSchema();
-  const repairItem = await updateRepairBatchItem(
-    job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-    'processing',
-  );
-
+function getRequiredTMDBApiKeyForBackfill(): string {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) throw new Error('TMDB_API_KEY is required for catalog backfill jobs');
+  return apiKey;
+}
 
-  const movie = await loadBackfillMovie(job.data.movieId);
-  if (!movie) {
-    logger.warn({ jobId: job.id, movieId: job.data.movieId }, 'Catalog backfill movie not found');
-    await completeRepairBatchItemAfterBackfill({
-      job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-      repairItem,
-      result: { reason: 'movie_not_found', movieId: String(job.data.movieId) },
-    });
-    return;
-  }
-
-  const match = movie.tmdb_id
-    ? { status: 'matched' as const, tmdbId: movie.tmdb_id, confidence: 1, candidates: [] }
-    : await searchMovieMatch(apiKey, movie.name, movie.year);
-
-  if (match.status !== 'matched') {
-    logger.warn(
-      {
-        jobId: job.id,
-        movieId: movie.id,
-        status: match.status,
-        candidateCount: match.candidates.length,
-      },
-      'Catalog backfill skipped movie without confident TMDB match',
-    );
-    await completeRepairBatchItemAfterBackfill({
-      job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-      repairItem,
-      result: {
-        reason: 'tmdb_match_not_confident',
-        movieId: movie.id,
-        matchStatus: match.status,
-        candidateCount: match.candidates.length,
-      },
-    });
-    return;
-  }
-
-  const details = await fetchMovieDetails(apiKey, match.tmdbId, job.data.language);
-  if (!details) {
-    logger.warn({ jobId: job.id, tmdbId: match.tmdbId }, 'Catalog backfill found no details');
-    await completeRepairBatchItemAfterBackfill({
-      job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-      repairItem,
-      result: { reason: 'tmdb_details_missing', movieId: movie.id, tmdbId: match.tmdbId },
-    });
-    return;
-  }
-
-  const runtime = details.runtime ?? movie.duration;
-  const ageRating = extractUSCertification(details);
-  const metadata = extractCatalogMetadata(details);
-  const embeddingText = movieToEmbeddingText({
-    title: movie.name,
-    year: movie.year,
-    ageRating,
-    runtime,
-    description: movie.description,
-    scoreRating: Number(movie.score_rating),
-  });
-
+function getRequiredOpenAIKeyForBackfill(): string {
   const openAIKey = process.env.OPENAI_API_KEY;
   if (!openAIKey) throw new Error('OPENAI_API_KEY is required for catalog backfill jobs');
-  const [embedding] = await createEmbeddings(openAIKey, [embeddingText]);
-  if (!embedding) throw new Error(`Embedding missing for movie ${movie.id}`);
+  return openAIKey;
+}
+
+async function resolveBackfillMovieMatch(
+  apiKey: string,
+  movie: BackfillMovieRow,
+): Promise<BackfillMovieMatchResult> {
+  return movie.tmdb_id
+    ? { status: 'matched' as const, tmdbId: movie.tmdb_id, confidence: 1, candidates: [] }
+    : searchMovieMatch(apiKey, movie.name, movie.year);
+}
+
+async function prepareBackfillMovie(
+  jobData: CatalogBackfillMovieJobData,
+): Promise<PreparedBackfillMovie> {
+  const apiKey = getRequiredTMDBApiKeyForBackfill();
+  const movie = await loadBackfillMovie(jobData.movieId);
+  if (!movie) return { status: 'movie_not_found', movieId: jobData.movieId };
+
+  const match = await resolveBackfillMovieMatch(apiKey, movie);
+  if (match.status !== 'matched') {
+    return {
+      status: 'tmdb_match_not_confident',
+      candidateCount: match.candidates.length,
+      matchStatus: match.status,
+      movie,
+    };
+  }
+
+  const details = await fetchMovieDetails(apiKey, match.tmdbId, jobData.language);
+  return details
+    ? { status: 'ready', details, match, movie }
+    : {
+        status: 'tmdb_details_missing',
+        movie,
+        tmdbId: match.tmdbId,
+      };
+}
+
+function getBackfillSkipResult(prepared: Exclude<PreparedBackfillMovie, { status: 'ready' }>) {
+  if (prepared.status === 'movie_not_found') {
+    return { reason: prepared.status, movieId: String(prepared.movieId) };
+  }
+  if (prepared.status === 'tmdb_details_missing') {
+    return { reason: prepared.status, movieId: prepared.movie.id, tmdbId: prepared.tmdbId };
+  }
+  return {
+    reason: prepared.status,
+    movieId: prepared.movie.id,
+    matchStatus: prepared.matchStatus,
+    candidateCount: prepared.candidateCount,
+  };
+}
+
+function logBackfillSkip(
+  job: Job<CatalogBackfillMovieJobData>,
+  prepared: Exclude<PreparedBackfillMovie, { status: 'ready' }>,
+): void {
+  if (prepared.status === 'movie_not_found') {
+    logger.warn({ jobId: job.id, movieId: prepared.movieId }, 'Catalog backfill movie not found');
+    return;
+  }
+  if (prepared.status === 'tmdb_details_missing') {
+    logger.warn({ jobId: job.id, tmdbId: prepared.tmdbId }, 'Catalog backfill found no details');
+    return;
+  }
+
+  logger.warn(
+    {
+      jobId: job.id,
+      movieId: prepared.movie.id,
+      status: prepared.matchStatus,
+      candidateCount: prepared.candidateCount,
+    },
+    'Catalog backfill skipped movie without confident TMDB match',
+  );
+}
+
+async function completeSkippedBackfillMovie(input: {
+  job: Job<CatalogBackfillMovieJobData>;
+  prepared: Exclude<PreparedBackfillMovie, { status: 'ready' }>;
+  repairItem: CatalogRepairBatchItem | null;
+}): Promise<void> {
+  logBackfillSkip(input.job, input.prepared);
+  await completeRepairBatchItemAfterBackfill({
+    job: input.job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+    repairItem: input.repairItem,
+    result: getBackfillSkipResult(input.prepared),
+  });
+}
+
+function getBackfillEmbeddingText(prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>) {
+  const runtime = prepared.details.runtime ?? prepared.movie.duration;
+  return movieToEmbeddingText({
+    title: prepared.movie.name,
+    year: prepared.movie.year,
+    ageRating: extractUSCertification(prepared.details),
+    runtime,
+    description: prepared.movie.description,
+    scoreRating: Number(prepared.movie.score_rating),
+  });
+}
+
+async function createBackfillEmbedding(
+  prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>,
+): Promise<number[]> {
+  const [embedding] = await createEmbeddings(getRequiredOpenAIKeyForBackfill(), [
+    getBackfillEmbeddingText(prepared),
+  ]);
+  if (!embedding) throw new Error(`Embedding missing for movie ${prepared.movie.id}`);
+  return embedding;
+}
+
+function getBackfillRuntime(prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>): number {
+  return prepared.details.runtime ?? prepared.movie.duration;
+}
+
+function getBackfillPosterUrl(details: TMDBMovieDetails): string | null {
+  return getPosterUrl(details.poster_path);
+}
+
+function getBackfillLocalizedName(
+  details: TMDBMovieDetails,
+  movie: BackfillMovieRow,
+): string | null {
+  return details.title && details.title !== movie.name ? details.title : null;
+}
+
+function getBackfillOriginalTitle(details: TMDBMovieDetails): string | null {
+  return details.original_title ?? null;
+}
+
+function getBackfillOriginalLanguage(details: TMDBMovieDetails): string | null {
+  return details.original_language ?? null;
+}
+
+function getBackfillReleaseDate(details: TMDBMovieDetails): string | null {
+  return details.release_date || null;
+}
+
+function getBackfillVoteCount(details: TMDBMovieDetails): number | null {
+  return details.vote_count ?? null;
+}
+
+function getBackfillPopularity(details: TMDBMovieDetails): number | null {
+  return details.popularity ?? null;
+}
+
+async function updateBackfilledMovie(input: {
+  embedding: number[];
+  metadata: TMDBCatalogMetadata;
+  prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>;
+}): Promise<void> {
+  const { details, match, movie } = input.prepared;
 
   await getPool().query(
     `UPDATE movies
@@ -705,42 +1229,65 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
             metadata_quality_flags = $14::jsonb
       WHERE id = $15`,
     [
-      runtime,
-      ageRating,
+      getBackfillRuntime(input.prepared),
+      extractUSCertification(details),
       match.tmdbId,
       match.confidence,
-      getPosterUrl(details.poster_path),
-      details.title && details.title !== movie.name ? details.title : null,
-      JSON.stringify(embedding),
-      details.original_title ?? null,
-      details.original_language ?? null,
-      details.release_date || null,
-      details.vote_count ?? null,
-      details.popularity ?? null,
-      metadata.qualityScore,
-      JSON.stringify(metadata.qualityFlags),
+      getBackfillPosterUrl(details),
+      getBackfillLocalizedName(details, movie),
+      JSON.stringify(input.embedding),
+      getBackfillOriginalTitle(details),
+      getBackfillOriginalLanguage(details),
+      getBackfillReleaseDate(details),
+      getBackfillVoteCount(details),
+      getBackfillPopularity(details),
+      input.metadata.qualityScore,
+      JSON.stringify(input.metadata.qualityFlags),
       movie.id,
     ],
   );
+}
 
-  await upsertMovieCatalogMetadata({
-    movieId: movie.id,
-    tmdbMetadata: metadata.snapshot,
-    people: metadata.people,
-    genres: metadata.genres,
-    keywords: metadata.keywords,
-    providers: metadata.providers,
-  });
+async function persistBackfillMovie(input: {
+  job: Job<CatalogBackfillMovieJobData>;
+  prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>;
+  repairItem: CatalogRepairBatchItem | null;
+}): Promise<void> {
+  const metadata = extractCatalogMetadata(input.prepared.details);
+  const embedding = await createBackfillEmbedding(input.prepared);
+
+  await updateBackfilledMovie({ embedding, metadata, prepared: input.prepared });
+  await upsertSeedCatalogMetadata(input.prepared.movie.id, metadata);
 
   logger.info(
-    { jobId: job.id, movieId: movie.id, tmdbId: match.tmdbId },
+    {
+      jobId: input.job.id,
+      movieId: input.prepared.movie.id,
+      tmdbId: input.prepared.match.tmdbId,
+    },
     'Catalog backfill completed',
   );
   await completeRepairBatchItemAfterBackfill({
-    job: job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
-    repairItem,
-    result: { movieId: movie.id, tmdbId: match.tmdbId },
+    job: input.job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+    repairItem: input.repairItem,
+    result: { movieId: input.prepared.movie.id, tmdbId: input.prepared.match.tmdbId },
   });
+}
+
+async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Promise<void> {
+  await ensureCatalogSchema();
+  const repairItem = await updateRepairBatchItem(
+    job as Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+    'processing',
+  );
+
+  const prepared = await prepareBackfillMovie(job.data);
+  if (prepared.status !== 'ready') {
+    await completeSkippedBackfillMovie({ job, prepared, repairItem });
+    return;
+  }
+
+  await persistBackfillMovie({ job, prepared, repairItem });
 }
 
 // Imported dynamically by startWorkers.ts.
