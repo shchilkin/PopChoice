@@ -93,7 +93,6 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
-    continue-on-error: true
     permissions:
       contents: read
     steps:
@@ -111,7 +110,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run advisory Fallow audit
+      - name: Run Fallow audit
         run: npm run quality:fallow:audit -- --changed-since origin/development --format compact
 
   server-tests:
@@ -393,6 +392,7 @@ jobs:
     needs:
       - changes
       - lint
+      - fallow-audit
       - type-check
       - server-tests
       - backoffice-tests
@@ -409,6 +409,7 @@ jobs:
     env:
       DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
       LINT_RESULT: ${{ needs.lint.result }}
+      FALLOW_AUDIT_RESULT: ${{ needs.fallow-audit.result }}
       TYPE_CHECK_RESULT: ${{ needs.type-check.result }}
       SERVER_TESTS_RESULT: ${{ needs.server-tests.result }}
       BACKOFFICE_TESTS_RESULT: ${{ needs.backoffice-tests.result }}
@@ -434,6 +435,7 @@ jobs:
           failures=()
 
           [[ "$LINT_RESULT" == "success" ]] || failures+=("Lint & Format: $LINT_RESULT")
+          [[ "$FALLOW_AUDIT_RESULT" == "success" ]] || failures+=("Fallow Audit: $FALLOW_AUDIT_RESULT")
           [[ "$TYPE_CHECK_RESULT" == "success" ]] || failures+=("Type Check: $TYPE_CHECK_RESULT")
           [[ "$SERVER_TESTS_RESULT" == "success" ]] || failures+=("Server Tests: $SERVER_TESTS_RESULT")
           [[ "$BACKOFFICE_TESTS_RESULT" == "success" ]] || failures+=("Backoffice Tests: $BACKOFFICE_TESTS_RESULT")
