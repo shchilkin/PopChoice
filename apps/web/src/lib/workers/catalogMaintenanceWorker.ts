@@ -118,26 +118,25 @@ const ACTIVE_DEDUPE_STATES = new Set([
   'waiting-children',
 ]);
 
-let databaseInitialized = false;
+let catalogDatabaseInitialized = false;
 let schemaReadyPromise: Promise<void> | null = null;
 
-function parsePositiveIntEnv(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+function getCatalogDatabaseUrl(): string {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (databaseUrl) return databaseUrl;
+  throw new Error('DATABASE_URL is required for catalog maintenance jobs');
+}
+
+function parseCatalogWorkerPositiveIntEnv(name: string, fallback: number): number {
+  const rawValue = process.env[name];
+  const parsedValue = rawValue ? Number.parseInt(rawValue, 10) : fallback;
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
 }
 
 function ensureDatabase(): void {
-  if (databaseInitialized) return;
-
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL is required for catalog maintenance jobs');
-  }
-
-  initDatabase(databaseUrl);
-  databaseInitialized = true;
+  if (catalogDatabaseInitialized) return;
+  initDatabase(getCatalogDatabaseUrl());
+  catalogDatabaseInitialized = true;
 }
 
 async function ensureCatalogSchema(): Promise<void> {
@@ -239,7 +238,7 @@ async function completeRepairBatchItemAfterBackfill({
   const issueResolved = await isCatalogHealthIssueResolvedForMovie({
     issueKey: repairItem.issueKey,
     movieId: repairItem.movieId,
-    staleAfterDays: parsePositiveIntEnv(
+    staleAfterDays: parseCatalogWorkerPositiveIntEnv(
       'CATALOG_HEALTH_STALE_DAYS',
       DEFAULT_CATALOG_HEALTH_STALE_DAYS,
     ),
@@ -262,7 +261,10 @@ async function handleRateLimit(
   const delayMs =
     error.retryAfterMs > 0
       ? error.retryAfterMs
-      : parsePositiveIntEnv('CATALOG_TMDB_429_BACKOFF_MS', DEFAULT_TMDB_429_BACKOFF_MS);
+      : parseCatalogWorkerPositiveIntEnv(
+          'CATALOG_TMDB_429_BACKOFF_MS',
+          DEFAULT_TMDB_429_BACKOFF_MS,
+        );
   logger.warn({ jobId: job.id, delayMs }, 'TMDB returned 429; pausing catalog queue');
   await worker.rateLimit(delayMs);
   throw Worker.RateLimitError();
@@ -397,20 +399,40 @@ type PreparedSeedMovie =
       reason: SeedMovieSkipReason;
     };
 
+type SeedMovieCandidateOutcome =
+  | {
+      status: 'candidate';
+      candidate: SeedMovieCandidate;
+      movie: CatalogSeedTMDBMovieJobData['movie'];
+    }
+  | Extract<PreparedSeedMovie, { status: 'skip' }>;
+
 async function resolveSeedMovieEmbedding(
   jobData: CatalogSeedTMDBMovieJobData,
   input: Omit<SeedMovieRecordInput, 'embedding' | 'metadata'>,
 ): Promise<number[] | undefined> {
   if (jobData.embedding) return jobData.embedding;
+  return createSeedMovieEmbedding(input);
+}
 
+function getRequiredOpenAIKeyForSeedMovie(): string {
   const openAIKey = process.env.OPENAI_API_KEY;
-  if (!openAIKey) {
-    throw new Error('OPENAI_API_KEY is required to embed catalog seed movies');
-  }
+  if (openAIKey) return openAIKey;
+  throw new Error('OPENAI_API_KEY is required to embed catalog seed movies');
+}
 
-  const embeddings = await createEmbeddings(openAIKey, [
+function getSeedMovieEmbeddingTitle(
+  input: Omit<SeedMovieRecordInput, 'embedding' | 'metadata'>,
+): string {
+  return input.details?.title ?? input.movie.title;
+}
+
+async function createSeedMovieEmbedding(
+  input: Omit<SeedMovieRecordInput, 'embedding' | 'metadata'>,
+): Promise<number[] | undefined> {
+  const embeddings = await createEmbeddings(getRequiredOpenAIKeyForSeedMovie(), [
     movieToEmbeddingText({
-      title: input.details?.title ?? input.movie.title,
+      title: getSeedMovieEmbeddingTitle(input),
       year: input.year,
       ageRating: input.ageRating,
       runtime: input.runtime,
@@ -588,13 +610,23 @@ async function seedMovieAlreadyExists(
   return true;
 }
 
-async function prepareSeedMovie(jobData: CatalogSeedTMDBMovieJobData): Promise<PreparedSeedMovie> {
+async function getSeedMovieCandidateOutcome(
+  jobData: CatalogSeedTMDBMovieJobData,
+): Promise<SeedMovieCandidateOutcome> {
   const movie = jobData.movie;
   if (hasLocalSeedDuplicate(jobData)) return { status: 'skip', movie, reason: 'local_duplicate' };
 
   const candidate = await getSeedMovieCandidate(jobData);
   if (!candidate) return { status: 'skip', movie, reason: 'missing_year' };
 
+  return { status: 'candidate', candidate, movie };
+}
+
+async function prepareSeedMovieRecord(
+  jobData: CatalogSeedTMDBMovieJobData,
+  outcome: Extract<SeedMovieCandidateOutcome, { status: 'candidate' }>,
+): Promise<PreparedSeedMovie> {
+  const { candidate, movie } = outcome;
   const alreadyExists = await seedMovieAlreadyExists(jobData, candidate);
   if (alreadyExists) return { status: 'skip', movie, reason: 'existing_movie' };
 
@@ -607,6 +639,12 @@ async function prepareSeedMovie(jobData: CatalogSeedTMDBMovieJobData): Promise<P
     movie,
     record: buildSeedMovieRecord(recordInput),
   };
+}
+
+async function prepareSeedMovie(jobData: CatalogSeedTMDBMovieJobData): Promise<PreparedSeedMovie> {
+  const outcome = await getSeedMovieCandidateOutcome(jobData);
+  if (outcome.status === 'skip') return outcome;
+  return prepareSeedMovieRecord(jobData, outcome);
 }
 
 function logSeedMovieSkip(job: Job<CatalogSeedTMDBMovieJobData>, outcome: PreparedSeedMovie): void {
@@ -657,34 +695,88 @@ async function processSeedTMDBMovie(job: Job<CatalogSeedTMDBMovieJobData>): Prom
   logSeedMovieSkip(job, result);
 }
 
+function getRequiredTMDBApiKeyForDiscovery(): string {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (apiKey) return apiKey;
+  throw new Error('TMDB_API_KEY is required for catalog discovery jobs');
+}
+
+function getCatalogDiscoveryLimits(jobData: CatalogDiscoverTMDBSourcePageJobData): {
+  maxMovies: number | undefined;
+  minVoteAverage: number;
+  minVoteCount: number;
+} {
+  return {
+    maxMovies: jobData.maxMoviesPerPage,
+    minVoteAverage: jobData.minVoteAverage ?? DEFAULT_MIN_VOTE_AVERAGE,
+    minVoteCount: jobData.minVoteCount ?? DEFAULT_MIN_VOTE_COUNT,
+  };
+}
+
+function isQualifiedTMDBCatalogCandidate(
+  movie: Awaited<ReturnType<typeof fetchTMDBSourcePage>>[number],
+  limits: ReturnType<typeof getCatalogDiscoveryLimits>,
+): boolean {
+  return [
+    hasCatalogCandidateReleaseYear(movie),
+    hasCatalogCandidateVoteFloor(movie, limits),
+    hasCatalogCandidateVoteAverage(movie, limits),
+    hasCatalogCandidateOverview(movie),
+  ].every(Boolean);
+}
+
+function hasCatalogCandidateReleaseYear(
+  movie: Awaited<ReturnType<typeof fetchTMDBSourcePage>>[number],
+): boolean {
+  const year = parseTMDBYear(movie.release_date);
+  return year > 1800;
+}
+
+function hasCatalogCandidateVoteFloor(
+  movie: Awaited<ReturnType<typeof fetchTMDBSourcePage>>[number],
+  limits: ReturnType<typeof getCatalogDiscoveryLimits>,
+): boolean {
+  const voteCount = movie.vote_count ?? 0;
+  return voteCount >= limits.minVoteCount;
+}
+
+function hasCatalogCandidateVoteAverage(
+  movie: Awaited<ReturnType<typeof fetchTMDBSourcePage>>[number],
+  limits: ReturnType<typeof getCatalogDiscoveryLimits>,
+): boolean {
+  return movie.vote_average >= limits.minVoteAverage;
+}
+
+function hasCatalogCandidateOverview(
+  movie: Awaited<ReturnType<typeof fetchTMDBSourcePage>>[number],
+): boolean {
+  return movie.overview.trim().length > 0;
+}
+
+function getQualifiedTMDBCatalogCandidates(
+  candidates: Awaited<ReturnType<typeof fetchTMDBSourcePage>>,
+  limits: ReturnType<typeof getCatalogDiscoveryLimits>,
+): Awaited<ReturnType<typeof fetchTMDBSourcePage>> {
+  return candidates
+    .filter((movie) => isQualifiedTMDBCatalogCandidate(movie, limits))
+    .slice(0, limits.maxMovies ?? candidates.length);
+}
+
 async function processDiscoverTMDBSourcePage(
   job: Job<CatalogDiscoverTMDBSourcePageJobData>,
 ): Promise<void> {
   ensureDatabase();
 
-  const apiKey = process.env.TMDB_API_KEY;
-  if (!apiKey) throw new Error('TMDB_API_KEY is required for catalog discovery jobs');
-
   const candidates = await fetchTMDBSourcePage({
-    apiKey,
+    apiKey: getRequiredTMDBApiKeyForDiscovery(),
     source: job.data.source,
     page: job.data.page,
     language: job.data.language,
   });
-  const minVoteCount = job.data.minVoteCount ?? DEFAULT_MIN_VOTE_COUNT;
-  const minVoteAverage = job.data.minVoteAverage ?? DEFAULT_MIN_VOTE_AVERAGE;
-  const maxMovies = job.data.maxMoviesPerPage ?? candidates.length;
-  const qualified = candidates
-    .filter((movie) => {
-      const year = parseTMDBYear(movie.release_date);
-      return (
-        year > 1800 &&
-        (movie.vote_count ?? 0) >= minVoteCount &&
-        movie.vote_average >= minVoteAverage &&
-        movie.overview.trim().length > 0
-      );
-    })
-    .slice(0, maxMovies);
+  const qualified = getQualifiedTMDBCatalogCandidates(
+    candidates,
+    getCatalogDiscoveryLimits(job.data),
+  );
 
   const queued = await import('@/features/catalogMaintenance/jobs').then(
     ({ enqueueCatalogSeedTMDBMovies }) =>
@@ -708,26 +800,47 @@ async function processDiscoverTMDBSourcePage(
   );
 }
 
+type BackfillJobEnqueueResult = {
+  jobId?: string;
+  status: 'queued' | 'deduped' | 'unavailable';
+};
+
+type ExistingBackfillJob = Awaited<
+  ReturnType<NonNullable<typeof catalogMaintenanceQueue>['getJob']>
+>;
+
+function getUnavailableBackfillEnqueueResult(): BackfillJobEnqueueResult {
+  return { status: 'unavailable' };
+}
+
+async function getExistingBackfillJobResult(
+  existingJob: ExistingBackfillJob,
+  fallbackJobId: string,
+): Promise<BackfillJobEnqueueResult | null> {
+  if (!existingJob) return null;
+
+  const state = await existingJob.getState();
+  if (ACTIVE_DEDUPE_STATES.has(state)) {
+    return { jobId: String(existingJob.id ?? fallbackJobId), status: 'deduped' };
+  }
+
+  await existingJob.remove();
+  return null;
+}
+
 async function enqueueBackfillJobForRepairBatchItem(input: {
   batchId: string | number;
   itemId: string | number;
   language?: string;
   movieId: string | number;
   reason: NonNullable<CatalogBackfillMovieJobData['reason']>;
-}): Promise<{ jobId?: string; status: 'queued' | 'deduped' | 'unavailable' }> {
-  if (!catalogMaintenanceQueue) return { status: 'unavailable' };
+}): Promise<BackfillJobEnqueueResult> {
+  if (!catalogMaintenanceQueue) return getUnavailableBackfillEnqueueResult();
 
   const jobId = getCatalogBackfillMovieJobId(input.movieId);
   const existingJob = await catalogMaintenanceQueue.getJob(jobId);
-
-  if (existingJob) {
-    const state = await existingJob.getState();
-    if (ACTIVE_DEDUPE_STATES.has(state)) {
-      return { jobId: String(existingJob.id ?? jobId), status: 'deduped' };
-    }
-
-    await existingJob.remove();
-  }
+  const existingJobResult = await getExistingBackfillJobResult(existingJob, jobId);
+  if (existingJobResult) return existingJobResult;
 
   const job = await catalogMaintenanceQueue.add(
     CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie,
@@ -751,7 +864,7 @@ async function enqueueBackfillJobForRepairBatchItem(input: {
 type CatalogHealthIssueMovie = Awaited<
   ReturnType<typeof listCatalogHealthIssueMoviePage>
 >['movies'][number];
-type RepairBatchEnqueueResult = Awaited<ReturnType<typeof enqueueBackfillJobForRepairBatchItem>>;
+type RepairBatchEnqueueResult = BackfillJobEnqueueResult;
 
 type RepairBatchOrchestrationParams = {
   batchId: string | number;
@@ -1290,6 +1403,148 @@ async function processBackfillMovie(job: Job<CatalogBackfillMovieJobData>): Prom
   await persistBackfillMovie({ job, prepared, repairItem });
 }
 
+type CatalogMaintenanceJobHandler = (
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+) => Promise<void>;
+
+const CATALOG_MAINTENANCE_JOB_HANDLERS: Record<
+  CatalogMaintenanceJobName,
+  CatalogMaintenanceJobHandler
+> = {
+  [CATALOG_MAINTENANCE_JOB_NAMES.seedTMDBMovie]: async (job) =>
+    processSeedTMDBMovie(job as Job<CatalogSeedTMDBMovieJobData>),
+  [CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage]: async (job) =>
+    processDiscoverTMDBSourcePage(job as Job<CatalogDiscoverTMDBSourcePageJobData>),
+  [CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie]: async (job) =>
+    processBackfillMovie(job as Job<CatalogBackfillMovieJobData>),
+  [CATALOG_MAINTENANCE_JOB_NAMES.enqueueCatalogRepairBatch]: async (job) =>
+    processEnqueueRepairBatch(job as Job<CatalogEnqueueRepairBatchJobData>),
+};
+
+function getCatalogTraceAttributes(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+): Record<string, string | undefined> {
+  return {
+    'messaging.system': 'bullmq',
+    'messaging.destination.name': CATALOG_MAINTENANCE_QUEUE_NAME,
+    'messaging.operation.name': 'process',
+    'job.id': String(job.id ?? 'unknown'),
+    'job.name': job.name,
+    'catalog.job.source': 'source' in job.data ? job.data.source : undefined,
+  };
+}
+
+async function handleCatalogMaintenanceJobError(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+  worker: CatalogWorker,
+  error: unknown,
+): Promise<void> {
+  if (error instanceof TMDBRateLimitError) {
+    recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'rate_limited');
+    await handleRateLimit(job, worker, error);
+  }
+  if (isTimeoutError(error)) {
+    recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'timeout');
+  }
+}
+
+async function processCatalogMaintenanceJob(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+  worker: CatalogWorker,
+): Promise<void> {
+  try {
+    await CATALOG_MAINTENANCE_JOB_HANDLERS[job.name](job);
+  } catch (error) {
+    await handleCatalogMaintenanceJobError(job, worker, error);
+    throw error;
+  }
+}
+
+function recordCatalogMaintenanceCompleted(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
+): void {
+  recordQueueJobEvent({
+    queue: CATALOG_MAINTENANCE_QUEUE_NAME,
+    job: job.name,
+    event: 'completed',
+    final: true,
+  });
+  logger.info({ jobId: job.id, jobName: job.name }, 'Catalog maintenance job completed');
+}
+
+type CatalogMaintenanceFailureContext = {
+  attemptsMade: number;
+  finalFailure: boolean;
+  jobId: string | number | undefined;
+  jobName: CatalogMaintenanceJobName | undefined;
+};
+
+function getCatalogMaintenanceFailureContext(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): CatalogMaintenanceFailureContext {
+  const attemptsMade = getWorkerJobAttemptsMade(job);
+  return {
+    attemptsMade,
+    finalFailure: attemptsMadeReachedLimit(attemptsMade),
+    jobId: getWorkerJobId(job),
+    jobName: getCatalogWorkerJobName(job),
+  };
+}
+
+function attemptsMadeReachedLimit(attemptsMade: number): boolean {
+  return attemptsMade >= MAX_CATALOG_ATTEMPTS;
+}
+
+function getCatalogWorkerJobName(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+): CatalogMaintenanceJobName | undefined {
+  return job?.name;
+}
+
+function recordCatalogMaintenanceFailed(context: CatalogMaintenanceFailureContext): void {
+  recordQueueJobEvent({
+    queue: CATALOG_MAINTENANCE_QUEUE_NAME,
+    job: context.jobName ?? 'unknown',
+    event: 'failed',
+    final: context.finalFailure,
+  });
+}
+
+function markRepairBatchItemFailedAfterWorkerFailure(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+  err: Error,
+): void {
+  void updateRepairBatchItem(job, 'failed', {
+    errorMessage: err.message,
+    result: { reason: 'worker_failed' },
+  }).catch((statusError) => {
+    logger.error(
+      { err: statusError, jobId: job?.id, jobName: job?.name },
+      'Failed to persist catalog repair batch item failure',
+    );
+  });
+}
+
+function handleCatalogMaintenanceJobFailure(
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName> | undefined,
+  err: Error,
+): void {
+  const context = getCatalogMaintenanceFailureContext(job);
+  recordCatalogMaintenanceFailed(context);
+  if (context.finalFailure) markRepairBatchItemFailedAfterWorkerFailure(job, err);
+  logger.error(
+    {
+      err,
+      jobId: context.jobId,
+      jobName: context.jobName,
+      attemptsMade: context.attemptsMade,
+      maxAttempts: MAX_CATALOG_ATTEMPTS,
+      willRetry: !context.finalFailure,
+    },
+    'Catalog maintenance job failed',
+  );
+}
+
 // Imported dynamically by startWorkers.ts.
 // fallow-ignore-next-line unused-export
 export function createCatalogMaintenanceWorker(): CatalogWorker | null {
@@ -1307,102 +1562,32 @@ export function createCatalogMaintenanceWorker(): CatalogWorker | null {
         'catalog_maintenance.worker.process',
         {
           carrier: job.data.trace,
-          attributes: {
-            'messaging.system': 'bullmq',
-            'messaging.destination.name': CATALOG_MAINTENANCE_QUEUE_NAME,
-            'messaging.operation.name': 'process',
-            'job.id': String(job.id ?? 'unknown'),
-            'job.name': job.name,
-            'catalog.job.source': 'source' in job.data ? job.data.source : undefined,
-          },
+          attributes: getCatalogTraceAttributes(job),
         },
-        async () => {
-          try {
-            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.seedTMDBMovie) {
-              await processSeedTMDBMovie(job as Job<CatalogSeedTMDBMovieJobData>);
-              return;
-            }
-            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.discoverTMDBSourcePage) {
-              await processDiscoverTMDBSourcePage(job as Job<CatalogDiscoverTMDBSourcePageJobData>);
-              return;
-            }
-            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.backfillMovie) {
-              await processBackfillMovie(job as Job<CatalogBackfillMovieJobData>);
-              return;
-            }
-            if (job.name === CATALOG_MAINTENANCE_JOB_NAMES.enqueueCatalogRepairBatch) {
-              await processEnqueueRepairBatch(job as Job<CatalogEnqueueRepairBatchJobData>);
-              return;
-            }
-            throw new Error(`Unsupported catalog maintenance job: ${job.name}`);
-          } catch (error) {
-            if (error instanceof TMDBRateLimitError) {
-              recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'rate_limited');
-              await handleRateLimit(job, worker, error);
-            }
-            if (isTimeoutError(error)) {
-              recordTMDBProviderError(catalogTMDBOperationForJob(job.name), 'timeout');
-            }
-            throw error;
-          }
-        },
+        () => processCatalogMaintenanceJob(job, worker),
       );
     },
     {
       connection,
-      concurrency: parsePositiveIntEnv('CATALOG_MAINTENANCE_CONCURRENCY', DEFAULT_CONCURRENCY),
+      concurrency: parseCatalogWorkerPositiveIntEnv(
+        'CATALOG_MAINTENANCE_CONCURRENCY',
+        DEFAULT_CONCURRENCY,
+      ),
       limiter: {
-        max: parsePositiveIntEnv(
+        max: parseCatalogWorkerPositiveIntEnv(
           'CATALOG_TMDB_REQUESTS_PER_WINDOW',
           DEFAULT_TMDB_REQUESTS_PER_WINDOW,
         ),
-        duration: parsePositiveIntEnv('CATALOG_TMDB_RATE_LIMIT_WINDOW_MS', DEFAULT_TMDB_WINDOW_MS),
+        duration: parseCatalogWorkerPositiveIntEnv(
+          'CATALOG_TMDB_RATE_LIMIT_WINDOW_MS',
+          DEFAULT_TMDB_WINDOW_MS,
+        ),
       },
     },
   );
 
-  worker.on('completed', (job) => {
-    recordQueueJobEvent({
-      queue: CATALOG_MAINTENANCE_QUEUE_NAME,
-      job: job.name,
-      event: 'completed',
-      final: true,
-    });
-    logger.info({ jobId: job.id, jobName: job.name }, 'Catalog maintenance job completed');
-  });
-
-  worker.on('failed', (job, err) => {
-    const attemptsMade = job?.attemptsMade ?? 0;
-    const finalFailure = attemptsMade >= MAX_CATALOG_ATTEMPTS;
-    recordQueueJobEvent({
-      queue: CATALOG_MAINTENANCE_QUEUE_NAME,
-      job: job?.name ?? 'unknown',
-      event: 'failed',
-      final: finalFailure,
-    });
-    if (finalFailure) {
-      void updateRepairBatchItem(job, 'failed', {
-        errorMessage: err instanceof Error ? err.message : String(err),
-        result: { reason: 'worker_failed' },
-      }).catch((statusError) => {
-        logger.error(
-          { err: statusError, jobId: job?.id, jobName: job?.name },
-          'Failed to persist catalog repair batch item failure',
-        );
-      });
-    }
-    logger.error(
-      {
-        err,
-        jobId: job?.id,
-        jobName: job?.name,
-        attemptsMade,
-        maxAttempts: MAX_CATALOG_ATTEMPTS,
-        willRetry: attemptsMade < MAX_CATALOG_ATTEMPTS,
-      },
-      'Catalog maintenance job failed',
-    );
-  });
+  worker.on('completed', recordCatalogMaintenanceCompleted);
+  worker.on('failed', handleCatalogMaintenanceJobFailure);
 
   worker.on('error', (err) => {
     logger.error({ err }, 'Catalog maintenance worker encountered an unrecoverable error');
