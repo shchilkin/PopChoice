@@ -3,39 +3,18 @@ import type { CatalogRepairBatch, CatalogRepairBatchItem } from '@pop-choice/sha
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { RepairStatusBadge, repairStatusLabel } from '../catalog-repair-status';
 import { CatalogStat, PanelHeader, TableEmptyRow } from '../shared';
-import {
-  getRepairBatchProgress,
-  issueHref,
-  movieHref,
-  repairItemPressureLabel,
-  resultValue,
-  snapshotValue,
-  truncateText,
-} from './helpers';
+import { getRepairBatchProgress, issueHref } from './helpers';
+import { getRepairBatchItemRowView, type RepairBatchItemRowView } from './viewModels';
 
-const RETRIABLE_ITEM_STATUSES = new Set<CatalogRepairBatchItem['status']>([
-  'failed',
-  'enqueue_failed',
-  'unavailable',
-]);
-
-function canRetryRepairBatchItem(item: CatalogRepairBatchItem): boolean {
-  return RETRIABLE_ITEM_STATUSES.has(item.status);
-}
-
-function RepairBatchItemAction({ item }: { item: CatalogRepairBatchItem }) {
-  if (!canRetryRepairBatchItem(item)) return <span className="muted">Inspect</span>;
+function RepairBatchItemAction({ action }: { action: RepairBatchItemRowView['action'] }) {
+  if (action.type === 'inspect') return <span className="muted">Inspect</span>;
 
   return (
-    <form action={`/repair-batches/${encodeURIComponent(item.batchId)}/actions`} method="post">
+    <form action={`/repair-batches/${encodeURIComponent(action.batchId)}/actions`} method="post">
       <input type="hidden" name="action" value="retry_item" />
-      <input type="hidden" name="batch_id" value={item.batchId} />
-      <input type="hidden" name="item_id" value={item.id} />
-      <input
-        type="hidden"
-        name="return_to"
-        value={`/repair-batches/${encodeURIComponent(item.batchId)}?status=needs_review`}
-      />
+      <input type="hidden" name="batch_id" value={action.batchId} />
+      <input type="hidden" name="item_id" value={action.itemId} />
+      <input type="hidden" name="return_to" value={action.returnTo} />
       <button className="button small secondary" type="submit">
         Retry item
       </button>
@@ -50,62 +29,58 @@ export function RepairBatchItemRows({ items }: { items: CatalogRepairBatchItem[]
     );
   }
 
+  const rows = items.map(getRepairBatchItemRowView);
+
   return (
     <>
-      {items.map((item) => {
-        const name = snapshotValue(item.movieSnapshot, 'name');
-        const year = snapshotValue(item.movieSnapshot, 'year');
-        const attempts =
-          resultValue(item.result, 'attemptsMade') ??
-          resultValue(item.result, 'attempts') ??
-          resultValue(item.result, 'attempt');
-
-        return (
-          <tr key={item.id}>
-            <td>#{item.id}</td>
-            <td>
-              <a href={issueHref(item.issueKey)}>{item.issueKey}</a>
-            </td>
-            <td>
-              <div className="movie-title">
-                <strong>
-                  <a href={movieHref(item.movieId)}>{name ?? `Movie ${item.movieId}`}</a>
-                </strong>
-                <span className="muted">
-                  #{item.movieId}
-                  {year === null || year === undefined ? '' : ` · ${year}`}
-                </span>
-              </div>
-            </td>
-            <td>
-              <RepairStatusBadge status={item.status} />
-            </td>
-            <td>
-              <div className="queue-metadata">
-                <strong>{item.jobId ?? '-'}</strong>
-                <span>{item.queueName ?? 'queue unknown'}</span>
-                <span>{item.jobName ?? 'job unknown'}</span>
-              </div>
-            </td>
-            <td>{item.reason ?? '-'}</td>
-            <td>{item.language ?? '-'}</td>
-            <td>
-              <span title={item.errorMessage ?? undefined}>{truncateText(item.errorMessage)}</span>
-            </td>
-            <td>
-              <div className="queue-metadata">
-                <strong>{repairItemPressureLabel(item)}</strong>
-                <span>{attempts === null ? 'attempts unknown' : `${attempts} attempts`}</span>
-              </div>
-            </td>
-            <td>{formatBackofficeDateTime(item.updatedAt)}</td>
-            <td>
-              <RepairBatchItemAction item={item} />
-            </td>
-          </tr>
-        );
-      })}
+      {rows.map((row) => (
+        <RepairBatchItemRow key={row.id} row={row} />
+      ))}
     </>
+  );
+}
+
+function RepairBatchItemRow({ row }: { row: RepairBatchItemRowView }) {
+  return (
+    <tr>
+      <td>#{row.id}</td>
+      <td>
+        <a href={row.issueHref}>{row.issueKey}</a>
+      </td>
+      <td>
+        <div className="movie-title">
+          <strong>
+            <a href={row.movieHref}>{row.movieLabel}</a>
+          </strong>
+          <span className="muted">{row.movieMeta}</span>
+        </div>
+      </td>
+      <td>
+        <RepairStatusBadge status={row.status} />
+      </td>
+      <td>
+        <div className="queue-metadata">
+          <strong>{row.jobIdLabel}</strong>
+          <span>{row.queueNameLabel}</span>
+          <span>{row.jobNameLabel}</span>
+        </div>
+      </td>
+      <td>{row.reasonLabel}</td>
+      <td>{row.languageLabel}</td>
+      <td>
+        <span title={row.errorTitle}>{row.errorLabel}</span>
+      </td>
+      <td>
+        <div className="queue-metadata">
+          <strong>{row.pressureLabel}</strong>
+          <span>{row.attemptsLabel}</span>
+        </div>
+      </td>
+      <td>{row.updatedAtLabel}</td>
+      <td>
+        <RepairBatchItemAction action={row.action} />
+      </td>
+    </tr>
   );
 }
 
