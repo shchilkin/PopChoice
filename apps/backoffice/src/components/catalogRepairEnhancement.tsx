@@ -38,6 +38,8 @@ type RepairStatusHandler = (
   timeouts: number[],
 ) => void;
 
+const REPAIR_SUBMISSION_TIMEOUT_MS = 15_000;
+
 function setMessage(form: HTMLFormElement, text: string, tone: RepairTone): void {
   const message = form.querySelector<HTMLElement>('[data-repair-message]');
   if (!message) return;
@@ -142,7 +144,7 @@ function submitButtonText(form: HTMLFormElement): string {
   return form.querySelector('[data-repair-submit]')?.textContent || 'Queue backfill';
 }
 
-function beginRepairSubmission(form: HTMLFormElement): RepairSubmissionState {
+export function beginRepairSubmission(form: HTMLFormElement): RepairSubmissionState {
   const state = {
     form,
     originalText: submitButtonText(form),
@@ -159,17 +161,34 @@ async function readRepairPayload(response: Response): Promise<RepairPayload | nu
   return (await response.json().catch(() => null)) as RepairPayload | null;
 }
 
-async function postRepairSubmission(form: HTMLFormElement): Promise<RepairResponse> {
-  const response = await fetch(formActionUrl(form), {
-    body: formBody(form),
-    headers: { Accept: 'application/json', 'X-Requested-With': 'fetch' },
-    method: 'POST',
-  });
+function repairSubmissionAbortSignal(): { clear: () => void; signal: AbortSignal } {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REPAIR_SUBMISSION_TIMEOUT_MS);
 
   return {
-    ok: response.ok,
-    payload: await readRepairPayload(response),
+    clear: () => window.clearTimeout(timeoutId),
+    signal: controller.signal,
   };
+}
+
+async function postRepairSubmission(form: HTMLFormElement): Promise<RepairResponse> {
+  const abort = repairSubmissionAbortSignal();
+
+  try {
+    const response = await fetch(formActionUrl(form), {
+      body: formBody(form),
+      headers: { Accept: 'application/json', 'X-Requested-With': 'fetch' },
+      method: 'POST',
+      signal: abort.signal,
+    });
+
+    return {
+      ok: response.ok,
+      payload: await readRepairPayload(response),
+    };
+  } finally {
+    abort.clear();
+  }
 }
 
 function clearPending(state: RepairSubmissionState): void {
@@ -248,7 +267,7 @@ const REPAIR_STATUS_HANDLERS: Record<string, RepairStatusHandler> = {
   queued: handleQueuedOrDedupedRepair,
 };
 
-function handleRepairResponse(
+export function handleRepairResponse(
   state: RepairSubmissionState,
   response: RepairResponse,
   timeouts: number[],
