@@ -9,7 +9,9 @@ import {
 const mocks = vi.hoisted(() => ({
   backofficeActionErrorResponse: vi.fn(),
   backofficeActionFailureResponse: vi.fn(),
-  catalogRepairMessage: vi.fn(),
+  buildCatalogRepairActionBody: vi.fn(),
+  getCatalogRepairActionStatusCode: vi.fn(),
+  getCatalogRepairRedirectStatus: vi.fn(),
   getBackofficeErrorStatus: vi.fn(),
   isSameOriginRequest: vi.fn(),
   logBackofficeError: vi.fn(),
@@ -21,7 +23,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../../lib/backoffice', () => ({
   backofficeActionErrorResponse: mocks.backofficeActionErrorResponse,
   backofficeActionFailureResponse: mocks.backofficeActionFailureResponse,
-  catalogRepairMessage: mocks.catalogRepairMessage,
+  buildCatalogRepairActionBody: mocks.buildCatalogRepairActionBody,
+  getCatalogRepairActionStatusCode: mocks.getCatalogRepairActionStatusCode,
+  getCatalogRepairRedirectStatus: mocks.getCatalogRepairRedirectStatus,
   getBackofficeErrorStatus: mocks.getBackofficeErrorStatus,
   logBackofficeError: mocks.logBackofficeError,
   parseBackofficeReturnPath: mocks.parseBackofficeReturnPath,
@@ -62,7 +66,34 @@ function createRepairRequest({
 describe('catalog health repair action route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.catalogRepairMessage.mockImplementation((status: string) => `message:${status}`);
+    mocks.buildCatalogRepairActionBody.mockImplementation((result) => ({
+      ok:
+        result.status === 'queued' ||
+        result.status === 'deduped' ||
+        result.status === 'orchestration_queued',
+      mode: result.mode,
+      status: result.status,
+      message: `message:${result.status}`,
+      issueKey: result.issueKey,
+      ...(result.mode === 'single'
+        ? { movieId: result.movieId, job: result.job }
+        : { summary: result.summary }),
+    }));
+    mocks.getCatalogRepairActionStatusCode.mockImplementation((status: string) => {
+      if (status === 'unavailable') return 503;
+      if (status === 'failed') return 500;
+      if (status === 'partial') return 207;
+      return 200;
+    });
+    mocks.getCatalogRepairRedirectStatus.mockImplementation((result) => {
+      if (result.status === 'queued') return result.mode === 'bulk' ? 'bulk-queued' : 'queued';
+      if (result.status === 'deduped') return 'deduped';
+      if (result.status === 'orchestration_queued') return 'bulk-orchestration-queued';
+      if (result.status === 'partial') return 'bulk-partial';
+      if (result.status === 'empty') return 'empty';
+      if (result.status === 'failed') return 'failed';
+      return 'unavailable';
+    });
     mocks.getBackofficeErrorStatus.mockReturnValue(500);
     mocks.isSameOriginRequest.mockReturnValue(true);
     mocks.parseBackofficeReturnPath.mockImplementation((value: FormDataEntryValue | null) =>

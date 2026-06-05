@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { catalogRepairMessage, REPAIRABLE_CATALOG_ISSUE_KEYS } from './catalogRepairActions';
 import { getBackfillReasonForIssue, getBulkRepairStatus } from './catalogRepairActionHelpers';
+import {
+  buildCatalogRepairActionBody,
+  getCatalogRepairActionStatusCode,
+  getCatalogRepairRedirectStatus,
+} from './catalogRepairActionResponse';
 
 describe('catalog repair actions', () => {
   it('keeps every known automatic repair issue registered as repairable', () => {
@@ -51,5 +56,101 @@ describe('catalog repair actions', () => {
     expect(getBulkRepairStatus({ ...base, failed: 1, queued: 4 })).toBe('partial');
     expect(getBulkRepairStatus({ ...base, failed: 1 })).toBe('failed');
     expect(getBulkRepairStatus({ ...base, unavailable: 10 })).toBe('unavailable');
+  });
+
+  it('builds catalog repair JSON contracts and response status codes', () => {
+    expect(
+      buildCatalogRepairActionBody({
+        issueKey: 'missing_poster_url',
+        job: {
+          jobId: 'backfill-42',
+          jobName: 'catalog-backfill-movie',
+          language: 'en-US',
+          queueName: 'catalog-maintenance',
+          status: 'queued',
+        },
+        mode: 'single',
+        movieId: '42',
+        status: 'queued',
+      }),
+    ).toMatchObject({
+      issueKey: 'missing_poster_url',
+      job: {
+        jobId: 'backfill-42',
+        jobName: 'catalog-backfill-movie',
+        language: 'en-US',
+        queueName: 'catalog-maintenance',
+        status: 'queued',
+      },
+      mode: 'single',
+      movieId: '42',
+      ok: true,
+      status: 'queued',
+    });
+    expect(getCatalogRepairActionStatusCode('queued')).toBe(200);
+
+    expect(
+      buildCatalogRepairActionBody({
+        issueKey: 'missing_poster_url',
+        mode: 'bulk',
+        status: 'partial',
+        summary: {
+          attempted: 2,
+          deduped: 0,
+          failed: 1,
+          issueKey: 'missing_poster_url',
+          jobs: [],
+          limit: 2,
+          movieIds: ['42'],
+          queued: 1,
+          totalCandidates: 2,
+          unavailable: 0,
+        },
+      }),
+    ).toMatchObject({
+      mode: 'bulk',
+      ok: false,
+      status: 'partial',
+    });
+    expect(getCatalogRepairActionStatusCode('partial')).toBe(207);
+    expect(getCatalogRepairActionStatusCode('unavailable')).toBe(503);
+    expect(getCatalogRepairActionStatusCode('failed')).toBe(500);
+  });
+
+  it('maps catalog repair results into redirect status flags', () => {
+    expect(
+      getCatalogRepairRedirectStatus({
+        issueKey: 'missing_poster_url',
+        job: {
+          jobId: 'backfill-42',
+          jobName: 'catalog-backfill-movie',
+          language: 'en-US',
+          queueName: 'catalog-maintenance',
+          status: 'queued',
+        },
+        mode: 'single',
+        movieId: '42',
+        status: 'queued',
+      }),
+    ).toBe('queued');
+    expect(
+      getCatalogRepairRedirectStatus({
+        issueKey: 'missing_poster_url',
+        mode: 'bulk',
+        status: 'orchestration_queued',
+        summary: {
+          attempted: 0,
+          deduped: 0,
+          failed: 0,
+          issueKey: 'missing_poster_url',
+          jobs: [],
+          limit: 10,
+          movieIds: [],
+          queued: 0,
+          totalCandidates: 10,
+          unavailable: 0,
+        },
+      }),
+    ).toBe('bulk-orchestration-queued');
   });
 });
