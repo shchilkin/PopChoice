@@ -1,5 +1,9 @@
 import type {
   CatalogHealthIssue,
+  CatalogMovieDetail,
+  CatalogMovieDetailHealthFlag,
+  CatalogMovieDetailPersonCredit,
+  CatalogMovieDetailTaxonomyItem,
   CatalogMovieSample,
   CatalogRepairBatch,
   CatalogRepairBatchItem,
@@ -25,6 +29,98 @@ export function catalogMovieSample(
     tmdb_id: null,
     tmdb_matched_at: null,
     year: 1995,
+    ...overrides,
+  };
+}
+
+export function catalogMovieDetailHealthFlag(
+  overrides: Partial<CatalogMovieDetailHealthFlag> = {},
+): CatalogMovieDetailHealthFlag {
+  return {
+    isActive: true,
+    key: 'missing_poster_url',
+    label: 'Missing poster',
+    ...overrides,
+  };
+}
+
+export function catalogMovieDetailPersonCredit(
+  overrides: Partial<CatalogMovieDetailPersonCredit> = {},
+): CatalogMovieDetailPersonCredit {
+  return {
+    billingOrder: 1,
+    characterName: 'Neil McCauley',
+    department: null,
+    id: 'credit-1',
+    job: null,
+    name: 'Robert De Niro',
+    personId: 'person-1',
+    popularity: 12,
+    profilePath: null,
+    rawMetadata: {},
+    role: 'cast',
+    tmdbCreditId: 'credit-tmdb-1',
+    tmdbId: 380,
+    ...overrides,
+  };
+}
+
+export function catalogMovieDetailTaxonomyItem(
+  overrides: Partial<CatalogMovieDetailTaxonomyItem> = {},
+): CatalogMovieDetailTaxonomyItem {
+  return {
+    id: 'genre-1',
+    name: 'Crime',
+    rawMetadata: {},
+    source: 'tmdb',
+    tmdbId: 80,
+    ...overrides,
+  };
+}
+
+export function catalogMovieDetail(
+  overrides: Partial<CatalogMovieDetail> = {},
+): CatalogMovieDetail {
+  return {
+    cast: [catalogMovieDetailPersonCredit()],
+    directors: [
+      catalogMovieDetailPersonCredit({
+        billingOrder: null,
+        characterName: null,
+        id: 'credit-director-1',
+        job: 'Director',
+        name: 'Michael Mann',
+        personId: 'person-director-1',
+        role: 'director',
+        tmdbId: 638,
+      }),
+    ],
+    duplicateContext: {
+      normalizedTitleYearPeers: [],
+      tmdbIdPeers: [],
+    },
+    genres: [catalogMovieDetailTaxonomyItem()],
+    healthFlags: [catalogMovieDetailHealthFlag()],
+    keywords: [catalogMovieDetailTaxonomyItem({ id: 'keyword-1', name: 'heist', tmdbId: 100 })],
+    movie: {
+      ageRating: 'R',
+      description: 'A crew and a detective move through Los Angeles.',
+      duration: 170,
+      id: '42',
+      localizedName: 'Fuego contra fuego',
+      name: 'Heat',
+      posterUrl: null,
+      scoreRating: 8.3,
+      tmdbId: 949,
+      tmdbMatchConfidence: 0.92,
+      tmdbMatchSource: 'manual_review',
+      tmdbMatchedAt: '2026-06-02T12:00:00.000Z',
+      tmdbMetadata: {},
+      tmdbMetadataRefreshedAt: '2026-06-03T12:00:00.000Z',
+      year: 1995,
+    },
+    relatedReviews: [],
+    repairAudit: [],
     ...overrides,
   };
 }
