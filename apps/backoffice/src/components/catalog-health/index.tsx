@@ -15,73 +15,12 @@ import { formatLiveSyncTime } from '../liveRefreshTime';
 import { CountPill, SimplePaginationControls } from '../shared';
 import { buildRepairAuditPageHref } from '../shared/hrefs';
 import { CatalogIssuePanel } from './issuePanel';
+import { buildDuplicateReportViewModel, buildRepairFlashViewModel } from './viewModels';
 
 function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
-  if (repairStatus === 'queued') {
-    return (
-      <div className="notice neutral">
-        Catalog backfill work accepted. This row is not resolved yet; workers will process it
-        through the existing rate-limited TMDB path.
-      </div>
-    );
-  }
+  const view = buildRepairFlashViewModel(repairStatus);
 
-  if (repairStatus === 'deduped') {
-    return (
-      <div className="notice neutral">
-        Catalog backfill work was already queued. Workers will process the existing job through the
-        rate-limited TMDB path.
-      </div>
-    );
-  }
-
-  if (repairStatus === 'bulk-queued') {
-    return (
-      <div className="notice neutral">
-        Catalog repair batch accepted. Issues stay open until workers update the catalog and the
-        next health report clears them.
-      </div>
-    );
-  }
-
-  if (repairStatus === 'bulk-orchestration-queued') {
-    return (
-      <div className="notice neutral">
-        Catalog repair orchestration accepted. A durable batch was created; workers will add repair
-        items and queue backfill jobs in chunks.
-      </div>
-    );
-  }
-
-  if (repairStatus === 'bulk-partial') {
-    return (
-      <div className="notice warn">
-        Catalog repair batch partially queued. Check the recent repair audit before retrying.
-      </div>
-    );
-  }
-
-  if (repairStatus === 'unavailable') {
-    return (
-      <div className="notice warn">
-        Catalog repair queue is unavailable. Check REDIS_URL and the backoffice logs.
-      </div>
-    );
-  }
-
-  if (repairStatus === 'empty') {
-    return <div className="notice warn">No affected movies are currently available to queue.</div>;
-  }
-
-  if (repairStatus === 'failed') {
-    return (
-      <div className="notice warn">
-        Catalog repair action failed. Check backoffice logs for details.
-      </div>
-    );
-  }
-
-  return null;
+  return view ? <div className={`notice ${view.tone}`}>{view.copy}</div> : null;
 }
 
 function DuplicateGroup({ group }: { group: DuplicateIdentityGroup }) {
@@ -113,28 +52,26 @@ function DuplicateReport({
   title: string;
   report: CatalogHealthReport['duplicateTmdbIds'];
 }) {
-  const state = report.totalGroups > 0 ? 'warning' : 'healthy';
+  const view = buildDuplicateReportViewModel(report);
 
   return (
-    <section
-      className={`panel duplicate-panel ${report.totalGroups > 0 ? 'needs-work' : 'healthy'}`}
-    >
+    <section className={view.panelClassName}>
       <div className="panel-header">
         <div className="issue-title">
           <div className="issue-title-row">
             <h2>{title}</h2>
-            <span className={`pill ${state}`}>{report.totalGroups > 0 ? 'Review' : 'Healthy'}</span>
+            <span className={`pill ${view.state}`}>{view.pillLabel}</span>
           </div>
           <div className="issue-hint">
             Potential identity collisions that should be reviewed before merge automation.
           </div>
         </div>
-        <CountPill count={report.totalGroups} state={state} />
+        <CountPill count={report.totalGroups} state={view.state} />
       </div>
-      {report.groups.length === 0 ? (
+      {view.groups.length === 0 ? (
         <p className="empty">No duplicate groups found.</p>
       ) : (
-        report.groups.map((group) => <DuplicateGroup key={group.identityKey} group={group} />)
+        view.groups.map((group) => <DuplicateGroup key={group.identityKey} group={group} />)
       )}
     </section>
   );
