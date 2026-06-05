@@ -16,6 +16,7 @@ import {
   excludeMentionedLocalMovies,
   excludeMentionedTMDBMovies,
   excludeFeedbackTMDBMovies,
+  type FeedbackCandidateSignals,
   getFeedbackCandidateSignals,
   getMentionedMovieTitleKeys,
 } from './candidateFilters';
@@ -45,6 +46,7 @@ import {
 
 import type {
   ApiResponse,
+  EnhancedMovieMatch,
   PersonFormData,
   RecommendationExperienceMode,
   RecommendationSourceStrategy,
@@ -53,6 +55,56 @@ import type { RecommendationStage } from '@/lib/db/recommendations';
 import type { Locale } from '@/lib/locale';
 
 const MOVIE_SEED_ENQUEUE_TIMEOUT_MS = 1500;
+
+type RecommendationPipelineOptions = {
+  experienceMode?: RecommendationExperienceMode;
+  onStageChange?: (stage: RecommendationStage) => Promise<void> | void;
+  sourceStrategy?: RecommendationSourceStrategy;
+  userId?: string;
+};
+
+type PipelineContext = {
+  experienceMode: RecommendationExperienceMode;
+  mentionedTitleKeys: Set<string>;
+  sourceStrategy: RecommendationSourceStrategy;
+  emitStage: (stage: RecommendationStage) => Promise<void>;
+};
+
+type PreparedRecommendationInputs = {
+  dbMovieCount: number | null;
+  feedbackSignals: FeedbackCandidateSignals;
+  refinedQueryTags: string | null;
+};
+
+type CandidatePool = {
+  localSimilarMovies: EnhancedMovieMatch[];
+  similarMovies: EnhancedMovieMatch[];
+  usedBroaderSearch: boolean;
+};
+
+type TMDBExpansionInput = {
+  allPeopleData: PersonFormData[];
+  emitStage: (stage: RecommendationStage) => Promise<void>;
+  embedding: number[];
+  feedbackSignals: FeedbackCandidateSignals;
+  locale: Locale;
+  mentionedTitleKeys: Set<string>;
+  similarMovies: EnhancedMovieMatch[];
+  sourceStrategy: RecommendationSourceStrategy;
+};
+
+type CandidatePoolBuildInput = Omit<TMDBExpansionInput, 'similarMovies'>;
+
+type TMDBExpansionResult = {
+  similarMovies: EnhancedMovieMatch[];
+  usedBroaderSearch: boolean;
+};
+
+type EnrichedRecommendation = {
+  guardedRecommendation: ReturnType<typeof resolveGuardedRecommendation>;
+  moviesWithDescriptions: Awaited<ReturnType<typeof generateMovieDescriptions>>;
+  posterURL?: string;
+};
 
 class EnqueueTimeoutError extends Error {
   constructor(message: string) {
@@ -106,14 +158,54 @@ async function withTimeout<T>(
 export async function runRecommendationPipeline(
   allPeopleData: PersonFormData[],
   locale: Locale,
-  options: {
-    experienceMode?: RecommendationExperienceMode;
-    onStageChange?: (stage: RecommendationStage) => Promise<void> | void;
-    sourceStrategy?: RecommendationSourceStrategy;
-    userId?: string;
-  } = {},
+  options: RecommendationPipelineOptions = {},
 ): Promise<ApiResponse> {
-  const mentionedTitleKeys = getMentionedMovieTitleKeys(allPeopleData);
+  const context = createPipelineContext(allPeopleData, options);
+  const preparedInputs = await prepareRecommendationInputs(
+    allPeopleData,
+    options.userId,
+    context.emitStage,
+  );
+  const embedding = await createPipelineEmbedding(
+    allPeopleData,
+    preparedInputs.refinedQueryTags,
+    preparedInputs.dbMovieCount,
+    context.emitStage,
+  );
+  const candidatePool = await buildCandidatePool({
+    allPeopleData,
+    embedding,
+    feedbackSignals: preparedInputs.feedbackSignals,
+    locale,
+    mentionedTitleKeys: context.mentionedTitleKeys,
+    sourceStrategy: context.sourceStrategy,
+    emitStage: context.emitStage,
+  });
+  const similarMovies = ensureCandidatePool(candidatePool, {
+    feedbackSignals: preparedInputs.feedbackSignals,
+    mentionedTitleKeys: context.mentionedTitleKeys,
+  });
+  const enrichedRecommendation = await rankAndEnrichRecommendation({
+    allPeopleData,
+    emitStage: context.emitStage,
+    feedbackSignals: preparedInputs.feedbackSignals,
+    locale,
+    similarMovies,
+  });
+
+  return buildPipelineResponse({
+    candidatePool,
+    dbMovieCount: preparedInputs.dbMovieCount,
+    enrichedRecommendation,
+    experienceMode: context.experienceMode,
+    sourceStrategy: context.sourceStrategy,
+  });
+}
+
+function createPipelineContext(
+  allPeopleData: PersonFormData[],
+  options: RecommendationPipelineOptions,
+): PipelineContext {
   const sourceStrategy =
     options.sourceStrategy ??
     resolveRecommendationSourceStrategy({
@@ -121,278 +213,500 @@ export async function runRecommendationPipeline(
       people: allPeopleData,
     }).id;
   const experienceMode = options.experienceMode ?? 'normal-match';
+  const mentionedTitleKeys = getMentionedMovieTitleKeys(allPeopleData);
+
   setActiveTraceAttributes({
     'recommendation.experience_mode': experienceMode,
     'recommendation.source_strategy': sourceStrategy,
   });
   logger.info({ experienceMode, sourceStrategy }, 'Recommendation source strategy selected');
 
-  async function emitStage(stage: RecommendationStage): Promise<void> {
+  return {
+    experienceMode,
+    mentionedTitleKeys,
+    sourceStrategy,
+    emitStage: createStageEmitter(options.onStageChange),
+  };
+}
+
+function createStageEmitter(onStageChange: RecommendationPipelineOptions['onStageChange']) {
+  return async (stage: RecommendationStage): Promise<void> => {
     setActiveTraceAttributes({ 'recommendation.stage': stage });
     try {
-      await options.onStageChange?.(stage);
+      await onStageChange?.(stage);
     } catch (err) {
       logger.warn({ err, stage }, 'Failed to update recommendation stage');
     }
-  }
+  };
+}
 
-  // Step 0.5: Query enrichment — convert "Why?" text to semantic tags using a lightweight LLM,
-  // while the DB movie count and user feedback are fetched in parallel (all are independent).
+async function prepareRecommendationInputs(
+  allPeopleData: PersonFormData[],
+  userId: string | undefined,
+  emitStage: PipelineContext['emitStage'],
+): Promise<PreparedRecommendationInputs> {
   await emitStage('preparing');
-  const [refinedQueryTags, dbMovieCountResult, feedbackPreferences] = await Promise.all([
+  const [refinedQueryTags, dbMovieCount, feedbackPreferences] = await Promise.all([
     refineQueryWithLLM(allPeopleData),
-    (async () => {
-      try {
-        const db = getDbClient();
-        if (!db.isConfigured()) return null;
-        const countRes = await db.from('movies').select('id', { count: 'exact', head: true });
-        return countRes.count ?? null;
-      } catch {
-        return null;
-      }
-    })(),
-    (async () => {
-      if (!options.userId) return [];
-      try {
-        return await getUserRecommendationFeedbackMoviePreferences(options.userId);
-      } catch (err) {
-        logger.warn({ err }, 'Failed to load user recommendation feedback preferences');
-        return [];
-      }
-    })(),
+    getDbMovieCount(),
+    getFeedbackPreferences(userId),
   ]);
-  const feedbackSignals = getFeedbackCandidateSignals(feedbackPreferences);
 
-  // Step 1: Create embedding
+  return {
+    dbMovieCount,
+    feedbackSignals: getFeedbackCandidateSignals(feedbackPreferences),
+    refinedQueryTags,
+  };
+}
+
+async function getDbMovieCount(): Promise<number | null> {
+  try {
+    const db = getDbClient();
+    if (!db.isConfigured()) return null;
+    const countRes = await db.from('movies').select('id', { count: 'exact', head: true });
+    return countRes.count ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function getFeedbackPreferences(userId: string | undefined) {
+  if (!userId) return [];
+
+  try {
+    return await getUserRecommendationFeedbackMoviePreferences(userId);
+  } catch (err) {
+    logger.warn({ err }, 'Failed to load user recommendation feedback preferences');
+    return [];
+  }
+}
+
+async function createPipelineEmbedding(
+  allPeopleData: PersonFormData[],
+  refinedQueryTags: string | null,
+  dbMovieCount: number | null,
+  emitStage: PipelineContext['emitStage'],
+): Promise<number[]> {
   await emitStage('embedding');
   const embedding = await createEmbedding(allPeopleData, refinedQueryTags ?? undefined);
-  logger.info({ dbMovieCount: dbMovieCountResult }, 'Embedding created, DB count fetched');
+  logger.info({ dbMovieCount }, 'Embedding created, DB count fetched');
+  return embedding;
+}
 
-  // Step 2: Find similar movies (local vector search)
+async function buildCandidatePool(input: CandidatePoolBuildInput): Promise<CandidatePool> {
+  const localCandidatePool = await getLocalCandidatePool(
+    input.embedding,
+    input.mentionedTitleKeys,
+    input.feedbackSignals,
+    input.emitStage,
+  );
+  const expandedPool = await maybeExpandWithTMDB({
+    ...input,
+    similarMovies: localCandidatePool.similarMovies,
+  });
+
+  return {
+    localSimilarMovies: localCandidatePool.localSimilarMovies,
+    similarMovies: expandedPool.similarMovies,
+    usedBroaderSearch: expandedPool.usedBroaderSearch,
+  };
+}
+
+async function getLocalCandidatePool(
+  embedding: number[],
+  mentionedTitleKeys: Set<string>,
+  feedbackSignals: FeedbackCandidateSignals,
+  emitStage: PipelineContext['emitStage'],
+): Promise<Omit<CandidatePool, 'usedBroaderSearch'>> {
   await emitStage('local-search');
   const localSimilarMovies = await getSimilarMovies(embedding);
   const mentionedFilteredLocalMovies = excludeMentionedLocalMovies(
     localSimilarMovies,
     mentionedTitleKeys,
   );
-  let similarMovies = applyFeedbackToLocalMovies(mentionedFilteredLocalMovies, feedbackSignals);
 
-  // Step 3: External catalog search — use TMDB as primary for tmdb-first, or as fallback
-  // for hybrid strategies when local results are insufficient.
-  let usedBroaderSearch = false;
-  const highQualityLocal = similarMovies.filter((m) => m.similarity >= SIMILARITY_THRESHOLD);
-  const tmdbFallbackDecision = getTMDBFallbackDecision(sourceStrategy, similarMovies);
-  const shouldAttemptTMDB = tmdbFallbackDecision.shouldAttempt;
-  const prefersTMDBCandidates = sourceStrategy === 'tmdb-first';
+  return {
+    localSimilarMovies,
+    similarMovies: applyFeedbackToLocalMovies(mentionedFilteredLocalMovies, feedbackSignals),
+  };
+}
 
-  if (shouldAttemptTMDB) {
-    await emitStage('tmdb-search');
-    logger.info(
-      {
-        highQualityLocal: highQualityLocal.length,
-        sourceStrategy,
-        threshold: SIMILARITY_THRESHOLD,
-        tmdbFallbackReason: tmdbFallbackDecision.reason,
-      },
-      prefersTMDBCandidates
-        ? 'Trying TMDB-first candidate retrieval'
-        : 'Local results below quality threshold — trying TMDB fallback',
-    );
-  } else {
-    logger.info(
-      {
-        highQualityLocal: highQualityLocal.length,
-        sourceStrategy,
-        threshold: SIMILARITY_THRESHOLD,
-        tmdbFallbackReason: tmdbFallbackDecision.reason,
-      },
-      'TMDB fallback skipped by source strategy policy',
-    );
+async function maybeExpandWithTMDB(input: TMDBExpansionInput): Promise<TMDBExpansionResult> {
+  const highQualityLocal = input.similarMovies.filter(
+    (movie) => movie.similarity >= SIMILARITY_THRESHOLD,
+  );
+  const tmdbFallbackDecision = getTMDBFallbackDecision(input.sourceStrategy, input.similarMovies);
+  const prefersTMDBCandidates = input.sourceStrategy === 'tmdb-first';
+
+  await logTMDBFallbackDecision({
+    decision: tmdbFallbackDecision,
+    emitStage: input.emitStage,
+    highQualityLocalCount: highQualityLocal.length,
+    prefersTMDBCandidates,
+    sourceStrategy: input.sourceStrategy,
+  });
+
+  if (!tmdbFallbackDecision.shouldAttempt) {
+    return { similarMovies: input.similarMovies, usedBroaderSearch: false };
   }
 
-  if (shouldAttemptTMDB) {
-    const tmdbApiKey = process.env.TMDB_API_KEY;
-    if (tmdbApiKey) {
-      const tmdbMovies = excludeFeedbackTMDBMovies(
-        excludeMentionedTMDBMovies(
-          await fetchTMDBDiscoverMovies(allPeopleData, tmdbApiKey),
-          mentionedTitleKeys,
-        ),
-        feedbackSignals,
-      );
-
-      if (tmdbMovies.length > 0) {
-        const localResultsForMerge = highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
-
-        const localKeys = new Set<string>();
-        for (const m of similarMovies) {
-          const nameLower = m.name.toLowerCase();
-          localKeys.add(`${nameLower}|${m.year}`);
-        }
-        const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
-        const filteredTMDBMovies = tmdbMovies
-          .filter((m) => {
-            const tmdbYear = parseTMDBReleaseYear(m.release_date);
-            return !localKeys.has(`${m.title.toLowerCase()}|${tmdbYear}`);
-          })
-          .slice(0, slotsRemaining);
-        const newTMDBMatches = await scoreAndConvertTMDBMovies(filteredTMDBMovies, embedding);
-        const tmdbEmbeddings = newTMDBMatches.embeddings;
-        const enrichedTMDBMatches = prefersTMDBCandidates
-          ? await enrichTMDBMatchesWithDetails(newTMDBMatches.matches, tmdbApiKey, locale)
-          : newTMDBMatches.matches;
-        const newTMDBMatchList = applyFeedbackToLocalMovies(enrichedTMDBMatches, feedbackSignals);
-
-        if (prefersTMDBCandidates) {
-          similarMovies = [...newTMDBMatchList, ...localResultsForMerge]
-            .sort((a, b) => b.similarity - a.similarity)
-            .slice(0, MAX_TOTAL_MOVIES);
-        } else {
-          similarMovies = [...localResultsForMerge, ...newTMDBMatchList].slice(0, MAX_TOTAL_MOVIES);
-        }
-
-        if (newTMDBMatchList.length > 0) {
-          usedBroaderSearch = true;
-        }
-
-        logger.info(
-          {
-            localCount: localResultsForMerge.length,
-            tmdbCount: newTMDBMatchList.length,
-            finalCount: similarMovies.length,
-            sourceStrategy,
-          },
-          prefersTMDBCandidates
-            ? 'Merged score-ranked TMDB-first and local candidates'
-            : 'Merged local and TMDB results',
-        );
-
-        // Queue per-movie catalog maintenance jobs with deterministic ids so repeated
-        // recommendation requests do not fan out duplicate TMDB/cache work.
-        try {
-          const queuedMovies = await withTimeout(
-            enqueueCatalogSeedTMDBMovies({
-              movies: tmdbMovies,
-              source: 'recommendation_jit',
-              localKeys: Array.from(localKeys),
-              embeddings: tmdbEmbeddings,
-            }),
-            MOVIE_SEED_ENQUEUE_TIMEOUT_MS,
-            'Catalog seed enqueue timed out',
-          );
-          if (queuedMovies > 0) {
-            logger.info({ queuedMovies }, 'Queued catalog maintenance seed jobs');
-          } else {
-            logger.warn(
-              'Catalog maintenance queue unavailable — falling back to fire-and-forget TMDB seeding',
-            );
-            seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
-          }
-        } catch (error) {
-          if (error instanceof EnqueueTimeoutError) {
-            logger.warn(
-              { err: error, queuedMovies: tmdbMovies.length },
-              'Timed out while enqueueing catalog seed jobs; skipping fallback since enqueue status is uncertain',
-            );
-          } else {
-            logger.warn(
-              { err: error },
-              'Failed to enqueue catalog seed jobs — falling back to fire-and-forget seeding',
-            );
-            seedMoviesInBackground(tmdbMovies, localKeys, tmdbEmbeddings);
-          }
-        }
-      }
-    } else {
-      logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
-    }
+  const tmdbApiKey = process.env.TMDB_API_KEY;
+  if (!tmdbApiKey) {
+    logger.warn('TMDB_API_KEY not configured — skipping TMDB fallback');
+    return { similarMovies: input.similarMovies, usedBroaderSearch: false };
   }
 
-  if (similarMovies.length === 0) {
-    const feedbackPreservedFallbackMovies = applyFeedbackToLocalMovies(
-      localSimilarMovies,
-      feedbackSignals,
-    ).slice(0, MAX_TOTAL_MOVIES);
-    if (feedbackPreservedFallbackMovies.length > 0) {
-      logger.warn(
-        {
-          feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
-          feedbackDownrankTitleCount: feedbackSignals.downrankTitleKeys.size,
-          fallbackCount: feedbackPreservedFallbackMovies.length,
-        },
-        'Mentioned-title filtering and TMDB fallback did not refill results; relaxing mentioned-title filters while preserving feedback filters',
-      );
-      similarMovies = feedbackPreservedFallbackMovies;
-    }
+  const tmdbMovies = await fetchFilteredTMDBMovies(input, tmdbApiKey);
+  if (tmdbMovies.length === 0) {
+    return { similarMovies: input.similarMovies, usedBroaderSearch: false };
   }
 
-  if (similarMovies.length === 0) {
-    logger.warn(
-      {
-        mentionedTitleCount: mentionedTitleKeys.size,
-        feedbackExcludedMovieCount: feedbackSignals.excludedMovieKeys.size,
-        feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
-      },
-      'No recommendation candidates remain after preserving user memory filters',
-    );
-    throw new Error('No similar movies found after applying recommendation history filters.');
+  return mergeTMDBCandidates({
+    embedding: input.embedding,
+    feedbackSignals: input.feedbackSignals,
+    highQualityLocal,
+    locale: input.locale,
+    prefersTMDBCandidates,
+    similarMovies: input.similarMovies,
+    sourceStrategy: input.sourceStrategy,
+    tmdbApiKey,
+    tmdbMovies,
+  });
+}
+
+async function logTMDBFallbackDecision(input: {
+  decision: ReturnType<typeof getTMDBFallbackDecision>;
+  emitStage: PipelineContext['emitStage'];
+  highQualityLocalCount: number;
+  prefersTMDBCandidates: boolean;
+  sourceStrategy: RecommendationSourceStrategy;
+}): Promise<void> {
+  const logPayload = {
+    highQualityLocal: input.highQualityLocalCount,
+    sourceStrategy: input.sourceStrategy,
+    threshold: SIMILARITY_THRESHOLD,
+    tmdbFallbackReason: input.decision.reason,
+  };
+
+  if (!input.decision.shouldAttempt) {
+    logger.info(logPayload, 'TMDB fallback skipped by source strategy policy');
+    return;
   }
 
-  // Step 4: Get recommendation from OpenAI
-  await emitStage('ai-ranking');
-  const responseMessage = await getRecommendation(similarMovies, allPeopleData, locale);
-  const guardedRecommendation = resolveGuardedRecommendation(
-    responseMessage,
-    similarMovies,
-    locale,
+  await input.emitStage('tmdb-search');
+  logger.info(
+    logPayload,
+    input.prefersTMDBCandidates
+      ? 'Trying TMDB-first candidate retrieval'
+      : 'Local results below quality threshold — trying TMDB fallback',
+  );
+}
+
+async function fetchFilteredTMDBMovies(input: TMDBExpansionInput, tmdbApiKey: string) {
+  const discoveredMovies = await fetchTMDBDiscoverMovies(input.allPeopleData, tmdbApiKey);
+  const mentionedFilteredMovies = excludeMentionedTMDBMovies(
+    discoveredMovies,
+    input.mentionedTitleKeys,
+  );
+  return excludeFeedbackTMDBMovies(mentionedFilteredMovies, input.feedbackSignals);
+}
+
+async function mergeTMDBCandidates(input: {
+  embedding: number[];
+  feedbackSignals: FeedbackCandidateSignals;
+  highQualityLocal: EnhancedMovieMatch[];
+  locale: Locale;
+  prefersTMDBCandidates: boolean;
+  similarMovies: EnhancedMovieMatch[];
+  sourceStrategy: RecommendationSourceStrategy;
+  tmdbApiKey: string;
+  tmdbMovies: Awaited<ReturnType<typeof fetchTMDBDiscoverMovies>>;
+}): Promise<TMDBExpansionResult> {
+  const localResultsForMerge = input.highQualityLocal.slice(0, MAX_TOTAL_MOVIES);
+  const localKeys = getLocalMovieKeys(input.similarMovies);
+  const filteredTMDBMovies = getNewTMDBMovies(input.tmdbMovies, localKeys, localResultsForMerge);
+  const newTMDBMatches = await scoreAndConvertTMDBMovies(filteredTMDBMovies, input.embedding);
+  const enrichedTMDBMatches = input.prefersTMDBCandidates
+    ? await enrichTMDBMatchesWithDetails(newTMDBMatches.matches, input.tmdbApiKey, input.locale)
+    : newTMDBMatches.matches;
+  const newTMDBMatchList = applyFeedbackToLocalMovies(enrichedTMDBMatches, input.feedbackSignals);
+  const similarMovies = mergeCandidateLists(
+    localResultsForMerge,
+    newTMDBMatchList,
+    input.prefersTMDBCandidates,
   );
 
-  if (guardedRecommendation.replacedOutOfSetTitle) {
+  logTMDBMerge({
+    localCount: localResultsForMerge.length,
+    tmdbCount: newTMDBMatchList.length,
+    finalCount: similarMovies.length,
+    prefersTMDBCandidates: input.prefersTMDBCandidates,
+    sourceStrategy: input.sourceStrategy,
+  });
+
+  await queueTMDBCatalogSeedJobs(input.tmdbMovies, localKeys, newTMDBMatches.embeddings);
+
+  return {
+    similarMovies,
+    usedBroaderSearch: newTMDBMatchList.length > 0,
+  };
+}
+
+function getLocalMovieKeys(movies: EnhancedMovieMatch[]): Set<string> {
+  const localKeys = new Set<string>();
+  for (const movie of movies) {
+    localKeys.add(`${movie.name.toLowerCase()}|${movie.year}`);
+  }
+  return localKeys;
+}
+
+function getNewTMDBMovies(
+  tmdbMovies: Awaited<ReturnType<typeof fetchTMDBDiscoverMovies>>,
+  localKeys: Set<string>,
+  localResultsForMerge: EnhancedMovieMatch[],
+) {
+  const slotsRemaining = Math.max(0, MAX_TOTAL_MOVIES - localResultsForMerge.length);
+  return tmdbMovies.filter((movie) => isNewTMDBMovie(movie, localKeys)).slice(0, slotsRemaining);
+}
+
+function isNewTMDBMovie(
+  movie: Awaited<ReturnType<typeof fetchTMDBDiscoverMovies>>[number],
+  localKeys: Set<string>,
+): boolean {
+  const tmdbYear = parseTMDBReleaseYear(movie.release_date);
+  return !localKeys.has(`${movie.title.toLowerCase()}|${tmdbYear}`);
+}
+
+function mergeCandidateLists(
+  localResultsForMerge: EnhancedMovieMatch[],
+  newTMDBMatchList: EnhancedMovieMatch[],
+  prefersTMDBCandidates: boolean,
+): EnhancedMovieMatch[] {
+  if (!prefersTMDBCandidates) {
+    return [...localResultsForMerge, ...newTMDBMatchList].slice(0, MAX_TOTAL_MOVIES);
+  }
+
+  return [...newTMDBMatchList, ...localResultsForMerge]
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, MAX_TOTAL_MOVIES);
+}
+
+function logTMDBMerge(input: {
+  finalCount: number;
+  localCount: number;
+  prefersTMDBCandidates: boolean;
+  sourceStrategy: RecommendationSourceStrategy;
+  tmdbCount: number;
+}) {
+  logger.info(
+    {
+      localCount: input.localCount,
+      tmdbCount: input.tmdbCount,
+      finalCount: input.finalCount,
+      sourceStrategy: input.sourceStrategy,
+    },
+    input.prefersTMDBCandidates
+      ? 'Merged score-ranked TMDB-first and local candidates'
+      : 'Merged local and TMDB results',
+  );
+}
+
+async function queueTMDBCatalogSeedJobs(
+  tmdbMovies: Awaited<ReturnType<typeof fetchTMDBDiscoverMovies>>,
+  localKeys: Set<string>,
+  embeddings: Awaited<ReturnType<typeof scoreAndConvertTMDBMovies>>['embeddings'],
+): Promise<void> {
+  try {
+    const queuedMovies = await withTimeout(
+      enqueueCatalogSeedTMDBMovies({
+        movies: tmdbMovies,
+        source: 'recommendation_jit',
+        localKeys: Array.from(localKeys),
+        embeddings,
+      }),
+      MOVIE_SEED_ENQUEUE_TIMEOUT_MS,
+      'Catalog seed enqueue timed out',
+    );
+    handleCatalogSeedQueueResult(queuedMovies, tmdbMovies, localKeys, embeddings);
+  } catch (error) {
+    handleCatalogSeedQueueError(error, tmdbMovies, localKeys, embeddings);
+  }
+}
+
+function handleCatalogSeedQueueResult(
+  queuedMovies: number,
+  tmdbMovies: Awaited<ReturnType<typeof fetchTMDBDiscoverMovies>>,
+  localKeys: Set<string>,
+  embeddings: Awaited<ReturnType<typeof scoreAndConvertTMDBMovies>>['embeddings'],
+): void {
+  if (queuedMovies > 0) {
+    logger.info({ queuedMovies }, 'Queued catalog maintenance seed jobs');
+    return;
+  }
+
+  logger.warn(
+    'Catalog maintenance queue unavailable — falling back to fire-and-forget TMDB seeding',
+  );
+  seedMoviesInBackground(tmdbMovies, localKeys, embeddings);
+}
+
+function handleCatalogSeedQueueError(
+  error: unknown,
+  tmdbMovies: Awaited<ReturnType<typeof fetchTMDBDiscoverMovies>>,
+  localKeys: Set<string>,
+  embeddings: Awaited<ReturnType<typeof scoreAndConvertTMDBMovies>>['embeddings'],
+): void {
+  if (error instanceof EnqueueTimeoutError) {
+    logger.warn(
+      { err: error, queuedMovies: tmdbMovies.length },
+      'Timed out while enqueueing catalog seed jobs; skipping fallback since enqueue status is uncertain',
+    );
+    return;
+  }
+
+  logger.warn(
+    { err: error },
+    'Failed to enqueue catalog seed jobs — falling back to fire-and-forget seeding',
+  );
+  seedMoviesInBackground(tmdbMovies, localKeys, embeddings);
+}
+
+function ensureCandidatePool(
+  candidatePool: CandidatePool,
+  input: {
+    feedbackSignals: FeedbackCandidateSignals;
+    mentionedTitleKeys: Set<string>;
+  },
+): EnhancedMovieMatch[] {
+  const recoveredMovies = recoverCandidatePool(candidatePool, input.feedbackSignals);
+
+  if (recoveredMovies.length > 0) {
+    return recoveredMovies;
+  }
+
+  logger.warn(
+    {
+      mentionedTitleCount: input.mentionedTitleKeys.size,
+      feedbackExcludedMovieCount: input.feedbackSignals.excludedMovieKeys.size,
+      feedbackExcludedTitleCount: input.feedbackSignals.excludedTitleKeys.size,
+    },
+    'No recommendation candidates remain after preserving user memory filters',
+  );
+  throw new Error('No similar movies found after applying recommendation history filters.');
+}
+
+function recoverCandidatePool(
+  candidatePool: CandidatePool,
+  feedbackSignals: FeedbackCandidateSignals,
+): EnhancedMovieMatch[] {
+  if (candidatePool.similarMovies.length > 0) {
+    return candidatePool.similarMovies;
+  }
+
+  const feedbackPreservedFallbackMovies = applyFeedbackToLocalMovies(
+    candidatePool.localSimilarMovies,
+    feedbackSignals,
+  ).slice(0, MAX_TOTAL_MOVIES);
+  if (feedbackPreservedFallbackMovies.length > 0) {
     logger.warn(
       {
-        requestedTitle: guardedRecommendation.requestedTitle,
-        fallbackTitle: guardedRecommendation.title,
-        candidateCount: similarMovies.length,
-        feedbackExcludedMovieCount: feedbackSignals.excludedMovieKeys.size,
         feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
+        feedbackDownrankTitleCount: feedbackSignals.downrankTitleKeys.size,
+        fallbackCount: feedbackPreservedFallbackMovies.length,
       },
-      'OpenAI returned a movie outside filtered candidates; using strongest remaining candidate',
+      'Mentioned-title filtering and TMDB fallback did not refill results; relaxing mentioned-title filters while preserving feedback filters',
     );
-  } else {
+  }
+
+  return feedbackPreservedFallbackMovies;
+}
+
+async function rankAndEnrichRecommendation(input: {
+  allPeopleData: PersonFormData[];
+  emitStage: PipelineContext['emitStage'];
+  feedbackSignals: FeedbackCandidateSignals;
+  locale: Locale;
+  similarMovies: EnhancedMovieMatch[];
+}): Promise<EnrichedRecommendation> {
+  await input.emitStage('ai-ranking');
+  const responseMessage = await getRecommendation(
+    input.similarMovies,
+    input.allPeopleData,
+    input.locale,
+  );
+  const guardedRecommendation = resolveGuardedRecommendation(
+    responseMessage,
+    input.similarMovies,
+    input.locale,
+  );
+  logGuardedRecommendation(guardedRecommendation, input.similarMovies, input.feedbackSignals);
+
+  await input.emitStage('posters');
+  const { posterURL } = await getMovieInfo(
+    guardedRecommendation.title,
+    input.locale,
+    guardedRecommendation.movie.year,
+    getGuardedMovieTMDBId(guardedRecommendation.movie),
+  );
+
+  logger.info('Enhancing similar movies with posters');
+  const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(
+    input.similarMovies,
+    input.locale,
+  );
+
+  await input.emitStage('descriptions');
+  logger.info('Generating personalized AI descriptions for each movie');
+  const moviesWithDescriptions = await generateMovieDescriptions(
+    enhancedSimilarMovies,
+    input.allPeopleData,
+    input.locale,
+  );
+
+  return {
+    guardedRecommendation,
+    moviesWithDescriptions,
+    posterURL,
+  };
+}
+
+function logGuardedRecommendation(
+  guardedRecommendation: ReturnType<typeof resolveGuardedRecommendation>,
+  similarMovies: EnhancedMovieMatch[],
+  feedbackSignals: FeedbackCandidateSignals,
+): void {
+  if (!guardedRecommendation.replacedOutOfSetTitle) {
     logger.info(
       { recommendedTitle: guardedRecommendation.title },
       'OpenAI recommendation received',
     );
+    return;
   }
 
-  // Step 5: Get localized poster + name for main recommendation
-  await emitStage('posters');
-  const guardedMovieTMDBId =
-    guardedRecommendation.movie.tmdbId ??
-    (Number(guardedRecommendation.movie.id) < 0
-      ? Math.abs(Number(guardedRecommendation.movie.id))
-      : undefined);
-  const { posterURL } = await getMovieInfo(
-    guardedRecommendation.title,
-    locale,
-    guardedRecommendation.movie.year,
-    guardedMovieTMDBId ?? undefined,
+  logger.warn(
+    {
+      requestedTitle: guardedRecommendation.requestedTitle,
+      fallbackTitle: guardedRecommendation.title,
+      candidateCount: similarMovies.length,
+      feedbackExcludedMovieCount: feedbackSignals.excludedMovieKeys.size,
+      feedbackExcludedTitleCount: feedbackSignals.excludedTitleKeys.size,
+    },
+    'OpenAI returned a movie outside filtered candidates; using strongest remaining candidate',
   );
+}
 
-  // Step 6: Enhance similar movies with poster URLs and localized names (in batches)
-  logger.info('Enhancing similar movies with posters');
-  const enhancedSimilarMovies = await enhanceSimilarMoviesWithPosters(similarMovies, locale);
+function getGuardedMovieTMDBId(movie: EnhancedMovieMatch): number | undefined {
+  return movie.tmdbId ?? (Number(movie.id) < 0 ? Math.abs(Number(movie.id)) : undefined);
+}
 
-  // Step 7: Generate AI descriptions for each movie
-  await emitStage('descriptions');
-  logger.info('Generating personalized AI descriptions for each movie');
-  const moviesWithDescriptions = await generateMovieDescriptions(
-    enhancedSimilarMovies,
-    allPeopleData,
-    locale,
-  );
-
-  // Find the recommended movie
+function buildPipelineResponse(input: {
+  candidatePool: CandidatePool;
+  dbMovieCount: number | null;
+  enrichedRecommendation: EnrichedRecommendation;
+  experienceMode: RecommendationExperienceMode;
+  sourceStrategy: RecommendationSourceStrategy;
+}): ApiResponse {
+  const { guardedRecommendation, moviesWithDescriptions, posterURL } = input.enrichedRecommendation;
   const recommendedMovie =
     moviesWithDescriptions.find((movie) => movie.id === guardedRecommendation.movie.id) ??
     findCandidateByRecommendedTitle(moviesWithDescriptions, guardedRecommendation.title);
@@ -402,57 +716,65 @@ export async function runRecommendationPipeline(
     'Returning all movies in unified list',
   );
 
-  const responseSimilarMovies: NonNullable<ApiResponse['similarMovies']> =
-    moviesWithDescriptions.map((movie) => {
-      const source = getCandidateSource(movie);
-
-      return {
-        id: Number(movie.id),
-        tmdbId: movie.tmdbId ?? (Number(movie.id) < 0 ? Math.abs(Number(movie.id)) : null),
-        name: movie.name,
-        year: movie.year,
-        similarity: Number.isFinite(movie.similarity) ? movie.similarity : 0,
-        age_rating: movie.age_rating,
-        duration: movie.duration,
-        score_rating: movie.score_rating,
-        posterURL: movie.posterURL,
-        aiDescription: movie.aiDescription,
-        localizedName: movie.localizedName,
-        metadataQualityScore: movie.metadataQualityScore,
-        metadataQualityFlags: movie.metadataQualityFlags,
-        originalLanguage: movie.originalLanguage,
-        voteCount: movie.voteCount,
-        popularity: movie.popularity,
-        watchProviders: movie.watchProviders,
-        isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
-        fromTMDB: Number(movie.id) < 0,
-        source,
-      };
-    });
-  const candidateSourceDistribution = summarizeCandidateSources(responseSimilarMovies);
+  const similarMovies = mapResponseSimilarMovies(moviesWithDescriptions, recommendedMovie);
+  const candidateSourceDistribution = summarizeCandidateSources(similarMovies);
 
   logger.info({ candidateSourceDistribution }, 'Recommendation candidate source distribution');
 
   return {
     description: guardedRecommendation.description,
     title: guardedRecommendation.title,
-    posterURL: posterURL,
-    movieDetails: recommendedMovie
-      ? {
-          year: recommendedMovie.year,
-          age_rating: recommendedMovie.age_rating,
-          duration: recommendedMovie.duration,
-          score_rating: recommendedMovie.score_rating,
-          similarity: Number.isFinite(recommendedMovie.similarity)
-            ? recommendedMovie.similarity
-            : 0,
-        }
-      : undefined,
-    similarMovies: responseSimilarMovies,
+    posterURL,
+    movieDetails: recommendedMovie ? mapRecommendedMovieDetails(recommendedMovie) : undefined,
+    similarMovies,
     candidateSourceDistribution,
-    experienceMode,
-    sourceStrategy,
-    usedBroaderSearch,
-    dbMovieCount: dbMovieCountResult ?? undefined,
+    experienceMode: input.experienceMode,
+    sourceStrategy: input.sourceStrategy,
+    usedBroaderSearch: input.candidatePool.usedBroaderSearch,
+    dbMovieCount: input.dbMovieCount ?? undefined,
   };
+}
+
+function mapResponseSimilarMovies(
+  moviesWithDescriptions: EnrichedRecommendation['moviesWithDescriptions'],
+  recommendedMovie: EnhancedMovieMatch | undefined,
+): NonNullable<ApiResponse['similarMovies']> {
+  return moviesWithDescriptions.map((movie) => ({
+    id: Number(movie.id),
+    tmdbId: movie.tmdbId ?? (Number(movie.id) < 0 ? Math.abs(Number(movie.id)) : null),
+    name: movie.name,
+    year: movie.year,
+    similarity: toFiniteNumber(movie.similarity),
+    age_rating: movie.age_rating,
+    duration: movie.duration,
+    score_rating: movie.score_rating,
+    posterURL: movie.posterURL,
+    aiDescription: movie.aiDescription,
+    localizedName: movie.localizedName,
+    metadataQualityScore: movie.metadataQualityScore,
+    metadataQualityFlags: movie.metadataQualityFlags,
+    originalLanguage: movie.originalLanguage,
+    voteCount: movie.voteCount,
+    popularity: movie.popularity,
+    watchProviders: movie.watchProviders,
+    isMainRecommendation: recommendedMovie ? movie.id === recommendedMovie.id : false,
+    fromTMDB: Number(movie.id) < 0,
+    source: getCandidateSource(movie),
+  }));
+}
+
+function mapRecommendedMovieDetails(
+  recommendedMovie: EnhancedMovieMatch,
+): NonNullable<ApiResponse['movieDetails']> {
+  return {
+    year: recommendedMovie.year,
+    age_rating: recommendedMovie.age_rating,
+    duration: recommendedMovie.duration,
+    score_rating: recommendedMovie.score_rating,
+    similarity: toFiniteNumber(recommendedMovie.similarity),
+  };
+}
+
+function toFiniteNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
