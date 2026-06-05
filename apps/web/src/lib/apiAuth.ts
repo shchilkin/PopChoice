@@ -25,65 +25,19 @@ let cachedValidKeys: { rawKeys: string; hashBuffers: Buffer[] } | null = null;
 
 export async function validateApiKey(req: Request): Promise<string | null> {
   const rawKeys = process.env.VALID_API_KEYS;
+  const configuredKeys = rawKeys?.trim() ? rawKeys : null;
 
-  // Development mode: auth is disabled when VALID_API_KEYS is not configured.
-  if (!rawKeys || rawKeys.trim() === '') {
-    if (process.env.NODE_ENV !== 'production') {
-      if (!hasLoggedMissingKeysWarning) {
-        logger.warn(
-          'VALID_API_KEYS is not set — API authentication is disabled. Set this variable in production.',
-        );
-        hasLoggedMissingKeysWarning = true;
-      }
-      return 'dev-unauthenticated';
-    }
-    // In production with no keys configured, deny all requests to prevent an
-    // accidentally open API from consuming quota.
-    if (!hasLoggedMissingKeysError) {
-      logger.error(
-        'VALID_API_KEYS is not configured in production — all API requests will be rejected.',
-      );
-      hasLoggedMissingKeysError = true;
-    }
-    return null;
-  }
+  if (!configuredKeys) return resolveMissingApiKeysClientId();
 
-  const validHashBuffers = getValidHashBuffers(rawKeys);
-
+  const validHashBuffers = getValidHashBuffers(configuredKeys);
   const derivationSecret = getConfiguredDerivationSecret();
+
   if (!derivationSecret) {
-    if (!hasLoggedMissingSecretError) {
-      logger.error(
-        'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
-      );
-      hasLoggedMissingSecretError = true;
-    }
+    logMissingDerivationSecret();
     return null;
   }
 
-  // Extract the raw key from the request headers.
-  const authHeader = req.headers.get('authorization');
-  const apiKeyHeader = req.headers.get('x-api-key');
-
-  let candidateKey: string | null = null;
-
-  if (authHeader) {
-    const parts = authHeader.split(' ');
-    if (parts.length === 2 && parts[0].toLowerCase() === 'bearer') {
-      const bearerToken = parts[1].trim();
-      if (bearerToken) {
-        candidateKey = bearerToken;
-      }
-    }
-  }
-
-  if (!candidateKey && apiKeyHeader) {
-    const trimmedApiKeyHeader = apiKeyHeader.trim();
-    if (trimmedApiKeyHeader) {
-      candidateKey = trimmedApiKeyHeader;
-    }
-  }
-
+  const candidateKey = extractCandidateApiKey(req.headers);
   if (!candidateKey) {
     logger.warn({ ip: getRequestIp(req) }, 'API auth failed: no key provided');
     return null;
@@ -94,16 +48,7 @@ export async function validateApiKey(req: Request): Promise<string | null> {
   const candidateHash = await hashApiKeyWithSecretAsync(candidateKey, derivationSecret);
   const candidateHashBuf = Buffer.from(candidateHash, 'hex');
 
-  const matched = validHashBuffers.some((storedHashBuf) => {
-    if (storedHashBuf.length !== candidateHashBuf.length) return false;
-    try {
-      return timingSafeEqual(storedHashBuf, candidateHashBuf);
-    } catch {
-      return false;
-    }
-  });
-
-  if (!matched) {
+  if (!hasMatchingApiKeyHash(validHashBuffers, candidateHashBuf)) {
     // Log the first 8 characters of the hash (not the key itself) for audit trail.
     logger.warn(
       { keyPrefix: candidateHash.substring(0, 8), ip: getRequestIp(req) },
@@ -116,6 +61,70 @@ export async function validateApiKey(req: Request): Promise<string | null> {
   const clientId = `client:${candidateHash.substring(0, 12)}`;
   logger.debug({ clientId }, 'API auth succeeded');
   return clientId;
+}
+
+function resolveMissingApiKeysClientId(): string | null {
+  if (process.env.NODE_ENV !== 'production') {
+    logMissingKeysWarning();
+    return 'dev-unauthenticated';
+  }
+
+  logMissingKeysProductionError();
+  return null;
+}
+
+function logMissingKeysWarning() {
+  if (hasLoggedMissingKeysWarning) return;
+  logger.warn(
+    'VALID_API_KEYS is not set — API authentication is disabled. Set this variable in production.',
+  );
+  hasLoggedMissingKeysWarning = true;
+}
+
+function logMissingKeysProductionError() {
+  if (hasLoggedMissingKeysError) return;
+  logger.error(
+    'VALID_API_KEYS is not configured in production — all API requests will be rejected.',
+  );
+  hasLoggedMissingKeysError = true;
+}
+
+function logMissingDerivationSecret() {
+  if (hasLoggedMissingSecretError) return;
+  logger.error(
+    'API_KEY_HMAC_SECRET must be set when VALID_API_KEYS is configured — rejecting API requests.',
+  );
+  hasLoggedMissingSecretError = true;
+}
+
+function extractCandidateApiKey(headers: Headers): string | null {
+  return extractBearerToken(headers.get('authorization')) ?? extractApiKeyHeader(headers);
+}
+
+function extractBearerToken(authHeader: string | null): string | null {
+  if (!authHeader) return null;
+
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') return null;
+
+  return parts[1].trim() || null;
+}
+
+function extractApiKeyHeader(headers: Headers): string | null {
+  return headers.get('x-api-key')?.trim() || null;
+}
+
+function hasMatchingApiKeyHash(storedHashes: Buffer[], candidateHash: Buffer): boolean {
+  return storedHashes.some((storedHash) => isSameHash(storedHash, candidateHash));
+}
+
+function isSameHash(storedHash: Buffer, candidateHash: Buffer): boolean {
+  if (storedHash.length !== candidateHash.length) return false;
+  try {
+    return timingSafeEqual(storedHash, candidateHash);
+  } catch {
+    return false;
+  }
 }
 
 /**
