@@ -143,6 +143,10 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Align CI checks to the new boundaries and ownership model.
 - [x] Adopt Fallow code-quality analysis in [#684](https://github.com/shchilkin/PopChoice/issues/684), starting advisory with PR-local findings before making it a required gate.
 - [x] Extend Fallow cleanup beyond `apps/web` through [#697](https://github.com/shchilkin/PopChoice/issues/697) for backoffice/docs and [#698](https://github.com/shchilkin/PopChoice/issues/698) for shared/services.
+- [ ] Drive inherited repo-wide Fallow complexity to zero actionable findings
+      through [#717](https://github.com/shchilkin/PopChoice/issues/717), split into
+      focused worker, recommendation, persistence, eval, backoffice, account/results,
+      auth, catalog, and UI helper cleanup issues.
 
 ### CI/CD and Deployment Track
 
