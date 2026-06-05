@@ -54,9 +54,7 @@ export type RecommendationEvalActionResult =
       errorMessage: string;
     };
 
-export function recommendationEvalMessage(
-  status: RecommendationEvalActionResult['status'],
-): string {
+function recommendationEvalMessage(status: RecommendationEvalActionResult['status']): string {
   if (status === 'queued') {
     return 'Recommendation eval job queued. Workers will persist results when it finishes.';
   }
@@ -64,6 +62,49 @@ export function recommendationEvalMessage(
     return 'Recommendation eval queue is unavailable. Check REDIS_URL and worker status.';
   }
   return 'Recommendation eval failed to enqueue. Check backoffice logs before retrying.';
+}
+
+export function getRecommendationEvalActionStatusCode(
+  status: RecommendationEvalActionResult['status'],
+): number {
+  if (status === 'unavailable') return 503;
+  if (status === 'failed') return 500;
+  return 200;
+}
+
+export function buildRecommendationEvalActionBody(result: RecommendationEvalActionResult) {
+  return {
+    ok: result.status === 'queued',
+    message: recommendationEvalMessage(result.status),
+    mode: result.mode,
+    runId: result.runId,
+    status: result.status,
+    ...(result.status === 'queued'
+      ? { jobId: result.jobId }
+      : { errorMessage: result.errorMessage }),
+  };
+}
+
+export function buildRecommendationEvalFormDataFromJsonBody(
+  body: Record<string, unknown>,
+): FormData {
+  const formData = new FormData();
+  if (typeof body.mode === 'string') {
+    formData.set('mode', body.mode);
+  }
+  if (body.acknowledgeLiveCost === true || body.acknowledge_live_cost === 'yes') {
+    formData.set('acknowledge_live_cost', 'yes');
+  }
+  const liveConfirmation =
+    typeof body.liveConfirmation === 'string'
+      ? body.liveConfirmation
+      : typeof body.live_confirmation === 'string'
+        ? body.live_confirmation
+        : null;
+  if (liveConfirmation !== null) {
+    formData.set('live_confirmation', liveConfirmation);
+  }
+  return formData;
 }
 
 export async function performRecommendationEvalAction(

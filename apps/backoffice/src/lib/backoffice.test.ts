@@ -8,6 +8,9 @@ import {
   MAX_QUEUE_JOB_PAGE_SIZE,
   MAX_RECOMMENDATION_EVAL_PAGE_SIZE,
   MAX_REPAIR_BATCH_PAGE_SIZE,
+  buildRecommendationEvalActionBody,
+  buildRecommendationEvalFormDataFromJsonBody,
+  getRecommendationEvalActionStatusCode,
   parseCatalogMaintenanceQueueParams,
   parseRecommendationEvalListParams,
   parseRecommendationEvalMode,
@@ -150,5 +153,55 @@ describe('recommendation eval params and actions', () => {
     accepted.set('live_confirmation', 'RUN LIVE RECOMMENDATION EVAL');
 
     expect(parseRecommendationEvalMode(accepted)).toBe('live');
+  });
+
+  it('builds recommendation eval action JSON contracts and status codes', () => {
+    expect(
+      buildRecommendationEvalActionBody({
+        jobId: 'job-1',
+        mode: 'mock',
+        runId: 'run-1',
+        status: 'queued',
+      }),
+    ).toMatchObject({
+      jobId: 'job-1',
+      ok: true,
+      status: 'queued',
+    });
+    expect(getRecommendationEvalActionStatusCode('queued')).toBe(200);
+
+    expect(
+      buildRecommendationEvalActionBody({
+        errorMessage: 'redis down',
+        mode: 'real-data',
+        runId: 'run-2',
+        status: 'unavailable',
+      }),
+    ).toMatchObject({
+      errorMessage: 'redis down',
+      ok: false,
+      status: 'unavailable',
+    });
+    expect(getRecommendationEvalActionStatusCode('unavailable')).toBe(503);
+    expect(getRecommendationEvalActionStatusCode('failed')).toBe(500);
+  });
+
+  it('maps recommendation eval JSON API bodies into action form data', () => {
+    const formData = buildRecommendationEvalFormDataFromJsonBody({
+      acknowledgeLiveCost: true,
+      liveConfirmation: 'RUN LIVE RECOMMENDATION EVAL',
+      mode: 'live',
+    });
+
+    expect(formData.get('mode')).toBe('live');
+    expect(formData.get('acknowledge_live_cost')).toBe('yes');
+    expect(formData.get('live_confirmation')).toBe('RUN LIVE RECOMMENDATION EVAL');
+
+    const snakeCase = buildRecommendationEvalFormDataFromJsonBody({
+      acknowledge_live_cost: 'yes',
+      live_confirmation: 'RUN LIVE RECOMMENDATION EVAL',
+    });
+    expect(snakeCase.get('acknowledge_live_cost')).toBe('yes');
+    expect(snakeCase.get('live_confirmation')).toBe('RUN LIVE RECOMMENDATION EVAL');
   });
 });
