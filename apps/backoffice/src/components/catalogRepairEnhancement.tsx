@@ -6,6 +6,38 @@ import { requestCatalogHealthRefresh } from './catalogHealthRefreshEvent';
 
 type RepairTone = '' | 'accepted' | 'good' | 'warn';
 
+type RepairSummary = {
+  batchId?: string;
+  queued?: number;
+  deduped?: number;
+  failed?: number;
+  unavailable?: number;
+};
+
+type RepairPayload = {
+  message?: string;
+  mode?: string;
+  status?: string;
+  summary?: RepairSummary;
+};
+
+type RepairResponse = {
+  ok: boolean;
+  payload: RepairPayload | null;
+};
+
+type RepairSubmissionState = {
+  form: HTMLFormElement;
+  originalText: string;
+  row: HTMLTableRowElement | null;
+};
+
+type RepairStatusHandler = (
+  state: RepairSubmissionState,
+  payload: RepairPayload,
+  timeouts: number[],
+) => void;
+
 function setMessage(form: HTMLFormElement, text: string, tone: RepairTone): void {
   const message = form.querySelector<HTMLElement>('[data-repair-message]');
   if (!message) return;
@@ -93,6 +125,145 @@ function formBody(form: HTMLFormElement): URLSearchParams {
   return body;
 }
 
+function confirmInlineSubmission(form: HTMLFormElement): boolean {
+  const confirmMessage = form.dataset.confirmMessage;
+  if (confirmMessage && form.dataset.confirmed !== 'true') {
+    showInlineConfirmation(form, confirmMessage);
+    setMessage(form, 'Confirm this batch in-place to continue.', 'warn');
+    return false;
+  }
+
+  delete form.dataset.confirmed;
+  removeInlineConfirmation(form);
+  return true;
+}
+
+function submitButtonText(form: HTMLFormElement): string {
+  return form.querySelector('[data-repair-submit]')?.textContent || 'Queue backfill';
+}
+
+function beginRepairSubmission(form: HTMLFormElement): RepairSubmissionState {
+  const state = {
+    form,
+    originalText: submitButtonText(form),
+    row: form.closest<HTMLTableRowElement>('[data-repair-row]'),
+  };
+
+  state.row?.classList.add('repair-pending');
+  setButton(form, 'Queueing...', true);
+  setMessage(form, 'Queueing...', '');
+  return state;
+}
+
+async function readRepairPayload(response: Response): Promise<RepairPayload | null> {
+  return (await response.json().catch(() => null)) as RepairPayload | null;
+}
+
+async function postRepairSubmission(form: HTMLFormElement): Promise<RepairResponse> {
+  const response = await fetch(formActionUrl(form), {
+    body: formBody(form),
+    headers: { Accept: 'application/json', 'X-Requested-With': 'fetch' },
+    method: 'POST',
+  });
+
+  return {
+    ok: response.ok,
+    payload: await readRepairPayload(response),
+  };
+}
+
+function clearPending(state: RepairSubmissionState): void {
+  state.row?.classList.remove('repair-pending');
+}
+
+function restoreRepairForm(state: RepairSubmissionState, message: string): void {
+  clearPending(state);
+  setButton(state.form, state.originalText, false);
+  setMessage(state.form, message, 'warn');
+}
+
+export function acceptedRepairMessage(payload: RepairPayload): string {
+  const bulkSummary = payload.mode === 'bulk' ? payload.summary : null;
+  if (bulkSummary) {
+    return `Accepted ${bulkSummary.queued ?? 0}, already queued ${bulkSummary.deduped ?? 0}`;
+  }
+
+  return payload.status === 'deduped' ? 'Already queued for worker' : 'Accepted for worker';
+}
+
+function scheduleAcceptedRowRemoval(row: HTMLTableRowElement | null, timeouts: number[]): void {
+  if (!row) return;
+
+  const timeoutId = window.setTimeout(() => {
+    const body = row.parentElement;
+    const columnCount = row.cells.length;
+    row.remove();
+    appendEmptyPlaceholder(body, columnCount);
+  }, 450);
+  timeouts.push(timeoutId);
+}
+
+function handleQueuedOrDedupedRepair(
+  state: RepairSubmissionState,
+  payload: RepairPayload,
+  timeouts: number[],
+): void {
+  requestCatalogHealthRefresh();
+  clearPending(state);
+  state.row?.classList.add('repair-accepted');
+  setButton(state.form, payload.status === 'deduped' ? 'Already queued' : 'Accepted', true);
+  setMessage(state.form, acceptedRepairMessage(payload), 'accepted');
+  scheduleAcceptedRowRemoval(state.row, timeouts);
+}
+
+export function orchestrationAcceptedMessage(summary: RepairSummary | undefined): string {
+  return summary?.batchId
+    ? `Batch ${summary.batchId} accepted. Worker will queue jobs in chunks.`
+    : 'Batch accepted. Worker will queue jobs in chunks.';
+}
+
+function handleOrchestrationQueuedRepair(
+  state: RepairSubmissionState,
+  payload: RepairPayload,
+): void {
+  requestCatalogHealthRefresh();
+  clearPending(state);
+  setButton(state.form, 'Orchestration accepted', true);
+  setMessage(state.form, orchestrationAcceptedMessage(payload.summary), 'accepted');
+}
+
+export function partialRepairMessage(summary: RepairSummary | undefined): string {
+  return `Partial: queued ${summary?.queued ?? 0}, deduped ${summary?.deduped ?? 0}, failed ${summary?.failed ?? 0}, unavailable ${summary?.unavailable ?? 0}`;
+}
+
+function handlePartialRepair(state: RepairSubmissionState, payload: RepairPayload): void {
+  requestCatalogHealthRefresh();
+  restoreRepairForm(state, partialRepairMessage(payload.summary));
+}
+
+const REPAIR_STATUS_HANDLERS: Record<string, RepairStatusHandler> = {
+  deduped: handleQueuedOrDedupedRepair,
+  orchestration_queued: handleOrchestrationQueuedRepair,
+  partial: handlePartialRepair,
+  queued: handleQueuedOrDedupedRepair,
+};
+
+function handleRepairResponse(
+  state: RepairSubmissionState,
+  response: RepairResponse,
+  timeouts: number[],
+): void {
+  const status = response.payload?.status;
+  const handler = status ? REPAIR_STATUS_HANDLERS[status] : undefined;
+
+  if (response.ok && handler && response.payload) {
+    handler(state, response.payload, timeouts);
+    return;
+  }
+
+  restoreRepairForm(state, response.payload?.message || 'Queue unavailable. Check Redis and logs.');
+}
+
 export function formActionUrl(
   form: Pick<HTMLFormElement, 'getAttribute'>,
   baseUrl = window.location.href,
@@ -115,103 +286,16 @@ export function CatalogRepairEnhancement() {
       const submit = async (event: SubmitEvent) => {
         event.preventDefault();
 
-        const confirmMessage = form.dataset.confirmMessage;
-        if (confirmMessage && form.dataset.confirmed !== 'true') {
-          showInlineConfirmation(form, confirmMessage);
-          setMessage(form, 'Confirm this batch in-place to continue.', 'warn');
+        if (!confirmInlineSubmission(form)) {
           return;
         }
-        delete form.dataset.confirmed;
-        removeInlineConfirmation(form);
 
-        const row = form.closest<HTMLTableRowElement>('[data-repair-row]');
-        const originalText =
-          form.querySelector('[data-repair-submit]')?.textContent || 'Queue backfill';
-
-        row?.classList.add('repair-pending');
-        setButton(form, 'Queueing...', true);
-        setMessage(form, 'Queueing...', '');
+        const state = beginRepairSubmission(form);
 
         try {
-          const response = await fetch(formActionUrl(form), {
-            body: formBody(form),
-            headers: { Accept: 'application/json', 'X-Requested-With': 'fetch' },
-            method: 'POST',
-          });
-          const payload = (await response.json().catch(() => null)) as {
-            message?: string;
-            mode?: string;
-            status?: string;
-            summary?: {
-              batchId?: string;
-              queued?: number;
-              deduped?: number;
-              failed?: number;
-              unavailable?: number;
-            };
-          } | null;
-
-          if (response.ok && (payload?.status === 'queued' || payload?.status === 'deduped')) {
-            requestCatalogHealthRefresh();
-            row?.classList.remove('repair-pending');
-            row?.classList.add('repair-accepted');
-            const deduped = payload.status === 'deduped';
-            setButton(form, deduped ? 'Already queued' : 'Accepted', true);
-            const bulkSummary = payload.mode === 'bulk' ? payload.summary : null;
-            const bulkMessage = bulkSummary
-              ? `Accepted ${bulkSummary.queued ?? 0}, already queued ${bulkSummary.deduped ?? 0}`
-              : deduped
-                ? 'Already queued for worker'
-                : 'Accepted for worker';
-            setMessage(form, bulkMessage, 'accepted');
-
-            if (row) {
-              const timeoutId = window.setTimeout(() => {
-                const body = row.parentElement;
-                const columnCount = row.cells.length;
-                row.remove();
-                appendEmptyPlaceholder(body, columnCount);
-              }, 450);
-              timeouts.push(timeoutId);
-            }
-            return;
-          }
-
-          if (response.ok && payload?.status === 'orchestration_queued') {
-            requestCatalogHealthRefresh();
-            row?.classList.remove('repair-pending');
-            setButton(form, 'Orchestration accepted', true);
-            const batchId = payload.summary?.batchId;
-            setMessage(
-              form,
-              batchId
-                ? `Batch ${batchId} accepted. Worker will queue jobs in chunks.`
-                : 'Batch accepted. Worker will queue jobs in chunks.',
-              'accepted',
-            );
-            return;
-          }
-
-          if (response.ok && payload?.status === 'partial') {
-            requestCatalogHealthRefresh();
-            const bulkSummary = payload.summary;
-            row?.classList.remove('repair-pending');
-            setButton(form, originalText, false);
-            setMessage(
-              form,
-              `Partial: queued ${bulkSummary?.queued ?? 0}, deduped ${bulkSummary?.deduped ?? 0}, failed ${bulkSummary?.failed ?? 0}, unavailable ${bulkSummary?.unavailable ?? 0}`,
-              'warn',
-            );
-            return;
-          }
-
-          row?.classList.remove('repair-pending');
-          setButton(form, originalText, false);
-          setMessage(form, payload?.message || 'Queue unavailable. Check Redis and logs.', 'warn');
+          handleRepairResponse(state, await postRepairSubmission(form), timeouts);
         } catch {
-          row?.classList.remove('repair-pending');
-          setButton(form, originalText, false);
-          setMessage(form, 'Request failed. Try again.', 'warn');
+          restoreRepairForm(state, 'Request failed. Try again.');
         }
       };
 
