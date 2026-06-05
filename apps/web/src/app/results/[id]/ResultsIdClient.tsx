@@ -1,89 +1,93 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { use, useEffect, useMemo } from 'react';
+import { use, useEffect, type ReactNode } from 'react';
 
-import { RecommendationFetchError, useRecommendation } from '@/hooks/useRecommendation';
+import { useRecommendation } from '@/hooks/useRecommendation';
 import { navigateToFreshQuiz } from '@/lib/quizNavigation';
-import { type MovieRecommendation } from '@/utils/client';
 
 import { RecommendationResultsView } from './RecommendationResultsView';
 import { ResultsErrorState } from './ResultsErrorState';
+import {
+  getResultsClientRenderState,
+  getReadyResultsViewModel,
+  getResultRouteId,
+  type LoadingResultsClientRenderState,
+  type ReadyResultsClientRenderState,
+  type ResultsClientRenderState,
+} from './resultsIdViewModel';
 import { ResultsLoadingState } from './ResultsLoadingState';
 
 export function ResultsIdClient({ params }: { params: Promise<{ id: string }> }) {
   const routeParams = use(params);
   const router = useRouter();
-  const id = typeof routeParams.id === 'string' ? routeParams.id : '';
+  const id = getResultRouteId(routeParams);
 
   const { data, error, isError, refetch, morePicksTimedOut } = useRecommendation(id);
+  const renderState = getResultsClientRenderState({ data, error, id, isError });
 
-  // Derive movies from the completed poll response — no secondary fetch needed because
-  // poster URLs are fetched during the BullMQ job and stored in recommendation_movies.
-  const movies = useMemo<MovieRecommendation[]>(() => {
-    if (data?.status !== 'completed' || !data.movies) return [];
-    return data.movies.map((m) => ({
-      id: m.id,
-      name: m.name,
-      year: m.year,
-      similarity: m.similarity ?? 0,
-      age_rating: m.age_rating,
-      duration: m.duration,
-      score_rating: m.score_rating,
-      posterURL: m.posterURL,
-      description: m.aiDescription,
-      localizedName: m.localizedName,
-      isMainRecommendation: m.isMainRecommendation,
-      fromTMDB: m.fromTMDB,
-    }));
-  }, [data]);
+  useRedirectMissingResultId(id, router);
 
-  const peopleCount = data?.peopleCount ?? 1;
-  const groupInsights = data?.groupInsights ?? null;
+  const renderers: Record<ResultsClientRenderState['kind'], () => ReactNode> = {
+    empty: () => <ResultsErrorState variant="empty" onRetry={navigateToFreshQuiz} />,
+    failed: () => <ResultsErrorState variant="failed" onRetry={navigateToFreshQuiz} />,
+    loading: () => (
+      <LoadingResultsState renderState={renderState as LoadingResultsClientRenderState} />
+    ),
+    missing: () => <ResultsErrorState variant="missing" onRetry={navigateToFreshQuiz} />,
+    ready: () => (
+      <ReadyResultsView
+        renderState={renderState as ReadyResultsClientRenderState}
+        recommendationSlug={id}
+        morePicksTimedOut={morePicksTimedOut}
+        onMorePicksRequested={refetch}
+      />
+    ),
+    redirect: () => null,
+  };
 
+  return renderers[renderState.kind]();
+}
+
+function useRedirectMissingResultId(id: string, router: ReturnType<typeof useRouter>) {
   useEffect(() => {
     if (!id) {
       router.replace('/quiz');
     }
   }, [id, router]);
+}
 
-  const status = data?.status;
-  const stage = data?.stage;
+function LoadingResultsState({ renderState }: { renderState: LoadingResultsClientRenderState }) {
+  return <ResultsLoadingState status={renderState.status} stage={renderState.stage} />;
+}
 
-  if (!id) return null;
-
-  if (isError) {
-    const variant =
-      error instanceof RecommendationFetchError && error.status === 404 ? 'missing' : 'failed';
-    return <ResultsErrorState variant={variant} onRetry={navigateToFreshQuiz} />;
-  }
-
-  if (status === 'failed') {
-    return <ResultsErrorState variant="failed" onRetry={navigateToFreshQuiz} />;
-  }
-
-  if (!data || status === 'pending' || status === 'processing') {
-    return <ResultsLoadingState status={status} stage={stage} />;
-  }
-
-  if (movies.length === 0) {
-    return <ResultsErrorState variant="empty" onRetry={navigateToFreshQuiz} />;
-  }
+function ReadyResultsView({
+  renderState,
+  recommendationSlug,
+  morePicksTimedOut,
+  onMorePicksRequested,
+}: {
+  renderState: ReadyResultsClientRenderState;
+  recommendationSlug: string;
+  morePicksTimedOut: boolean;
+  onMorePicksRequested: () => Promise<unknown>;
+}) {
+  const viewModel = getReadyResultsViewModel(renderState);
 
   return (
     <RecommendationResultsView
-      movies={movies}
-      usedBroaderSearch={data.usedBroaderSearch ?? false}
-      dbMovieCount={data.dbMovieCount}
-      peopleCount={peopleCount}
-      hasActorSignal={data.hasActorSignal ?? false}
-      groupInsights={groupInsights}
-      recommendationSlug={id}
-      morePicksStatus={data.morePicksStatus}
+      movies={viewModel.movies}
+      usedBroaderSearch={viewModel.usedBroaderSearch}
+      dbMovieCount={viewModel.dbMovieCount}
+      peopleCount={viewModel.peopleCount}
+      hasActorSignal={viewModel.hasActorSignal}
+      groupInsights={viewModel.groupInsights}
+      recommendationSlug={recommendationSlug}
+      morePicksStatus={viewModel.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}
-      viewerCanRate={data.viewerCanRate ?? false}
-      isSharedResult={data.isSharedResult ?? false}
-      onMorePicksRequested={refetch}
+      viewerCanRate={viewModel.viewerCanRate}
+      isSharedResult={viewModel.isSharedResult}
+      onMorePicksRequested={onMorePicksRequested}
     />
   );
 }
