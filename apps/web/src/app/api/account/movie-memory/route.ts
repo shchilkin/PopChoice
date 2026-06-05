@@ -39,127 +39,141 @@ function parseRequestedLocale(req: NextRequest): Locale {
   return parseMovieMemoryLocale(localeParam, parseLocaleFromRequest(req));
 }
 
-export async function GET(req: NextRequest): Promise<Response> {
-  const session = getSessionFromRequest(req);
-  if (!session) {
-    return movieMemoryJson({ error: 'Unauthorized' }, 401);
-  }
+type MovieMemoryGetRequest =
+  | { kind: 'candidates'; query: string }
+  | { kind: 'list'; query: string }
+  | { kind: 'search'; query: string };
 
-  const startedAt = Date.now();
-  const isCandidatesRequest = req.nextUrl.searchParams.get('mode') === 'candidates';
-  const isListRequest = req.nextUrl.searchParams.get('mode') === 'list';
+type MovieMemoryGetContext = {
+  request: MovieMemoryGetRequest;
+  startedAt: number;
+  userId: string;
+};
+
+function getMovieMemoryGetRequest(req: NextRequest): MovieMemoryGetRequest {
+  const mode = req.nextUrl.searchParams.get('mode');
   const query = req.nextUrl.searchParams.get('query') ?? req.nextUrl.searchParams.get('q') ?? '';
-  const requestKind = isCandidatesRequest ? 'candidates' : isListRequest ? 'list' : 'search';
+  if (mode === 'candidates') return { kind: 'candidates', query };
+  if (mode === 'list') return { kind: 'list', query };
+  return { kind: 'search', query };
+}
+
+function logMovieMemoryGetReceived(context: MovieMemoryGetContext): void {
   logger.info(
     {
-      userId: session.sub,
-      requestKind,
-      queryLength: isCandidatesRequest ? undefined : query.length,
+      userId: context.userId,
+      requestKind: context.request.kind,
+      queryLength: context.request.kind === 'candidates' ? undefined : context.request.query.length,
     },
     'Movie memory GET received',
   );
+}
 
-  const rateLimitResponse = await applyRateLimit(req);
-  if (rateLimitResponse) {
-    logger.warn(
-      {
-        userId: session.sub,
-        requestKind,
-        status: rateLimitResponse.status,
-        durationMs: elapsedMs(startedAt),
-      },
-      'Movie memory GET rate limited',
+async function handleCandidateGet(
+  req: NextRequest,
+  context: MovieMemoryGetContext,
+): Promise<Response> {
+  try {
+    const locale = parseRequestedLocale(req);
+    const { movies, source, emptyStats } = await loadMovieMemoryCandidatesForUser(
+      context.userId,
+      locale,
+      { logContext: { requestKind: context.request.kind } },
     );
-    return rateLimitResponse;
+    logger.info(
+      {
+        userId: context.userId,
+        requestKind: context.request.kind,
+        source,
+        requested: CANDIDATE_LIMIT,
+        returned: movies.length,
+        catalogCount: emptyStats?.catalogCount,
+        memoryCount: emptyStats?.memoryCount,
+        availableCatalogCount: emptyStats?.availableCatalogCount,
+        durationMs: elapsedMs(context.startedAt),
+      },
+      'Movie memory candidates loaded',
+    );
+    return movieMemoryJson({ movies }, 200);
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        userId: context.userId,
+        requestKind: context.request.kind,
+        durationMs: elapsedMs(context.startedAt),
+      },
+      'Failed to load movie memory candidates',
+    );
+    return movieMemoryJson({ error: 'Failed to load movie memory candidates' }, 500);
   }
+}
 
-  if (isCandidatesRequest) {
-    try {
-      const locale = parseRequestedLocale(req);
-      const { movies, source, emptyStats } = await loadMovieMemoryCandidatesForUser(
-        session.sub,
-        locale,
-        { logContext: { requestKind } },
-      );
-      logger.info(
-        {
-          userId: session.sub,
-          requestKind,
-          source,
-          requested: CANDIDATE_LIMIT,
-          returned: movies.length,
-          catalogCount: emptyStats?.catalogCount,
-          memoryCount: emptyStats?.memoryCount,
-          availableCatalogCount: emptyStats?.availableCatalogCount,
-          durationMs: elapsedMs(startedAt),
-        },
-        'Movie memory candidates loaded',
-      );
-      return movieMemoryJson({ movies }, 200);
-    } catch (err) {
-      logger.error(
-        { err, userId: session.sub, requestKind, durationMs: elapsedMs(startedAt) },
-        'Failed to load movie memory candidates',
-      );
-      return movieMemoryJson({ error: 'Failed to load movie memory candidates' }, 500);
-    }
-  }
-
-  if (isListRequest) {
-    const parsed = listMovieMemorySchema.safeParse({
-      offset: req.nextUrl.searchParams.get('offset') ?? undefined,
-      limit: req.nextUrl.searchParams.get('limit') ?? undefined,
-    });
-    if (!parsed.success) {
-      logger.warn(
-        { userId: session.sub, requestKind, durationMs: elapsedMs(startedAt) },
-        'Movie memory list rejected: invalid pagination',
-      );
-      return movieMemoryJson({ error: 'Invalid movie memory pagination' }, 422);
-    }
-
-    try {
-      const page = await getMovieMemoryPageForUser(session.sub, parsed.data);
-      logger.info(
-        {
-          userId: session.sub,
-          requestKind,
-          requested: parsed.data.limit,
-          offset: parsed.data.offset,
-          returned: page.items.length,
-          total: page.total,
-          nextOffset: page.nextOffset,
-          durationMs: elapsedMs(startedAt),
-        },
-        'Movie memory list loaded',
-      );
-      return movieMemoryJson(
-        {
-          movieMemory: page.items,
-          total: page.total,
-          nextOffset: page.nextOffset,
-        },
-        200,
-      );
-    } catch (err) {
-      logger.error(
-        { err, userId: session.sub, requestKind, durationMs: elapsedMs(startedAt) },
-        'Failed to load movie memory list',
-      );
-      return movieMemoryJson({ error: 'Failed to load movie memory' }, 500);
-    }
-  }
-
-  const parsed = searchMovieMemorySchema.safeParse({
-    query,
+async function handleListGet(req: NextRequest, context: MovieMemoryGetContext): Promise<Response> {
+  const parsed = listMovieMemorySchema.safeParse({
+    offset: req.nextUrl.searchParams.get('offset') ?? undefined,
+    limit: req.nextUrl.searchParams.get('limit') ?? undefined,
   });
   if (!parsed.success) {
     logger.warn(
       {
-        userId: session.sub,
-        requestKind,
-        queryLength: query.length,
-        durationMs: elapsedMs(startedAt),
+        userId: context.userId,
+        requestKind: context.request.kind,
+        durationMs: elapsedMs(context.startedAt),
+      },
+      'Movie memory list rejected: invalid pagination',
+    );
+    return movieMemoryJson({ error: 'Invalid movie memory pagination' }, 422);
+  }
+
+  try {
+    const page = await getMovieMemoryPageForUser(context.userId, parsed.data);
+    logger.info(
+      {
+        userId: context.userId,
+        requestKind: context.request.kind,
+        requested: parsed.data.limit,
+        offset: parsed.data.offset,
+        returned: page.items.length,
+        total: page.total,
+        nextOffset: page.nextOffset,
+        durationMs: elapsedMs(context.startedAt),
+      },
+      'Movie memory list loaded',
+    );
+    return movieMemoryJson(
+      {
+        movieMemory: page.items,
+        total: page.total,
+        nextOffset: page.nextOffset,
+      },
+      200,
+    );
+  } catch (err) {
+    logger.error(
+      {
+        err,
+        userId: context.userId,
+        requestKind: context.request.kind,
+        durationMs: elapsedMs(context.startedAt),
+      },
+      'Failed to load movie memory list',
+    );
+    return movieMemoryJson({ error: 'Failed to load movie memory' }, 500);
+  }
+}
+
+async function handleSearchGet(context: MovieMemoryGetContext): Promise<Response> {
+  const parsed = searchMovieMemorySchema.safeParse({
+    query: context.request.query,
+  });
+  if (!parsed.success) {
+    logger.warn(
+      {
+        userId: context.userId,
+        requestKind: context.request.kind,
+        queryLength: context.request.query.length,
+        durationMs: elapsedMs(context.startedAt),
       },
       'Movie memory search rejected: invalid query',
     );
@@ -170,11 +184,11 @@ export async function GET(req: NextRequest): Promise<Response> {
     const movies = await searchMovieMemoryCatalog(parsed.data.query);
     logger.info(
       {
-        userId: session.sub,
-        requestKind,
+        userId: context.userId,
+        requestKind: context.request.kind,
         queryLength: parsed.data.query.length,
         returned: movies.length,
-        durationMs: elapsedMs(startedAt),
+        durationMs: elapsedMs(context.startedAt),
       },
       'Movie memory search completed',
     );
@@ -183,15 +197,51 @@ export async function GET(req: NextRequest): Promise<Response> {
     logger.error(
       {
         err,
-        userId: session.sub,
-        requestKind,
+        userId: context.userId,
+        requestKind: context.request.kind,
         queryLength: parsed.data.query.length,
-        durationMs: elapsedMs(startedAt),
+        durationMs: elapsedMs(context.startedAt),
       },
       'Failed to search movie catalog for memory',
     );
     return movieMemoryJson({ error: 'Failed to search movie catalog' }, 500);
   }
+}
+
+function handleGetByKind(req: NextRequest, context: MovieMemoryGetContext): Promise<Response> {
+  if (context.request.kind === 'candidates') return handleCandidateGet(req, context);
+  if (context.request.kind === 'list') return handleListGet(req, context);
+  return handleSearchGet(context);
+}
+
+export async function GET(req: NextRequest): Promise<Response> {
+  const session = getSessionFromRequest(req);
+  if (!session) {
+    return movieMemoryJson({ error: 'Unauthorized' }, 401);
+  }
+
+  const context: MovieMemoryGetContext = {
+    request: getMovieMemoryGetRequest(req),
+    startedAt: Date.now(),
+    userId: session.sub,
+  };
+  logMovieMemoryGetReceived(context);
+
+  const rateLimitResponse = await applyRateLimit(req);
+  if (rateLimitResponse) {
+    logger.warn(
+      {
+        userId: context.userId,
+        requestKind: context.request.kind,
+        status: rateLimitResponse.status,
+        durationMs: elapsedMs(context.startedAt),
+      },
+      'Movie memory GET rate limited',
+    );
+    return rateLimitResponse;
+  }
+
+  return handleGetByKind(req, context);
 }
 
 export async function POST(req: NextRequest): Promise<Response> {

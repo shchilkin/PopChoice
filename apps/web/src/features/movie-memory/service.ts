@@ -94,6 +94,8 @@ const tmdbDiscoverResponseSchema = z.object({
   results: z.array(tmdbCandidateSchema).optional(),
 });
 
+type TMDBCandidate = z.infer<typeof tmdbCandidateSchema>;
+type TMDBDiscoverResponse = z.infer<typeof tmdbDiscoverResponseSchema>;
 type MovieMemoryLogContext = Record<string, unknown>;
 
 export interface MovieMemoryCandidateResult {
@@ -128,6 +130,116 @@ function buildMemoryExclusionSet(items: UserMovieMemorySummary[]): Set<string> {
   return excluded;
 }
 
+function buildTMDBDiscoverUrl(page: number, tmdbLanguage: string): string {
+  const url = new URL('https://api.themoviedb.org/3/discover/movie');
+  url.searchParams.set('include_adult', 'false');
+  url.searchParams.set('language', tmdbLanguage);
+  url.searchParams.set('page', String(page));
+  url.searchParams.set('sort_by', 'vote_average.desc');
+  url.searchParams.set('vote_count.gte', '1000');
+  return url.toString();
+}
+
+async function fetchTMDBDiscoverPage(
+  page: number,
+  tmdbApiKey: string,
+  tmdbLanguage: string,
+): Promise<TMDBDiscoverResponse | null> {
+  try {
+    const response = await fetch(buildTMDBDiscoverUrl(page, tmdbLanguage), {
+      headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(TMDB_DISCOVER_FETCH_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      logger.warn({ status: response.status, page }, 'Movie memory TMDB fallback failed');
+      return null;
+    }
+
+    const responseBody = tmdbDiscoverResponseSchema.safeParse(await response.json());
+    if (!responseBody.success) {
+      logger.warn({ err: responseBody.error, page }, 'Movie memory TMDB fallback response invalid');
+      return null;
+    }
+
+    return responseBody.data;
+  } catch (err: unknown) {
+    logger.warn({ err, page }, 'Movie memory TMDB fallback failed');
+    return null;
+  }
+}
+
+function getTMDBCandidateTitles(movie: TMDBCandidate, locale: Locale) {
+  const canonicalTitle = movie.original_title?.trim() || movie.title;
+  const localizedName =
+    locale !== 'en' && movie.title.trim() && movie.title.trim() !== canonicalTitle
+      ? movie.title
+      : null;
+
+  return { canonicalTitle, localizedName };
+}
+
+function toMovieMemoryCandidate(
+  movie: TMDBCandidate,
+  locale: Locale,
+): MovieMemoryCandidate | undefined {
+  const movieYear = getYearFromReleaseDate(movie.release_date);
+  const { canonicalTitle, localizedName } = getTMDBCandidateTitles(movie, locale);
+  const movieKey = getMovieIdentityKey({
+    tmdbId: movie.id,
+    title: canonicalTitle,
+    year: movieYear,
+  });
+  if (!movieKey) return undefined;
+
+  return {
+    id: -movie.id,
+    tmdbId: movie.id,
+    movieName: canonicalTitle,
+    movieYear,
+    posterURL: getPosterURL(movie.poster_path),
+    localizedName,
+    duration: null,
+    description: locale === 'en' ? movie.overview || null : null,
+    localizedOverview: locale === 'en' ? null : movie.overview || null,
+  };
+}
+
+function appendTMDBMemoryCandidate(
+  candidates: MovieMemoryCandidate[],
+  seenCandidateKeys: Set<string>,
+  excluded: Set<string>,
+  movie: TMDBCandidate,
+  locale: Locale,
+): void {
+  const candidate = toMovieMemoryCandidate(movie, locale);
+  if (!candidate) return;
+
+  const movieKey = getMovieIdentityKey({
+    tmdbId: candidate.tmdbId,
+    title: candidate.movieName,
+    year: candidate.movieYear,
+  });
+  if (!movieKey || excluded.has(movieKey) || seenCandidateKeys.has(movieKey)) return;
+
+  seenCandidateKeys.add(movieKey);
+  candidates.push(candidate);
+}
+
+function appendTMDBMemoryCandidates(
+  candidates: MovieMemoryCandidate[],
+  seenCandidateKeys: Set<string>,
+  excluded: Set<string>,
+  movies: TMDBCandidate[],
+  locale: Locale,
+  limit: number,
+): void {
+  for (const movie of movies) {
+    appendTMDBMemoryCandidate(candidates, seenCandidateKeys, excluded, movie, locale);
+    if (candidates.length >= limit) break;
+  }
+}
+
 async function getTMDBMovieMemoryCandidatesForUser(
   userId: string,
   limit: number,
@@ -143,71 +255,16 @@ async function getTMDBMovieMemoryCandidatesForUser(
   const tmdbLanguage = LOCALE_TO_TMDB_LANG[locale] ?? 'en-US';
 
   for (let page = 1; page <= TMDB_DISCOVER_MAX_PAGES && candidates.length < limit; page++) {
-    const url = new URL('https://api.themoviedb.org/3/discover/movie');
-    url.searchParams.set('include_adult', 'false');
-    url.searchParams.set('language', tmdbLanguage);
-    url.searchParams.set('page', String(page));
-    url.searchParams.set('sort_by', 'vote_average.desc');
-    url.searchParams.set('vote_count.gte', '1000');
-
-    const parsed = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${tmdbApiKey}`, Accept: 'application/json' },
-      signal: AbortSignal.timeout(TMDB_DISCOVER_FETCH_TIMEOUT_MS),
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          logger.warn({ status: response.status, page }, 'Movie memory TMDB fallback failed');
-          return null;
-        }
-
-        const responseBody = tmdbDiscoverResponseSchema.safeParse(await response.json());
-        if (!responseBody.success) {
-          logger.warn(
-            { err: responseBody.error, page },
-            'Movie memory TMDB fallback response invalid',
-          );
-          return null;
-        }
-
-        return responseBody.data;
-      })
-      .catch((err: unknown) => {
-        logger.warn({ err, page }, 'Movie memory TMDB fallback failed');
-        return null;
-      });
-    if (!parsed) {
-      break;
-    }
-
-    for (const movie of parsed.results ?? []) {
-      const movieYear = getYearFromReleaseDate(movie.release_date);
-      const canonicalTitle = movie.original_title?.trim() || movie.title;
-      const localizedTitle =
-        locale !== 'en' && movie.title.trim() && movie.title.trim() !== canonicalTitle
-          ? movie.title
-          : null;
-      const movieKey = getMovieIdentityKey({
-        tmdbId: movie.id,
-        title: canonicalTitle,
-        year: movieYear,
-      });
-      if (!movieKey || excluded.has(movieKey) || seenCandidateKeys.has(movieKey)) continue;
-
-      seenCandidateKeys.add(movieKey);
-      candidates.push({
-        id: -movie.id,
-        tmdbId: movie.id,
-        movieName: canonicalTitle,
-        movieYear,
-        posterURL: getPosterURL(movie.poster_path),
-        localizedName: localizedTitle,
-        duration: null,
-        description: locale === 'en' ? movie.overview || null : null,
-        localizedOverview: locale === 'en' ? null : movie.overview || null,
-      });
-
-      if (candidates.length >= limit) break;
-    }
+    const parsed = await fetchTMDBDiscoverPage(page, tmdbApiKey, tmdbLanguage);
+    if (!parsed) break;
+    appendTMDBMemoryCandidates(
+      candidates,
+      seenCandidateKeys,
+      excluded,
+      parsed.results ?? [],
+      locale,
+      limit,
+    );
   }
 
   return candidates;
