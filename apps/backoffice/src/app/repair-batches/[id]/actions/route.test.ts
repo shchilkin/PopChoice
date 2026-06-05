@@ -105,4 +105,27 @@ describe('repair batch action route', () => {
       expect.any(Headers),
     );
   });
+
+  it('maps unavailable retry results to the JSON failure contract', async () => {
+    mocks.retryCatalogRepairBatchItem.mockResolvedValue({
+      batchId: 'batch-1',
+      issueKey: 'missing_poster_url',
+      item: { batchId: 'batch-1', id: 'item-1', status: 'unavailable' },
+      job: null,
+      status: 'unavailable',
+    });
+
+    const response = await POST(createRetryRequest() as never, {
+      params: Promise.resolve({ id: 'batch-1' }),
+    });
+
+    await expectBackofficeActionJson(response, {
+      body: expect.objectContaining({
+        message: 'Queue is unavailable; retry item remains unresolved.',
+        ok: false,
+        status: 'unavailable',
+      }),
+      status: 503,
+    });
+  });
 });
