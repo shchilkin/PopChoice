@@ -12,10 +12,9 @@ import { ReviewActionSubmitButton } from './actionSubmitButton';
 import { AuditRows } from './auditRows';
 import {
   buildReviewPageHref,
-  canApplyCandidate,
-  getCandidateWarning,
+  buildCandidateCardViewModel,
+  buildStatusActionViewModel,
   getReviewRiskSummary,
-  isCurrentCandidate,
 } from './helpers';
 import {
   ConfidenceMeter,
@@ -34,51 +33,36 @@ function CandidateCard({
   candidate: TMDBReviewCandidate;
   index: number;
 }) {
-  const canApply = canApplyCandidate({ candidate, review });
-  const isBest = index === 0;
-  const isCurrent = isCurrentCandidate({ candidate, review });
-  const warning = getCandidateWarning({ candidate, review });
+  const view = buildCandidateCardViewModel({ candidate, index, review });
 
   return (
-    <article className={`candidate ${isBest ? 'best' : ''} ${isCurrent ? 'current' : ''}`}>
+    <article className={view.className}>
       <div>
         <div className="candidate-title">
-          <h3>{candidate.title}</h3>
+          <h3>{view.title}</h3>
           <div className="candidate-flags">
-            {isBest ? <span className="pill good">Best candidate</span> : null}
-            {isCurrent ? <span className="pill repairable">Current TMDB</span> : null}
-            {warning ? <span className="pill warning">Needs check</span> : null}
+            {view.flags.map((flag) => (
+              <span key={flag.label} className={flag.className}>
+                {flag.label}
+              </span>
+            ))}
           </div>
         </div>
         <dl>
-          <div>
-            <dt>TMDB</dt>
-            <dd>{candidate.id ?? '-'}</dd>
-          </div>
-          <div>
-            <dt>Original</dt>
-            <dd>{candidate.originalTitle ?? '-'}</dd>
-          </div>
-          <div>
-            <dt>Year</dt>
-            <dd>{candidate.releaseYear ?? '-'}</dd>
-          </div>
-          <div>
-            <dt>Confidence</dt>
-            <dd>{formatPercent(candidate.confidence)}</dd>
-          </div>
+          {view.facts.map((fact) => (
+            <div key={fact.label}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
         </dl>
-        <ConfidenceMeter confidence={candidate.confidence} />
-        {warning ? <p className="candidate-warning">{warning}</p> : null}
+        <ConfidenceMeter confidence={view.confidence} />
+        {view.warning ? <p className="candidate-warning">{view.warning}</p> : null}
       </div>
-      {canApply ? (
-        <form
-          className="action-form apply-action"
-          method="post"
-          action={`/tmdb-reviews/${encodeURIComponent(review.id)}/actions`}
-        >
+      {view.applyCandidateId ? (
+        <form className="action-form apply-action" method="post" action={view.actionHref}>
           <input type="hidden" name="action" value="apply_candidate" />
-          <input type="hidden" name="candidate_id" value={String(candidate.id)} />
+          <input type="hidden" name="candidate_id" value={view.applyCandidateId} />
           <label>
             Decision note
             <input name="note" maxLength={500} placeholder="Why this candidate is correct" />
@@ -112,61 +96,41 @@ function StatusActionForm({
   action: Exclude<TMDBMatchReviewAction, 'apply_candidate'>;
   label: string;
 }) {
-  const disabled =
-    review.status === 'resolved' ||
-    (action === 'reject' && review.status === 'ignored') ||
-    (action === 'defer' && review.status === 'deferred') ||
-    (action === 'reopen' && review.status === 'open');
-  const details = {
-    defer: {
-      buttonClass: 'secondary',
-      className: 'defer',
-      description: 'Keep it out of the active queue until more catalog context exists.',
-    },
-    reject: {
-      buttonClass: 'danger',
-      className: 'reject',
-      description: 'Mark this review as ignored when candidates are wrong or not useful.',
-    },
-    reopen: {
-      buttonClass: 'quiet',
-      className: 'reopen',
-      description: 'Move a deferred or ignored review back into active operator work.',
-    },
-  }[action];
+  const view = buildStatusActionViewModel({ action, review });
 
   return (
-    <article className={`decision-card ${details.className}`}>
+    <article className={`decision-card ${view.className}`}>
       <div className="decision-card-header">
         <span className="decision-title">{label}</span>
-        <span className="small-note">{details.description}</span>
+        <span className="small-note">{view.description}</span>
       </div>
-      <form
-        className="action-form"
-        method="post"
-        action={`/tmdb-reviews/${encodeURIComponent(review.id)}/actions`}
-      >
+      <form className="action-form" method="post" action={view.formAction}>
         <input type="hidden" name="action" value={action} />
         <label>
           Decision note
-          <input name="note" maxLength={500} placeholder="Optional rationale" disabled={disabled} />
+          <input
+            name="note"
+            maxLength={500}
+            placeholder="Optional rationale"
+            disabled={view.disabled}
+          />
         </label>
         <ReviewActionSubmitButton
-          buttonClass={details.buttonClass}
-          disabled={disabled}
+          buttonClass={view.buttonClass}
+          disabled={view.disabled}
           label={label}
           pendingLabel="Saving..."
         />
-        {action === 'reopen' ? null : (
+        {view.includeNextAction ? (
           <ReviewActionSubmitButton
             buttonClass="secondary"
-            disabled={disabled}
+            disabled={view.disabled}
             label={`${label} + next`}
             name="next_review"
             pendingLabel="Saving..."
             value="1"
           />
-        )}
+        ) : null}
       </form>
     </article>
   );
