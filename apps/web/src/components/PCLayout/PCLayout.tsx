@@ -38,6 +38,13 @@ type LayoutNavigationProps = {
   toggle: () => void;
 };
 
+type FreshQuizLinkProps = {
+  label: string;
+  onStart: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+  show: boolean;
+  variant: 'desktop' | 'mobile';
+};
+
 function ThemeToggleButton({
   isDark,
   toggle,
@@ -68,6 +75,283 @@ function ThemeToggleButton({
   );
 }
 
+function DesktopNavigationBar({
+  currentPath,
+  isAuthenticated,
+  isDark,
+  logout,
+  navLinks,
+  showFreshQuizLink,
+  startFreshQuiz,
+  t,
+  toggle,
+}: LayoutNavigationProps & {
+  currentPath: string;
+  showFreshQuizLink: boolean;
+  startFreshQuiz?: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  return (
+    <nav className="hidden md:flex items-center gap-1">
+      <DesktopNavLinks currentPath={currentPath} navLinks={navLinks} />
+      <DesktopLogoutButton isAuthenticated={isAuthenticated} label={t.nav.logOut} logout={logout} />
+      <LanguageSwitcher />
+      <ThemeToggleButton
+        isDark={isDark}
+        toggle={toggle}
+        label={t.nav.toggleTheme}
+        className="ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
+      />
+      <FreshQuizLink
+        label={t.nav.findAMovie}
+        onStart={startFreshQuiz ?? preventFreshQuizFallback}
+        show={showFreshQuizLink}
+        variant="desktop"
+      />
+    </nav>
+  );
+}
+
+function DesktopNavLinks({ currentPath, navLinks }: { currentPath: string; navLinks: NavLink[] }) {
+  return (
+    <>
+      {navLinks.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
+          style={desktopNavLinkStyle(currentPath.startsWith(link.href))}
+        >
+          {link.label}
+        </Link>
+      ))}
+    </>
+  );
+}
+
+function DesktopLogoutButton({
+  isAuthenticated,
+  label,
+  logout,
+}: {
+  isAuthenticated: boolean;
+  label: string;
+  logout: () => Promise<void>;
+}) {
+  if (!isAuthenticated) return null;
+
+  return (
+    <button
+      onClick={() => {
+        void logout();
+      }}
+      className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
+      style={{ color: 'var(--pc-t3)', background: 'transparent' }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MobileNavigationControls({
+  isDark,
+  mobileMenuOpen,
+  setMobileMenuOpen,
+  t,
+  toggle,
+}: Pick<
+  LayoutNavigationProps,
+  'isDark' | 'mobileMenuOpen' | 'setMobileMenuOpen' | 't' | 'toggle'
+>) {
+  return (
+    <div className="flex md:hidden items-center gap-1">
+      <ThemeToggleButton
+        isDark={isDark}
+        toggle={toggle}
+        label={t.nav.toggleTheme}
+        className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
+      />
+
+      <button
+        onClick={() => setMobileMenuOpen((prev) => !prev)}
+        className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
+        style={mobileMenuButtonStyle(mobileMenuOpen)}
+        aria-label={mobileMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
+        aria-expanded={mobileMenuOpen}
+        aria-controls="mobile-nav-drawer"
+      >
+        <MobileMenuIcon open={mobileMenuOpen} />
+      </button>
+    </div>
+  );
+}
+
+function MobileMenuIcon({ open }: { open: boolean }) {
+  return open ? (
+    <X size={16} style={{ color: 'var(--pc-t2)' }} />
+  ) : (
+    <Menu size={16} style={{ color: 'var(--pc-t2)' }} />
+  );
+}
+
+function MobileNavigationDrawer({
+  currentPath,
+  isAuthenticated,
+  isOpen,
+  logout,
+  navLinks,
+  setMobileMenuOpen,
+  showFreshQuizLink,
+  startFreshQuiz,
+  t,
+}: Pick<
+  LayoutNavigationProps,
+  'isAuthenticated' | 'logout' | 'navLinks' | 'setMobileMenuOpen' | 't'
+> & {
+  currentPath: string;
+  isOpen: boolean;
+  showFreshQuizLink: boolean;
+  startFreshQuiz: (event: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <nav
+      id="mobile-nav-drawer"
+      className="md:hidden z-40 flex flex-col gap-1 px-4 py-3"
+      style={{
+        background: 'var(--pc-header-bg)',
+        backdropFilter: 'blur(16px)',
+        borderBottom: '1px solid var(--pc-bd1)',
+      }}
+    >
+      <MobileNavLinks
+        currentPath={currentPath}
+        navLinks={navLinks}
+        onNavigate={() => setMobileMenuOpen(false)}
+      />
+      <MobileLogoutButton
+        isAuthenticated={isAuthenticated}
+        label={t.nav.logOut}
+        logout={logout}
+        onNavigate={() => setMobileMenuOpen(false)}
+      />
+      <div className="flex items-center gap-2 pt-1">
+        <LanguageSwitcher />
+        <FreshQuizLink
+          label={t.nav.findAMovie}
+          onStart={startFreshQuiz}
+          show={showFreshQuizLink}
+          variant="mobile"
+        />
+      </div>
+    </nav>
+  );
+}
+
+function MobileNavLinks({
+  currentPath,
+  navLinks,
+  onNavigate,
+}: {
+  currentPath: string;
+  navLinks: NavLink[];
+  onNavigate: () => void;
+}) {
+  return (
+    <>
+      {navLinks.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          onClick={onNavigate}
+          className="px-3 py-2.5 rounded-xl text-sm transition-colors duration-200"
+          style={mobileNavLinkStyle(currentPath.startsWith(link.href))}
+        >
+          {link.label}
+        </Link>
+      ))}
+    </>
+  );
+}
+
+function MobileLogoutButton({
+  isAuthenticated,
+  label,
+  logout,
+  onNavigate,
+}: {
+  isAuthenticated: boolean;
+  label: string;
+  logout: () => Promise<void>;
+  onNavigate: () => void;
+}) {
+  if (!isAuthenticated) return null;
+
+  return (
+    <button
+      onClick={() => {
+        onNavigate();
+        void logout();
+      }}
+      className="px-3 py-2.5 rounded-xl text-sm text-left transition-colors duration-200"
+      style={{ color: 'var(--pc-t2)', background: 'transparent' }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function FreshQuizLink({ label, onStart, show, variant }: FreshQuizLinkProps) {
+  if (!show) return null;
+
+  return (
+    <Link
+      href="/quiz"
+      onClick={onStart}
+      className={freshQuizLinkClassName(variant)}
+      style={{
+        background: 'var(--pc-cta)',
+        color: 'var(--pc-cta-text)',
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </Link>
+  );
+}
+
+function preventFreshQuizFallback(event: React.MouseEvent<HTMLAnchorElement>) {
+  event.preventDefault();
+}
+
+function desktopNavLinkStyle(isActive: boolean): React.CSSProperties {
+  return {
+    color: isActive ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+    background: isActive ? 'var(--pc-gold-subtle)' : 'transparent',
+  };
+}
+
+function mobileNavLinkStyle(isActive: boolean): React.CSSProperties {
+  return {
+    color: isActive ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+    background: isActive ? 'var(--pc-gold-subtle)' : 'transparent',
+    fontWeight: isActive ? 600 : 400,
+  };
+}
+
+function mobileMenuButtonStyle(isOpen: boolean): React.CSSProperties {
+  return {
+    background: isOpen ? 'var(--pc-gold-subtle)' : 'var(--pc-ghost)',
+    border: '1px solid var(--pc-bd2)',
+  };
+}
+
+function freshQuizLinkClassName(variant: FreshQuizLinkProps['variant']): string {
+  return variant === 'desktop'
+    ? 'ml-1 px-3 py-2 rounded-xl text-sm'
+    : 'flex-1 text-center px-3 py-2.5 rounded-xl text-sm';
+}
+
 function LayoutNavigationFallback({
   isAuthenticated,
   isDark,
@@ -80,69 +364,25 @@ function LayoutNavigationFallback({
 }: LayoutNavigationProps) {
   return (
     <>
-      <nav className="hidden md:flex items-center gap-1">
-        {navLinks.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
-            style={{
-              color: 'var(--pc-t3)',
-              background: 'transparent',
-            }}
-          >
-            {link.label}
-          </Link>
-        ))}
-
-        {isAuthenticated && (
-          <button
-            onClick={() => {
-              void logout();
-            }}
-            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
-            style={{ color: 'var(--pc-t3)', background: 'transparent' }}
-          >
-            {t.nav.logOut}
-          </button>
-        )}
-
-        <LanguageSwitcher />
-
-        <ThemeToggleButton
-          isDark={isDark}
-          toggle={toggle}
-          label={t.nav.toggleTheme}
-          className="ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
-        />
-      </nav>
-
-      <div className="flex md:hidden items-center gap-1">
-        <ThemeToggleButton
-          isDark={isDark}
-          toggle={toggle}
-          label={t.nav.toggleTheme}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
-        />
-
-        <button
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
-          style={{
-            background: mobileMenuOpen ? 'var(--pc-gold-subtle)' : 'var(--pc-ghost)',
-            border: '1px solid var(--pc-bd2)',
-          }}
-          aria-label={mobileMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
-          aria-expanded={mobileMenuOpen}
-          aria-controls="mobile-nav-drawer"
-        >
-          {mobileMenuOpen ? (
-            <X size={16} style={{ color: 'var(--pc-t2)' }} />
-          ) : (
-            <Menu size={16} style={{ color: 'var(--pc-t2)' }} />
-          )}
-        </button>
-      </div>
+      <DesktopNavigationBar
+        currentPath=""
+        isAuthenticated={isAuthenticated}
+        isDark={isDark}
+        logout={logout}
+        mobileMenuOpen={mobileMenuOpen}
+        navLinks={navLinks}
+        setMobileMenuOpen={setMobileMenuOpen}
+        showFreshQuizLink={false}
+        t={t}
+        toggle={toggle}
+      />
+      <MobileNavigationControls
+        isDark={isDark}
+        mobileMenuOpen={mobileMenuOpen}
+        setMobileMenuOpen={setMobileMenuOpen}
+        t={t}
+        toggle={toggle}
+      />
     </>
   );
 }
@@ -174,157 +414,43 @@ function LayoutNavigation({
 
   return (
     <>
-      <nav className="hidden md:flex items-center gap-1">
-        {navLinks.map((link) => {
-          const isActive = currentPath.startsWith(link.href);
-
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
-              style={{
-                color: isActive ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
-                background: isActive ? 'var(--pc-gold-subtle)' : 'transparent',
-              }}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
-
-        {isAuthenticated && (
-          <button
-            onClick={() => {
-              void logout();
-            }}
-            className="px-3 py-2 rounded-xl text-sm transition-colors duration-200"
-            style={{ color: 'var(--pc-t3)', background: 'transparent' }}
-          >
-            {t.nav.logOut}
-          </button>
-        )}
-
-        <LanguageSwitcher />
-
-        <ThemeToggleButton
-          isDark={isDark}
-          toggle={toggle}
-          label={t.nav.toggleTheme}
-          className="ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
-        />
-
-        {!isLanding && (
-          <Link
-            href="/quiz"
-            onClick={(event) => {
-              event.preventDefault();
-              startFreshQuiz();
-            }}
-            className="ml-1 px-3 py-2 rounded-xl text-sm"
-            style={{
-              background: 'var(--pc-cta)',
-              color: 'var(--pc-cta-text)',
-              fontWeight: 600,
-            }}
-          >
-            {t.nav.findAMovie}
-          </Link>
-        )}
-      </nav>
-
-      <div className="flex md:hidden items-center gap-1">
-        <ThemeToggleButton
-          isDark={isDark}
-          toggle={toggle}
-          label={t.nav.toggleTheme}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
-        />
-
-        <button
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors duration-200"
-          style={{
-            background: mobileMenuOpen ? 'var(--pc-gold-subtle)' : 'var(--pc-ghost)',
-            border: '1px solid var(--pc-bd2)',
-          }}
-          aria-label={mobileMenuOpen ? t.nav.closeMenu : t.nav.openMenu}
-          aria-expanded={mobileMenuOpen}
-          aria-controls="mobile-nav-drawer"
-        >
-          {mobileMenuOpen ? (
-            <X size={16} style={{ color: 'var(--pc-t2)' }} />
-          ) : (
-            <Menu size={16} style={{ color: 'var(--pc-t2)' }} />
-          )}
-        </button>
-      </div>
-
-      {mobileMenuOpen && (
-        <nav
-          id="mobile-nav-drawer"
-          className="md:hidden z-40 flex flex-col gap-1 px-4 py-3"
-          style={{
-            background: 'var(--pc-header-bg)',
-            backdropFilter: 'blur(16px)',
-            borderBottom: '1px solid var(--pc-bd1)',
-          }}
-        >
-          {navLinks.map((link) => {
-            const isActive = currentPath.startsWith(link.href);
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2.5 rounded-xl text-sm transition-colors duration-200"
-                style={{
-                  color: isActive ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-                  background: isActive ? 'var(--pc-gold-subtle)' : 'transparent',
-                  fontWeight: isActive ? 600 : 400,
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-
-          {isAuthenticated && (
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                void logout();
-              }}
-              className="px-3 py-2.5 rounded-xl text-sm text-left transition-colors duration-200"
-              style={{ color: 'var(--pc-t2)', background: 'transparent' }}
-            >
-              {t.nav.logOut}
-            </button>
-          )}
-
-          <div className="flex items-center gap-2 pt-1">
-            <LanguageSwitcher />
-            {!isLanding && (
-              <Link
-                href="/quiz"
-                onClick={(event) => {
-                  event.preventDefault();
-                  startFreshQuiz();
-                }}
-                className="flex-1 text-center px-3 py-2.5 rounded-xl text-sm"
-                style={{
-                  background: 'var(--pc-cta)',
-                  color: 'var(--pc-cta-text)',
-                  fontWeight: 600,
-                }}
-              >
-                {t.nav.findAMovie}
-              </Link>
-            )}
-          </div>
-        </nav>
-      )}
+      <DesktopNavigationBar
+        currentPath={currentPath}
+        isAuthenticated={isAuthenticated}
+        isDark={isDark}
+        logout={logout}
+        mobileMenuOpen={mobileMenuOpen}
+        navLinks={navLinks}
+        setMobileMenuOpen={setMobileMenuOpen}
+        showFreshQuizLink={!isLanding}
+        startFreshQuiz={(event) => {
+          event.preventDefault();
+          startFreshQuiz();
+        }}
+        t={t}
+        toggle={toggle}
+      />
+      <MobileNavigationControls
+        isDark={isDark}
+        mobileMenuOpen={mobileMenuOpen}
+        setMobileMenuOpen={setMobileMenuOpen}
+        t={t}
+        toggle={toggle}
+      />
+      <MobileNavigationDrawer
+        currentPath={currentPath}
+        isAuthenticated={isAuthenticated}
+        isOpen={mobileMenuOpen}
+        logout={logout}
+        navLinks={navLinks}
+        setMobileMenuOpen={setMobileMenuOpen}
+        showFreshQuizLink={!isLanding}
+        startFreshQuiz={(event) => {
+          event.preventDefault();
+          startFreshQuiz();
+        }}
+        t={t}
+      />
     </>
   );
 }
