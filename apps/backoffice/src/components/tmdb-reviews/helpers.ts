@@ -7,3 +7,9 @@ export {
 export { buildReviewDetailHref, buildReviewPageHref } from './navigation';
 export type { ReviewFilters } from './navigation';
 export { getReviewRiskSummary } from './riskSummary';
+export {
+  buildCandidateCardViewModel,
+  buildCandidateSummaryViewModel,
+  buildReviewPaginationViewModel,
+  buildStatusActionViewModel,
+} from './viewModels';

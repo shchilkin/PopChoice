@@ -2,7 +2,7 @@ import type { TMDBMatchReview, TMDBReviewCandidate } from '@pop-choice/shared';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { PanelHeader, TableEmptyRow, TableScroll, formatPercent } from '../shared';
+import { PanelHeader, TableEmptyRow, TableScroll } from '../shared';
 import {
   ConfidenceMeter,
   CurrentTMDBValue,
@@ -11,7 +11,22 @@ import {
   renderStatus,
   StatusBadge,
 } from './reviewPresentation';
-import { buildReviewPageHref, candidateConfidenceGap, type ReviewFilters } from './helpers';
+import {
+  buildCandidateSummaryViewModel,
+  buildReviewPaginationViewModel,
+  type ReviewFilters,
+} from './helpers';
+
+const REVIEW_TABLE_COLUMNS = [
+  'ID',
+  'Local movie',
+  'Reason',
+  'Status',
+  'Candidates',
+  'Current TMDB',
+  'Updated',
+  '',
+] as const;
 
 function ReviewFilterSummary({ filters }: { filters: ReviewFilters }) {
   return (
@@ -38,27 +53,14 @@ function PaginationControls({
   pageSize: number;
   totalCount: number;
 }) {
-  const totalPages = Math.max(Math.ceil(totalCount / pageSize), 1);
-  const currentPage = Math.max(page, 1);
-  const firstItem =
-    totalCount === 0 || currentPage > totalPages ? 0 : (currentPage - 1) * pageSize + 1;
-  const lastItem = currentPage > totalPages ? 0 : Math.min(currentPage * pageSize, totalCount);
+  const view = buildReviewPaginationViewModel({ filters, page, pageSize, totalCount });
 
   return (
     <nav className="pagination" aria-label="Review queue pagination">
-      <span className="pagination-summary">
-        {totalCount === 0
-          ? 'No reviews'
-          : currentPage > totalPages
-            ? `Page ${currentPage} is past ${totalCount} matching reviews`
-            : `Showing ${firstItem}-${lastItem} of ${totalCount} reviews`}
-      </span>
+      <span className="pagination-summary">{view.summary}</span>
       <div className="pagination-actions">
-        {currentPage > 1 ? (
-          <a
-            className="button small"
-            href={buildReviewPageHref({ filters, page: currentPage - 1, pageSize })}
-          >
+        {view.previousHref ? (
+          <a className="button small" href={view.previousHref}>
             Previous
           </a>
         ) : (
@@ -67,13 +69,10 @@ function PaginationControls({
           </span>
         )}
         <span className="pagination-page">
-          Page {currentPage} / {totalPages}
+          Page {view.currentPage} / {view.totalPages}
         </span>
-        {currentPage < totalPages ? (
-          <a
-            className="button small"
-            href={buildReviewPageHref({ filters, page: currentPage + 1, pageSize })}
-          >
+        {view.nextHref ? (
+          <a className="button small" href={view.nextHref}>
             Next
           </a>
         ) : (
@@ -87,26 +86,17 @@ function PaginationControls({
 }
 
 function CandidateSummary({ candidates }: { candidates: TMDBReviewCandidate[] }) {
-  if (candidates.length === 0) return <span className="muted">No candidates captured</span>;
-
-  const [best] = candidates;
-  const gap = candidateConfidenceGap(candidates);
+  const view = buildCandidateSummaryViewModel(candidates);
+  if (view.emptyText) return <span className="muted">{view.emptyText}</span>;
 
   return (
     <div className="candidate-summary">
       <div className="candidate-headline">
-        <strong>
-          {best?.title}
-          {best?.releaseYear === null || best?.releaseYear === undefined
-            ? null
-            : ` (${best.releaseYear})`}
-        </strong>
-        <span className="pill">{formatPercent(best?.confidence ?? null)}</span>
+        <strong>{view.headline}</strong>
+        <span className="pill">{view.confidenceLabel}</span>
       </div>
-      <ConfidenceMeter confidence={best?.confidence ?? null} />
-      <div className="muted">
-        {candidates.length} candidate(s){gap === null ? '' : `, gap ${formatPercent(gap)}`}
-      </div>
+      <ConfidenceMeter confidence={view.confidence} />
+      <div className="muted">{view.meta}</div>
     </div>
   );
 }
@@ -224,14 +214,9 @@ export function ReviewListPage({
           <table className="review-table">
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Local movie</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>Candidates</th>
-                <th>Current TMDB</th>
-                <th>Updated</th>
-                <th />
+                {REVIEW_TABLE_COLUMNS.map((column, index) => (
+                  <th key={`${column}-${index}`}>{column}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
