@@ -22,82 +22,30 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNod
 
 import { useAuth } from '@/components/AuthProvider';
 import { useLanguage } from '@/i18n';
-import { getCsrfToken } from '@/lib/csrfClient';
 import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 import { palette } from '@/styles/designTokens';
 
-type RecommendationFeedbackKind =
-  | 'useful'
-  | 'already_watched'
-  | 'wrong_mood'
-  | 'too_obvious'
-  | 'too_obscure'
-  | 'close';
+import { useAccountDashboardState } from './accountDashboardState';
+import {
+  filterMovieMemory,
+  filterRecommendations,
+  getAccountRenderState,
+  isSearchActive,
+  shouldLoadMoreMovieMemory,
+  type AccountRenderState,
+} from './accountViewModel';
 
-type RecommendationSummary = {
-  slug: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  stage: string;
-  createdAt: string;
-  completedAt: string | null;
-  peopleCount: number;
-  movieName: string | null;
-  movieYear: number | null;
-  posterURL: string | null;
-  feedbackKind: RecommendationFeedbackKind | null;
-};
+import type {
+  AccountResponse,
+  MemoryActionState,
+  MemoryPageState,
+  MovieMemoryFilter,
+  MovieMemorySummary,
+  RecommendationFilter,
+  RecommendationSummary,
+  UserMovieInteractionKind,
+} from './accountTypes';
 
-type UserMovieInteractionKind = 'watched' | 'liked' | 'not_interested' | 'wrong_mood' | 'not_seen';
-
-type MovieMemorySummary = {
-  movieKey: string;
-  tmdbId: number | null;
-  movieName: string;
-  movieYear: number | null;
-  posterURL: string | null;
-  localizedName: string | null;
-  kind: UserMovieInteractionKind;
-  updatedAt: string;
-};
-
-type AccountResponse = {
-  user: { email: string };
-  recommendations: RecommendationSummary[];
-  movieMemory: MovieMemorySummary[];
-  movieMemoryTotal?: number;
-  movieMemoryNextOffset?: number | null;
-};
-
-type PosterLookupResult = {
-  id: number;
-  posterURL: string | null;
-  localizedName?: string | null;
-};
-
-type LoadState =
-  | { status: 'idle' }
-  | { status: 'loaded'; data: AccountResponse }
-  | { status: 'error' };
-
-type MemoryActionState =
-  | { status: 'forgetting'; movieKey: string }
-  | { status: 'error'; movieKey: string }
-  | null;
-
-type MemoryPageState = { status: 'idle' } | { status: 'loading' } | { status: 'error' };
-
-type RecommendationFilter =
-  | 'all'
-  | 'rated'
-  | 'useful'
-  | 'already_watched'
-  | 'wrong_mood'
-  | 'not_interested';
-
-type MovieMemoryFilter = 'all' | UserMovieInteractionKind;
-
-const ACCOUNT_FETCH_TIMEOUT_MS = 10000;
-const MOVIE_MEMORY_PAGE_SIZE = 50;
 const MEMORY_ROW_HEIGHT_PX = 142;
 const MEMORY_GRID_GAP_PX = 12;
 const MEMORY_GRID_OVERSCAN_ROWS = 3;
@@ -122,355 +70,105 @@ export default function AccountPage() {
   const { auth } = useAuth();
   const { locale, t } = useLanguage();
   const a = t.account;
-  const [state, setState] = useState<LoadState>({ status: 'idle' });
-  const [memoryAction, setMemoryAction] = useState<MemoryActionState>(null);
-  const [memoryPageState, setMemoryPageState] = useState<MemoryPageState>({ status: 'idle' });
+  const { forgetMovie, loadMoreMovieMemory, memoryAction, memoryPageState, state } =
+    useAccountDashboardState(auth.status, locale);
   const [recommendationQuery, setRecommendationQuery] = useState('');
   const [recommendationFilter, setRecommendationFilter] = useState<RecommendationFilter>('all');
   const [memoryQuery, setMemoryQuery] = useState('');
   const [memoryFilter, setMemoryFilter] = useState<MovieMemoryFilter>('all');
-  const requestedMemoryPosters = useRef<Set<string>>(new Set());
+  const renderState = getAccountRenderState(auth.status, state.status);
 
-  useEffect(() => {
-    if (auth.status !== 'authenticated') {
-      return;
-    }
-
-    let cancelled = false;
-    let timedOut = false;
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, ACCOUNT_FETCH_TIMEOUT_MS);
-
-    async function loadAccount() {
-      try {
-        const response = await fetch('/api/account', {
-          method: 'GET',
-          cache: 'no-store',
-          credentials: 'same-origin',
-          signal: controller.signal,
-        });
-        window.clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error('Failed to load account');
-        }
-
-        const data = (await response.json()) as AccountResponse;
-        if (!cancelled) {
-          setState({
-            status: 'loaded',
-            data: {
-              ...data,
-              movieMemory: Array.isArray(data.movieMemory) ? data.movieMemory : [],
-              movieMemoryTotal:
-                typeof data.movieMemoryTotal === 'number'
-                  ? data.movieMemoryTotal
-                  : Array.isArray(data.movieMemory)
-                    ? data.movieMemory.length
-                    : 0,
-              movieMemoryNextOffset: data.movieMemoryNextOffset ?? null,
-            },
-          });
-        }
-      } catch {
-        if (!cancelled || timedOut) {
-          setState({ status: 'error' });
-        }
-      } finally {
-        window.clearTimeout(timeoutId);
-      }
-    }
-
-    void loadAccount();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-      window.clearTimeout(timeoutId);
-    };
-  }, [auth.status]);
-
-  useEffect(() => {
-    requestedMemoryPosters.current.clear();
-  }, [locale]);
-
-  useEffect(() => {
-    if (state.status !== 'loaded') return;
-
-    const missingPosterItems = state.data.movieMemory
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => {
-        const needsLocalizedName = locale !== 'en' && !item.localizedName;
-        return (
-          (!item.posterURL || needsLocalizedName) &&
-          !requestedMemoryPosters.current.has(item.movieKey)
-        );
-      });
-
-    if (missingPosterItems.length === 0) return;
-
-    for (const { item } of missingPosterItems) {
-      requestedMemoryPosters.current.add(item.movieKey);
-    }
-
-    let cancelled = false;
-
-    async function loadMemoryPosters() {
-      try {
-        const response = await fetch('/api/movie-posters', {
-          method: 'POST',
-          cache: 'no-store',
-          credentials: 'same-origin',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            locale,
-            movies: missingPosterItems.map(({ item, index }) => ({
-              id: index,
-              name: item.movieName,
-              year: item.movieYear ?? undefined,
-              tmdbId: item.tmdbId ?? undefined,
-            })),
-          }),
-        });
-
-        if (!response.ok) return;
-
-        const data = (await response.json()) as { results?: PosterLookupResult[] };
-        const resultsByIndex = new Map(
-          (Array.isArray(data.results) ? data.results : []).map((result) => [result.id, result]),
-        );
-
-        if (cancelled || resultsByIndex.size === 0) return;
-
-        setState((current) => {
-          if (current.status !== 'loaded') return current;
-
-          let changed = false;
-          const movieMemory = current.data.movieMemory.map((item, index) => {
-            const result = resultsByIndex.get(index);
-            if (!result) return item;
-
-            const posterURL = item.posterURL ?? result.posterURL;
-            const localizedName = item.localizedName ?? result.localizedName ?? null;
-            if (posterURL === item.posterURL && localizedName === item.localizedName) return item;
-
-            changed = true;
-            return { ...item, posterURL, localizedName };
-          });
-
-          return changed
-            ? {
-                status: 'loaded',
-                data: {
-                  ...current.data,
-                  movieMemory,
-                },
-              }
-            : current;
-        });
-      } catch {
-        // Missing posters should not make the account page fail to load.
-      }
-    }
-
-    void loadMemoryPosters();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [state, locale]);
-
-  const loadMoreMovieMemory = useCallback(async () => {
-    if (state.status !== 'loaded' || memoryPageState.status === 'loading') return;
-
-    const nextOffset = state.data.movieMemoryNextOffset;
-    if (nextOffset == null) return;
-
-    setMemoryPageState({ status: 'loading' });
-
-    try {
-      const response = await fetch(
-        `/api/account/movie-memory?mode=list&offset=${nextOffset}&limit=${MOVIE_MEMORY_PAGE_SIZE}`,
-        {
-          method: 'GET',
-          cache: 'no-store',
-          credentials: 'same-origin',
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to load movie memory page');
-      }
-
-      const page = (await response.json()) as {
-        movieMemory?: MovieMemorySummary[];
-        total?: number;
-        nextOffset?: number | null;
-      };
-      const nextItems = Array.isArray(page.movieMemory) ? page.movieMemory : [];
-
-      setState((current) => {
-        if (current.status !== 'loaded') return current;
-        const existingKeys = new Set(current.data.movieMemory.map((item) => item.movieKey));
-        const movieMemory = [
-          ...current.data.movieMemory,
-          ...nextItems.filter((item) => !existingKeys.has(item.movieKey)),
-        ];
-
-        return {
-          status: 'loaded',
-          data: {
-            ...current.data,
-            movieMemory,
-            movieMemoryTotal: page.total ?? current.data.movieMemoryTotal ?? movieMemory.length,
-            movieMemoryNextOffset: page.nextOffset ?? null,
-          },
-        };
-      });
-      setMemoryPageState({ status: 'idle' });
-    } catch {
-      setMemoryPageState({ status: 'error' });
-    }
-  }, [memoryPageState.status, state]);
-
-  if (auth.status === 'unknown' || (auth.status === 'authenticated' && state.status === 'idle')) {
-    return (
+  const renderers: Record<AccountRenderState, () => ReactNode> = {
+    empty: () => null,
+    error: () => <AccountErrorState labels={a} />,
+    loaded: () =>
+      state.status === 'loaded' ? (
+        <AccountDashboard
+          data={state.data}
+          labels={a}
+          locale={locale}
+          memoryAction={memoryAction}
+          memoryFilter={memoryFilter}
+          memoryPageState={memoryPageState}
+          memoryQuery={memoryQuery}
+          recommendationFilter={recommendationFilter}
+          recommendationQuery={recommendationQuery}
+          onClearMemoryFilters={() => {
+            setMemoryQuery('');
+            setMemoryFilter('all');
+          }}
+          onClearRecommendationFilters={() => {
+            setRecommendationQuery('');
+            setRecommendationFilter('all');
+          }}
+          onForgetMovie={forgetMovie}
+          onLoadMoreMovieMemory={loadMoreMovieMemory}
+          onMemoryFilterChange={(value) => setMemoryFilter(value as MovieMemoryFilter)}
+          onMemoryQueryChange={setMemoryQuery}
+          onRecommendationFilterChange={(value) =>
+            setRecommendationFilter(value as RecommendationFilter)
+          }
+          onRecommendationQueryChange={setRecommendationQuery}
+        />
+      ) : null,
+    loading: () => (
       <AccountShell>
         <AccountLoadingState label={a.loading} />
       </AccountShell>
-    );
-  }
+    ),
+    'signed-out': () => (
+      <SignedOutAccountState labels={a} loginLabel={t.nav.logIn} signUpLabel={t.nav.signUp} />
+    ),
+  };
 
-  if (auth.status !== 'authenticated') {
-    return (
-      <AccountShell>
-        <motion.section
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-auto flex max-w-xl flex-col items-center gap-5 py-16 text-center"
-        >
-          <div
-            className="flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
-          >
-            <UserRound size={26} />
-          </div>
-          <div>
-            <h1
-              className="mb-3 uppercase"
-              style={{
-                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-                fontSize: 'clamp(2rem, 8vw, 3.4rem)',
-                fontWeight: 600,
-                color: 'var(--pc-t1)',
-              }}
-            >
-              {a.signedOutTitle}
-            </h1>
-            <p style={{ color: 'var(--pc-t2)' }}>{a.signedOutBody}</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link
-              href="/login"
-              className="rounded-xl px-5 py-3 text-sm font-semibold"
-              style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
-            >
-              {t.nav.logIn}
-            </Link>
-            <Link
-              href="/register"
-              className="rounded-xl px-5 py-3 text-sm font-semibold"
-              style={{
-                background: 'var(--pc-ghost)',
-                border: '1px solid var(--pc-bd2)',
-                color: 'var(--pc-t2)',
-              }}
-            >
-              {t.nav.signUp}
-            </Link>
-          </div>
-        </motion.section>
-      </AccountShell>
-    );
-  }
+  return renderers[renderState]();
+}
 
-  if (state.status === 'error') {
-    return (
-      <AccountShell>
-        <div
-          className="mx-auto flex max-w-xl items-start gap-4 rounded-2xl p-5"
-          style={{
-            background: `${palette.red}14`,
-            border: `1px solid ${palette.red}35`,
-            color: 'var(--pc-t2)',
-          }}
-        >
-          <AlertCircle size={22} style={{ color: palette.red }} />
-          <div>
-            <h1 className="mb-1 font-semibold" style={{ color: 'var(--pc-t1)' }}>
-              {a.errorTitle}
-            </h1>
-            <p>{a.errorBody}</p>
-          </div>
-        </div>
-      </AccountShell>
-    );
-  }
-
-  if (state.status !== 'loaded') {
-    return null;
-  }
-
-  async function handleForgetMovie(movieKey: string) {
-    setMemoryAction({ status: 'forgetting', movieKey });
-
-    try {
-      const response = await fetch('/api/account/movie-memory', {
-        method: 'DELETE',
-        cache: 'no-store',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-Token': getCsrfToken(),
-        },
-        body: JSON.stringify({ movieKey }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to forget movie memory');
-      }
-
-      setState((current) =>
-        current.status === 'loaded'
-          ? {
-              status: 'loaded',
-              data: {
-                ...current.data,
-                movieMemory: current.data.movieMemory.filter((item) => item.movieKey !== movieKey),
-                movieMemoryTotal: Math.max((current.data.movieMemoryTotal ?? 1) - 1, 0),
-              },
-            }
-          : current,
-      );
-      setMemoryAction(null);
-    } catch {
-      setMemoryAction({ status: 'error', movieKey });
-    }
-  }
-
-  const { user, recommendations, movieMemory } = state.data;
+function AccountDashboard({
+  data,
+  labels,
+  locale,
+  memoryAction,
+  memoryFilter,
+  memoryPageState,
+  memoryQuery,
+  recommendationFilter,
+  recommendationQuery,
+  onClearMemoryFilters,
+  onClearRecommendationFilters,
+  onForgetMovie,
+  onLoadMoreMovieMemory,
+  onMemoryFilterChange,
+  onMemoryQueryChange,
+  onRecommendationFilterChange,
+  onRecommendationQueryChange,
+}: {
+  data: AccountResponse;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+  memoryAction: MemoryActionState;
+  memoryFilter: MovieMemoryFilter;
+  memoryPageState: MemoryPageState;
+  memoryQuery: string;
+  recommendationFilter: RecommendationFilter;
+  recommendationQuery: string;
+  onClearMemoryFilters: () => void;
+  onClearRecommendationFilters: () => void;
+  onForgetMovie: (movieKey: string) => void;
+  onLoadMoreMovieMemory: () => void;
+  onMemoryFilterChange: (value: string) => void;
+  onMemoryQueryChange: (value: string) => void;
+  onRecommendationFilterChange: (value: string) => void;
+  onRecommendationQueryChange: (value: string) => void;
+}) {
+  const { user, recommendations, movieMemory } = data;
   const filteredRecommendations = filterRecommendations(
     recommendations,
     recommendationQuery,
     recommendationFilter,
-    a,
+    labels,
   );
-  const filteredMovieMemory = filterMovieMemory(movieMemory, memoryQuery, memoryFilter, a);
+  const filteredMovieMemory = filterMovieMemory(movieMemory, memoryQuery, memoryFilter, labels);
   const recommendationFiltersActive =
     isSearchActive(recommendationQuery) || recommendationFilter !== 'all';
   const memoryFiltersActive = isSearchActive(memoryQuery) || memoryFilter !== 'all';
@@ -493,7 +191,7 @@ export default function AccountPage() {
               }}
             >
               <UserRound size={14} />
-              {a.badge}
+              {labels.badge}
             </div>
             <h1
               className="uppercase"
@@ -505,7 +203,7 @@ export default function AccountPage() {
                 color: 'var(--pc-t1)',
               }}
             >
-              {a.title}
+              {labels.title}
             </h1>
             <p className="mt-4 text-lg" style={{ color: 'var(--pc-t2)' }}>
               {user.email}
@@ -521,7 +219,7 @@ export default function AccountPage() {
               className="rounded-xl px-5 py-3 text-sm font-semibold"
               style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
             >
-              {a.newRecommendation}
+              {labels.newRecommendation}
             </Link>
             <Link
               href="/delete-account"
@@ -533,111 +231,268 @@ export default function AccountPage() {
               }}
             >
               <Trash2 size={15} />
-              {a.deleteAccount}
+              {labels.deleteAccount}
             </Link>
           </div>
         </div>
 
-        <section className="mx-auto max-w-4xl">
-          <div className="mb-5 flex items-center justify-center gap-3">
-            <Sparkles size={18} style={{ color: 'var(--pc-gold-text)' }} />
-            <h2
-              className="uppercase"
-              style={{
-                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-                letterSpacing: '0.12em',
-                color: 'var(--pc-gold-text)',
-              }}
-            >
-              {a.savedTitle}
-            </h2>
-          </div>
-
-          {recommendations.length === 0 ? (
-            <div
-              className="mx-auto rounded-2xl px-6 py-10 text-center md:px-10 md:py-12"
-              style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
-            >
-              <div
-                className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
-                style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
-              >
-                <Clapperboard size={32} />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold" style={{ color: 'var(--pc-t1)' }}>
-                {a.emptyTitle}
-              </h3>
-              <p className="mx-auto max-w-md" style={{ color: 'var(--pc-t2)' }}>
-                {a.emptyBody}
-              </p>
-            </div>
-          ) : (
-            <>
-              <AccountFilterControls
-                searchLabel={a.searchRecommendations}
-                searchValue={recommendationQuery}
-                onSearchChange={setRecommendationQuery}
-                selectedFilter={recommendationFilter}
-                onFilterChange={(value) => setRecommendationFilter(value as RecommendationFilter)}
-                filters={RECOMMENDATION_FILTERS.map((filter) => ({
-                  value: filter,
-                  label: a.recommendationFilters[filter],
-                }))}
-                visibleCount={filteredRecommendations.length}
-                totalCount={recommendations.length}
-                countLabel={a.showingCount}
-                clearLabel={a.clearFilters}
-                clearSearchLabel={a.clearSearch}
-                hasActiveFilters={recommendationFiltersActive}
-                onClear={() => {
-                  setRecommendationQuery('');
-                  setRecommendationFilter('all');
-                }}
-              />
-
-              {filteredRecommendations.length === 0 ? (
-                <FilteredEmptyState
-                  title={a.noFilteredRecommendationsTitle}
-                  body={a.noFilteredRecommendationsBody}
-                />
-              ) : (
-                <div className="grid gap-3">
-                  {filteredRecommendations.map((recommendation) => (
-                    <RecommendationRow
-                      key={recommendation.slug}
-                      recommendation={recommendation}
-                      locale={locale}
-                      labels={a}
-                    />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </section>
+        <RecommendationsSection
+          recommendations={recommendations}
+          visibleRecommendations={filteredRecommendations}
+          labels={labels}
+          locale={locale}
+          searchValue={recommendationQuery}
+          selectedFilter={recommendationFilter}
+          hasActiveFilters={recommendationFiltersActive}
+          onSearchChange={onRecommendationQueryChange}
+          onFilterChange={onRecommendationFilterChange}
+          onClearFilters={onClearRecommendationFilters}
+        />
 
         <MovieMemorySection
           items={movieMemory}
           visibleItems={filteredMovieMemory}
-          totalItems={state.data.movieMemoryTotal ?? movieMemory.length}
-          hasMoreItems={state.data.movieMemoryNextOffset != null}
+          totalItems={data.movieMemoryTotal ?? movieMemory.length}
+          hasMoreItems={data.movieMemoryNextOffset != null}
           pageState={memoryPageState}
-          labels={a}
+          labels={labels}
           locale={locale}
           action={memoryAction}
           searchValue={memoryQuery}
           selectedFilter={memoryFilter}
           hasActiveFilters={memoryFiltersActive}
-          onSearchChange={setMemoryQuery}
-          onFilterChange={(value) => setMemoryFilter(value as MovieMemoryFilter)}
-          onClearFilters={() => {
-            setMemoryQuery('');
-            setMemoryFilter('all');
-          }}
-          onLoadMore={loadMoreMovieMemory}
-          onForget={handleForgetMovie}
+          onSearchChange={onMemoryQueryChange}
+          onFilterChange={onMemoryFilterChange}
+          onClearFilters={onClearMemoryFilters}
+          onLoadMore={onLoadMoreMovieMemory}
+          onForget={onForgetMovie}
         />
       </motion.section>
+    </AccountShell>
+  );
+}
+
+type RecommendationsResultsProps = {
+  recommendations: RecommendationSummary[];
+  visibleRecommendations: RecommendationSummary[];
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+  searchValue: string;
+  selectedFilter: RecommendationFilter;
+  hasActiveFilters: boolean;
+  onSearchChange: (value: string) => void;
+  onFilterChange: (value: string) => void;
+  onClearFilters: () => void;
+};
+
+function RecommendationsSection(props: RecommendationsResultsProps) {
+  const { labels, recommendations } = props;
+
+  return (
+    <section className="mx-auto max-w-4xl">
+      <div className="mb-5 flex items-center justify-center gap-3">
+        <Sparkles size={18} style={{ color: 'var(--pc-gold-text)' }} />
+        <h2
+          className="uppercase"
+          style={{
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            letterSpacing: '0.12em',
+            color: 'var(--pc-gold-text)',
+          }}
+        >
+          {labels.savedTitle}
+        </h2>
+      </div>
+
+      {recommendations.length === 0 ? (
+        <RecommendationsEmptyState labels={labels} />
+      ) : (
+        <RecommendationsResults {...props} />
+      )}
+    </section>
+  );
+}
+
+function RecommendationsEmptyState({
+  labels,
+}: {
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+}) {
+  return (
+    <div
+      className="mx-auto rounded-2xl px-6 py-10 text-center md:px-10 md:py-12"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <div
+        className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
+        style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
+      >
+        <Clapperboard size={32} />
+      </div>
+      <h3 className="mb-2 text-lg font-semibold" style={{ color: 'var(--pc-t1)' }}>
+        {labels.emptyTitle}
+      </h3>
+      <p className="mx-auto max-w-md" style={{ color: 'var(--pc-t2)' }}>
+        {labels.emptyBody}
+      </p>
+    </div>
+  );
+}
+
+function RecommendationsResults({
+  recommendations,
+  visibleRecommendations,
+  labels,
+  locale,
+  searchValue,
+  selectedFilter,
+  hasActiveFilters,
+  onSearchChange,
+  onFilterChange,
+  onClearFilters,
+}: RecommendationsResultsProps) {
+  return (
+    <>
+      <AccountFilterControls
+        searchLabel={labels.searchRecommendations}
+        searchValue={searchValue}
+        onSearchChange={onSearchChange}
+        selectedFilter={selectedFilter}
+        onFilterChange={onFilterChange}
+        filters={RECOMMENDATION_FILTERS.map((filter) => ({
+          value: filter,
+          label: labels.recommendationFilters[filter],
+        }))}
+        visibleCount={visibleRecommendations.length}
+        totalCount={recommendations.length}
+        countLabel={labels.showingCount}
+        clearLabel={labels.clearFilters}
+        clearSearchLabel={labels.clearSearch}
+        hasActiveFilters={hasActiveFilters}
+        onClear={onClearFilters}
+      />
+
+      <VisibleRecommendations
+        recommendations={visibleRecommendations}
+        labels={labels}
+        locale={locale}
+      />
+    </>
+  );
+}
+
+function VisibleRecommendations({
+  recommendations,
+  labels,
+  locale,
+}: {
+  recommendations: RecommendationSummary[];
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+}) {
+  if (recommendations.length === 0) {
+    return (
+      <FilteredEmptyState
+        title={labels.noFilteredRecommendationsTitle}
+        body={labels.noFilteredRecommendationsBody}
+      />
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {recommendations.map((recommendation) => (
+        <RecommendationRow
+          key={recommendation.slug}
+          recommendation={recommendation}
+          locale={locale}
+          labels={labels}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SignedOutAccountState({
+  labels,
+  loginLabel,
+  signUpLabel,
+}: {
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  loginLabel: string;
+  signUpLabel: string;
+}) {
+  return (
+    <AccountShell>
+      <motion.section
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mx-auto flex max-w-xl flex-col items-center gap-5 py-16 text-center"
+      >
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-2xl"
+          style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
+        >
+          <UserRound size={26} />
+        </div>
+        <div>
+          <h1
+            className="mb-3 uppercase"
+            style={{
+              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+              fontSize: 'clamp(2rem, 8vw, 3.4rem)',
+              fontWeight: 600,
+              color: 'var(--pc-t1)',
+            }}
+          >
+            {labels.signedOutTitle}
+          </h1>
+          <p style={{ color: 'var(--pc-t2)' }}>{labels.signedOutBody}</p>
+        </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link
+            href="/login"
+            className="rounded-xl px-5 py-3 text-sm font-semibold"
+            style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
+          >
+            {loginLabel}
+          </Link>
+          <Link
+            href="/register"
+            className="rounded-xl px-5 py-3 text-sm font-semibold"
+            style={{
+              background: 'var(--pc-ghost)',
+              border: '1px solid var(--pc-bd2)',
+              color: 'var(--pc-t2)',
+            }}
+          >
+            {signUpLabel}
+          </Link>
+        </div>
+      </motion.section>
+    </AccountShell>
+  );
+}
+
+function AccountErrorState({ labels }: { labels: ReturnType<typeof useLanguage>['t']['account'] }) {
+  return (
+    <AccountShell>
+      <div
+        className="mx-auto flex max-w-xl items-start gap-4 rounded-2xl p-5"
+        style={{
+          background: `${palette.red}14`,
+          border: `1px solid ${palette.red}35`,
+          color: 'var(--pc-t2)',
+        }}
+      >
+        <AlertCircle size={22} style={{ color: palette.red }} />
+        <div>
+          <h1 className="mb-1 font-semibold" style={{ color: 'var(--pc-t1)' }}>
+            {labels.errorTitle}
+          </h1>
+          <p>{labels.errorBody}</p>
+        </div>
+      </div>
     </AccountShell>
   );
 }
@@ -834,13 +689,7 @@ function RecommendationRow({
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(recommendation.createdAt));
-  const title =
-    recommendation.movieName ??
-    (recommendation.status === 'completed' ? labels.untitledCompleted : labels.pendingTitle);
-  const statusLabel = labels.status[recommendation.status] ?? recommendation.status;
-  const feedbackLabel = recommendation.feedbackKind
-    ? labels.feedback[recommendation.feedbackKind]
-    : null;
+  const title = getRecommendationTitle(recommendation, labels);
 
   return (
     <Link
@@ -848,54 +697,11 @@ function RecommendationRow({
       className="grid gap-4 rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-0.5 md:grid-cols-[88px_1fr]"
       style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
     >
-      <div
-        className="flex aspect-[2/3] w-20 items-center justify-center overflow-hidden rounded-xl md:w-[88px]"
-        style={{ background: 'var(--pc-ghost)' }}
-      >
-        {recommendation.posterURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={recommendation.posterURL}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <Film size={22} style={{ color: 'var(--pc-t3)' }} />
-        )}
-      </div>
+      <RecommendationPoster posterURL={recommendation.posterURL} />
 
       <div className="min-w-0">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span
-            className="rounded-full px-2.5 py-1 text-xs font-semibold"
-            style={{
-              background: statusBackground(recommendation.status),
-              color: statusColor(recommendation.status),
-            }}
-          >
-            {statusLabel}
-          </span>
-          <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
-            {date}
-          </span>
-          {feedbackLabel ? (
-            <span
-              className="rounded-full px-2.5 py-1 text-xs font-semibold"
-              style={{
-                background: 'var(--pc-gold-subtle)',
-                border: '1px solid var(--pc-gold-bd)',
-                color: 'var(--pc-gold-text)',
-              }}
-            >
-              {labels.feedbackLabel}: {feedbackLabel}
-            </span>
-          ) : null}
-        </div>
-        <h3 className="truncate text-lg font-semibold" style={{ color: 'var(--pc-t1)' }}>
-          {title}
-          {recommendation.movieYear ? ` (${recommendation.movieYear})` : ''}
-        </h3>
+        <RecommendationMeta date={date} labels={labels} recommendation={recommendation} />
+        <RecommendationTitle title={title} year={recommendation.movieYear} />
         <p className="mt-1 text-sm" style={{ color: 'var(--pc-t3)' }}>
           {labels.peopleCount.replace('{count}', String(recommendation.peopleCount))}
         </p>
@@ -911,24 +717,96 @@ function RecommendationRow({
   );
 }
 
-function MovieMemorySection({
-  items,
-  visibleItems,
-  totalItems,
-  hasMoreItems,
-  pageState,
+function RecommendationPoster({ posterURL }: { posterURL: string | null }) {
+  return (
+    <div
+      className="flex aspect-[2/3] w-20 items-center justify-center overflow-hidden rounded-xl md:w-[88px]"
+      style={{ background: 'var(--pc-ghost)' }}
+    >
+      {posterURL ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={posterURL} alt="" className="h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <Film size={22} style={{ color: 'var(--pc-t3)' }} />
+      )}
+    </div>
+  );
+}
+
+function RecommendationMeta({
+  date,
   labels,
-  locale,
-  action,
-  searchValue,
-  selectedFilter,
-  hasActiveFilters,
-  onSearchChange,
-  onFilterChange,
-  onClearFilters,
-  onLoadMore,
-  onForget,
+  recommendation,
 }: {
+  date: string;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  recommendation: RecommendationSummary;
+}) {
+  const statusLabel = labels.status[recommendation.status] ?? recommendation.status;
+  const feedbackLabel = recommendation.feedbackKind
+    ? labels.feedback[recommendation.feedbackKind]
+    : null;
+
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-2">
+      <span
+        className="rounded-full px-2.5 py-1 text-xs font-semibold"
+        style={{
+          background: statusBackground(recommendation.status),
+          color: statusColor(recommendation.status),
+        }}
+      >
+        {statusLabel}
+      </span>
+      <span className="text-xs" style={{ color: 'var(--pc-t4)' }}>
+        {date}
+      </span>
+      <RecommendationFeedbackBadge feedbackLabel={feedbackLabel} label={labels.feedbackLabel} />
+    </div>
+  );
+}
+
+function RecommendationFeedbackBadge({
+  feedbackLabel,
+  label,
+}: {
+  feedbackLabel: string | null;
+  label: string;
+}) {
+  if (!feedbackLabel) return null;
+
+  return (
+    <span
+      className="rounded-full px-2.5 py-1 text-xs font-semibold"
+      style={{
+        background: 'var(--pc-gold-subtle)',
+        border: '1px solid var(--pc-gold-bd)',
+        color: 'var(--pc-gold-text)',
+      }}
+    >
+      {label}: {feedbackLabel}
+    </span>
+  );
+}
+
+function RecommendationTitle({ title, year }: { title: string; year: number | null }) {
+  return (
+    <h3 className="truncate text-lg font-semibold" style={{ color: 'var(--pc-t1)' }}>
+      {title}
+      {year ? ` (${year})` : ''}
+    </h3>
+  );
+}
+
+function getRecommendationTitle(
+  recommendation: RecommendationSummary,
+  labels: ReturnType<typeof useLanguage>['t']['account'],
+) {
+  if (recommendation.movieName) return recommendation.movieName;
+  return recommendation.status === 'completed' ? labels.untitledCompleted : labels.pendingTitle;
+}
+
+type MovieMemoryContentProps = {
   items: MovieMemorySummary[];
   visibleItems: MovieMemorySummary[];
   totalItems: number;
@@ -945,7 +823,11 @@ function MovieMemorySection({
   onClearFilters: () => void;
   onLoadMore: () => void;
   onForget: (movieKey: string) => void;
-}) {
+};
+
+function MovieMemorySection(props: MovieMemoryContentProps) {
+  const { action, labels } = props;
+
   return (
     <section className="mx-auto mt-12 max-w-4xl">
       <div className="mb-4 flex items-center justify-center gap-3">
@@ -965,18 +847,7 @@ function MovieMemorySection({
         {labels.memoryBody}
       </p>
 
-      {action?.status === 'error' ? (
-        <div
-          className="mb-3 rounded-2xl px-4 py-3 text-sm"
-          style={{
-            background: `${palette.red}12`,
-            border: `1px solid ${palette.red}35`,
-            color: palette.red,
-          }}
-        >
-          {labels.memoryForgetError}
-        </div>
-      ) : null}
+      <MovieMemoryActionError action={action} label={labels.memoryForgetError} />
 
       <Link
         href="/account/movie-memory"
@@ -1008,61 +879,147 @@ function MovieMemorySection({
         </span>
       </Link>
 
-      {items.length === 0 ? (
-        <div
-          className="rounded-2xl px-6 py-8 text-center"
-          style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
-        >
-          <h3 className="mb-2 text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
-            {labels.memoryEmptyTitle}
-          </h3>
-          <p className="mx-auto max-w-md text-sm" style={{ color: 'var(--pc-t2)' }}>
-            {labels.memoryEmptyBody}
-          </p>
-        </div>
-      ) : (
-        <>
-          <AccountFilterControls
-            searchLabel={labels.searchMovieMemory}
-            searchValue={searchValue}
-            onSearchChange={onSearchChange}
-            selectedFilter={selectedFilter}
-            onFilterChange={onFilterChange}
-            filters={MOVIE_MEMORY_FILTERS.map((filter) => ({
-              value: filter,
-              label: labels.memoryFilters[filter],
-            }))}
-            visibleCount={visibleItems.length}
-            totalCount={totalItems}
-            countLabel={labels.showingCount}
-            clearLabel={labels.clearFilters}
-            clearSearchLabel={labels.clearSearch}
-            hasActiveFilters={hasActiveFilters}
-            onClear={onClearFilters}
-          />
-
-          {visibleItems.length === 0 ? (
-            <FilteredEmptyState
-              title={labels.noFilteredMemoryTitle}
-              body={labels.noFilteredMemoryBody}
-            />
-          ) : (
-            <VirtualMovieMemoryGrid
-              items={visibleItems}
-              labels={labels}
-              locale={locale}
-              action={action}
-              loadedCount={items.length}
-              totalCount={totalItems}
-              hasMoreItems={hasMoreItems}
-              pageState={pageState}
-              onLoadMore={onLoadMore}
-              onForget={onForget}
-            />
-          )}
-        </>
-      )}
+      <MovieMemoryContent {...props} />
     </section>
+  );
+}
+
+function MovieMemoryActionError({ action, label }: { action: MemoryActionState; label: string }) {
+  if (action?.status !== 'error') return null;
+
+  return (
+    <div
+      className="mb-3 rounded-2xl px-4 py-3 text-sm"
+      style={{
+        background: `${palette.red}12`,
+        border: `1px solid ${palette.red}35`,
+        color: palette.red,
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
+function MovieMemoryContent({
+  items,
+  visibleItems,
+  totalItems,
+  hasMoreItems,
+  pageState,
+  labels,
+  locale,
+  action,
+  searchValue,
+  selectedFilter,
+  hasActiveFilters,
+  onSearchChange,
+  onFilterChange,
+  onClearFilters,
+  onLoadMore,
+  onForget,
+}: MovieMemoryContentProps) {
+  if (items.length === 0) return <MovieMemoryEmptyState labels={labels} />;
+
+  return (
+    <>
+      <AccountFilterControls
+        searchLabel={labels.searchMovieMemory}
+        searchValue={searchValue}
+        onSearchChange={onSearchChange}
+        selectedFilter={selectedFilter}
+        onFilterChange={onFilterChange}
+        filters={MOVIE_MEMORY_FILTERS.map((filter) => ({
+          value: filter,
+          label: labels.memoryFilters[filter],
+        }))}
+        visibleCount={visibleItems.length}
+        totalCount={totalItems}
+        countLabel={labels.showingCount}
+        clearLabel={labels.clearFilters}
+        clearSearchLabel={labels.clearSearch}
+        hasActiveFilters={hasActiveFilters}
+        onClear={onClearFilters}
+      />
+
+      <MovieMemoryResults
+        items={items}
+        visibleItems={visibleItems}
+        totalItems={totalItems}
+        hasMoreItems={hasMoreItems}
+        pageState={pageState}
+        labels={labels}
+        locale={locale}
+        action={action}
+        onLoadMore={onLoadMore}
+        onForget={onForget}
+      />
+    </>
+  );
+}
+
+function MovieMemoryEmptyState({
+  labels,
+}: {
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+}) {
+  return (
+    <div
+      className="rounded-2xl px-6 py-8 text-center"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <h3 className="mb-2 text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
+        {labels.memoryEmptyTitle}
+      </h3>
+      <p className="mx-auto max-w-md text-sm" style={{ color: 'var(--pc-t2)' }}>
+        {labels.memoryEmptyBody}
+      </p>
+    </div>
+  );
+}
+
+function MovieMemoryResults({
+  items,
+  visibleItems,
+  totalItems,
+  hasMoreItems,
+  pageState,
+  labels,
+  locale,
+  action,
+  onLoadMore,
+  onForget,
+}: {
+  items: MovieMemorySummary[];
+  visibleItems: MovieMemorySummary[];
+  totalItems: number;
+  hasMoreItems: boolean;
+  pageState: MemoryPageState;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  locale: string;
+  action: MemoryActionState;
+  onLoadMore: () => void;
+  onForget: (movieKey: string) => void;
+}) {
+  if (visibleItems.length === 0) {
+    return (
+      <FilteredEmptyState title={labels.noFilteredMemoryTitle} body={labels.noFilteredMemoryBody} />
+    );
+  }
+
+  return (
+    <VirtualMovieMemoryGrid
+      items={visibleItems}
+      labels={labels}
+      locale={locale}
+      action={action}
+      loadedCount={items.length}
+      totalCount={totalItems}
+      hasMoreItems={hasMoreItems}
+      pageState={pageState}
+      onLoadMore={onLoadMore}
+      onForget={onForget}
+    />
   );
 }
 
@@ -1127,12 +1084,10 @@ function VirtualMovieMemoryGrid({
   }, []);
 
   const maybeLoadMore = useCallback(() => {
-    const node = scrollerRef.current;
-    if (!node || !hasMoreItems || isLoadingMore || pageState.status === 'error') return;
-    if (node.scrollTop + node.clientHeight >= node.scrollHeight - 520) {
+    if (shouldLoadMoreMovieMemory(scrollerRef.current, hasMoreItems, isLoadingMore, pageState)) {
       onLoadMore();
     }
-  }, [hasMoreItems, isLoadingMore, onLoadMore, pageState.status]);
+  }, [hasMoreItems, isLoadingMore, onLoadMore, pageState]);
 
   useEffect(() => {
     updateViewport();
@@ -1146,29 +1101,13 @@ function VirtualMovieMemoryGrid({
 
   return (
     <div>
-      <div
-        className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs"
-        style={{ color: 'var(--pc-t4)' }}
-      >
-        <span>
-          {labels.memoryLoadedCount
-            .replace('{loaded}', String(loadedCount))
-            .replace('{total}', String(totalCount))}
-        </span>
-        {pageState.status === 'error' ? (
-          <button
-            type="button"
-            onClick={onLoadMore}
-            className="rounded-full px-3 py-1.5 font-semibold transition hover:bg-[var(--pc-ghost)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-            style={{
-              border: '1px solid var(--pc-bd2)',
-              color: 'var(--pc-t2)',
-            }}
-          >
-            {labels.loadMoreMemoryRetry}
-          </button>
-        ) : null}
-      </div>
+      <MovieMemoryGridStatus
+        loadedCount={loadedCount}
+        totalCount={totalCount}
+        pageState={pageState}
+        labels={labels}
+        onLoadMore={onLoadMore}
+      />
       <div
         ref={scrollerRef}
         onScroll={() => {
@@ -1202,27 +1141,110 @@ function VirtualMovieMemoryGrid({
           ))}
         </div>
         <div style={{ height: bottomSpacer }} aria-hidden="true" />
-        {hasMoreItems ? (
-          <div className="flex justify-center py-4">
-            <button
-              type="button"
-              onClick={onLoadMore}
-              disabled={isLoadingMore}
-              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
-              style={{
-                background: 'var(--pc-ghost)',
-                border: '1px solid var(--pc-bd2)',
-                color: 'var(--pc-t2)',
-              }}
-            >
-              {isLoadingMore ? <Loader2 className="animate-spin" size={16} /> : null}
-              {isLoadingMore ? labels.loadingMoreMemory : labels.loadMoreMemory}
-            </button>
-          </div>
-        ) : null}
+        <MovieMemoryLoadMoreButton
+          hasMoreItems={hasMoreItems}
+          isLoadingMore={isLoadingMore}
+          labels={labels}
+          onLoadMore={onLoadMore}
+        />
       </div>
     </div>
   );
+}
+
+function MovieMemoryGridStatus({
+  loadedCount,
+  totalCount,
+  pageState,
+  labels,
+  onLoadMore,
+}: {
+  loadedCount: number;
+  totalCount: number;
+  pageState: MemoryPageState;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  onLoadMore: () => void;
+}) {
+  return (
+    <div
+      className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs"
+      style={{ color: 'var(--pc-t4)' }}
+    >
+      <span>
+        {labels.memoryLoadedCount
+          .replace('{loaded}', String(loadedCount))
+          .replace('{total}', String(totalCount))}
+      </span>
+      <MovieMemoryRetryButton
+        isVisible={pageState.status === 'error'}
+        label={labels.loadMoreMemoryRetry}
+        onLoadMore={onLoadMore}
+      />
+    </div>
+  );
+}
+
+function MovieMemoryRetryButton({
+  isVisible,
+  label,
+  onLoadMore,
+}: {
+  isVisible: boolean;
+  label: string;
+  onLoadMore: () => void;
+}) {
+  if (!isVisible) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onLoadMore}
+      className="rounded-full px-3 py-1.5 font-semibold transition hover:bg-[var(--pc-ghost)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+      style={{
+        border: '1px solid var(--pc-bd2)',
+        color: 'var(--pc-t2)',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MovieMemoryLoadMoreButton({
+  hasMoreItems,
+  isLoadingMore,
+  labels,
+  onLoadMore,
+}: {
+  hasMoreItems: boolean;
+  isLoadingMore: boolean;
+  labels: ReturnType<typeof useLanguage>['t']['account'];
+  onLoadMore: () => void;
+}) {
+  if (!hasMoreItems) return null;
+
+  return (
+    <div className="flex justify-center py-4">
+      <button
+        type="button"
+        onClick={onLoadMore}
+        disabled={isLoadingMore}
+        className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition hover:-translate-y-0.5 active:translate-y-0 disabled:pointer-events-none disabled:opacity-60"
+        style={{
+          background: 'var(--pc-ghost)',
+          border: '1px solid var(--pc-bd2)',
+          color: 'var(--pc-t2)',
+        }}
+      >
+        <MovieMemoryLoadMoreSpinner isVisible={isLoadingMore} />
+        {isLoadingMore ? labels.loadingMoreMemory : labels.loadMoreMemory}
+      </button>
+    </div>
+  );
+}
+
+function MovieMemoryLoadMoreSpinner({ isVisible }: { isVisible: boolean }) {
+  return isVisible ? <Loader2 className="animate-spin" size={16} /> : null;
 }
 
 function MovieMemoryCard({
@@ -1305,12 +1327,17 @@ function MovieMemoryCard({
 }
 
 function MemoryKindIcon({ kind }: { kind: UserMovieInteractionKind }) {
-  if (kind === 'watched') return <Eye size={12} />;
-  if (kind === 'liked') return <Heart size={12} />;
-  if (kind === 'not_seen') return <Film size={12} />;
-  if (kind === 'wrong_mood') return <Frown size={12} />;
-  return <Ban size={12} />;
+  const Icon = MEMORY_KIND_ICON_BY_KIND[kind];
+  return <Icon size={12} />;
 }
+
+const MEMORY_KIND_ICON_BY_KIND = {
+  liked: Heart,
+  not_interested: Ban,
+  not_seen: Film,
+  watched: Eye,
+  wrong_mood: Frown,
+} satisfies Record<UserMovieInteractionKind, typeof Eye>;
 
 function statusBackground(status: RecommendationSummary['status']) {
   if (status === 'completed') return `${palette.green}18`;
@@ -1322,95 +1349,4 @@ function statusColor(status: RecommendationSummary['status']) {
   if (status === 'completed') return palette.green;
   if (status === 'failed') return palette.red;
   return 'var(--pc-gold-text)';
-}
-
-function filterRecommendations(
-  recommendations: RecommendationSummary[],
-  query: string,
-  filter: RecommendationFilter,
-  labels: ReturnType<typeof useLanguage>['t']['account'],
-) {
-  const normalizedQuery = normalizeSearch(query);
-  return recommendations.filter((recommendation) => {
-    if (!matchesRecommendationFilter(recommendation, filter)) {
-      return false;
-    }
-
-    if (!normalizedQuery) {
-      return true;
-    }
-
-    return recommendationSearchText(recommendation, labels).includes(normalizedQuery);
-  });
-}
-
-function filterMovieMemory(
-  items: MovieMemorySummary[],
-  query: string,
-  filter: MovieMemoryFilter,
-  labels: ReturnType<typeof useLanguage>['t']['account'],
-) {
-  const normalizedQuery = normalizeSearch(query);
-  return items.filter((item) => {
-    if (filter !== 'all' && item.kind !== filter) {
-      return false;
-    }
-
-    if (!normalizedQuery) {
-      return true;
-    }
-
-    return movieMemorySearchText(item, labels).includes(normalizedQuery);
-  });
-}
-
-function matchesRecommendationFilter(
-  recommendation: RecommendationSummary,
-  filter: RecommendationFilter,
-) {
-  if (filter === 'all') return true;
-  if (filter === 'rated') return Boolean(recommendation.feedbackKind);
-  if (filter === 'not_interested') {
-    return (
-      recommendation.feedbackKind === 'too_obvious' || recommendation.feedbackKind === 'too_obscure'
-    );
-  }
-  return recommendation.feedbackKind === filter;
-}
-
-function recommendationSearchText(
-  recommendation: RecommendationSummary,
-  labels: ReturnType<typeof useLanguage>['t']['account'],
-) {
-  return normalizeSearch(
-    [
-      recommendation.movieName,
-      recommendation.movieYear,
-      labels.status[recommendation.status],
-      recommendation.feedbackKind ? labels.feedback[recommendation.feedbackKind] : null,
-    ]
-      .filter(Boolean)
-      .join(' '),
-  );
-}
-
-function movieMemorySearchText(
-  item: MovieMemorySummary,
-  labels: ReturnType<typeof useLanguage>['t']['account'],
-) {
-  return normalizeSearch(
-    [item.movieName, item.localizedName, item.movieYear, labels.memoryKind[item.kind]]
-      .filter(Boolean)
-      .join(' '),
-  );
-}
-
-function normalizeSearch(value: unknown) {
-  return String(value ?? '')
-    .trim()
-    .toLocaleLowerCase();
-}
-
-function isSearchActive(value: string) {
-  return normalizeSearch(value).length > 0;
 }
