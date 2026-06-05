@@ -29,7 +29,7 @@ legacy findings, so PR review should focus on findings introduced by a changeset
 and on obvious cleanup candidates. Use `fallow audit` for PR-shaped feedback and
 the focused commands when planning cleanup work.
 
-## Initial Baseline Notes
+## Baseline Notes
 
 The first scoped pass on `@pop-choice/web` found useful signal:
 
@@ -51,6 +51,23 @@ recommended adoption path is:
 3. Add baselines or suppressions only when a finding is intentionally kept.
 4. Make the PR audit blocking once new-only failures are consistently low-noise.
 
+The repo-wide changed-code hygiene rollout is complete: PR-local Fallow Audit is
+green on the cleanup PRs, and changed-code dead-code and duplication checks are
+clean for the focused cleanup slices. The remaining backlog is inherited
+complexity rather than new-code regressions.
+
+Fresh `development` complexity baseline on 2026-06-05:
+
+- `health`: 165 findings.
+- Severity split: 37 critical, 47 high, 81 moderate.
+- Workspace split: 136 in `apps/web`, 28 in `apps/backoffice`, and 1 script
+  finding.
+
+Track the repo-wide complexity cleanup in
+[#717](https://github.com/shchilkin/PopChoice/issues/717). The child issues split
+the work by file/workflow so each PR can keep behavior stable and avoid broad
+complexity suppressions.
+
 ## Monorepo Follow-ups
 
 Fallow is configured at the repository root and sees all npm workspaces:
@@ -69,6 +86,13 @@ Completed focused follow-ups:
   entrypoint ownership ([#703](https://github.com/shchilkin/PopChoice/issues/703)),
   and shared package health hotspots
   ([#704](https://github.com/shchilkin/PopChoice/issues/704)).
+
+Active repo-wide complexity follow-up:
+
+- [#717](https://github.com/shchilkin/PopChoice/issues/717): drive inherited
+  Fallow complexity findings to zero actionable items. Start with the highest
+  risk worker, recommendation, persistence, eval, backoffice, account/results,
+  auth, catalog, and UI helper slices tracked by its child issues.
 
 The root config intentionally ignores `**/e2e/**` for dead-code reachability and
 `collections/server` as a generated Fumadocs import. Keep those ignores narrow:
