@@ -16,6 +16,11 @@ import {
   type QueueRealtimeConnectionState,
 } from './helpers';
 import { QueueCommandStrip, QueueJobsPanel, QueueRealtimeStatus } from './realtimeSections';
+import {
+  buildQueueFingerprint,
+  getConnectionStateAfterSnapshotRefresh,
+  loadQueueSnapshotRefresh,
+} from './realtimeViewModel';
 
 async function fetchCatalogMaintenanceQueue(
   search: string,
@@ -54,16 +59,14 @@ export function CatalogMaintenanceQueueRealtime({
   const [lastEventAt, setLastEventAt] = useState<string | null>(initialJobPage.updatedAt);
   const [nowMs, setNowMs] = useState(Date.now());
   const refreshRequestId = useRef(0);
-  const initialFingerprint = useRef(
-    `${initialJobPage.state}:${initialJobPage.offset}:${initialJobPage.limit}:${initialJobPage.updatedAt}`,
-  );
+  const initialFingerprint = useRef(buildQueueFingerprint(initialJobPage));
   const search = useMemo(() => {
     const serialized = searchParams.toString();
     return serialized ? `?${serialized}` : '';
   }, [searchParams]);
 
   useEffect(() => {
-    const nextFingerprint = `${initialJobPage.state}:${initialJobPage.offset}:${initialJobPage.limit}:${initialJobPage.updatedAt}`;
+    const nextFingerprint = buildQueueFingerprint(initialJobPage);
     if (initialFingerprint.current === nextFingerprint) return;
 
     initialFingerprint.current = nextFingerprint;
@@ -77,22 +80,21 @@ export function CatalogMaintenanceQueueRealtime({
     const requestId = ++refreshRequestId.current;
     setIsFallbackFetching(true);
 
-    try {
-      const nextJobPage = await fetchCatalogMaintenanceQueue(search);
-      if (requestId !== refreshRequestId.current) return;
+    const result = await loadQueueSnapshotRefresh({
+      fetchQueue: fetchCatalogMaintenanceQueue,
+      search,
+    });
+    if (requestId !== refreshRequestId.current) return;
 
-      setJobPage(nextJobPage);
-      setLastEventAt(nextJobPage.updatedAt);
-      setNowMs(Date.now());
-      setConnectionState((current) => (current === 'connected' ? current : 'fallback'));
-    } catch {
-      if (requestId === refreshRequestId.current) {
-        setConnectionState('reconnecting');
-        setNowMs(Date.now());
-      }
-    } finally {
-      if (requestId === refreshRequestId.current) setIsFallbackFetching(false);
+    if (result.kind === 'success') {
+      setJobPage(result.jobPage);
+      setLastEventAt(result.jobPage.updatedAt);
+      setConnectionState(getConnectionStateAfterSnapshotRefresh);
+    } else {
+      setConnectionState('reconnecting');
     }
+    setNowMs(result.nowMs);
+    setIsFallbackFetching(false);
   }, [search]);
 
   useEffect(() => {

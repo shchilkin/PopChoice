@@ -3,21 +3,23 @@ import type {
   CatalogMaintenanceQueueJobState,
   CatalogMaintenanceQueueJobSummary,
 } from '../../catalogMaintenanceQueue';
-import { formatLiveSyncTime } from '../liveRefreshTime';
 import { PanelHeader, SimplePaginationControls, TableEmptyRow, TableScroll } from '../shared';
 import {
   buildQueueHref,
   getLastQueueEvent,
-  getQueueHealth,
   getQueueJobLinks,
   getQueueStateClass,
   getQueueStateCount,
-  queueRealtimeDetailCopy,
   QUEUE_STATES,
-  queueRealtimeCopy,
   STATE_LABELS,
   type QueueRealtimeStatus as QueueRealtimeStatusValue,
 } from './helpers';
+import {
+  buildQueueCommandStripViewModel,
+  buildQueueRealtimeStatusViewModel,
+} from './realtimeViewModel';
+
+const QUEUE_JOB_COLUMNS = ['Job', 'State', 'Details', 'Attempts', 'Last update', 'Links'] as const;
 
 export function QueueCommandStrip({
   bullBoardUrl,
@@ -26,48 +28,30 @@ export function QueueCommandStrip({
   bullBoardUrl?: string;
   jobPage: CatalogMaintenanceQueueJobPage;
 }) {
-  const health = getQueueHealth(jobPage);
+  const view = buildQueueCommandStripViewModel({ bullBoardUrl, jobPage });
 
   return (
-    <section className={`queue-command-strip ${health.state}`}>
+    <section className={`queue-command-strip ${view.state}`}>
       <div className="queue-command-main">
-        <span
-          className={`queue-dot ${health.state === 'healthy' ? '' : health.state === 'active' ? 'neutral' : 'warning'}`}
-          aria-hidden="true"
-        />
+        <span className={view.dotClassName} aria-hidden="true" />
         <div>
-          <h2>{health.title}</h2>
-          <p>{health.copy}</p>
+          <h2>{view.title}</h2>
+          <p>{view.copy}</p>
         </div>
       </div>
       <div className="queue-command-metrics" aria-label="Queue health metrics">
-        <span>
-          <strong>{jobPage.openJobs}</strong> open
-        </span>
-        <span className={jobPage.counts.failed > 0 ? 'warn' : ''}>
-          <strong>{jobPage.counts.failed}</strong> failed
-        </span>
-        <span>
-          <strong>{jobPage.counts.waiting}</strong> waiting
-        </span>
-        <span>
-          <strong>{jobPage.counts.delayed}</strong> scheduled
-        </span>
+        {view.metrics.map((metric) => (
+          <span key={metric.label} className={metric.className}>
+            <strong>{metric.value}</strong> {metric.label}
+          </span>
+        ))}
       </div>
       <div className="queue-command-actions">
-        {jobPage.counts.failed > 0 && jobPage.state !== 'failed' ? (
-          <a
-            className="button secondary small"
-            href={buildQueueHref({ page: 1, pageSize: jobPage.limit, state: 'failed' })}
-          >
-            Review failed
+        {view.actions.map((action) => (
+          <a key={action.href} className={action.className} href={action.href}>
+            {action.label}
           </a>
-        ) : null}
-        {bullBoardUrl ? (
-          <a className="button small" href={bullBoardUrl}>
-            Open Bull Board
-          </a>
-        ) : null}
+        ))}
       </div>
     </section>
   );
@@ -108,12 +92,9 @@ export function QueueJobsPanel({ jobPage }: { jobPage: CatalogMaintenanceQueueJo
         <table className="queue-jobs-table">
           <thead>
             <tr>
-              <th>Job</th>
-              <th>State</th>
-              <th>Details</th>
-              <th>Attempts</th>
-              <th>Last update</th>
-              <th>Links</th>
+              {QUEUE_JOB_COLUMNS.map((column) => (
+                <th key={column}>{column}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -289,29 +270,27 @@ export function QueueRealtimeStatus({
   onRefresh?: () => void;
   status: QueueRealtimeStatusValue;
 }) {
-  const copy = queueRealtimeCopy(status);
-  const detailCopy = queueRealtimeDetailCopy(status);
-  const lastEvent = lastEventAt ? formatLiveSyncTime(lastEventAt) : null;
-  const dotState =
-    status === 'connecting' || isRefreshing ? 'pending' : status === 'connected' ? '' : 'error';
-  const showFallbackControls = status !== 'connected' && status !== 'connecting';
+  const view = buildQueueRealtimeStatusViewModel({
+    isRefreshing,
+    lastEventAt,
+    onRefreshAvailable: Boolean(onRefresh),
+    status,
+  });
 
   return (
     <div className={`live-refresh realtime-refresh ${status}`} aria-live="polite">
-      <span className={`live-refresh-dot ${dotState}`} aria-hidden="true" />
-      <span>{copy}</span>
-      <span className="live-refresh-meta">
-        {lastEvent ? `Updated ${lastEvent}` : 'Waiting for the first update'}
-      </span>
-      {detailCopy ? <span className="live-refresh-error">{detailCopy}</span> : null}
-      {showFallbackControls && onRefresh ? (
+      <span className={`live-refresh-dot ${view.dotState}`} aria-hidden="true" />
+      <span>{view.copy}</span>
+      <span className="live-refresh-meta">{view.lastEventLabel}</span>
+      {view.detailCopy ? <span className="live-refresh-error">{view.detailCopy}</span> : null}
+      {view.refreshButton && onRefresh ? (
         <button
           className="button small quiet"
-          disabled={isRefreshing}
+          disabled={view.refreshButton.disabled}
           onClick={onRefresh}
           type="button"
         >
-          {isRefreshing ? 'Refreshing' : 'Refresh'}
+          {view.refreshButton.label}
         </button>
       ) : null}
     </div>
