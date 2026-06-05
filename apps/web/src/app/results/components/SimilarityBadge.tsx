@@ -3,8 +3,8 @@
 import { Sparkles } from 'lucide-react';
 
 import { useLanguage } from '@/i18n';
-import { palette } from '@/styles/designTokens';
-import { getSimilarityTier } from '@/utils/ui';
+
+import { buildResultMatchViewModel } from './resultMovieCardViewModel';
 
 export function SimilarityBadge({
   similarity,
@@ -14,31 +14,21 @@ export function SimilarityBadge({
   compact?: boolean;
 }) {
   const { t } = useLanguage();
-  const { pct, tier } = getSimilarityTier(similarity);
-  const color =
-    tier === 'strong'
-      ? palette.teal
-      : tier === 'good'
-        ? palette.gold
-        : tier === 'possible'
-          ? palette.amber
-          : palette.purple;
-  const label = t.results.matchTiers[tier];
-  const exactLabel = t.results.matchTierExact.replace('{pct}', String(pct));
+  const match = buildResultMatchViewModel(similarity, t.results);
 
   return (
     <div
       className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs"
-      title={exactLabel}
-      aria-label={`${label}. ${exactLabel}`}
+      title={match.exactLabel}
+      aria-label={`${match.label}. ${match.exactLabel}`}
       style={{
-        background: `${color}18`,
-        border: `1px solid ${color}35`,
-        color,
+        background: `${match.color}18`,
+        border: `1px solid ${match.color}35`,
+        color: match.color,
       }}
     >
       {!compact && <Sparkles size={10} />}
-      {label}
+      {match.label}
     </div>
   );
 }
