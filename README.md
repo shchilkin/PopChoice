@@ -189,7 +189,7 @@ Live runs require configured provider/database environment variables and are int
 
 ### Static code quality
 
-Fallow provides advisory unused-code, duplication, complexity, and PR audit checks:
+Fallow provides unused-code, duplication, complexity, and PR audit checks. The PR audit runs as a required new-only CI gate:
 
 ```bash
 npm run quality:fallow:audit -- --changed-since origin/development

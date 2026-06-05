@@ -141,7 +141,7 @@ This is an extraction direction, not a mandate for large-scale file moves right 
 - Consolidate shared TypeScript, lint, formatting, and test conventions.
 - Reuse config packages where duplication exists across app/services.
 - Align CI checks to the new boundaries and ownership model.
-- [x] Adopt Fallow code-quality analysis in [#684](https://github.com/shchilkin/PopChoice/issues/684), starting advisory with PR-local findings before making it a required gate.
+- [x] Adopt Fallow code-quality analysis in [#684](https://github.com/shchilkin/PopChoice/issues/684), with PR-local Fallow Audit promoted to a required new-only gate.
 - [x] Extend Fallow cleanup beyond `apps/web` through [#697](https://github.com/shchilkin/PopChoice/issues/697) for backoffice/docs and [#698](https://github.com/shchilkin/PopChoice/issues/698) for shared/services.
 - [ ] Drive inherited repo-wide Fallow complexity to zero actionable findings
       through [#717](https://github.com/shchilkin/PopChoice/issues/717), split into

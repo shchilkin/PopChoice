@@ -8,7 +8,7 @@ title: 'CI/CD Documentation'
 
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
-- `.github/workflows/pr.yml` – main application and workspace checks (lint, type-check, web tests, recommendation evals, Storybook tests, e2e smoke tests, build, service CI, dependency review)
+- `.github/workflows/pr.yml` – main application and workspace checks (lint, Fallow audit, type-check, web tests, recommendation evals, Storybook tests, e2e smoke tests, build, service CI, dependency review)
 - `.github/workflows/recommendation-real-data-evals.yml` – scheduled/manual recommendation evals against a seeded database and real catalog retrieval
 - `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
@@ -24,7 +24,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------- |
 | `pr.yml`                             | `changes`                        | Classifies PR as docs-only vs code-changing                                     |
 | `pr.yml`                             | `lint`                           | ESLint code quality + Prettier formatting                                       |
-| `pr.yml`                             | `fallow-audit`                   | Advisory new-only Fallow audit for changed TypeScript/JavaScript quality risks  |
+| `pr.yml`                             | `fallow-audit`                   | Required new-only Fallow audit for changed TypeScript/JavaScript quality risks  |
 | `pr.yml`                             | `type-check`                     | TypeScript type safety (`tsc --noEmit`)                                         |
 | `pr.yml`                             | `server-tests`                   | Vitest server tests with coverage collection and artifact upload                |
 | `pr.yml`                             | `recommendation-evals`           | Deterministic recommendation quality fixtures and scoring                       |
@@ -81,9 +81,9 @@ Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (
 ### Fallow Code Quality Audit
 
 The `fallow-audit` PR job runs `npm run quality:fallow:audit -- --changed-since origin/development --format compact`.
-It is intentionally advisory during the first rollout (`continue-on-error: true`) and is not included in the required
-`PR Validation` aggregate yet. This lets reviewers see newly introduced unused-code, duplication, and complexity
-findings while the project tunes false positives and turns high-confidence baseline findings into focused cleanup work.
+It is a required new-only gate for code-changing PRs and is included in the required
+`PR Validation` aggregate. The job fails when a changeset introduces unused-code, duplication,
+or complexity findings that Fallow reports against the changed files.
 The audit runs from the repository root, so findings can come from any npm workspace, not only `apps/web`.
 
 ### Google Fonts Build Reliability

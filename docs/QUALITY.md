@@ -4,7 +4,7 @@ title: 'Code Quality Checks'
 
 # Code Quality Checks
 
-PopChoice uses Fallow for advisory static analysis across the TypeScript/JavaScript
+PopChoice uses Fallow for static analysis across the TypeScript/JavaScript
 monorepo. Fallow complements ESLint, TypeScript, tests, CodeQL, and dependency
 review by finding unused code, duplicate code, complexity hotspots, and
 PR-local regressions.
@@ -24,9 +24,9 @@ npm run quality:fallow:health -- --workspace @pop-choice/web --summary
 npm run quality:fallow:audit -- --changed-since origin/development
 ```
 
-The first rollout is intentionally advisory. Current `development` still has
-legacy findings, so PR review should focus on findings introduced by a changeset
-and on obvious cleanup candidates. Use `fallow audit` for PR-shaped feedback and
+The PR audit is a blocking new-only gate in CI. Current `development` still has
+legacy findings, so the gate focuses on findings introduced by a changeset rather
+than failing every inherited issue. Use `fallow audit` for PR-shaped feedback and
 the focused commands when planning cleanup work.
 
 ## Baseline Notes
@@ -44,12 +44,12 @@ The first scoped pass on `@pop-choice/web` found useful signal:
 
 Treat these numbers as orientation, not a target to clear in one PR. Track the
 rollout in [#684](https://github.com/shchilkin/PopChoice/issues/684). The
-recommended adoption path is:
+adoption path is:
 
-1. Keep the PR audit advisory while tuning false positives.
-2. Convert high-confidence findings into focused cleanup tickets.
+1. PR-local Fallow Audit runs as a required new-only CI gate.
+2. Convert high-confidence inherited findings into focused cleanup tickets.
 3. Add baselines or suppressions only when a finding is intentionally kept.
-4. Make the PR audit blocking once new-only failures are consistently low-noise.
+4. Keep broad repo-wide cleanup under focused issues instead of relaxing the gate.
 
 The repo-wide changed-code hygiene rollout is complete: PR-local Fallow Audit is
 green on the cleanup PRs, and changed-code dead-code and duplication checks are
