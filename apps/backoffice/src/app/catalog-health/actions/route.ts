@@ -3,7 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import {
   backofficeActionErrorResponse,
   backofficeActionFailureResponse,
-  catalogRepairMessage,
+  buildCatalogRepairActionBody,
+  getCatalogRepairActionStatusCode,
+  getCatalogRepairRedirectStatus,
   logBackofficeError,
   parseBackofficeReturnPath,
   performCatalogRepairAction,
@@ -12,16 +14,6 @@ import {
 import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
-
-function repairRedirectStatus(result: Awaited<ReturnType<typeof performCatalogRepairAction>>) {
-  if (result.status === 'queued') return result.mode === 'bulk' ? 'bulk-queued' : 'queued';
-  if (result.status === 'deduped') return 'deduped';
-  if (result.status === 'orchestration_queued') return 'bulk-orchestration-queued';
-  if (result.status === 'partial') return 'bulk-partial';
-  if (result.status === 'empty') return 'empty';
-  if (result.status === 'failed') return 'failed';
-  return 'unavailable';
-}
 
 function buildRepairRedirectUrl({
   request,
@@ -54,39 +46,16 @@ export async function POST(request: NextRequest) {
     const result = await performCatalogRepairAction(formData, request.headers);
 
     if (wantsBackofficeJsonResponse(request)) {
-      const ok =
-        result.status === 'queued' ||
-        result.status === 'deduped' ||
-        result.status === 'orchestration_queued';
-      return NextResponse.json(
-        {
-          ok,
-          mode: result.mode,
-          status: result.status,
-          message: catalogRepairMessage(result.status),
-          issueKey: result.issueKey,
-          ...(result.mode === 'single'
-            ? { movieId: result.movieId, job: result.job }
-            : { summary: result.summary }),
-        },
-        {
-          status:
-            result.status === 'unavailable'
-              ? 503
-              : result.status === 'failed'
-                ? 500
-                : result.status === 'partial'
-                  ? 207
-                  : 200,
-        },
-      );
+      return NextResponse.json(buildCatalogRepairActionBody(result), {
+        status: getCatalogRepairActionStatusCode(result.status),
+      });
     }
 
     return NextResponse.redirect(
       buildRepairRedirectUrl({
         request,
         returnPath,
-        repairStatus: repairRedirectStatus(result),
+        repairStatus: getCatalogRepairRedirectStatus(result),
       }),
       303,
     );
