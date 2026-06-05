@@ -7,6 +7,11 @@ import logger from '@/lib/logger';
 type RouteHandler = (req: NextRequest, clientId: string) => Promise<Response> | Response;
 const CSRF_COOKIE = '__csrf';
 
+type CsrfCredentials = {
+  cookie: string | undefined;
+  header: string | null;
+};
+
 /**
  * Higher-order function that wraps a Next.js API route handler with authentication.
  *
@@ -37,60 +42,88 @@ const CSRF_COOKIE = '__csrf';
 export function withAuth(handler: RouteHandler) {
   return async function authMiddleware(req: NextRequest): Promise<Response> {
     // 1. Validate CSRF pair whenever either CSRF artifact is present.
-    const csrfHeader = req.headers.get('x-csrf-token');
-    const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
-    if (csrfHeader || csrfCookie) {
-      if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
-        logger.warn('Auth failed: invalid CSRF header/cookie pair');
-        return NextResponse.json({ error: 'Unauthorized: invalid CSRF token.' }, { status: 401 });
-      }
+    const csrf = readCsrfCredentials(req);
+    if (hasInvalidCsrfPair(csrf)) {
+      logger.warn('Auth failed: invalid CSRF header/cookie pair');
+      return invalidCsrfResponse();
     }
-
-    const hasApiKeyCredential = Boolean(
-      req.headers.get('authorization') || req.headers.get('x-api-key'),
-    );
 
     // 2. Prefer API key auth for external/service callers when a key is actually supplied.
-    if (hasApiKeyCredential) {
-      const clientId = await validateApiKey(req);
-      if (clientId !== null) {
-        return handler(req, clientId);
-      }
-    }
+    const apiKeyResponse = await tryApiKeyAuth(req, handler);
+    if (apiKeyResponse) return apiKeyResponse;
 
     // 3. Same-origin browser fallback with a valid CSRF pair.
-    if (csrfHeader && csrfCookie && isSameOriginBrowserRequest(req)) {
-      const session = getSessionFromRequest(req);
-      if (session) {
-        logger.debug({ userId: session.sub }, 'Auth succeeded via browser session');
-        return handler(req, `user:${session.sub}`);
-      }
+    const browserResponse = tryBrowserCsrfAuth(req, handler, csrf);
+    if (browserResponse) return browserResponse;
 
-      logger.debug('Auth succeeded via same-origin CSRF browser fallback');
-      return handler(req, 'browser-csrf');
-    }
-
-    if (csrfHeader || csrfCookie) {
+    if (hasCsrfCredential(csrf)) {
       logger.warn('Auth failed: cross-origin CSRF fallback attempt');
-      return NextResponse.json({ error: 'Unauthorized: invalid CSRF token.' }, { status: 401 });
+      return invalidCsrfResponse();
     }
-
-    const shouldUseDevAuthBypass =
-      process.env.NODE_ENV !== 'production' && !process.env.VALID_API_KEYS;
 
     // 4. Development-only unauthenticated API fallback when no credentials were supplied.
-    if (shouldUseDevAuthBypass) {
-      const clientId = await validateApiKey(req);
-      if (clientId !== null) {
-        return handler(req, clientId);
-      }
-    }
+    const devBypassResponse = await tryDevAuthBypass(req, handler);
+    if (devBypassResponse) return devBypassResponse;
 
     return NextResponse.json(
       { error: 'Unauthorized: valid API key or same-origin CSRF token is required.' },
       { status: 401 },
     );
   };
+}
+
+function readCsrfCredentials(req: NextRequest): CsrfCredentials {
+  return {
+    cookie: req.cookies.get(CSRF_COOKIE)?.value,
+    header: req.headers.get('x-csrf-token'),
+  };
+}
+
+function hasCsrfCredential(csrf: CsrfCredentials): boolean {
+  return Boolean(csrf.header || csrf.cookie);
+}
+
+function hasInvalidCsrfPair(csrf: CsrfCredentials): boolean {
+  return hasCsrfCredential(csrf) && (!csrf.header || !csrf.cookie || csrf.header !== csrf.cookie);
+}
+
+function invalidCsrfResponse(): Response {
+  return NextResponse.json({ error: 'Unauthorized: invalid CSRF token.' }, { status: 401 });
+}
+
+function hasApiKeyCredential(req: NextRequest): boolean {
+  return Boolean(req.headers.get('authorization') || req.headers.get('x-api-key'));
+}
+
+async function tryApiKeyAuth(req: NextRequest, handler: RouteHandler): Promise<Response | null> {
+  if (!hasApiKeyCredential(req)) return null;
+
+  const clientId = await validateApiKey(req);
+  return clientId === null ? null : handler(req, clientId);
+}
+
+function tryBrowserCsrfAuth(
+  req: NextRequest,
+  handler: RouteHandler,
+  csrf: CsrfCredentials,
+): Response | Promise<Response> | null {
+  if (!csrf.header || !csrf.cookie || !isSameOriginBrowserRequest(req)) return null;
+
+  const session = getSessionFromRequest(req);
+  if (session) {
+    logger.debug({ userId: session.sub }, 'Auth succeeded via browser session');
+    return handler(req, `user:${session.sub}`);
+  }
+
+  logger.debug('Auth succeeded via same-origin CSRF browser fallback');
+  return handler(req, 'browser-csrf');
+}
+
+async function tryDevAuthBypass(req: NextRequest, handler: RouteHandler): Promise<Response | null> {
+  if (process.env.NODE_ENV === 'production' || process.env.VALID_API_KEYS) return null;
+
+  const clientId = await validateApiKey(req);
+  return clientId === null ? null : handler(req, clientId);
 }
 
 /**
