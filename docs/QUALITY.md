@@ -94,16 +94,19 @@ Completed repo-wide complexity follow-up:
   risk worker, recommendation, persistence, eval, backoffice, account/results,
   auth, catalog, and UI helper slices tracked by its child issues.
 
-Active health-score follow-up:
+Completed health-score follow-up:
 
 - [#766](https://github.com/shchilkin/PopChoice/issues/766): improve the Fallow
-  health score after complexity findings reached zero. The first score-hardening
-  pass split shared DB helpers, movie catalog query handling, movie-memory
-  service helpers, recommendation TMDB modules, and the remaining coupling
-  targets. Fresh root health score after that pass: `77.8` (`B`), with penalties
-  still dominated by inherited `hotspots` and `unit_size`. Reaching the desired
-  `85-90` band requires a separate large-units wave across long production
-  pages, workers, design-system surfaces, and service/shared workflow modules.
+  health score after complexity findings reached zero. The score-hardening pass
+  split shared DB helpers, movie catalog query handling, movie-memory service
+  helpers, recommendation TMDB modules, and the remaining coupling targets.
+- [#772](https://github.com/shchilkin/PopChoice/issues/772): move the root
+  Fallow health score into the desired `85-90` band without broad suppressions.
+  After PR [#773](https://github.com/shchilkin/PopChoice/pull/773), the root
+  health score is `87.9` (`A`), with zero complexity findings and zero
+  dead-code issues. The remaining score delta is dominated by inherited
+  `unit_size` and `coupling` penalties; future work toward `90+` should be a
+  separate optional hardening wave.
 
 The root config intentionally ignores `**/e2e/**` for dead-code reachability and
 `collections/server` as a generated Fumadocs import. Keep those ignores narrow:
