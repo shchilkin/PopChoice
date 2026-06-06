@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { getDeckCardAnimate, getDeckKeyboardAction } from './movieMemoryDeckViewModel';
 import {
   formatDuration,
   formatMovieName,
-  getDeckCardAnimate,
-  getDeckKeyboardAction,
   getMovieSummary,
   getMovieTitle,
   getOriginalTitle,
-} from './movieMemoryViewModel';
+} from './movieMemoryDisplayViewModel';
 
 describe('movieMemoryViewModel', () => {
   it('maps deck keyboard shortcuts when the event can be handled', () => {

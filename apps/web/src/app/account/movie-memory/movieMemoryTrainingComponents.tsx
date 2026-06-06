@@ -6,14 +6,14 @@ import { useId, useState, type FormEvent } from 'react';
 
 import { palette } from '@/styles/designTokens';
 
+import { getDeckCardAnimate } from './movieMemoryDeckViewModel';
 import {
   formatDuration,
   formatMovieName,
-  getDeckCardAnimate,
   getMovieSummary,
   getMovieTitle,
   getOriginalTitle,
-} from './movieMemoryViewModel';
+} from './movieMemoryDisplayViewModel';
 
 import type { useLanguage } from '@/i18n';
 

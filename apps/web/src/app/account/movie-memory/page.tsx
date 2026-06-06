@@ -10,12 +10,12 @@ import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 import { palette } from '@/styles/designTokens';
 
+import { getDeckKeyboardAction } from './movieMemoryDeckViewModel';
 import {
   CompletionPanel,
   ManualSearchPanel,
   MovieTrainingCard,
 } from './movieMemoryTrainingComponents';
-import { getDeckKeyboardAction } from './movieMemoryViewModel';
 
 type UserMovieInteractionKind = 'watched' | 'not_seen';
 
