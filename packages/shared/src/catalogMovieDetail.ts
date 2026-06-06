@@ -1,5 +1,9 @@
 import { CATALOG_HEALTH_ISSUE_DEFINITIONS } from './catalogHealth.js';
 import { getPool } from './db.js';
+import {
+  normalizeTMDBMatchReviewAudit,
+  normalizeTMDBReviewCandidates,
+} from './tmdbMatchReviews.js';
 import type {
   CatalogRepairAction,
   CatalogRepairActionAudit,
@@ -222,10 +226,6 @@ function toRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function toStringOrNull(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() !== '' ? value : null;
-}
-
 function normalizeMovie(row: MovieRow): CatalogMovieDetailMovie {
   return {
     id: String(row.id),
@@ -283,35 +283,6 @@ function normalizePeer(row: PeerRow): CatalogMovieDetailPeer {
   };
 }
 
-function parseCandidates(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value;
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value) as unknown;
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-  return [];
-}
-
-function normalizeCandidate(candidate: unknown): TMDBReviewCandidate {
-  const raw =
-    typeof candidate === 'object' && candidate !== null
-      ? (candidate as Record<string, unknown>)
-      : { value: candidate };
-
-  return {
-    id: toNullableNumber(raw.id as string | number | null | undefined),
-    title: toStringOrNull(raw.title) ?? '(untitled candidate)',
-    originalTitle: toStringOrNull(raw.originalTitle),
-    releaseYear: toNullableNumber(raw.releaseYear as string | number | null | undefined),
-    confidence: toNullableNumber(raw.confidence as string | number | null | undefined),
-    raw,
-  };
-}
-
 function normalizeTMDBReview(row: TMDBReviewRow): Omit<CatalogMovieDetailTMDBReview, 'audit'> {
   return {
     id: String(row.id),
@@ -320,23 +291,10 @@ function normalizeTMDBReview(row: TMDBReviewRow): Omit<CatalogMovieDetailTMDBRev
     movieYear: toNumber(row.movie_year),
     reason: row.reason,
     status: row.status,
-    candidates: parseCandidates(row.candidates).map(normalizeCandidate),
+    candidates: normalizeTMDBReviewCandidates(row.candidates),
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  };
-}
-
-function normalizeTMDBReviewAudit(row: TMDBReviewAuditRow): TMDBMatchReviewActionAudit {
-  return {
-    id: String(row.id),
-    action: row.action,
-    actor: row.actor,
-    note: row.note,
-    previousStatus: row.previous_status,
-    newStatus: row.new_status,
-    candidate: row.candidate ? normalizeCandidate(row.candidate) : null,
-    createdAt: row.created_at,
   };
 }
 
@@ -574,7 +532,7 @@ async function getRelatedReviews(
   for (const row of auditResult.rows) {
     const reviewId = String(row.review_id);
     const audit = auditByReviewId.get(reviewId) ?? [];
-    audit.push(normalizeTMDBReviewAudit(row));
+    audit.push(normalizeTMDBMatchReviewAudit(row));
     auditByReviewId.set(reviewId, audit);
   }
 

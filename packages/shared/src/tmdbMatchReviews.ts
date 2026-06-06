@@ -95,7 +95,7 @@ type TMDBMatchReviewRow = {
 };
 
 type TMDBMatchReviewAuditRow = {
-  id: string;
+  id: string | number;
   action: TMDBMatchReviewAction;
   actor: string;
   note: string | null;
@@ -103,6 +103,20 @@ type TMDBMatchReviewAuditRow = {
   new_status: TMDBMatchReviewStatus;
   candidate: unknown;
   created_at: string;
+};
+
+type TMDBReviewMovieSnapshotSource = {
+  id: string | number;
+  name: string;
+  year: string | number;
+  duration: string | number;
+  age_rating: string;
+  tmdb_id: string | number | null;
+  poster_url: string | null;
+  localized_name: string | null;
+  tmdb_match_confidence: string | number | null;
+  tmdb_match_source: string | null;
+  tmdb_matched_at: string | null;
 };
 
 interface ReviewActionOutcome {
@@ -137,7 +151,7 @@ export function isTMDBMatchReviewSort(value: string): value is TMDBMatchReviewSo
   return VALID_SORTS.includes(value as TMDBMatchReviewSort);
 }
 
-function toNumber(value: unknown): number | null {
+function toNullableNumber(value: unknown): number | null {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -147,7 +161,7 @@ function toStringOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
-function parseCandidates(value: unknown): unknown[] {
+function parseTMDBReviewCandidates(value: unknown): unknown[] {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') {
     try {
@@ -160,19 +174,52 @@ function parseCandidates(value: unknown): unknown[] {
   return [];
 }
 
-function normalizeCandidate(candidate: unknown): TMDBReviewCandidate {
+function normalizeTMDBReviewCandidate(candidate: unknown): TMDBReviewCandidate {
   const raw =
     typeof candidate === 'object' && candidate !== null
       ? (candidate as Record<string, unknown>)
       : { value: candidate };
 
   return {
-    id: toNumber(raw.id),
+    id: toNullableNumber(raw.id),
     title: toStringOrNull(raw.title) ?? '(untitled candidate)',
     originalTitle: toStringOrNull(raw.originalTitle),
-    releaseYear: toNumber(raw.releaseYear),
-    confidence: toNumber(raw.confidence),
+    releaseYear: toNullableNumber(raw.releaseYear),
+    confidence: toNullableNumber(raw.confidence),
     raw,
+  };
+}
+
+export function normalizeTMDBReviewCandidates(value: unknown): TMDBReviewCandidate[] {
+  return parseTMDBReviewCandidates(value).map(normalizeTMDBReviewCandidate);
+}
+
+export function normalizeTMDBMatchReviewAudit(
+  row: TMDBMatchReviewAuditRow,
+): TMDBMatchReviewActionAudit {
+  return {
+    id: String(row.id),
+    action: row.action,
+    actor: row.actor,
+    note: row.note,
+    previousStatus: row.previous_status,
+    newStatus: row.new_status,
+    candidate: row.candidate ? normalizeTMDBReviewCandidate(row.candidate) : null,
+    createdAt: row.created_at,
+  };
+}
+
+function normalizeTMDBReviewMovieSnapshot(
+  row: TMDBReviewMovieSnapshotSource,
+): TMDBReviewMovieSnapshot {
+  return {
+    ...row,
+    id: String(row.id),
+    year: Number(row.year),
+    duration: Number(row.duration),
+    tmdb_id: row.tmdb_id === null ? null : Number(row.tmdb_id),
+    tmdb_match_confidence:
+      row.tmdb_match_confidence === null ? null : Number(row.tmdb_match_confidence),
   };
 }
 
@@ -184,36 +231,11 @@ function normalizeReview(row: TMDBMatchReviewRow): TMDBMatchReview {
     movieYear: Number(row.movie_year),
     reason: row.reason,
     status: row.status,
-    candidates: parseCandidates(row.candidates).map(normalizeCandidate),
+    candidates: normalizeTMDBReviewCandidates(row.candidates),
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    currentMovie: row.current_movie
-      ? {
-          ...row.current_movie,
-          id: String(row.current_movie.id),
-          year: Number(row.current_movie.year),
-          duration: Number(row.current_movie.duration),
-          tmdb_id: row.current_movie.tmdb_id === null ? null : Number(row.current_movie.tmdb_id),
-          tmdb_match_confidence:
-            row.current_movie.tmdb_match_confidence === null
-              ? null
-              : Number(row.current_movie.tmdb_match_confidence),
-        }
-      : null,
-  };
-}
-
-function normalizeAudit(row: TMDBMatchReviewAuditRow): TMDBMatchReviewActionAudit {
-  return {
-    id: String(row.id),
-    action: row.action,
-    actor: row.actor,
-    note: row.note,
-    previousStatus: row.previous_status,
-    newStatus: row.new_status,
-    candidate: row.candidate ? normalizeCandidate(row.candidate) : null,
-    createdAt: row.created_at,
+    currentMovie: row.current_movie ? normalizeTMDBReviewMovieSnapshot(row.current_movie) : null,
   };
 }
 
@@ -377,7 +399,7 @@ export async function listTMDBMatchReviewAudit(
     [reviewId],
   );
 
-  return result.rows.map(normalizeAudit);
+  return result.rows.map(normalizeTMDBMatchReviewAudit);
 }
 
 async function getTMDBMatchReviewForUpdate(
