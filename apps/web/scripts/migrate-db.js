@@ -32,62 +32,99 @@ async function main() {
   const client = await connectWithRetry(databaseUrl);
 
   try {
-    const files = (await readdir(migrationsDir))
-      .filter((name) => name.endsWith('.sql'))
-      .sort((left, right) => left.localeCompare(right));
-
-    await client.query('BEGIN');
-    try {
-      for (const fileName of files) {
-        const filePath = path.join(migrationsDir, fileName);
-        const sql = await readFile(filePath, 'utf8');
-        console.log(`[db:migrate] Applying ${fileName}`);
-        await client.query(sql);
-      }
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    }
-
+    await applyMigrations(client, await readMigrationFileNames());
     console.log('[db:migrate] Migrations complete.');
   } finally {
     await client.end();
   }
 }
 
+async function readMigrationFileNames() {
+  return (await readdir(migrationsDir))
+    .filter((name) => name.endsWith('.sql'))
+    .sort((left, right) => left.localeCompare(right));
+}
+
+async function applyMigrations(client, files) {
+  await client.query('BEGIN');
+  try {
+    await runMigrationFiles(client, files);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  }
+}
+
+async function runMigrationFiles(client, files) {
+  for (const fileName of files) {
+    await applyMigrationFile(client, fileName);
+  }
+}
+
+async function applyMigrationFile(client, fileName) {
+  const filePath = path.join(migrationsDir, fileName);
+  const sql = await readFile(filePath, 'utf8');
+  console.log(`[db:migrate] Applying ${fileName}`);
+  await client.query(sql);
+}
+
 async function connectWithRetry(databaseUrl) {
-  const attempts = Number.isFinite(connectAttempts) && connectAttempts > 0 ? connectAttempts : 20;
-  const delayMs = Number.isFinite(connectDelayMs) && connectDelayMs > 0 ? connectDelayMs : 3000;
+  const attempts = normalizePositiveInteger(connectAttempts, 20);
+  const delayMs = normalizePositiveInteger(connectDelayMs, 3000);
   let lastError;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
-    const client = new Client({ connectionString: databaseUrl });
-
-    try {
-      await client.connect();
-      if (attempt > 1) {
-        console.log(`[db:migrate] Connected to database on attempt ${attempt}.`);
-      }
-      return client;
-    } catch (error) {
-      await client.end().catch(() => {});
-      lastError = error;
-
-      if (!isTransientConnectionError(error) || attempt === attempts) {
-        throw error;
-      }
-
-      console.warn(
-        `[db:migrate] Database connection failed (${formatConnectionError(error)}). Retrying in ${
-          delayMs / 1000
-        }s (${attempt}/${attempts})...`,
-      );
-      await sleep(delayMs);
+    const result = await tryConnect(databaseUrl, attempt);
+    if (result.client) {
+      return result.client;
     }
+
+    lastError = result.error;
+    await waitBeforeRetry(result.error, { attempt, attempts, delayMs });
   }
 
   throw lastError;
+}
+
+async function tryConnect(databaseUrl, attempt) {
+  const client = new Client({ connectionString: databaseUrl });
+
+  try {
+    await client.connect();
+    logSuccessfulRetry(attempt);
+    return { client };
+  } catch (error) {
+    await client.end().catch(() => {});
+    return { error };
+  }
+}
+
+async function waitBeforeRetry(error, { attempt, attempts, delayMs }) {
+  if (!shouldRetryConnection(error, attempt, attempts)) {
+    throw error;
+  }
+
+  console.warn(
+    `[db:migrate] Database connection failed (${formatConnectionError(error)}). Retrying in ${
+      delayMs / 1000
+    }s (${attempt}/${attempts})...`,
+  );
+  await sleep(delayMs);
+}
+
+function shouldRetryConnection(error, attempt, attempts) {
+  return isTransientConnectionError(error) && attempt < attempts;
+}
+
+function logSuccessfulRetry(attempt) {
+  if (attempt > 1) {
+    console.log(`[db:migrate] Connected to database on attempt ${attempt}.`);
+  }
+}
+
+function normalizePositiveInteger(value, fallback) {
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 function isTransientConnectionError(error) {
@@ -95,7 +132,15 @@ function isTransientConnectionError(error) {
 }
 
 function formatConnectionError(error) {
-  return error?.code ?? error?.message ?? 'unknown error';
+  return getErrorCode(error) ?? getErrorMessage(error) ?? 'unknown error';
+}
+
+function getErrorCode(error) {
+  return error?.code;
+}
+
+function getErrorMessage(error) {
+  return error?.message;
 }
 
 function sleep(ms) {
@@ -104,18 +149,25 @@ function sleep(ms) {
 
 async function resolveDatabaseUrl() {
   for (const envFile of envFiles) {
-    try {
-      const content = await readFile(envFile, 'utf8');
-      const match = content.match(/^DATABASE_URL=(.+)$/m);
-      if (match?.[1]) {
-        return match[1].trim();
-      }
-    } catch {
-      // Ignore missing env files and continue to the next fallback.
-    }
+    const databaseUrl = await readDatabaseUrlFromEnvFile(envFile);
+    if (databaseUrl) return databaseUrl;
   }
 
   return null;
+}
+
+async function readDatabaseUrlFromEnvFile(envFile) {
+  try {
+    const content = await readFile(envFile, 'utf8');
+    return extractDatabaseUrl(content);
+  } catch {
+    return null;
+  }
+}
+
+function extractDatabaseUrl(content) {
+  const match = content.match(/^DATABASE_URL=(.+)$/m);
+  return match?.[1]?.trim() ?? null;
 }
 
 main().catch((error) => {

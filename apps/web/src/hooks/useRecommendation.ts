@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 import { getCsrfToken } from '@/lib/csrfClient';
 
 import type { RecommendationWithMovies } from '@/lib/db/recommendations';
+import type { MutableRefObject } from 'react';
 
 /** Stop polling for more-picks after 2 minutes — prevents an infinite spinner when workers are down. */
 const MORE_PICKS_POLL_TIMEOUT_MS = 2 * 60 * 1000;
@@ -49,31 +50,65 @@ export function useRecommendation(id: string) {
       return res.json() as Promise<RecommendationWithMovies>;
     },
     refetchInterval: (query) => {
-      if (query.state.error) return false;
-
-      const status = query.state.data?.status;
-      const morePicksStatus = query.state.data?.morePicksStatus;
-      if (status === 'failed') return false;
-      if (status !== 'completed') return 2000;
-      // Keep polling while the more-picks job is in flight, but stop after timeout
-      if (morePicksStatus === 'pending' || morePicksStatus === 'processing') {
-        if (morePicksPendingSince.current === null) {
-          morePicksPendingSince.current = Date.now();
-        }
-        if (Date.now() - morePicksPendingSince.current > MORE_PICKS_POLL_TIMEOUT_MS) {
-          setMorePicksTimedOut(true);
-          return false;
-        }
-        return 2000;
-      }
-      // Job resolved (completed / failed / null) — reset timeout tracking
-      morePicksPendingSince.current = null;
-      setMorePicksTimedOut(false);
-      return false;
+      return getRecommendationRefetchInterval({
+        data: query.state.data,
+        error: query.state.error,
+        morePicksPendingSince,
+        setMorePicksTimedOut,
+      });
     },
     staleTime: Infinity,
     retry: shouldRetryRecommendationFetch,
   });
 
   return { ...query, morePicksTimedOut };
+}
+
+function getRecommendationRefetchInterval({
+  data,
+  error,
+  morePicksPendingSince,
+  setMorePicksTimedOut,
+}: {
+  data: RecommendationWithMovies | undefined;
+  error: Error | null;
+  morePicksPendingSince: MutableRefObject<number | null>;
+  setMorePicksTimedOut: (timedOut: boolean) => void;
+}) {
+  if (error || data?.status === 'failed') return false;
+  if (data?.status !== 'completed') return 2000;
+
+  return getMorePicksRefetchInterval(
+    data.morePicksStatus,
+    morePicksPendingSince,
+    setMorePicksTimedOut,
+  );
+}
+
+function getMorePicksRefetchInterval(
+  morePicksStatus: RecommendationWithMovies['morePicksStatus'],
+  morePicksPendingSince: MutableRefObject<number | null>,
+  setMorePicksTimedOut: (timedOut: boolean) => void,
+) {
+  if (morePicksStatus === 'pending' || morePicksStatus === 'processing') {
+    return getPendingMorePicksRefetchInterval(morePicksPendingSince, setMorePicksTimedOut);
+  }
+
+  morePicksPendingSince.current = null;
+  setMorePicksTimedOut(false);
+  return false;
+}
+
+function getPendingMorePicksRefetchInterval(
+  morePicksPendingSince: MutableRefObject<number | null>,
+  setMorePicksTimedOut: (timedOut: boolean) => void,
+) {
+  morePicksPendingSince.current ??= Date.now();
+
+  if (Date.now() - morePicksPendingSince.current > MORE_PICKS_POLL_TIMEOUT_MS) {
+    setMorePicksTimedOut(true);
+    return false;
+  }
+
+  return 2000;
 }

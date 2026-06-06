@@ -18,6 +18,8 @@ import {
 import { setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 import { withAuth } from '@/lib/withAuth';
 
+import type { RecommendationSourceStrategy } from '@/features/recommendation/types';
+
 // ---------------------------------------------------------------------------
 // POST handler
 // ---------------------------------------------------------------------------
@@ -25,127 +27,162 @@ async function postHandler(req: NextRequest): Promise<Response> {
   const startTime = Date.now();
 
   try {
-    const rateLimitResponse = await applyRateLimit(req);
-    if (rateLimitResponse) {
-      recordRecommendationCompletion({
-        mode: 'legacy_sync',
-        status: 'failure',
-        durationMs: Date.now() - startTime,
-      });
-      return rateLimitResponse;
-    }
+    const rateLimitResponse = await getRateLimitResponse(req, startTime);
+    if (rateLimitResponse) return rateLimitResponse;
 
-    const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
+    const context = await getLegacyRecommendationContext(req);
+    logRecommendationRequest(context);
 
-    // Validate request body
-    const validatedBody = requestBodySchema.parse(body);
-
-    // Read locale from Accept-Language header, default to English
-    const locale = parseLocaleFromRequest(req);
-
-    // Normalize to array format for consistent processing
-    const allPeopleData = normalizePeopleData(validatedBody);
-    const experienceMode = 'normal-match';
-    const sourceStrategy = resolveRecommendationSourceStrategy({
-      experienceMode,
-      people: allPeopleData,
-    }).id;
-
-    logger.info(
-      { experienceMode, personCount: allPeopleData.length, locale, sourceStrategy },
-      'Processing recommendation request',
-    );
-
-    const inputBlock = await getRecommendationInputBlock(allPeopleData);
+    const inputBlock = await getRecommendationInputBlock(context.allPeopleData);
     if (inputBlock) {
-      recordRecommendationCompletion({
-        mode: 'legacy_sync',
-        status: 'failure',
-        durationMs: Date.now() - startTime,
-      });
+      recordLegacyRecommendationFailure(startTime);
       return NextResponse.json(inputBlock, { status: 422 });
     }
 
-    // Run the full AI pipeline (Steps 0.5–7)
-    const response = await withTraceSpan(
-      'recommendation.process.legacy_sync',
-      {
-        attributes: {
-          'http.route': '/api/movie-recommendation',
-          'recommendation.experience_mode': experienceMode,
-          'recommendation.mode': 'legacy_sync',
-          'recommendation.people.count': allPeopleData.length,
-          'recommendation.source_strategy': sourceStrategy,
-          locale,
-        },
-      },
-      async () =>
-        runRecommendationPipeline(allPeopleData, locale, {
-          onStageChange: (stage) => {
-            setActiveTraceAttributes({ 'recommendation.stage': stage });
-          },
-          experienceMode,
-          sourceStrategy,
-        }),
-    );
+    const response = await runLegacyRecommendation(context);
 
     const duration = Date.now() - startTime;
-    logger.info(
-      { durationMs: duration, movieCount: response.similarMovies?.length ?? 0 },
-      'Recommendation request completed',
-    );
-    recordRecommendationCompletion({
-      mode: 'legacy_sync',
-      status: 'success',
-      durationMs: duration,
-    });
+    logLegacyRecommendationSuccess(duration, response.similarMovies?.length ?? 0);
+    recordLegacyRecommendationSuccess(duration);
 
     return NextResponse.json(apiResponseSchema.parse(response));
   } catch (error) {
-    recordRecommendationCompletion({
-      mode: 'legacy_sync',
-      status: 'failure',
-      durationMs: Date.now() - startTime,
-    });
-
-    const bodyErrorResponse = requestBodyErrorResponse(error);
-    if (bodyErrorResponse) return bodyErrorResponse;
-
-    // Handle validation errors first — these are client errors (400), not server errors
-    if (error instanceof z.ZodError) {
-      logger.warn({ err: error, issues: error.issues }, 'Invalid request body');
-      return NextResponse.json(
-        {
-          error: 'Invalid request data',
-          details: error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
-        },
-        { status: 400 },
-      );
-    }
-
-    logger.error({ err: error }, 'Error in movie recommendation API');
-
-    if (isOpenAITimeoutError(error)) {
-      return NextResponse.json({ error: 'OpenAI request timed out' }, { status: 504 });
-    }
-
-    // Handle other known errors
-    if (error instanceof Error) {
-      // Return more specific error messages based on error content
-      if (error.message.includes('embedding')) {
-        return NextResponse.json({ error: 'Failed to process preferences' }, { status: 500 });
-      }
-      if (error.message.includes('similar movies')) {
-        return NextResponse.json({ error: 'Failed to find matching movies' }, { status: 500 });
-      }
-      if (error.message.includes('OpenAI')) {
-        return NextResponse.json({ error: 'Failed to generate recommendation' }, { status: 500 });
-      }
-    }
-
-    // Generic error response
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    recordLegacyRecommendationFailure(startTime);
+    return getLegacyRecommendationErrorResponse(error);
   }
+}
+
+type LegacyRecommendationContext = {
+  allPeopleData: ReturnType<typeof normalizePeopleData>;
+  experienceMode: 'normal-match';
+  locale: ReturnType<typeof parseLocaleFromRequest>;
+  sourceStrategy: RecommendationSourceStrategy;
+};
+
+async function getRateLimitResponse(req: NextRequest, startTime: number) {
+  const rateLimitResponse = await applyRateLimit(req);
+  if (rateLimitResponse) {
+    recordLegacyRecommendationFailure(startTime);
+  }
+
+  return rateLimitResponse;
+}
+
+async function getLegacyRecommendationContext(
+  req: NextRequest,
+): Promise<LegacyRecommendationContext> {
+  const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
+  const validatedBody = requestBodySchema.parse(body);
+  const locale = parseLocaleFromRequest(req);
+  const allPeopleData = normalizePeopleData(validatedBody);
+  const experienceMode = 'normal-match';
+  const sourceStrategy = resolveRecommendationSourceStrategy({
+    experienceMode,
+    people: allPeopleData,
+  }).id;
+
+  return { allPeopleData, experienceMode, locale, sourceStrategy };
+}
+
+function logRecommendationRequest(context: LegacyRecommendationContext) {
+  logger.info(
+    {
+      experienceMode: context.experienceMode,
+      locale: context.locale,
+      personCount: context.allPeopleData.length,
+      sourceStrategy: context.sourceStrategy,
+    },
+    'Processing recommendation request',
+  );
+}
+
+async function runLegacyRecommendation(context: LegacyRecommendationContext) {
+  return withTraceSpan(
+    'recommendation.process.legacy_sync',
+    {
+      attributes: {
+        'http.route': '/api/movie-recommendation',
+        'recommendation.experience_mode': context.experienceMode,
+        'recommendation.mode': 'legacy_sync',
+        'recommendation.people.count': context.allPeopleData.length,
+        'recommendation.source_strategy': context.sourceStrategy,
+        locale: context.locale,
+      },
+    },
+    async () =>
+      runRecommendationPipeline(context.allPeopleData, context.locale, {
+        onStageChange: (stage) => {
+          setActiveTraceAttributes({ 'recommendation.stage': stage });
+        },
+        experienceMode: context.experienceMode,
+        sourceStrategy: context.sourceStrategy,
+      }),
+  );
+}
+
+function logLegacyRecommendationSuccess(duration: number, movieCount: number) {
+  logger.info({ durationMs: duration, movieCount }, 'Recommendation request completed');
+}
+
+function recordLegacyRecommendationSuccess(durationMs: number) {
+  recordRecommendationCompletion({ durationMs, mode: 'legacy_sync', status: 'success' });
+}
+
+function recordLegacyRecommendationFailure(startTime: number) {
+  recordRecommendationCompletion({
+    durationMs: Date.now() - startTime,
+    mode: 'legacy_sync',
+    status: 'failure',
+  });
+}
+
+function getLegacyRecommendationErrorResponse(error: unknown) {
+  const bodyErrorResponse = requestBodyErrorResponse(error);
+  if (bodyErrorResponse) return bodyErrorResponse;
+
+  if (error instanceof z.ZodError) {
+    return getValidationErrorResponse(error);
+  }
+
+  logger.error({ err: error }, 'Error in movie recommendation API');
+  return getKnownRecommendationErrorResponse(error);
+}
+
+function getValidationErrorResponse(error: z.ZodError) {
+  logger.warn({ err: error, issues: error.issues }, 'Invalid request body');
+  return NextResponse.json(
+    {
+      details: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', '),
+      error: 'Invalid request data',
+    },
+    { status: 400 },
+  );
+}
+
+function getKnownRecommendationErrorResponse(error: unknown) {
+  if (isOpenAITimeoutError(error)) {
+    return NextResponse.json({ error: 'OpenAI request timed out' }, { status: 504 });
+  }
+
+  if (error instanceof Error) {
+    return getKnownErrorMessageResponse(error);
+  }
+
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+}
+
+function getKnownErrorMessageResponse(error: Error) {
+  if (error.message.includes('embedding')) {
+    return NextResponse.json({ error: 'Failed to process preferences' }, { status: 500 });
+  }
+  if (error.message.includes('similar movies')) {
+    return NextResponse.json({ error: 'Failed to find matching movies' }, { status: 500 });
+  }
+  if (error.message.includes('OpenAI')) {
+    return NextResponse.json({ error: 'Failed to generate recommendation' }, { status: 500 });
+  }
+
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }
 
 export const POST = withAuth(postHandler);

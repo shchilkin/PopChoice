@@ -34,80 +34,18 @@ import {
 } from './_components';
 import { MOCK_MOVIES, MOCK_TABLE_MOVIES } from './_data';
 
+import type { Translations } from '@/i18n/locales/en';
+
 export default function StyleGuideComponentsPage() {
   const { t } = useLanguage();
-
-  const GENRES_L = [
-    { id: 'action', label: t.genres.action, icon: Zap, color: palette.amber },
-    { id: 'comedy', label: t.genres.comedy, icon: Smile, color: palette.gold },
-    { id: 'drama', label: t.genres.drama, icon: Play, color: palette.purple },
-    { id: 'scifi', label: t.genres.scifi, icon: Sparkles, color: palette.teal },
-  ];
-
-  const TONES_L = [
-    {
-      id: 'light',
-      label: t.tones.light.label,
-      desc: t.tones.light.desc,
-      icon: Sparkles,
-      color: palette.gold,
-      grad: `linear-gradient(135deg, ${palette.gold}18, ${palette.amber}18)`,
-    },
-    {
-      id: 'balanced',
-      label: t.tones.balanced.label,
-      desc: t.tones.balanced.desc,
-      icon: Play,
-      color: palette.teal,
-      grad: `linear-gradient(135deg, ${palette.teal}18, ${palette.blue}18)`,
-    },
-    {
-      id: 'serious',
-      label: t.tones.serious.label,
-      desc: t.tones.serious.desc,
-      icon: Play,
-      color: palette.purple,
-      grad: `linear-gradient(135deg, ${palette.purple}18, ${palette.purpleLight}18)`,
-    },
-    {
-      id: 'dark',
-      label: t.tones.dark.label,
-      desc: t.tones.dark.desc,
-      icon: Clapperboard,
-      color: palette.gray,
-      grad: `linear-gradient(135deg, ${palette.gray}18, ${palette.red}18)`,
-    },
-  ];
-
-  const ERAS_L = [
-    {
-      id: 'new',
-      emoji: '✨',
-      title: t.quiz.era.new.title,
-      desc: t.quiz.era.new.desc,
-      color: palette.teal,
-    },
-    {
-      id: 'classic',
-      emoji: '🎞️',
-      title: t.quiz.era.classic.title,
-      desc: t.quiz.era.classic.desc,
-      color: palette.gold,
-    },
-    {
-      id: 'both',
-      emoji: '🎬',
-      title: t.quiz.era.both.title,
-      desc: t.quiz.era.both.desc,
-      color: palette.purple,
-    },
-  ];
+  const genres = getGenreOptions(t);
+  const tones = getToneOptions(t);
+  const eras = getEraOptions(t);
   // Selectable demo state
   const [selectedGenres, setSelectedGenres] = useState<string[]>(['comedy']);
   const [selectedTone, setSelectedTone] = useState<string>('light');
   const [selectedEra, setSelectedEra] = useState<string>('both');
   const [activeCard, setActiveCard] = useState<number>(0);
-  const [skeletonLoading, setSkeletonLoading] = useState<boolean>(true);
 
   return (
     <div
@@ -304,55 +242,7 @@ export default function StyleGuideComponentsPage() {
         </Section>
 
         {/* ── Skeleton States ──────────────────────────────────────────── */}
-        <Section title={t.styleGuide.sections.skeletonLoading} id="skeleton-loading">
-          <div className="space-y-6">
-            {/* Toggle */}
-            <div className="flex items-center gap-3">
-              <span
-                className="text-xs font-semibold uppercase tracking-widest"
-                style={{ color: 'var(--pc-t3)' }}
-              >
-                {t.styleGuide.comp.stateLabel}
-              </span>
-              <button
-                type="button"
-                onClick={() => setSkeletonLoading((v) => !v)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-                style={{
-                  background: skeletonLoading ? 'var(--pc-gold-subtle)' : 'var(--pc-surface)',
-                  border: `1px solid ${skeletonLoading ? 'var(--pc-gold-bd)' : 'var(--pc-bd2)'}`,
-                  color: skeletonLoading ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-                }}
-              >
-                {skeletonLoading ? t.styleGuide.comp.loading : t.styleGuide.comp.loaded}
-              </button>
-            </div>
-
-            {/* MoviesTable */}
-            <div>
-              <p className="text-xs mb-3" style={{ color: 'var(--pc-t3)' }}>
-                {t.styleGuide.comp.skeletonMoviesNote}
-              </p>
-              {skeletonLoading ? (
-                <MoviesTableSkeleton />
-              ) : (
-                <MoviesTable movies={MOCK_TABLE_MOVIES} />
-              )}
-            </div>
-
-            {/* Card skeleton */}
-            <div style={{ borderTop: '1px solid var(--pc-bd1)', paddingTop: '1.5rem' }}>
-              <p className="text-xs mb-3" style={{ color: 'var(--pc-t3)' }}>
-                {t.styleGuide.comp.skeletonCardNote}
-              </p>
-              <div className="flex gap-4 flex-wrap">
-                {MOCK_MOVIES.map((movie) => (
-                  <SkeletonCard key={movie.id} loading={skeletonLoading} movie={movie} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </Section>
+        <SkeletonStatesSection t={t} />
 
         {/* ── AI Content Block ─────────────────────────────────────────── */}
         <Section title={t.styleGuide.sections.aiContentBlock} id="ai-content-block">
@@ -418,7 +308,7 @@ export default function StyleGuideComponentsPage() {
               {t.styleGuide.comp.genreSelectorNote}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {GENRES_L.map((g) => (
+              {genres.map((g) => (
                 <GenreChip
                   key={g.id}
                   icon={g.icon}
@@ -444,7 +334,7 @@ export default function StyleGuideComponentsPage() {
               {t.styleGuide.comp.toneSelectorNote}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {TONES_L.map((tone) => (
+              {tones.map((tone) => (
                 <ToneCard
                   key={tone.id}
                   icon={tone.icon}
@@ -468,7 +358,7 @@ export default function StyleGuideComponentsPage() {
               {t.styleGuide.comp.eraSelectorNote}
             </p>
             <div className="flex flex-col gap-3 max-w-sm">
-              {ERAS_L.map((era) => (
+              {eras.map((era) => (
                 <EraOption
                   key={era.id}
                   emoji={era.emoji}
@@ -657,4 +547,161 @@ export default function StyleGuideComponentsPage() {
       </div>
     </div>
   );
+}
+
+function getGenreOptions(t: Translations) {
+  return [
+    { id: 'action', label: t.genres.action, icon: Zap, color: palette.amber },
+    { id: 'comedy', label: t.genres.comedy, icon: Smile, color: palette.gold },
+    { id: 'drama', label: t.genres.drama, icon: Play, color: palette.purple },
+    { id: 'scifi', label: t.genres.scifi, icon: Sparkles, color: palette.teal },
+  ];
+}
+
+function SkeletonStatesSection({ t }: { t: Translations }) {
+  const [skeletonLoading, setSkeletonLoading] = useState<boolean>(true);
+
+  return (
+    <Section title={t.styleGuide.sections.skeletonLoading} id="skeleton-loading">
+      <div className="space-y-6">
+        <SkeletonStateToggle
+          loading={skeletonLoading}
+          t={t}
+          onToggle={() => setSkeletonLoading((value) => !value)}
+        />
+        <MoviesTableLoadingDemo loading={skeletonLoading} t={t} />
+        <SkeletonCardDemo loading={skeletonLoading} t={t} />
+      </div>
+    </Section>
+  );
+}
+
+function SkeletonStateToggle({
+  loading,
+  onToggle,
+  t,
+}: {
+  loading: boolean;
+  onToggle: () => void;
+  t: Translations;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span
+        className="text-xs font-semibold uppercase tracking-widest"
+        style={{ color: 'var(--pc-t3)' }}
+      >
+        {t.styleGuide.comp.stateLabel}
+      </span>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+        style={getSkeletonToggleStyle(loading)}
+      >
+        {getSkeletonStateLabel(t, loading)}
+      </button>
+    </div>
+  );
+}
+
+function MoviesTableLoadingDemo({ loading, t }: { loading: boolean; t: Translations }) {
+  return (
+    <div>
+      <p className="text-xs mb-3" style={{ color: 'var(--pc-t3)' }}>
+        {t.styleGuide.comp.skeletonMoviesNote}
+      </p>
+      {loading ? <MoviesTableSkeleton /> : <MoviesTable movies={MOCK_TABLE_MOVIES} />}
+    </div>
+  );
+}
+
+function SkeletonCardDemo({ loading, t }: { loading: boolean; t: Translations }) {
+  return (
+    <div style={{ borderTop: '1px solid var(--pc-bd1)', paddingTop: '1.5rem' }}>
+      <p className="text-xs mb-3" style={{ color: 'var(--pc-t3)' }}>
+        {t.styleGuide.comp.skeletonCardNote}
+      </p>
+      <div className="flex gap-4 flex-wrap">
+        {MOCK_MOVIES.map((movie) => (
+          <SkeletonCard key={movie.id} loading={loading} movie={movie} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getSkeletonToggleStyle(loading: boolean) {
+  return {
+    background: loading ? 'var(--pc-gold-subtle)' : 'var(--pc-surface)',
+    border: `1px solid ${loading ? 'var(--pc-gold-bd)' : 'var(--pc-bd2)'}`,
+    color: loading ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+  };
+}
+
+function getSkeletonStateLabel(t: Translations, loading: boolean) {
+  return loading ? t.styleGuide.comp.loading : t.styleGuide.comp.loaded;
+}
+
+function getToneOptions(t: Translations) {
+  return [
+    {
+      id: 'light',
+      label: t.tones.light.label,
+      desc: t.tones.light.desc,
+      icon: Sparkles,
+      color: palette.gold,
+      grad: `linear-gradient(135deg, ${palette.gold}18, ${palette.amber}18)`,
+    },
+    {
+      id: 'balanced',
+      label: t.tones.balanced.label,
+      desc: t.tones.balanced.desc,
+      icon: Play,
+      color: palette.teal,
+      grad: `linear-gradient(135deg, ${palette.teal}18, ${palette.blue}18)`,
+    },
+    {
+      id: 'serious',
+      label: t.tones.serious.label,
+      desc: t.tones.serious.desc,
+      icon: Play,
+      color: palette.purple,
+      grad: `linear-gradient(135deg, ${palette.purple}18, ${palette.purpleLight}18)`,
+    },
+    {
+      id: 'dark',
+      label: t.tones.dark.label,
+      desc: t.tones.dark.desc,
+      icon: Clapperboard,
+      color: palette.gray,
+      grad: `linear-gradient(135deg, ${palette.gray}18, ${palette.red}18)`,
+    },
+  ];
+}
+
+function getEraOptions(t: Translations) {
+  return [
+    {
+      id: 'new',
+      emoji: '✨',
+      title: t.quiz.era.new.title,
+      desc: t.quiz.era.new.desc,
+      color: palette.teal,
+    },
+    {
+      id: 'classic',
+      emoji: '🎞️',
+      title: t.quiz.era.classic.title,
+      desc: t.quiz.era.classic.desc,
+      color: palette.gold,
+    },
+    {
+      id: 'both',
+      emoji: '🎬',
+      title: t.quiz.era.both.title,
+      desc: t.quiz.era.both.desc,
+      color: palette.purple,
+    },
+  ];
 }

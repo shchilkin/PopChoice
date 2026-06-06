@@ -15,76 +15,71 @@ interface AgeRatingChipProps {
 /**
  * Maps age ratings to semantic color token classes
  */
-function getRatingColorClasses(rating: AgeRating): {
+type RatingColorClasses = {
   background: string;
   text: string;
   border: string;
-} {
-  const normalizedRating = rating.toUpperCase().trim();
+};
 
-  switch (normalizedRating) {
-    // Safe content - Green (G rating)
-    case 'G':
-      return {
-        background: 'bg-[var(--rating-safe-bg)]',
-        text: 'text-[var(--rating-safe-text)]',
-        border: 'border-[var(--rating-safe-border)]',
-      };
+const RATING_COLOR_BY_GROUP: Record<string, RatingColorClasses> = {
+  caution: {
+    background: 'bg-[var(--rating-caution-bg)]',
+    border: 'border-[var(--rating-caution-border)]',
+    text: 'text-[var(--rating-caution-text)]',
+  },
+  mature: {
+    background: 'bg-[var(--rating-mature-bg)]',
+    border: 'border-[var(--rating-mature-border)]',
+    text: 'text-[var(--rating-mature-text)]',
+  },
+  safe: {
+    background: 'bg-[var(--rating-safe-bg)]',
+    border: 'border-[var(--rating-safe-border)]',
+    text: 'text-[var(--rating-safe-text)]',
+  },
+  teen: {
+    background: 'bg-[var(--rating-teen-bg)]',
+    border: 'border-[var(--rating-teen-border)]',
+    text: 'text-[var(--rating-teen-text)]',
+  },
+  unknown: {
+    background: 'bg-[var(--rating-unknown-bg)]',
+    border: 'border-[var(--rating-unknown-border)]',
+    text: 'text-[var(--rating-unknown-text)]',
+  },
+};
 
-    // Caution content - Blue (PG, 12+ ratings)
-    case 'PG':
-    case '12+':
-      return {
-        background: 'bg-[var(--rating-caution-bg)]',
-        text: 'text-[var(--rating-caution-text)]',
-        border: 'border-[var(--rating-caution-border)]',
-      };
+const RATING_GROUP_BY_VALUE: Record<string, keyof typeof RATING_COLOR_BY_GROUP> = {
+  '12+': 'caution',
+  '15': 'mature',
+  '16+': 'mature',
+  '18+': 'mature',
+  G: 'safe',
+  'NOT RATED': 'unknown',
+  NR: 'unknown',
+  PG: 'caution',
+  'PG-13': 'teen',
+  R: 'mature',
+};
 
-    // Teen content - Orange (PG-13 rating)
-    case 'PG-13':
-      return {
-        background: 'bg-[var(--rating-teen-bg)]',
-        text: 'text-[var(--rating-teen-text)]',
-        border: 'border-[var(--rating-teen-border)]',
-      };
+function getRatingColorClasses(rating: AgeRating): RatingColorClasses {
+  const group = RATING_GROUP_BY_VALUE[rating.toUpperCase().trim()] ?? 'unknown';
 
-    // Mature content - Red (R, 15, 16+, 18+ ratings)
-    case 'R':
-    case '15':
-    case '16+':
-    case '18+':
-      return {
-        background: 'bg-[var(--rating-mature-bg)]',
-        text: 'text-[var(--rating-mature-text)]',
-        border: 'border-[var(--rating-mature-border)]',
-      };
-
-    // Unknown/Unrated - Gray (NR, NOT RATED)
-    case 'NR':
-    case 'NOT RATED':
-    default:
-      return {
-        background: 'bg-[var(--rating-unknown-bg)]',
-        text: 'text-[var(--rating-unknown-text)]',
-        border: 'border-[var(--rating-unknown-border)]',
-      };
-  }
+  return RATING_COLOR_BY_GROUP[group];
 }
 
 /**
  * Gets size-specific classes for the chip
  */
 function getSizeClasses(size: 'sm' | 'md' | 'lg'): string {
-  switch (size) {
-    case 'sm':
-      return 'px-4 py-0.5 text-xs';
-    case 'lg':
-      return 'px-4 py-2 text-base';
-    case 'md':
-    default:
-      return 'px-4 py-1 text-sm';
-  }
+  return SIZE_CLASSES[size];
 }
+
+const SIZE_CLASSES = {
+  lg: 'px-4 py-2 text-base',
+  md: 'px-4 py-1 text-sm',
+  sm: 'px-4 py-0.5 text-xs',
+};
 
 /**
  * AgeRatingChip - A reusable component for displaying movie age ratings

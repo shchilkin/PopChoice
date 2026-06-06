@@ -43,33 +43,41 @@ function verifySessionToken(token: string): SessionPayload | null {
     return null;
   }
 
-  const expectedSignature = signValue(encodedPayload, secret);
-  const signatureBuffer = Buffer.from(signature);
-  const expectedSignatureBuffer = Buffer.from(expectedSignature);
-  if (
-    signatureBuffer.length !== expectedSignatureBuffer.length ||
-    !timingSafeEqual(signatureBuffer, expectedSignatureBuffer)
-  ) {
+  if (!isValidSignature(encodedPayload, signature, secret)) {
     return null;
   }
 
   try {
-    const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as
-      | SessionPayload
-      | undefined;
-
-    if (!parsed?.sub || typeof parsed.exp !== 'number') {
-      return null;
-    }
-
-    if (parsed.exp <= Math.floor(Date.now() / 1000)) {
-      return null;
-    }
-
-    return parsed;
+    return parseValidSessionPayload(encodedPayload);
   } catch {
     return null;
   }
+}
+
+function isValidSignature(encodedPayload: string, signature: string, secret: string): boolean {
+  const signatureBuffer = Buffer.from(signature);
+  const expectedSignatureBuffer = Buffer.from(signValue(encodedPayload, secret));
+
+  return (
+    signatureBuffer.length === expectedSignatureBuffer.length &&
+    timingSafeEqual(signatureBuffer, expectedSignatureBuffer)
+  );
+}
+
+function parseValidSessionPayload(encodedPayload: string): SessionPayload | null {
+  const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as
+    | SessionPayload
+    | undefined;
+
+  return isValidSessionPayload(parsed) ? parsed : null;
+}
+
+function isValidSessionPayload(payload: SessionPayload | undefined): payload is SessionPayload {
+  return Boolean(payload?.sub && typeof payload.exp === 'number' && !isExpired(payload.exp));
+}
+
+function isExpired(exp: number): boolean {
+  return exp <= Math.floor(Date.now() / 1000);
 }
 
 export function getSessionFromRequest(req: Pick<NextRequest, 'cookies'>): SessionPayload | null {

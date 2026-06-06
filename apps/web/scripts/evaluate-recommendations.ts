@@ -21,6 +21,16 @@ type EvalCliOptions = {
   outputPath: string;
 };
 
+type CliArgHandler = (argv: string[], index: number, options: EvalCliOptions) => number;
+
+const CLI_ARG_HANDLERS: Record<string, CliArgHandler> = {
+  '--help': handleHelpArgument,
+  '--live': handleLiveArgument,
+  '--output': handleOutputArgument,
+  '--real-data': handleRealDataArgument,
+  '-h': handleHelpArgument,
+};
+
 function printUsage(): void {
   console.log(`Usage: npm run eval:recommendations -- [--real-data] [--live] [--output <path>]
 
@@ -30,58 +40,101 @@ Use --live only for explicit manual runs against configured providers and databa
 }
 
 function parseCliOptions(argv: string[]): EvalCliOptions {
-  let mode: RecommendationEvalRunMode = 'mock';
-  let outputPath = defaultOutputPath;
+  const options: EvalCliOptions = { mode: 'mock', outputPath: defaultOutputPath };
 
   for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === '--help' || arg === '-h') {
-      printUsage();
-      process.exit(0);
-    }
-    if (arg === '--live') {
-      mode = 'live';
-      continue;
-    }
-    if (arg === '--real-data') {
-      mode = 'real-data';
-      continue;
-    }
-    if (arg === '--output') {
-      const value = argv[index + 1];
-      if (!value) throw new Error('--output requires a path');
-      outputPath = path.resolve(process.cwd(), value);
-      index += 1;
-      continue;
-    }
-    throw new Error(`Unknown argument: ${arg}`);
+    index = parseCliArgument(argv, index, options);
   }
 
-  return { mode, outputPath };
+  return options;
+}
+
+function parseCliArgument(argv: string[], index: number, options: EvalCliOptions) {
+  const arg = argv[index];
+  const handler = CLI_ARG_HANDLERS[arg];
+
+  if (handler) return handler(argv, index, options);
+
+  throw new Error(`Unknown argument: ${arg}`);
+}
+
+function handleHelpArgument(_argv: string[], index: number) {
+  printUsage();
+  process.exit(0);
+  return index;
+}
+
+function handleLiveArgument(_argv: string[], index: number, options: EvalCliOptions) {
+  options.mode = 'live';
+  return index;
+}
+
+function handleRealDataArgument(_argv: string[], index: number, options: EvalCliOptions) {
+  options.mode = 'real-data';
+  return index;
+}
+
+function handleOutputArgument(argv: string[], index: number, options: EvalCliOptions) {
+  options.outputPath = resolveOutputPath(argv[index + 1]);
+  return index + 1;
+}
+
+function resolveOutputPath(value: string | undefined) {
+  if (!value) throw new Error('--output requires a path');
+  return path.resolve(process.cwd(), value);
 }
 
 async function main(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
   const report = await runRecommendationEvals({ mode: options.mode });
-  await mkdir(path.dirname(options.outputPath), { recursive: true });
-  await writeFile(options.outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  await writeReport(options.outputPath, report);
+  printEvalReport(options, report);
+  setExitCode(report.passed);
+}
 
+async function writeReport(
+  outputPath: string,
+  report: Awaited<ReturnType<typeof runRecommendationEvals>>,
+) {
+  await mkdir(path.dirname(outputPath), { recursive: true });
+  await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+}
+
+function printEvalReport(
+  options: EvalCliOptions,
+  report: Awaited<ReturnType<typeof runRecommendationEvals>>,
+) {
+  printEvalSummary(options, report);
+  for (const result of report.results) {
+    printEvalResult(result);
+  }
+}
+
+function printEvalSummary(
+  options: EvalCliOptions,
+  report: Awaited<ReturnType<typeof runRecommendationEvals>>,
+) {
   console.log(
     `Recommendation evals (${options.mode}): ${report.summary.passed}/${report.summary.fixtureCount} passed. Report: ${options.outputPath}`,
   );
-  for (const result of report.results) {
-    const status = result.passed ? 'PASS' : 'FAIL';
-    console.log(`- ${status} ${result.fixtureId}: ${result.score}/${result.maxScore}`);
-    for (const check of result.checks) {
-      if (!check.passed) {
-        console.log(`  - ${check.label}: ${check.details}`);
-      }
-    }
-  }
+}
 
-  if (!report.passed) {
-    process.exitCode = 1;
-  }
+function printEvalResult(
+  result: Awaited<ReturnType<typeof runRecommendationEvals>>['results'][number],
+) {
+  const status = result.passed ? 'PASS' : 'FAIL';
+  console.log(`- ${status} ${result.fixtureId}: ${result.score}/${result.maxScore}`);
+  result.checks.filter((check) => !check.passed).forEach(printFailedCheck);
+}
+
+function printFailedCheck(
+  check: Awaited<ReturnType<typeof runRecommendationEvals>>['results'][number]['checks'][number],
+) {
+  console.log(`  - ${check.label}: ${check.details}`);
+}
+
+function setExitCode(passed: boolean) {
+  process.exitCode = passed ? 0 : 1;
 }
 
 main().catch((error: unknown) => {

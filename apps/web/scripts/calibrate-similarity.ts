@@ -50,6 +50,12 @@ const QUERIES = [
 
 const MATCH_COUNT = 5;
 
+type MatchMovieRow = {
+  name: string;
+  year?: number | null;
+  similarity: number;
+};
+
 // ---------------------------------------------------------------------------
 
 function printSeparator() {
@@ -65,89 +71,170 @@ async function embedQuery(text: string): Promise<number[]> {
 }
 
 async function main() {
-  // Validate env
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('❌ Missing required environment variable: OPENAI_API_KEY');
-    process.exit(1);
-  }
-  if (!process.env.DATABASE_URL) {
-    console.error('❌ Missing required environment variable: DATABASE_URL');
-    process.exit(1);
-  }
+  validateEnvironment();
 
   const db = createPgDbClient();
+  printCalibrationHeader();
 
+  const bestScores = await collectBestScores(db);
+  printSummary(bestScores);
+  console.log('');
+}
+
+async function collectBestScores(db: ReturnType<typeof createPgDbClient>) {
+  const bestScores: number[] = [];
+  for (const query of QUERIES) {
+    const bestScore = await runCalibrationQuery(db, query);
+    appendBestScore(bestScores, bestScore);
+  }
+
+  return bestScores;
+}
+
+async function runCalibrationQuery(
+  db: ReturnType<typeof createPgDbClient>,
+  query: (typeof QUERIES)[number],
+) {
+  printQueryHeader(query);
+
+  const embedding = await tryEmbedQuery(query.text);
+  if (!embedding) {
+    return null;
+  }
+
+  const rows = await findMatches(db, embedding);
+  if (!rows) {
+    return null;
+  }
+
+  if (rows.length === 0) {
+    printNoResults();
+    return null;
+  }
+
+  printRows(rows);
+  return rows[0].similarity;
+}
+
+function validateEnvironment() {
+  requireEnvironmentVariable('OPENAI_API_KEY');
+  requireEnvironmentVariable('DATABASE_URL');
+}
+
+function requireEnvironmentVariable(name: string) {
+  if (process.env[name]) {
+    return;
+  }
+
+  console.error(`❌ Missing required environment variable: ${name}`);
+  process.exit(1);
+}
+
+function printCalibrationHeader() {
   console.log('\n🎬 PopChoice — Similarity Threshold Calibration');
   printSeparator();
   console.log(`Model : text-embedding-3-large`);
   console.log(`Top-N : ${MATCH_COUNT} results per query`);
   console.log(`Queries: ${QUERIES.length}`);
   printSeparator();
+}
 
-  const bestScores: number[] = [];
+function printQueryHeader(query: (typeof QUERIES)[number]) {
+  console.log(`\nQuery: ${query.label}`);
+  console.log(`  "${query.text}"`);
+}
 
-  for (const query of QUERIES) {
-    console.log(`\nQuery: ${query.label}`);
-    console.log(`  "${query.text}"`);
+async function tryEmbedQuery(text: string) {
+  try {
+    return await embedQuery(text);
+  } catch (err) {
+    console.error(`  ❌ Embedding failed: ${(err as Error).message}`);
+    return null;
+  }
+}
 
-    let embedding: number[];
-    try {
-      embedding = await embedQuery(query.text);
-    } catch (err) {
-      console.error(`  ❌ Embedding failed: ${(err as Error).message}`);
-      continue;
-    }
+async function findMatches(db: ReturnType<typeof createPgDbClient>, embedding: number[]) {
+  const { data, error } = await db.rpc('match_movies', {
+    match_count: MATCH_COUNT,
+    match_threshold: LOCAL_VECTOR_MATCH_THRESHOLD,
+    query_embedding: embedding,
+  });
 
-    const { data, error } = await db.rpc('match_movies', {
-      query_embedding: embedding,
-      match_threshold: LOCAL_VECTOR_MATCH_THRESHOLD,
-      match_count: MATCH_COUNT,
-    });
-
-    if (error || !data) {
-      console.error(`  ❌ DB query failed: ${error?.message ?? 'no data'}`);
-      continue;
-    }
-
-    if (data.length === 0) {
-      console.log(`  (no results above match_threshold = ${LOCAL_VECTOR_MATCH_THRESHOLD})`);
-      continue;
-    }
-
-    const rows = data as { name: string; year?: number | null; similarity: number }[];
-    const best = rows[0].similarity;
-    bestScores.push(best);
-
-    rows.forEach((row, i) => {
-      const marker = i === 0 ? ' ← ceiling' : '';
-      const year = row.year ? ` (${row.year})` : '';
-      console.log(`  ${row.similarity.toFixed(4)}  ${row.name}${year}${marker}`);
-    });
+  if (hasMatchQueryError(error, data)) {
+    printMatchQueryError(error);
+    return null;
   }
 
-  // Summary
-  if (bestScores.length > 0) {
-    const ceiling = Math.max(...bestScores);
-    const suggested = Math.round(((ceiling * 2) / 3) * 100) / 100;
+  return data as MatchMovieRow[];
+}
 
-    printSeparator();
-    console.log('\nSummary');
-    console.log(`  Highest observed score : ${ceiling.toFixed(4)}`);
-    console.log(`  Suggested threshold    : ~${suggested.toFixed(2)}  (≈ 2/3 of ceiling)`);
-    console.log(
-      `  Current threshold      : ${SIMILARITY_THRESHOLD.toFixed(2)}  (SIMILARITY_THRESHOLD in src/features/recommendation/config.ts)`,
-    );
+function hasMatchQueryError(error: unknown, data: unknown) {
+  return Boolean(error) || !data;
+}
 
-    if (Math.abs(suggested - SIMILARITY_THRESHOLD) >= 0.05) {
-      console.log(`\n⚠️  Suggested threshold differs from current by ≥ 0.05.`);
-      console.log(`   Consider updating src/features/recommendation/config.ts`);
-      console.log(`   and the calibration table in docs/SERVICES.md.`);
-    } else {
-      console.log(`\n✅ Current threshold looks appropriate.`);
-    }
+function printMatchQueryError(error: { message?: string } | null) {
+  console.error(`  ❌ DB query failed: ${getMatchQueryErrorMessage(error)}`);
+}
+
+function getMatchQueryErrorMessage(error: { message?: string } | null) {
+  return error?.message ?? 'no data';
+}
+
+function printNoResults() {
+  console.log(`  (no results above match_threshold = ${LOCAL_VECTOR_MATCH_THRESHOLD})`);
+}
+
+function printRows(rows: MatchMovieRow[]) {
+  rows.forEach((row, index) => {
+    console.log(formatRow(row, index));
+  });
+}
+
+function formatRow(row: MatchMovieRow, index: number) {
+  const marker = index === 0 ? ' ← ceiling' : '';
+  const year = row.year ? ` (${row.year})` : '';
+  return `  ${row.similarity.toFixed(4)}  ${row.name}${year}${marker}`;
+}
+
+function appendBestScore(bestScores: number[], bestScore: number | null) {
+  if (bestScore !== null) {
+    bestScores.push(bestScore);
+  }
+}
+
+function printSummary(bestScores: number[]) {
+  if (bestScores.length === 0) {
+    return;
   }
 
-  console.log('');
+  const threshold = getSuggestedThreshold(bestScores);
+
+  printSeparator();
+  console.log('\nSummary');
+  console.log(`  Highest observed score : ${threshold.ceiling.toFixed(4)}`);
+  console.log(`  Suggested threshold    : ~${threshold.suggested.toFixed(2)}  (≈ 2/3 of ceiling)`);
+  console.log(
+    `  Current threshold      : ${SIMILARITY_THRESHOLD.toFixed(2)}  (SIMILARITY_THRESHOLD in src/features/recommendation/config.ts)`,
+  );
+  printThresholdAdvice(threshold.suggested);
+}
+
+function getSuggestedThreshold(bestScores: number[]) {
+  const ceiling = Math.max(...bestScores);
+  const suggested = Math.round(((ceiling * 2) / 3) * 100) / 100;
+
+  return { ceiling, suggested };
+}
+
+function printThresholdAdvice(suggested: number) {
+  if (Math.abs(suggested - SIMILARITY_THRESHOLD) < 0.05) {
+    console.log(`\n✅ Current threshold looks appropriate.`);
+    return;
+  }
+
+  console.log(`\n⚠️  Suggested threshold differs from current by ≥ 0.05.`);
+  console.log(`   Consider updating src/features/recommendation/config.ts`);
+  console.log(`   and the calibration table in docs/SERVICES.md.`);
 }
 
 main().catch((err) => {

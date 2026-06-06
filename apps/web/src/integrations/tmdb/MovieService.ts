@@ -8,6 +8,103 @@ export const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p';
 
 type Fetcher = typeof globalThis.fetch;
 
+function getSearchParams(
+  cleanedTitle: string,
+  year: number | undefined,
+  withYear: boolean,
+): Record<string, string> {
+  return {
+    include_adult: 'false',
+    language: 'en-US',
+    query: cleanedTitle,
+    ...(withYear && year ? { year: String(year) } : {}),
+  };
+}
+
+function selectBestMovieMatch(
+  results: TMDB_MovieEntry[],
+  cleanedTitle: string,
+  year: number | undefined,
+  withYear: boolean,
+): TMDB_MovieEntry | undefined {
+  if (results.length === 0) return undefined;
+
+  const pool = getCandidatePool(results, cleanedTitle, withYear);
+  if (pool.length === 0) return undefined;
+
+  return getYearMatchedMovie(pool, year) ?? pool[0];
+}
+
+function getCandidatePool(
+  results: TMDB_MovieEntry[],
+  cleanedTitle: string,
+  withYear: boolean,
+): TMDB_MovieEntry[] {
+  const normalizedQuery = normalizeMovieTitle(cleanedTitle);
+  const candidateMatches =
+    getExactTitleMatches(results, cleanedTitle) ||
+    getNormalizedTitleMatches(results, normalizedQuery);
+
+  return candidateMatches ?? getFallbackCandidatePool(results, normalizedQuery, withYear);
+}
+
+function getExactTitleMatches(results: TMDB_MovieEntry[], cleanedTitle: string) {
+  const matches = results.filter(
+    (movie) => movie.title.toLowerCase() === cleanedTitle.toLowerCase(),
+  );
+
+  return matches.length > 0 ? matches : null;
+}
+
+function getNormalizedTitleMatches(results: TMDB_MovieEntry[], normalizedQuery: string) {
+  const matches = results.filter((movie) => normalizeMovieTitle(movie.title) === normalizedQuery);
+
+  return matches.length > 0 ? matches : null;
+}
+
+function getFallbackCandidatePool(
+  results: TMDB_MovieEntry[],
+  normalizedQuery: string,
+  withYear: boolean,
+) {
+  const prefixMatches = results.filter((movie) => isPrefixTitleMatch(movie.title, normalizedQuery));
+
+  if (prefixMatches.length > 0) {
+    return prefixMatches;
+  }
+
+  return withYear ? [] : [results[0]];
+}
+
+function isPrefixTitleMatch(title: string, normalizedQuery: string) {
+  const normalizedTitle = normalizeMovieTitle(title);
+
+  return normalizedTitle.startsWith(normalizedQuery) || normalizedQuery.startsWith(normalizedTitle);
+}
+
+function getYearMatchedMovie(pool: TMDB_MovieEntry[], year: number | undefined) {
+  if (!year) {
+    return undefined;
+  }
+
+  return pool.find((movie) => isReleaseYearMatch(movie, year));
+}
+
+function isReleaseYearMatch(movie: TMDB_MovieEntry, year: number) {
+  const releaseYear = parseTMDBReleaseYear(movie.release_date);
+  return Math.abs(releaseYear - year) <= 1;
+}
+
+// Normalized comparison handles variations like "Brother 2" vs
+// "Brother 2: The Elder's Blood".
+function normalizeMovieTitle(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export class MovieService {
   constructor(
     private fetcher: Fetcher = globalThis.fetch,
@@ -50,85 +147,8 @@ export class MovieService {
     // Strip optional year suffix like " (1997)" that OpenAI sometimes appends to titles.
     const cleanedTitle = movieTitle.replace(/\s*\(\d{4}\)\s*$/, '').trim();
 
-    // Normalized comparison: lowercase + collapse whitespace + strip punctuation.
-    // Handles minor variations like "Brother 2" vs "Brother 2: The Elder's Blood".
-    const normalize = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    const normalizedQuery = normalize(cleanedTitle);
-
-    const searchOnce = async (withYear: boolean): Promise<TMDB_MovieEntry | undefined> => {
-      try {
-        const params: Record<string, string> = {
-          query: cleanedTitle,
-          language: 'en-US',
-          include_adult: 'false',
-        };
-        if (withYear && year) {
-          params['year'] = String(year);
-        }
-        const response = await this.tmdbGet('/search/movie', params);
-        if (!response.ok) {
-          logger.warn(
-            { status: response.status, movieTitle: cleanedTitle, withYear },
-            'TMDB search request failed',
-          );
-          return undefined;
-        }
-
-        const data = (await response.json()) as { results?: TMDB_MovieEntry[] };
-        const results: TMDB_MovieEntry[] = data.results ?? [];
-        if (results.length === 0) return undefined;
-
-        // 1. Exact title match (case-insensitive)
-        const exactMatches = results.filter(
-          (m) => m.title.toLowerCase() === cleanedTitle.toLowerCase(),
-        );
-
-        // 2. Normalized match — strips punctuation/extra spaces
-        const normalizedMatches =
-          exactMatches.length > 0
-            ? exactMatches
-            : results.filter((m) => normalize(m.title) === normalizedQuery);
-
-        // 3. Prefix/contains match — e.g. "Brother 2" matches "Brother 2: The Elder's Blood"
-        const candidateMatches =
-          normalizedMatches.length > 0
-            ? normalizedMatches
-            : results.filter(
-                (m) =>
-                  normalize(m.title).startsWith(normalizedQuery) ||
-                  normalizedQuery.startsWith(normalize(m.title)),
-              );
-
-        // 4. Last resort: trust TMDB ranking (first result), only without year constraint
-        const pool = candidateMatches.length > 0 ? candidateMatches : !withYear ? [results[0]] : [];
-        if (pool.length === 0) return undefined;
-
-        // Prefer the entry whose release year matches when a year is provided.
-        if (year) {
-          const yearMatch = pool.find((m) => {
-            const releaseYear = parseTMDBReleaseYear(m.release_date);
-            return Math.abs(releaseYear - year) <= 1; // ±1 year tolerance for release-date shifts
-          });
-          if (yearMatch) return yearMatch;
-        }
-
-        return pool[0];
-      } catch (error) {
-        logger.warn(
-          { err: error, movieTitle: cleanedTitle, withYear },
-          'TMDB search request failed',
-        );
-        return undefined;
-      }
-    };
-
     // Cascade: search with year first (better disambiguation), fall back without year.
-    const withYear = year ? await searchOnce(true) : undefined;
+    const withYear = year ? await this.searchMovie(cleanedTitle, year, true) : undefined;
     if (withYear) return withYear;
 
     if (year) {
@@ -137,11 +157,46 @@ export class MovieService {
         'Year-scoped TMDB search found nothing, retrying without year',
       );
     }
-    const withoutYear = await searchOnce(false);
+    const withoutYear = await this.searchMovie(cleanedTitle, year, false);
     if (!withoutYear) {
       logger.warn({ movieTitle, cleanedTitle }, 'No TMDB movie found with title after cascade');
     }
     return withoutYear;
+  }
+
+  private async searchMovie(
+    cleanedTitle: string,
+    year: number | undefined,
+    withYear: boolean,
+  ): Promise<TMDB_MovieEntry | undefined> {
+    try {
+      const results = await this.fetchSearchResults(cleanedTitle, year, withYear);
+      return selectBestMovieMatch(results, cleanedTitle, year, withYear);
+    } catch (error) {
+      logger.warn({ err: error, movieTitle: cleanedTitle, withYear }, 'TMDB search request failed');
+      return undefined;
+    }
+  }
+
+  private async fetchSearchResults(
+    cleanedTitle: string,
+    year: number | undefined,
+    withYear: boolean,
+  ): Promise<TMDB_MovieEntry[]> {
+    const response = await this.tmdbGet(
+      '/search/movie',
+      getSearchParams(cleanedTitle, year, withYear),
+    );
+    if (!response.ok) {
+      logger.warn(
+        { status: response.status, movieTitle: cleanedTitle, withYear },
+        'TMDB search request failed',
+      );
+      return [];
+    }
+
+    const data = (await response.json()) as { results?: TMDB_MovieEntry[] };
+    return data.results ?? [];
   }
 
   async getLocalizedMovieInfo(

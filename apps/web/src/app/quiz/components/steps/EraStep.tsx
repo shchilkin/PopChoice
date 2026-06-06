@@ -5,6 +5,8 @@ import { Clock } from 'lucide-react';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
+import { SelectionMark, StepHeader } from './StepPrimitives';
+
 import type { Era, PersonAnswers } from '../../types';
 
 interface EraStepProps {
@@ -12,10 +14,18 @@ interface EraStepProps {
   onUpdate: (updates: Partial<PersonAnswers>) => void;
 }
 
+type EraOptionData = {
+  color: string;
+  desc: string;
+  emoji: string;
+  id: Era;
+  title: string;
+};
+
 export function EraStep({ person, onUpdate }: EraStepProps) {
   const { t } = useLanguage();
 
-  const ERA_OPTIONS = [
+  const eraOptions: EraOptionData[] = [
     {
       id: 'new' as Era,
       emoji: '✨',
@@ -41,85 +51,73 @@ export function EraStep({ person, onUpdate }: EraStepProps) {
 
   return (
     <div className="flex flex-col gap-6 pt-2">
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{
-            background: 'rgba(255,159,28,0.15)',
-            color: 'var(--pc-amber)',
-          }}
-        >
-          <Clock size={20} />
-        </div>
-        <h2
-          style={{
-            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            fontSize: '1.8rem',
-            letterSpacing: '0.04em',
-            color: 'var(--pc-t1)',
-            lineHeight: 1.1,
-          }}
-        >
-          {t.quiz.era.title}
-        </h2>
-      </div>
+      <StepHeader
+        accentBackground="rgba(255,159,28,0.15)"
+        accentColor="var(--pc-amber)"
+        icon={<Clock size={20} />}
+        title={t.quiz.era.title}
+      />
 
       <div className="grid grid-cols-1 gap-4">
-        {ERA_OPTIONS.map((opt) => {
-          const selected = person.era === opt.id;
-          return (
-            <button
-              key={opt.id}
-              onClick={() => onUpdate({ era: opt.id })}
-              className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
-              style={{
-                background: selected ? `${opt.color}18` : 'var(--pc-surface)',
-                border: selected ? `1.5px solid ${opt.color}60` : '1px solid var(--pc-bd2)',
-                boxShadow: selected ? `0 0 20px ${opt.color}18` : 'none',
-              }}
-            >
-              <div className="text-2xl">{opt.emoji}</div>
-              <div className="flex-1">
-                <div
-                  style={{
-                    color: selected ? opt.color : 'var(--pc-t1)',
-                    fontWeight: 600,
-                    fontSize: '0.95rem',
-                  }}
-                >
-                  {opt.title}
-                </div>
-                <div
-                  style={{
-                    color: 'var(--pc-t3)',
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  {opt.desc}
-                </div>
-              </div>
-              {selected && (
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: opt.color }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path
-                      d="M2 5l2.5 2.5L8 3"
-                      stroke="var(--pc-cta-text)"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-              )}
-            </button>
-          );
-        })}
+        {eraOptions.map((option) => (
+          <EraOptionButton
+            key={option.id}
+            option={option}
+            selected={person.era === option.id}
+            onSelect={() => onUpdate({ era: option.id })}
+          />
+        ))}
       </div>
     </div>
   );
+}
+
+function EraOptionButton({
+  onSelect,
+  option,
+  selected,
+}: {
+  onSelect: () => void;
+  option: EraOptionData;
+  selected: boolean;
+}) {
+  const styles = getEraOptionStyles(option, selected);
+
+  return (
+    <button
+      onClick={onSelect}
+      className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]"
+      style={styles.button}
+    >
+      <div className="text-2xl">{option.emoji}</div>
+      <div className="flex-1">
+        <div style={styles.title}>{option.title}</div>
+        <div style={{ color: 'var(--pc-t3)', fontSize: '0.82rem' }}>{option.desc}</div>
+      </div>
+      {selected && <SelectionMark color={option.color} />}
+    </button>
+  );
+}
+
+function getEraOptionStyles(option: EraOptionData, selected: boolean) {
+  return {
+    button: {
+      background: getSelectedValue(selected, `${option.color}18`, 'var(--pc-surface)'),
+      border: getSelectedValue(
+        selected,
+        `1.5px solid ${option.color}60`,
+        '1px solid var(--pc-bd2)',
+      ),
+      boxShadow: getSelectedValue(selected, `0 0 20px ${option.color}18`, 'none'),
+    },
+    title: {
+      color: getSelectedValue(selected, option.color, 'var(--pc-t1)'),
+      fontSize: '0.95rem',
+      fontWeight: 600,
+    },
+  };
+}
+
+function getSelectedValue<T>(selected: boolean, selectedValue: T, defaultValue: T) {
+  return selected ? selectedValue : defaultValue;
 }

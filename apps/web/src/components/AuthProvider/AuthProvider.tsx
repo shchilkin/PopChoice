@@ -59,15 +59,16 @@ async function fetchSession(): Promise<AuthState> {
       return { status: 'anonymous', userId: null };
     }
 
-    const data = (await response.json()) as SessionResponse;
-    if (data.authenticated && data.userId) {
-      return { status: 'authenticated', userId: data.userId };
-    }
-
-    return { status: 'anonymous', userId: null };
+    return toAuthState((await response.json()) as SessionResponse);
   } catch {
     return { status: 'anonymous', userId: null };
   }
+}
+
+function toAuthState(data: SessionResponse): AuthState {
+  return data.authenticated && data.userId
+    ? { status: 'authenticated', userId: data.userId }
+    : { status: 'anonymous', userId: null };
 }
 
 const AuthContext = createContext<AuthContextValue>({

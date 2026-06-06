@@ -28,6 +28,15 @@ export type FeedbackCandidateSignals = {
 const FEEDBACK_DOWNRANK_AMOUNT = 0.08;
 const LIKED_MEMORY_BOOST_AMOUNT = 0.04;
 
+const EXCLUDED_FEEDBACK_KINDS = new Set<FeedbackMoviePreference['kind']>([
+  'already_watched',
+  'not_interested',
+  'recently_recommended',
+  'too_obscure',
+  'too_obvious',
+  'watched',
+]);
+
 export function getMentionedMovieTitleKeys(allPeopleData: PersonFormData[]): Set<string> {
   return new Set(
     allPeopleData
@@ -61,54 +70,79 @@ export function excludeMentionedTMDBMovies(
 export function getFeedbackCandidateSignals(
   preferences: FeedbackMoviePreference[],
 ): FeedbackCandidateSignals {
-  const excludedMovieKeys = new Set<string>();
-  const excludedTitleKeys = new Set<string>();
-  const downrankMovieKeys = new Set<string>();
-  const downrankTitleKeys = new Set<string>();
-  const boostMovieKeys = new Set<string>();
-  const boostTitleKeys = new Set<string>();
+  const signals = createEmptyFeedbackCandidateSignals();
 
   for (const preference of preferences) {
-    const movieKey =
+    addPreferenceToSignals(signals, preference);
+  }
+
+  return signals;
+}
+
+function createEmptyFeedbackCandidateSignals(): FeedbackCandidateSignals {
+  return {
+    boostMovieKeys: new Set<string>(),
+    boostTitleKeys: new Set<string>(),
+    downrankMovieKeys: new Set<string>(),
+    downrankTitleKeys: new Set<string>(),
+    excludedMovieKeys: new Set<string>(),
+    excludedTitleKeys: new Set<string>(),
+  };
+}
+
+function addPreferenceToSignals(
+  signals: FeedbackCandidateSignals,
+  preference: FeedbackMoviePreference,
+) {
+  const keys = getPreferenceKeys(preference);
+  const targets = getSignalTargets(signals, preference.kind);
+
+  if (!targets) {
+    return;
+  }
+
+  addFeedbackKeys(targets.movieKeys, targets.titleKeys, keys);
+}
+
+function getPreferenceKeys(preference: FeedbackMoviePreference) {
+  return {
+    movieKey:
       preference.movieKey ??
       getMovieIdentityKey({
         tmdbId: preference.tmdbId,
         title: preference.movieName,
         year: preference.movieYear,
-      });
-    const titleKey = getMovieTitleKey(preference.movieName);
+      }),
+    titleKey: getMovieTitleKey(preference.movieName),
+  };
+}
 
-    if (
-      preference.kind === 'already_watched' ||
-      preference.kind === 'watched' ||
-      preference.kind === 'recently_recommended' ||
-      preference.kind === 'not_interested' ||
-      preference.kind === 'too_obvious' ||
-      preference.kind === 'too_obscure'
-    ) {
-      if (movieKey) excludedMovieKeys.add(movieKey);
-      if (titleKey) excludedTitleKeys.add(titleKey);
-    }
-
-    if (preference.kind === 'wrong_mood') {
-      if (movieKey) downrankMovieKeys.add(movieKey);
-      if (titleKey) downrankTitleKeys.add(titleKey);
-    }
-
-    if (preference.kind === 'liked') {
-      if (movieKey) boostMovieKeys.add(movieKey);
-      if (titleKey) boostTitleKeys.add(titleKey);
-    }
+function getSignalTargets(
+  signals: FeedbackCandidateSignals,
+  kind: FeedbackMoviePreference['kind'],
+) {
+  if (EXCLUDED_FEEDBACK_KINDS.has(kind)) {
+    return { movieKeys: signals.excludedMovieKeys, titleKeys: signals.excludedTitleKeys };
   }
 
-  return {
-    excludedMovieKeys,
-    excludedTitleKeys,
-    downrankMovieKeys,
-    downrankTitleKeys,
-    boostMovieKeys,
-    boostTitleKeys,
-  };
+  if (kind === 'wrong_mood') {
+    return { movieKeys: signals.downrankMovieKeys, titleKeys: signals.downrankTitleKeys };
+  }
+
+  if (kind === 'liked') {
+    return { movieKeys: signals.boostMovieKeys, titleKeys: signals.boostTitleKeys };
+  }
+
+  return null;
+}
+
+function addFeedbackKeys(
+  movieKeys: Set<string>,
+  titleKeys: Set<string>,
+  keys: { movieKey: string | null; titleKey: string | null },
+) {
+  if (keys.movieKey) movieKeys.add(keys.movieKey);
+  if (keys.titleKey) titleKeys.add(keys.titleKey);
 }
 
 function getLocalMovieIdentityKey(movie: EnhancedMovieMatch): string | null {

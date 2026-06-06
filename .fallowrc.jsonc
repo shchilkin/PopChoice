@@ -29,7 +29,13 @@
     "maxCyclomatic": 20,
     "maxCognitive": 15,
     "maxCrap": 30,
-    "ignore": ["**/*.stories.*", "**/*.test.*", "**/*.spec.*", "**/e2e/**"],
+    "ignore": [
+      "**/*.stories.*",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/e2e/**",
+      "apps/web/public/mockServiceWorker.js",
+    ],
   },
   "audit": {
     "gate": "new-only",

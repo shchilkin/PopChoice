@@ -6,6 +6,8 @@ import { motion } from 'motion/react';
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
 
+import type { ElementType } from 'react';
+
 // Asymmetric 12-column grid: breaks identical card geometry while keeping group mode prominent
 const COL_SPANS = [
   'md:col-span-7', // AI-Powered: wider — the "why"
@@ -17,7 +19,7 @@ const COL_SPANS = [
 export function FeaturesSection() {
   const { t } = useLanguage();
 
-  const features = [
+  const features: FeatureCardData[] = [
     {
       icon: Sparkles,
       title: t.features.aiPowered.title,
@@ -74,55 +76,115 @@ export function FeaturesSection() {
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-        {features.map((f, i) => (
-          <motion.div
-            key={f.title}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className={`col-span-1 ${COL_SPANS[i]} rounded-2xl flex flex-col gap-4`}
-            style={{
-              padding: f.featured ? '2rem' : '1.5rem',
-              background: f.featured ? `${f.color}0d` : 'var(--pc-surface)',
-              border: `1px solid ${f.featured ? `${f.color}30` : 'var(--pc-bd1)'}`,
-              transition: 'background 0.3s, border-color 0.3s',
-            }}
-          >
-            <div
-              className="rounded-xl flex items-center justify-center"
-              style={{
-                width: f.featured ? '3rem' : '2.5rem',
-                height: f.featured ? '3rem' : '2.5rem',
-                background: `${f.color}18`,
-                color: f.color,
-              }}
-            >
-              <f.icon size={f.featured ? 24 : 20} />
-            </div>
-            <div>
-              <h3
-                className="mb-1"
-                style={{
-                  color: 'var(--pc-t1)',
-                  fontSize: f.featured ? '1.05rem' : '0.95rem',
-                  fontWeight: 600,
-                }}
-              >
-                {f.title}
-              </h3>
-              <p style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                {f.desc}
-              </p>
-            </div>
-            {f.featured && (
-              <p className="mt-auto text-xs font-semibold" style={{ color: f.color }}>
-                {t.features.groupMode.worksFor}
-              </p>
-            )}
-          </motion.div>
+        {features.map((feature, index) => (
+          <FeatureCard
+            key={feature.title}
+            columnClass={COL_SPANS[index]}
+            feature={feature}
+            index={index}
+            worksFor={t.features.groupMode.worksFor}
+          />
         ))}
       </div>
     </section>
   );
+}
+
+type FeatureCardData = {
+  color: string;
+  desc: string;
+  featured: boolean;
+  icon: ElementType;
+  title: string;
+};
+
+function FeatureCard({
+  columnClass,
+  feature,
+  index,
+  worksFor,
+}: {
+  columnClass: string;
+  feature: FeatureCardData;
+  index: number;
+  worksFor: string;
+}) {
+  const Icon = feature.icon;
+  const styles = getFeatureCardStyles(feature);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      className={`col-span-1 ${columnClass} rounded-2xl flex flex-col gap-4`}
+      style={styles.card}
+    >
+      <div className="rounded-xl flex items-center justify-center" style={styles.icon}>
+        <Icon size={feature.featured ? 24 : 20} />
+      </div>
+      <div>
+        <h3 className="mb-1" style={styles.title}>
+          {feature.title}
+        </h3>
+        <p style={{ color: 'var(--pc-t3)', fontSize: '0.85rem', lineHeight: 1.6 }}>
+          {feature.desc}
+        </p>
+      </div>
+      {feature.featured && (
+        <p className="mt-auto text-xs font-semibold" style={{ color: feature.color }}>
+          {worksFor}
+        </p>
+      )}
+    </motion.div>
+  );
+}
+
+function getFeatureCardStyles(feature: FeatureCardData) {
+  return {
+    card: getFeatureCardContainerStyle(feature),
+    icon: getFeatureIconStyle(feature),
+    title: getFeatureTitleStyle(feature),
+  };
+}
+
+function getFeatureCardContainerStyle(feature: FeatureCardData) {
+  return {
+    background: getFeatureCardBackground(feature),
+    border: `1px solid ${getFeatureCardBorderColor(feature)}`,
+    padding: getFeaturedValue(feature, '2rem', '1.5rem'),
+    transition: 'background 0.3s, border-color 0.3s',
+  };
+}
+
+function getFeatureIconStyle(feature: FeatureCardData) {
+  const size = getFeaturedValue(feature, '3rem', '2.5rem');
+
+  return {
+    background: `${feature.color}18`,
+    color: feature.color,
+    height: size,
+    width: size,
+  };
+}
+
+function getFeatureTitleStyle(feature: FeatureCardData) {
+  return {
+    color: 'var(--pc-t1)',
+    fontSize: getFeaturedValue(feature, '1.05rem', '0.95rem'),
+    fontWeight: 600,
+  };
+}
+
+function getFeatureCardBackground(feature: FeatureCardData) {
+  return getFeaturedValue(feature, `${feature.color}0d`, 'var(--pc-surface)');
+}
+
+function getFeatureCardBorderColor(feature: FeatureCardData) {
+  return getFeaturedValue(feature, `${feature.color}30`, 'var(--pc-bd1)');
+}
+
+function getFeaturedValue<T>(feature: FeatureCardData, featuredValue: T, defaultValue: T) {
+  return feature.featured ? featuredValue : defaultValue;
 }

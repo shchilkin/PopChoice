@@ -97,9 +97,8 @@ function MoviesTableEmptyState({
   onClearFilters,
 }: MoviesTableEmptyStateProps) {
   const { t } = useLanguage();
-  const title = hasActiveFilters ? t.moviesPage.emptyFilteredTitle : t.moviesPage.emptyCatalogTitle;
-  const body = hasActiveFilters ? t.moviesPage.emptyFilteredBody : t.moviesPage.emptyCatalogBody;
-  const canClearFilters = hasActiveFilters && onClearFilters;
+  const copy = getEmptyStateCopy(t, hasActiveFilters);
+  const canClearFilters = Boolean(hasActiveFilters && onClearFilters);
 
   return (
     <div
@@ -118,26 +117,14 @@ function MoviesTableEmptyState({
         <SearchX size={22} strokeWidth={1.8} />
       </div>
       <h2 className="text-base font-semibold" style={{ color: 'var(--pc-t1)' }}>
-        {title}
+        {copy.title}
       </h2>
       <p className="mt-2 max-w-sm text-sm leading-6" style={{ color: 'var(--pc-t3)' }}>
-        {body}
+        {copy.body}
       </p>
-      {canClearFilters ? (
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-200"
-          style={{
-            background: 'var(--pc-surface-hover)',
-            border: '1px solid var(--pc-bd2)',
-            color: 'var(--pc-t2)',
-          }}
-        >
-          <X size={16} aria-hidden="true" />
-          {t.moviesPage.clearFilters}
-        </button>
-      ) : null}
+      {canClearFilters && (
+        <ClearFiltersButton label={t.moviesPage.clearFilters} onClearFilters={onClearFilters} />
+      )}
     </div>
   );
 }
@@ -147,7 +134,6 @@ export function MoviesTable({
   hasActiveFilters = false,
   onClearFilters,
 }: MoviesTableProps) {
-  const { t } = useLanguage();
   const isMobile = useIsMobile();
 
   // Show the skeleton while the breakpoint is being measured to avoid a brief
@@ -157,57 +143,129 @@ export function MoviesTable({
 
   if (isMobile) {
     return (
+      <MobileMoviesTable
+        movies={movies}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={onClearFilters}
+      />
+    );
+  }
+
+  return (
+    <DesktopMoviesTable
+      movies={movies}
+      hasActiveFilters={hasActiveFilters}
+      onClearFilters={onClearFilters}
+    />
+  );
+}
+
+type MoviesPageCopy = ReturnType<typeof useLanguage>['t'];
+
+function getEmptyStateCopy(t: MoviesPageCopy, hasActiveFilters: boolean) {
+  return hasActiveFilters
+    ? { body: t.moviesPage.emptyFilteredBody, title: t.moviesPage.emptyFilteredTitle }
+    : { body: t.moviesPage.emptyCatalogBody, title: t.moviesPage.emptyCatalogTitle };
+}
+
+function ClearFiltersButton({
+  label,
+  onClearFilters,
+}: {
+  label: string;
+  onClearFilters?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClearFilters}
+      className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-200"
+      style={{
+        background: 'var(--pc-surface-hover)',
+        border: '1px solid var(--pc-bd2)',
+        color: 'var(--pc-t2)',
+      }}
+    >
+      <X size={16} aria-hidden="true" />
+      {label}
+    </button>
+  );
+}
+
+function MobileMoviesTable({ movies, hasActiveFilters, onClearFilters }: MoviesTableProps) {
+  if (movies.length === 0) {
+    return (
       <div className="flex flex-col gap-3">
-        {movies.length === 0 ? (
-          <div
-            className="rounded-2xl"
-            style={{
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-            }}
-          >
-            <MoviesTableEmptyState
-              compact
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={onClearFilters}
-            />
-          </div>
-        ) : (
-          movies.map((movie) => (
-            <div
-              key={movie.id}
-              className="rounded-2xl p-4"
-              style={{
-                background: 'var(--pc-surface)',
-                border: '1px solid var(--pc-bd2)',
-              }}
-            >
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
-                    {movie.name}
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
-                    {movie.year}
-                  </div>
-                </div>
-                <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
-              </div>
-              <div className="flex items-center gap-4 mt-2">
-                <span className="text-xs" style={{ color: 'var(--pc-t3)' }}>
-                  {formatDuration(movie.duration)}
-                </span>
-                <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
-                  ★ {movie.score_rating.toFixed(1)}
-                  <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>/10</span>
-                </span>
-              </div>
-            </div>
-          ))
-        )}
+        <MobileEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
       </div>
     );
   }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {movies.map((movie) => (
+        <MobileMovieCard key={movie.id} movie={movie} />
+      ))}
+    </div>
+  );
+}
+
+function MobileEmptyState({
+  hasActiveFilters,
+  onClearFilters,
+}: Pick<MoviesTableProps, 'hasActiveFilters' | 'onClearFilters'>) {
+  return (
+    <div
+      className="rounded-2xl"
+      style={{
+        background: 'var(--pc-surface)',
+        border: '1px solid var(--pc-bd2)',
+      }}
+    >
+      <MoviesTableEmptyState
+        compact
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={onClearFilters}
+      />
+    </div>
+  );
+}
+
+function MobileMovieCard({ movie }: { movie: Movie }) {
+  return (
+    <div
+      className="rounded-2xl p-4"
+      style={{
+        background: 'var(--pc-surface)',
+        border: '1px solid var(--pc-bd2)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
+            {movie.name}
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
+            {movie.year}
+          </div>
+        </div>
+        <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
+      </div>
+      <div className="flex items-center gap-4 mt-2">
+        <span className="text-xs" style={{ color: 'var(--pc-t3)' }}>
+          {formatDuration(movie.duration)}
+        </span>
+        <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
+          ★ {movie.score_rating.toFixed(1)}
+          <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>/10</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function DesktopMoviesTable({ movies, hasActiveFilters, onClearFilters }: MoviesTableProps) {
+  const { t } = useLanguage();
 
   return (
     <div
@@ -248,14 +306,7 @@ export function MoviesTable({
         </thead>
         <tbody>
           {movies.length === 0 ? (
-            <tr>
-              <td colSpan={4} className="px-0 py-0">
-                <MoviesTableEmptyState
-                  hasActiveFilters={hasActiveFilters}
-                  onClearFilters={onClearFilters}
-                />
-              </td>
-            </tr>
+            <DesktopEmptyRow hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
           ) : (
             movies.map((movie, i) => (
               <tr
@@ -296,5 +347,21 @@ export function MoviesTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function DesktopEmptyRow({
+  hasActiveFilters,
+  onClearFilters,
+}: Pick<MoviesTableProps, 'hasActiveFilters' | 'onClearFilters'>) {
+  return (
+    <tr>
+      <td colSpan={4} className="px-0 py-0">
+        <MoviesTableEmptyState
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={onClearFilters}
+        />
+      </td>
+    </tr>
   );
 }
