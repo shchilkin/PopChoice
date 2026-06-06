@@ -22,6 +22,13 @@ import {
 import { withTraceSpan } from '@/lib/tracing';
 import { withAuth } from '@/lib/withAuth';
 
+import type {
+  RecommendationExperienceMode,
+  RecommendationSourceStrategy,
+} from '@/features/recommendation/types';
+
+type CreateValidationIssue = { path: Array<string | number>; message: string };
+
 // ---------------------------------------------------------------------------
 // POST /api/recommendations — create a new recommendation job
 // ---------------------------------------------------------------------------
@@ -29,77 +36,153 @@ async function postHandler(req: NextRequest, clientId: string): Promise<Response
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  let body: unknown;
   try {
-    body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
-  } catch (error) {
-    const bodyErrorResponse = requestBodyErrorResponse(error);
-    if (bodyErrorResponse) return bodyErrorResponse;
-    throw error;
-  }
+    const parsed = await parseCreateRecommendationBody(req);
+    const context = getCreateRecommendationContext(req, parsed.data);
+    logCreateRecommendationRequest(context);
 
-  // Validate request body
+    const inputBlockResponse = await getInputBlockResponse(context);
+    if (inputBlockResponse) return inputBlockResponse;
+
+    const created = await createRecommendationJob(context, clientId);
+    return NextResponse.json({ id: created.slug }, { status: 201 });
+  } catch (error) {
+    return getCreateRecommendationErrorResponse(error);
+  }
+}
+
+async function parseCreateRecommendationBody(req: NextRequest) {
+  const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
   const parsed = recommendationCreateRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: 'Invalid request data',
-        details: parsed.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
-      },
-      { status: 400 },
-    );
+    throw parsed.error;
   }
 
-  const createInput = normalizeRecommendationCreateRequest(parsed.data);
+  return parsed;
+}
+
+function getCreateRecommendationContext(
+  req: NextRequest,
+  data: typeof recommendationCreateRequestSchema._output,
+) {
+  const createInput = normalizeRecommendationCreateRequest(data);
   const validatedBody = createInput.quizData;
   const locale = parseLocaleFromRequest(req);
   const allPeopleData = normalizePeopleData(validatedBody);
   const isDeterministic = usesDeterministicE2ERecommendations();
-  const experienceMode = isDeterministic
-    ? 'curated-showcase'
-    : (createInput.experienceMode ?? 'normal-match');
-  const sourceStrategy = isDeterministic
-    ? 'curated-showcase'
-    : resolveRecommendationSourceStrategy({ experienceMode, people: allPeopleData }).id;
 
+  return {
+    allPeopleData,
+    experienceMode: getCreateExperienceMode(isDeterministic, createInput.experienceMode),
+    isDeterministic,
+    locale,
+    sourceStrategy: getCreateSourceStrategy(
+      isDeterministic,
+      createInput.experienceMode,
+      allPeopleData,
+    ),
+    validatedBody,
+  };
+}
+
+type CreateRecommendationContext = ReturnType<typeof getCreateRecommendationContext>;
+
+function getCreateExperienceMode(
+  isDeterministic: boolean,
+  experienceMode: RecommendationExperienceMode | undefined,
+): RecommendationExperienceMode {
+  return isDeterministic ? 'curated-showcase' : (experienceMode ?? 'normal-match');
+}
+
+function getCreateSourceStrategy(
+  isDeterministic: boolean,
+  experienceMode: RecommendationExperienceMode | undefined,
+  allPeopleData: ReturnType<typeof normalizePeopleData>,
+): RecommendationSourceStrategy {
+  const resolvedExperienceMode = getCreateExperienceMode(isDeterministic, experienceMode);
+  return isDeterministic
+    ? 'curated-showcase'
+    : resolveRecommendationSourceStrategy({
+        experienceMode: resolvedExperienceMode,
+        people: allPeopleData,
+      }).id;
+}
+
+function logCreateRecommendationRequest(context: CreateRecommendationContext) {
   logger.info(
-    { experienceMode, personCount: allPeopleData.length, locale, sourceStrategy },
+    {
+      experienceMode: context.experienceMode,
+      locale: context.locale,
+      personCount: context.allPeopleData.length,
+      sourceStrategy: context.sourceStrategy,
+    },
     'Creating recommendation via /api/recommendations',
   );
+}
 
-  if (!isDeterministic) {
-    const inputBlock = await getRecommendationInputBlock(allPeopleData);
-    if (inputBlock) {
-      return NextResponse.json(inputBlock, { status: 422 });
-    }
+async function getInputBlockResponse(context: CreateRecommendationContext) {
+  if (context.isDeterministic) {
+    return null;
   }
 
+  const inputBlock = await getRecommendationInputBlock(context.allPeopleData);
+  return inputBlock ? NextResponse.json(inputBlock, { status: 422 }) : null;
+}
+
+async function createRecommendationJob(context: CreateRecommendationContext, clientId: string) {
   try {
-    const userId = clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
-    const created = await withTraceSpan(
+    return await withTraceSpan(
       'api.recommendations.create',
       {
         attributes: {
           'http.route': '/api/recommendations',
           'recommendation.mode': 'async',
-          'recommendation.experience_mode': experienceMode,
-          'recommendation.people.count': allPeopleData.length,
-          'recommendation.source_strategy': sourceStrategy,
-          locale,
+          'recommendation.experience_mode': context.experienceMode,
+          'recommendation.people.count': context.allPeopleData.length,
+          'recommendation.source_strategy': context.sourceStrategy,
+          locale: context.locale,
         },
       },
       async () =>
-        createAndStartRecommendation(validatedBody, allPeopleData, locale, {
-          experienceMode,
-          sourceStrategy,
-          userId,
+        createAndStartRecommendation(context.validatedBody, context.allPeopleData, context.locale, {
+          experienceMode: context.experienceMode,
+          sourceStrategy: context.sourceStrategy,
+          userId: getClientUserId(clientId),
         }),
     );
-    return NextResponse.json({ id: created.slug }, { status: 201 });
   } catch (err) {
     logger.error({ err }, 'Failed to create recommendation row');
-    return NextResponse.json({ error: 'Failed to create recommendation' }, { status: 500 });
+    throw new Error('Failed to create recommendation');
   }
+}
+
+function getClientUserId(clientId: string) {
+  return clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
+}
+
+function getCreateRecommendationErrorResponse(error: unknown) {
+  const bodyErrorResponse = requestBodyErrorResponse(error);
+  if (bodyErrorResponse) return bodyErrorResponse;
+
+  if (isCreateValidationError(error)) {
+    return getCreateValidationErrorResponse(error);
+  }
+
+  return NextResponse.json({ error: 'Failed to create recommendation' }, { status: 500 });
+}
+
+function isCreateValidationError(error: unknown): error is { issues: CreateValidationIssue[] } {
+  return error instanceof Error && error.name === 'ZodError' && 'issues' in error;
+}
+
+function getCreateValidationErrorResponse(error: { issues: CreateValidationIssue[] }) {
+  return NextResponse.json(
+    {
+      details: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', '),
+      error: 'Invalid request data',
+    },
+    { status: 400 },
+  );
 }
 
 export const POST = withAuth(postHandler);

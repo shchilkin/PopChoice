@@ -26,47 +26,22 @@ function parsePositiveFloat(value: string | undefined, fallback: number): number
 }
 
 function parseSources(): TMDBDiscoverySource[] {
-  const rawSources = process.env.TMDB_SOURCES?.split(',').map((source) => source.trim()) ?? [];
-  const filtered = rawSources.filter((source): source is TMDBDiscoverySource =>
-    VALID_SOURCES.includes(source as TMDBDiscoverySource),
-  );
-  if (rawSources.length > 0 && filtered.length === 0) {
+  const rawSources = parseRawSources();
+  const filtered = rawSources.filter(isValidSource);
+  if (hasOnlyInvalidSources(rawSources, filtered)) {
     throw new Error(`TMDB_SOURCES must include one of: ${VALID_SOURCES.join(', ')}`);
   }
-  return rawSources.length > 0 ? filtered : VALID_SOURCES;
+  return rawSources.length > 0 ? filtered : [...VALID_SOURCES];
 }
 
 async function enqueueDiscovery(): Promise<void> {
-  const sources = parseSources();
-  const maxPagesPerSource = parsePositiveInt(process.env.MAX_PAGES_PER_SOURCE, 3);
-  const minVoteCount = parsePositiveInt(process.env.MIN_VOTE_COUNT, 500);
-  const minVoteAverage = parsePositiveFloat(process.env.MIN_VOTE_AVERAGE, 6.5);
-  const maxMoviesPerPage = parsePositiveInt(process.env.MAX_MOVIES_PER_PAGE, 20);
-  const language = process.env.TMDB_LANGUAGE?.trim() || 'en-US';
-
-  let queued = 0;
-  for (const source of sources) {
-    for (let page = 1; page <= maxPagesPerSource; page++) {
-      const didQueue = await enqueueCatalogDiscoverTMDBSourcePage({
-        source,
-        page,
-        language,
-        minVoteCount,
-        minVoteAverage,
-        maxMoviesPerPage,
-      });
-      if (didQueue) queued++;
-    }
-  }
-
+  const queued = await enqueueDiscoveryPages(getDiscoveryOptions());
   console.log(`Queued ${queued} catalog discovery page jobs.`);
 }
 
 async function enqueueBackfill(): Promise<void> {
   const db = getDbClient();
-  if (!db.isConfigured() || !db.query) {
-    throw new Error('DATABASE_URL is required to enqueue catalog backfill jobs');
-  }
+  assertBackfillDbConfigured(db);
 
   const limit = parsePositiveInt(process.env.MAX_MOVIES, 100);
   const result = await db.query<{ id: string }>(
@@ -83,17 +58,84 @@ async function enqueueBackfill(): Promise<void> {
     [limit],
   );
 
+  const queued = await enqueueBackfillRows(result.rows);
+  console.log(`Queued ${queued} catalog backfill jobs.`);
+}
+
+function parseRawSources() {
+  return process.env.TMDB_SOURCES?.split(',').map((source) => source.trim()) ?? [];
+}
+
+function isValidSource(source: string): source is TMDBDiscoverySource {
+  return VALID_SOURCES.includes(source as TMDBDiscoverySource);
+}
+
+function hasOnlyInvalidSources(rawSources: string[], filtered: TMDBDiscoverySource[]) {
+  return rawSources.length > 0 && filtered.length === 0;
+}
+
+function getDiscoveryOptions() {
+  return {
+    language: process.env.TMDB_LANGUAGE?.trim() || 'en-US',
+    maxMoviesPerPage: parsePositiveInt(process.env.MAX_MOVIES_PER_PAGE, 20),
+    maxPagesPerSource: parsePositiveInt(process.env.MAX_PAGES_PER_SOURCE, 3),
+    minVoteAverage: parsePositiveFloat(process.env.MIN_VOTE_AVERAGE, 6.5),
+    minVoteCount: parsePositiveInt(process.env.MIN_VOTE_COUNT, 500),
+    sources: parseSources(),
+  };
+}
+
+async function enqueueDiscoveryPages(options: ReturnType<typeof getDiscoveryOptions>) {
   let queued = 0;
-  for (const row of result.rows) {
-    const didQueue = await enqueueCatalogBackfillMovie({
-      movieId: row.id,
-      reason: 'missing_metadata',
-      language: process.env.TMDB_LANGUAGE?.trim() || 'en-US',
+  for (const source of options.sources) {
+    queued += await enqueueDiscoverySource(source, options);
+  }
+
+  return queued;
+}
+
+async function enqueueDiscoverySource(
+  source: TMDBDiscoverySource,
+  options: ReturnType<typeof getDiscoveryOptions>,
+) {
+  let queued = 0;
+  for (let page = 1; page <= options.maxPagesPerSource; page++) {
+    const didQueue = await enqueueCatalogDiscoverTMDBSourcePage({
+      language: options.language,
+      maxMoviesPerPage: options.maxMoviesPerPage,
+      minVoteAverage: options.minVoteAverage,
+      minVoteCount: options.minVoteCount,
+      page,
+      source,
     });
     if (didQueue) queued++;
   }
 
-  console.log(`Queued ${queued} catalog backfill jobs.`);
+  return queued;
+}
+
+function assertBackfillDbConfigured(db: ReturnType<typeof getDbClient>): asserts db is ReturnType<
+  typeof getDbClient
+> & {
+  query: NonNullable<ReturnType<typeof getDbClient>['query']>;
+} {
+  if (!db.isConfigured() || !db.query) {
+    throw new Error('DATABASE_URL is required to enqueue catalog backfill jobs');
+  }
+}
+
+async function enqueueBackfillRows(rows: Array<{ id: string }>) {
+  let queued = 0;
+  for (const row of rows) {
+    const didQueue = await enqueueCatalogBackfillMovie({
+      language: process.env.TMDB_LANGUAGE?.trim() || 'en-US',
+      movieId: row.id,
+      reason: 'missing_metadata',
+    });
+    if (didQueue) queued++;
+  }
+
+  return queued;
 }
 
 async function main(): Promise<void> {

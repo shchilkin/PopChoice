@@ -102,6 +102,8 @@ interface QueryState {
   rangeTo: number | null;
 }
 
+type WhereClause = QueryState['wheres'][number];
+
 function defaultState(table: string): QueryState {
   assertSafeIdentifier(table, 'table name');
   return {
@@ -129,7 +131,6 @@ function buildSelectSQL(state: QueryState): {
   countValues?: unknown[];
 } {
   const values: unknown[] = [];
-  let idx = 1;
 
   // Column list
   const cols = state.headOnly ? '1' : state.columns;
@@ -140,69 +141,80 @@ function buildSelectSQL(state: QueryState): {
   const selectCols = needsWindowCount ? `${cols}, COUNT(*) OVER() AS _total_count` : cols;
 
   let sql = `SELECT ${selectCols} FROM "${state.table}"`;
-
-  // WHERE clauses
-  if (state.wheres.length > 0) {
-    const clauses = state.wheres.map((w) => {
-      if (w.op === 'IN') {
-        // Use = ANY($n) with a single array parameter for efficient IN queries.
-        const arr = w.value as unknown[];
-        values.push(arr);
-        return `"${w.column}" = ANY($${idx++})`;
-      }
-      const placeholder = `$${idx++}`;
-      values.push(w.value);
-      if (w.op === 'ILIKE') {
-        return `"${w.column}" ILIKE ${placeholder} ESCAPE '\\'`;
-      }
-      return `"${w.column}" ${w.op} ${placeholder}`;
-    });
-    sql += ` WHERE ${clauses.join(' AND ')}`;
-  }
+  sql += buildWhereSQL(state.wheres, values);
 
   // ORDER BY
   if (state.orderBy) {
     sql += ` ORDER BY "${state.orderBy.column}" ${state.orderBy.ascending ? 'ASC' : 'DESC'}`;
   }
 
-  // LIMIT / OFFSET via range
-  if (state.rangeFrom !== null && state.rangeTo !== null) {
-    const limit = safeNonNegativeInt(state.rangeTo - state.rangeFrom + 1);
-    const offset = safeNonNegativeInt(state.rangeFrom);
-    sql += ` LIMIT ${limit} OFFSET ${offset}`;
-  } else if (state.limitVal !== null) {
-    sql += ` LIMIT ${safeNonNegativeInt(state.limitVal)}`;
-  }
+  sql += buildLimitSQL(state);
 
   // Build a separate COUNT(*) query used as fallback when the window-function
   // path returns zero rows (OFFSET past end of result set), or for head-only queries.
-  let countText: string | undefined;
-  let countValues: unknown[] | undefined;
-  if (state.countMode === 'exact') {
-    let countSQL = `SELECT COUNT(*) as count FROM "${state.table}"`;
-    const cValues: unknown[] = [];
-    let cIdx = 1;
-    if (state.wheres.length > 0) {
-      const clauses = state.wheres.map((w) => {
-        if (w.op === 'IN') {
-          const arr = w.value as unknown[];
-          cValues.push(arr);
-          return `"${w.column}" = ANY($${cIdx++})`;
-        }
-        const placeholder = `$${cIdx++}`;
-        cValues.push(w.value);
-        if (w.op === 'ILIKE') {
-          return `"${w.column}" ILIKE ${placeholder} ESCAPE '\\'`;
-        }
-        return `"${w.column}" ${w.op} ${placeholder}`;
-      });
-      countSQL += ` WHERE ${clauses.join(' AND ')}`;
-    }
-    countText = countSQL;
-    countValues = cValues;
+  const countQuery = buildCountQuery(state);
+
+  return {
+    countText: countQuery?.text,
+    countValues: countQuery?.values,
+    text: sql,
+    useWindowCount: needsWindowCount,
+    values,
+  };
+}
+
+function buildWhereSQL(wheres: WhereClause[], values: unknown[]) {
+  const clauses = buildWhereClauses(wheres, values);
+  return clauses.length > 0 ? ` WHERE ${clauses.join(' AND ')}` : '';
+}
+
+function buildWhereClauses(wheres: WhereClause[], values: unknown[]) {
+  const index = { value: 1 };
+  return wheres.map((where) => buildWhereClause(where, values, index));
+}
+
+function buildWhereClause(where: WhereClause, values: unknown[], index: { value: number }) {
+  if (where.op === 'IN') {
+    values.push(where.value as unknown[]);
+    return `"${where.column}" = ANY($${index.value++})`;
   }
 
-  return { text: sql, values, useWindowCount: needsWindowCount, countText, countValues };
+  const placeholder = `$${index.value++}`;
+  values.push(where.value);
+  return where.op === 'ILIKE'
+    ? `"${where.column}" ILIKE ${placeholder} ESCAPE '\\'`
+    : `"${where.column}" ${where.op} ${placeholder}`;
+}
+
+function buildLimitSQL(state: QueryState) {
+  const rangeSQL = buildRangeSQL(state);
+  return rangeSQL ?? buildLimitOnlySQL(state);
+}
+
+function buildRangeSQL(state: QueryState) {
+  if (state.rangeFrom === null || state.rangeTo === null) {
+    return null;
+  }
+
+  const limit = safeNonNegativeInt(state.rangeTo - state.rangeFrom + 1);
+  const offset = safeNonNegativeInt(state.rangeFrom);
+  return ` LIMIT ${limit} OFFSET ${offset}`;
+}
+
+function buildLimitOnlySQL(state: QueryState) {
+  return state.limitVal === null ? '' : ` LIMIT ${safeNonNegativeInt(state.limitVal)}`;
+}
+
+function buildCountQuery(state: QueryState) {
+  if (state.countMode !== 'exact') {
+    return null;
+  }
+
+  const values: unknown[] = [];
+  return {
+    text: `SELECT COUNT(*) as count FROM "${state.table}"${buildWhereSQL(state.wheres, values)}`,
+    values,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -214,40 +226,13 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
     const { text, values, useWindowCount, countText, countValues } = buildSelectSQL(state);
 
     if (state.headOnly) {
-      // For head-only queries, we only need the count
-      if (countText) {
-        const countResult = await pool.query(countText, countValues);
-        return {
-          data: null,
-          error: null,
-          count: parseInt(countResult.rows[0]?.count ?? '0', 10),
-        };
-      }
-      return { data: null, error: null };
+      return executeHeadOnlySelect(pool, countText, countValues);
     }
 
     const result = await pool.query(text, values);
 
     if (useWindowCount) {
-      // Extract the injected _total_count window column and strip it from rows.
-      type RowWithCount = T & { _total_count?: string | number };
-      const rows = result.rows as RowWithCount[];
-
-      if (rows.length > 0) {
-        const count = parseInt(String(rows[0]._total_count ?? '0'), 10);
-        const data = rows.map(({ _total_count: _, ...rest }) => rest as T);
-        return { data, error: null, count };
-      }
-
-      // The OFFSET is past the end of the result set — the window function cannot
-      // return a count. Fall back to a separate COUNT(*) query.
-      // Any error thrown here is caught by the outer try/catch and returned as
-      // a QueryResult error, consistent with the rest of this function.
-      const fallbackCount =
-        countText != null
-          ? parseInt((await pool.query(countText, countValues)).rows[0]?.count ?? '0', 10)
-          : 0;
-      return { data: [], error: null, count: fallbackCount };
+      return executeWindowCountSelect<T>(pool, result.rows, countText, countValues);
     }
 
     return {
@@ -260,6 +245,42 @@ async function executeSelect<T>(pool: PgPool, state: QueryState): Promise<QueryR
       error: { message: err instanceof Error ? err.message : String(err) },
     };
   }
+}
+
+async function executeHeadOnlySelect<T>(
+  pool: PgPool,
+  countText: string | undefined,
+  countValues: unknown[] | undefined,
+): Promise<QueryResult<T>> {
+  if (!countText) {
+    return { data: null, error: null };
+  }
+
+  return { count: await queryCount(pool, countText, countValues), data: null, error: null };
+}
+
+async function executeWindowCountSelect<T>(
+  pool: PgPool,
+  rows: unknown[],
+  countText: string | undefined,
+  countValues: unknown[] | undefined,
+): Promise<QueryResult<T>> {
+  type RowWithCount = T & { _total_count?: string | number };
+  const rowsWithCount = rows as RowWithCount[];
+
+  if (rowsWithCount.length > 0) {
+    const count = parseInt(String(rowsWithCount[0]._total_count ?? '0'), 10);
+    const data = rowsWithCount.map(({ _total_count: _, ...rest }) => rest as T);
+    return { count, data, error: null };
+  }
+
+  const fallbackCount = countText ? await queryCount(pool, countText, countValues) : 0;
+  return { count: fallbackCount, data: [], error: null };
+}
+
+async function queryCount(pool: PgPool, countText: string, countValues: unknown[] | undefined) {
+  const countResult = await pool.query(countText, countValues);
+  return parseInt(countResult.rows[0]?.count ?? '0', 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -396,47 +417,9 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
     }
 
     try {
-      // Get column names from the first row and validate
-      const columns = Object.keys(rowArray[0] as Record<string, unknown>);
-      columns.forEach((c) => assertSafeIdentifier(c, 'column name'));
-      const colList = columns.map((c) => `"${c}"`).join(', ');
-
-      const valuePlaceholders: string[] = [];
-      const values: unknown[] = [];
-      let idx = 1;
-
-      for (const row of rowArray) {
-        const record = row as Record<string, unknown>;
-        const placeholders: string[] = [];
-        for (const col of columns) {
-          let val = record[col];
-          // Convert embedding arrays to pgvector string format
-          if (col === 'embedding' && Array.isArray(val)) {
-            val = `[${(val as number[]).join(',')}]`;
-          }
-          placeholders.push(`$${idx++}`);
-          values.push(val);
-        }
-        valuePlaceholders.push(`(${placeholders.join(', ')})`);
-      }
-
-      let sql = `INSERT INTO "${table}" (${colList}) VALUES ${valuePlaceholders.join(', ')}`;
-      if (returning) {
-        // Validate RETURNING column names and quote identifiers consistently.
-        const returningClause =
-          returning === '*'
-            ? '*'
-            : returning
-                .split(',')
-                .map((c) => c.trim())
-                .map((c) => {
-                  assertSafeIdentifier(c, 'column name');
-                  return `"${c}"`;
-                })
-                .join(', ');
-        sql += ` RETURNING ${returningClause}`;
-      }
-
+      const columns = getInsertColumns(rowArray);
+      const { values, valuePlaceholders } = buildInsertValues(rowArray, columns);
+      const sql = buildInsertSQL(table, columns, valuePlaceholders, returning);
       const result = await pool.query(sql, values);
       return { data: (result.rows as T[]) ?? [], error: null };
     } catch (err) {
@@ -466,6 +449,68 @@ function createInsert<T>(pool: PgPool, table: string, rows: T | T[]): QueryInser
       } as PromiseLike<QueryResult<T>>;
     },
   };
+}
+
+function getInsertColumns<T>(rowArray: T[]) {
+  const columns = Object.keys(rowArray[0] as Record<string, unknown>);
+  columns.forEach((column) => assertSafeIdentifier(column, 'column name'));
+  return columns;
+}
+
+function buildInsertValues<T>(rowArray: T[], columns: string[]) {
+  const values: unknown[] = [];
+  const index = { value: 1 };
+  const valuePlaceholders = rowArray.map((row) =>
+    buildInsertRowValues(row, columns, values, index),
+  );
+
+  return { values, valuePlaceholders };
+}
+
+function buildInsertRowValues<T>(
+  row: T,
+  columns: string[],
+  values: unknown[],
+  index: { value: number },
+) {
+  const record = row as Record<string, unknown>;
+  const placeholders = columns.map((column) => {
+    values.push(normalizeInsertValue(column, record[column]));
+    return `$${index.value++}`;
+  });
+
+  return `(${placeholders.join(', ')})`;
+}
+
+function normalizeInsertValue(column: string, value: unknown) {
+  return column === 'embedding' && Array.isArray(value)
+    ? `[${(value as number[]).join(',')}]`
+    : value;
+}
+
+function buildInsertSQL(
+  table: string,
+  columns: string[],
+  valuePlaceholders: string[],
+  returning: string | null,
+) {
+  const colList = columns.map((column) => `"${column}"`).join(', ');
+  const returningClause = buildReturningClause(returning);
+  return `INSERT INTO "${table}" (${colList}) VALUES ${valuePlaceholders.join(', ')}${returningClause}`;
+}
+
+function buildReturningClause(returning: string | null) {
+  return returning ? ` RETURNING ${formatReturningColumns(returning)}` : '';
+}
+
+function formatReturningColumns(returning: string) {
+  return returning === '*' ? '*' : returning.split(',').map(formatReturningColumn).join(', ');
+}
+
+function formatReturningColumn(column: string) {
+  const trimmed = column.trim();
+  assertSafeIdentifier(trimmed, 'column name');
+  return `"${trimmed}"`;
 }
 
 // ---------------------------------------------------------------------------

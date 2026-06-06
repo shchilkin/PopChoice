@@ -32,13 +32,22 @@ interface CacheEntry {
 function readCache(): string[] | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const entry = JSON.parse(raw) as CacheEntry;
-    if (Date.now() - entry.ts > CACHE_TTL_MS) return null;
-    return entry.posters.length > 0 ? entry.posters : null;
+    return raw ? getValidCachePosters(JSON.parse(raw) as CacheEntry) : null;
   } catch {
     return null;
   }
+}
+
+function getValidCachePosters(entry: CacheEntry) {
+  if (isCacheExpired(entry)) {
+    return null;
+  }
+
+  return entry.posters.length > 0 ? entry.posters : null;
+}
+
+function isCacheExpired(entry: CacheEntry) {
+  return Date.now() - entry.ts > CACHE_TTL_MS;
 }
 
 function writeCache(posters: string[]): void {
@@ -67,12 +76,15 @@ async function fetchPosterURLs(): Promise<string[]> {
  * This runs client-side only because the component is loaded with `ssr: false`.
  */
 function resolveInitialPosters(initialPosters?: string[]): string[] {
-  if (initialPosters && initialPosters.length > 0) return initialPosters;
-  if (typeof window !== 'undefined') {
-    const cached = readCache();
-    if (cached) return cached;
-  }
-  return FALLBACK_POSTERS;
+  return getProvidedPosters(initialPosters) ?? getCachedPosters() ?? FALLBACK_POSTERS;
+}
+
+function getProvidedPosters(initialPosters?: string[]) {
+  return initialPosters && initialPosters.length > 0 ? initialPosters : null;
+}
+
+function getCachedPosters() {
+  return typeof window === 'undefined' ? null : readCache();
 }
 
 /**

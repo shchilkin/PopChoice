@@ -12,23 +12,32 @@ async function getHandler(
   clientId: string,
   { id }: { id: string },
 ): Promise<Response> {
-  if (!id || typeof id !== 'string') {
-    return NextResponse.json({ error: 'Missing recommendation id' }, { status: 400 });
-  }
+  const validationResponse = getRecommendationIdValidationResponse(id);
+  if (validationResponse) return validationResponse;
 
   try {
-    const viewerUserId = clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
-    const result = await getRecommendationRecord(id, viewerUserId);
-
-    if (!result) {
-      return NextResponse.json({ error: 'Recommendation not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(result);
+    return getRecommendationResponse(id, clientId);
   } catch (err) {
     logger.error({ err, id }, 'Failed to fetch recommendation');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+function getRecommendationIdValidationResponse(id: string) {
+  return id ? null : NextResponse.json({ error: 'Missing recommendation id' }, { status: 400 });
+}
+
+async function getRecommendationResponse(id: string, clientId: string) {
+  const result = await getRecommendationRecord(id, getViewerUserId(clientId));
+  return result ? NextResponse.json(result) : getRecommendationNotFoundResponse();
+}
+
+function getViewerUserId(clientId: string) {
+  return clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
+}
+
+function getRecommendationNotFoundResponse() {
+  return NextResponse.json({ error: 'Recommendation not found' }, { status: 404 });
 }
 
 // Next.js dynamic route params are passed as the second argument to the route handler

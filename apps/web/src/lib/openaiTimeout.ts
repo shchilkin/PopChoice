@@ -18,52 +18,57 @@ export function openAIRequestOptions(timeoutMs: number): OpenAI.RequestOptions {
 
 export function isOpenAITimeoutError(error: unknown): boolean {
   const seen = new Set<unknown>();
+  const queue: unknown[] = [error];
 
-  function visit(value: unknown): boolean {
-    if (!value || seen.has(value)) return false;
+  while (queue.length > 0) {
+    const value = queue.shift();
+    if (!value || seen.has(value)) {
+      continue;
+    }
     seen.add(value);
 
-    if (value instanceof Error) {
-      if (
-        value.name === 'AbortError' ||
-        value.name === 'TimeoutError' ||
-        value.name === 'APIConnectionTimeoutError'
-      ) {
-        return true;
-      }
-
-      const message = value.message.toLowerCase();
-      if (
-        message.includes('timed out') ||
-        message.includes('timeout') ||
-        message.includes('aborted')
-      ) {
-        return true;
-      }
-
-      return visit(value.cause);
+    if (isTimeoutLikeValue(value)) {
+      return true;
     }
 
-    if (typeof value === 'object') {
-      const maybeError = value as { name?: unknown; message?: unknown; cause?: unknown };
-      if (
-        maybeError.name === 'AbortError' ||
-        maybeError.name === 'TimeoutError' ||
-        maybeError.name === 'APIConnectionTimeoutError'
-      ) {
-        return true;
-      }
-      if (
-        typeof maybeError.message === 'string' &&
-        /timed out|timeout|aborted/i.test(maybeError.message)
-      ) {
-        return true;
-      }
-      return visit(maybeError.cause);
+    const cause = getErrorCause(value);
+    if (cause) {
+      queue.push(cause);
     }
+  }
 
+  return false;
+}
+
+function isTimeoutLikeValue(value: unknown): boolean {
+  if (value instanceof Error) {
+    return isTimeoutName(value.name) || isTimeoutMessage(value.message);
+  }
+
+  if (typeof value !== 'object') {
     return false;
   }
 
-  return visit(error);
+  const maybeError = value as { name?: unknown; message?: unknown };
+  return isTimeoutName(maybeError.name) || isTimeoutMessage(maybeError.message);
+}
+
+function isTimeoutName(name: unknown): boolean {
+  return name === 'AbortError' || name === 'TimeoutError' || name === 'APIConnectionTimeoutError';
+}
+
+function isTimeoutMessage(message: unknown): boolean {
+  return typeof message === 'string' && /timed out|timeout|aborted/i.test(message);
+}
+
+function getErrorCause(value: unknown): unknown {
+  if (value instanceof Error) {
+    return value.cause;
+  }
+
+  if (typeof value === 'object') {
+    return (value as { cause?: unknown }).cause;
+  }
+
+  return undefined;
 }

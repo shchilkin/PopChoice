@@ -98,3 +98,8 @@ The root config intentionally ignores `**/e2e/**` for dead-code reachability and
 `collections/server` as a generated Fumadocs import. Keep those ignores narrow:
 e2e behavior is covered by Playwright jobs, and docs type-check runs
 `fumadocs-mdx` before `tsc`.
+
+The health config also ignores `apps/web/public/mockServiceWorker.js` because it
+is the generated MSW browser worker checked into `public/`. Regenerate it through
+MSW tooling when the package requires an update; do not hand-refactor it to
+silence complexity metrics.

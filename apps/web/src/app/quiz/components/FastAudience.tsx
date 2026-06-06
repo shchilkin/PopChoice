@@ -8,6 +8,8 @@ import { palette } from '@/styles/designTokens';
 
 import { AudienceChoiceButton } from './AudienceChoiceButton';
 
+import type { ElementType } from 'react';
+
 interface FastAudienceProps {
   flow: 'fast' | 'normal';
   onBack: () => void;
@@ -25,9 +27,7 @@ export function FastAudience({
 }: FastAudienceProps) {
   const { t } = useLanguage();
   const copy = flow === 'fast' ? t.quiz.fastAudience : t.quiz.normalAudience;
-  const iconBackground = flow === 'fast' ? 'rgba(245,197,24,0.15)' : `${palette.teal}26`;
-  const iconColor = flow === 'fast' ? 'var(--pc-gold-text)' : palette.teal;
-  const HeaderIcon = flow === 'fast' ? Zap : SlidersHorizontal;
+  const presentation = getFastAudiencePresentation(flow);
 
   return (
     <div className="flex min-h-[80vh] flex-1 flex-col items-center justify-center px-5 py-12">
@@ -51,30 +51,7 @@ export function FastAudience({
           {t.quiz.fastAudience.back}
         </button>
 
-        <div className="mb-8 text-center">
-          <div
-            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{
-              background: iconBackground,
-              color: iconColor,
-            }}
-          >
-            <HeaderIcon size={26} />
-          </div>
-          <h2
-            style={{
-              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-              fontWeight: '600',
-              textTransform: 'uppercase',
-              fontSize: '2rem',
-              letterSpacing: '0.05em',
-              color: 'var(--pc-t1)',
-            }}
-          >
-            {copy.title}
-          </h2>
-          <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem', marginTop: 6 }}>{copy.subtitle}</p>
-        </div>
+        <FastAudienceHeader copy={copy} presentation={presentation} />
 
         <div className="flex flex-col gap-4">
           <AudienceChoiceButton
@@ -110,4 +87,62 @@ export function FastAudience({
       </motion.div>
     </div>
   );
+}
+
+type FastAudienceCopy = ReturnType<typeof useLanguage>['t']['quiz']['fastAudience'];
+type FastAudiencePresentation = {
+  icon: ElementType;
+  iconBackground: string;
+  iconColor: string;
+};
+
+function FastAudienceHeader({
+  copy,
+  presentation,
+}: {
+  copy: FastAudienceCopy;
+  presentation: FastAudiencePresentation;
+}) {
+  const HeaderIcon = presentation.icon;
+
+  return (
+    <div className="mb-8 text-center">
+      <div
+        className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
+        style={{
+          background: presentation.iconBackground,
+          color: presentation.iconColor,
+        }}
+      >
+        <HeaderIcon size={26} />
+      </div>
+      <h2
+        style={{
+          color: 'var(--pc-t1)',
+          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+          fontSize: '2rem',
+          fontWeight: '600',
+          letterSpacing: '0.05em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {copy.title}
+      </h2>
+      <p style={{ color: 'var(--pc-t3)', fontSize: '0.9rem', marginTop: 6 }}>{copy.subtitle}</p>
+    </div>
+  );
+}
+
+function getFastAudiencePresentation(flow: FastAudienceProps['flow']): FastAudiencePresentation {
+  return flow === 'fast'
+    ? {
+        icon: Zap,
+        iconBackground: 'rgba(245,197,24,0.15)',
+        iconColor: 'var(--pc-gold-text)',
+      }
+    : {
+        icon: SlidersHorizontal,
+        iconBackground: `${palette.teal}26`,
+        iconColor: palette.teal,
+      };
 }

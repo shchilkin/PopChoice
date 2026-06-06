@@ -21,61 +21,102 @@ const globalTracingState = globalThis as typeof globalThis & {
   __popChoiceTracing?: PopChoiceTracingState;
 };
 
+const DIAG_LOG_LEVEL_BY_NAME: Record<string, DiagLogLevel> = {
+  debug: DiagLogLevel.DEBUG,
+  error: DiagLogLevel.ERROR,
+  info: DiagLogLevel.INFO,
+  none: DiagLogLevel.NONE,
+  verbose: DiagLogLevel.VERBOSE,
+  warn: DiagLogLevel.WARN,
+};
+
 export function initTracing(service: RuntimeService): void {
   if (!isTracingEnabled()) return;
 
   const state = (globalTracingState.__popChoiceTracing ??= { started: false });
   if (state.started) return;
 
-  const endpoint = resolveTraceEndpoint();
-  const sampleRate = parseSampleRate();
-
-  if (process.env.OTEL_DIAG_LOG_LEVEL) {
-    diag.setLogger(new DiagConsoleLogger(), parseDiagLogLevel(process.env.OTEL_DIAG_LOG_LEVEL));
-  }
-
-  const sdk = new NodeSDK({
-    resource: resourceFromAttributes({
-      'service.name': process.env.OTEL_SERVICE_NAME ?? `popchoice-${service}`,
-      'service.namespace': 'popchoice',
-      'service.version': process.env.APP_VERSION ?? 'development',
-      'service.instance.id': process.env.HOSTNAME,
-      'deployment.environment': process.env.NODE_ENV ?? 'development',
-    }),
-    sampler: new ParentBasedSampler({
-      root: new TraceIdRatioBasedSampler(sampleRate),
-    }),
-    traceExporter: new OTLPTraceExporter({ url: endpoint }),
-    instrumentations: [
-      new HttpInstrumentation({
-        ignoreIncomingRequestHook: (req) => {
-          const url = req.url ?? '';
-          return url.startsWith('/api/metrics') || url.startsWith('/_next/');
-        },
-        redactedQueryParams: ['token', 'api_key', 'key', 'signature', 'sig'],
-      }),
-      new UndiciInstrumentation({
-        requireParentforSpans: true,
-      }),
-      new PgInstrumentation({
-        enhancedDatabaseReporting: false,
-        requireParentSpan: true,
-      }),
-      new IORedisInstrumentation({
-        requireParentSpan: true,
-      }),
-    ],
-  });
+  const config = getTracingConfig(service);
+  configureDiagLogger();
+  const sdk = createTracingSdk(config);
 
   sdk.start();
   state.sdk = sdk;
   state.started = true;
 
-  logger.info({ endpoint, sampleRate, service }, 'OpenTelemetry tracing initialized');
+  logger.info(config, 'OpenTelemetry tracing initialized');
 
   process.once('beforeExit', () => {
     void shutdownTracing();
   });
+}
+
+function getTracingConfig(service: RuntimeService) {
+  return {
+    endpoint: resolveTraceEndpoint(),
+    sampleRate: parseSampleRate(),
+    service,
+  };
+}
+
+function configureDiagLogger() {
+  const logLevel = process.env.OTEL_DIAG_LOG_LEVEL;
+  if (!logLevel) return;
+
+  diag.setLogger(new DiagConsoleLogger(), parseDiagLogLevel(logLevel));
+}
+
+function createTracingSdk({
+  endpoint,
+  sampleRate,
+  service,
+}: {
+  endpoint: string;
+  sampleRate: number;
+  service: RuntimeService;
+}) {
+  return new NodeSDK({
+    instrumentations: createInstrumentations(),
+    resource: resourceFromAttributes(getResourceAttributes(service)),
+    sampler: new ParentBasedSampler({
+      root: new TraceIdRatioBasedSampler(sampleRate),
+    }),
+    traceExporter: new OTLPTraceExporter({ url: endpoint }),
+  });
+}
+
+function getResourceAttributes(service: RuntimeService) {
+  return {
+    'deployment.environment': process.env.NODE_ENV ?? 'development',
+    'service.instance.id': process.env.HOSTNAME,
+    'service.name': process.env.OTEL_SERVICE_NAME ?? `popchoice-${service}`,
+    'service.namespace': 'popchoice',
+    'service.version': process.env.APP_VERSION ?? 'development',
+  };
+}
+
+function createInstrumentations() {
+  return [
+    new HttpInstrumentation({
+      ignoreIncomingRequestHook: shouldIgnoreIncomingRequest,
+      redactedQueryParams: ['token', 'api_key', 'key', 'signature', 'sig'],
+    }),
+    new UndiciInstrumentation({
+      requireParentforSpans: true,
+    }),
+    new PgInstrumentation({
+      enhancedDatabaseReporting: false,
+      requireParentSpan: true,
+    }),
+    new IORedisInstrumentation({
+      requireParentSpan: true,
+    }),
+  ];
+}
+
+function shouldIgnoreIncomingRequest(req: { url?: string | undefined }) {
+  const url = req.url ?? '';
+  return url.startsWith('/api/metrics') || url.startsWith('/_next/');
 }
 
 export async function shutdownTracing(): Promise<void> {
@@ -109,30 +150,27 @@ function resolveTraceEndpoint(): string {
 }
 
 function parseSampleRate(): number {
-  const raw =
+  const raw = getSampleRateRawValue();
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? clampSampleRate(parsed) : getDefaultSampleRate();
+}
+
+function getSampleRateRawValue(): string {
+  return (
     process.env.TRACING_SAMPLE_RATE ??
     process.env.OTEL_TRACES_SAMPLER_ARG ??
-    (process.env.NODE_ENV === 'production' ? '0.05' : '1');
-  const parsed = Number.parseFloat(raw);
-  if (!Number.isFinite(parsed)) return process.env.NODE_ENV === 'production' ? 0.05 : 1;
-  return Math.max(0, Math.min(parsed, 1));
+    String(getDefaultSampleRate())
+  );
+}
+
+function getDefaultSampleRate() {
+  return process.env.NODE_ENV === 'production' ? 0.05 : 1;
+}
+
+function clampSampleRate(value: number) {
+  return Math.max(0, Math.min(value, 1));
 }
 
 function parseDiagLogLevel(raw: string): DiagLogLevel {
-  switch (raw.toLowerCase()) {
-    case 'debug':
-      return DiagLogLevel.DEBUG;
-    case 'info':
-      return DiagLogLevel.INFO;
-    case 'warn':
-      return DiagLogLevel.WARN;
-    case 'error':
-      return DiagLogLevel.ERROR;
-    case 'verbose':
-      return DiagLogLevel.VERBOSE;
-    case 'none':
-      return DiagLogLevel.NONE;
-    default:
-      return DiagLogLevel.ERROR;
-  }
+  return DIAG_LOG_LEVEL_BY_NAME[raw.toLowerCase()] ?? DiagLogLevel.ERROR;
 }

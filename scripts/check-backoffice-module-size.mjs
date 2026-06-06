@@ -8,26 +8,49 @@ const defaultMaxLines = 350;
 const allowedLargeFiles = new Map();
 
 function sourceFiles(dir) {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const entryPath = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === '.next' || entry.name === 'node_modules') return [];
-      return sourceFiles(entryPath);
-    }
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    sourceFilesForEntry(dir, entry),
+  );
+}
 
-    if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx')) return [];
-    if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.test.tsx')) return [];
-    return [entryPath];
-  });
+function sourceFilesForEntry(dir, entry) {
+  const entryPath = join(dir, entry.name);
+  if (entry.isDirectory()) {
+    return sourceFilesForDirectory(entry.name, entryPath);
+  }
+
+  return isCheckedSourceFile(entry.name) ? [entryPath] : [];
+}
+
+function sourceFilesForDirectory(name, entryPath) {
+  return isIgnoredDirectory(name) ? [] : sourceFiles(entryPath);
+}
+
+function isIgnoredDirectory(name) {
+  return name === '.next' || name === 'node_modules';
+}
+
+function isCheckedSourceFile(name) {
+  return isSourceFile(name) && !isTestFile(name);
+}
+
+function isSourceFile(name) {
+  return name.endsWith('.ts') || name.endsWith('.tsx');
+}
+
+function isTestFile(name) {
+  return name.endsWith('.test.ts') || name.endsWith('.test.tsx');
+}
+
+function getModuleSize(filePath) {
+  const relativePath = relative(repoRoot, filePath);
+  const maxLines = allowedLargeFiles.get(relativePath) ?? defaultMaxLines;
+  const lines = readFileSync(filePath, 'utf8').split('\n').length;
+  return { lines, maxLines, relativePath };
 }
 
 const oversizedFiles = sourceFiles(sourceRoot)
-  .map((filePath) => {
-    const relativePath = relative(repoRoot, filePath);
-    const maxLines = allowedLargeFiles.get(relativePath) ?? defaultMaxLines;
-    const lines = readFileSync(filePath, 'utf8').split('\n').length;
-    return { lines, maxLines, relativePath };
-  })
+  .map(getModuleSize)
   .filter(({ lines, maxLines }) => lines > maxLines)
   .sort((a, b) => b.lines - a.lines);
 

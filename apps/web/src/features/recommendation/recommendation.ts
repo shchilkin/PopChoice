@@ -122,22 +122,53 @@ async function findNearestMatch(embedding: number[]): Promise<EnhancedMovieMatch
   }
 
   return (data as LocalMatchRow[])
-    .map((movie) => ({
-      ...movie,
-      similarity: adjustLocalSimilarityForMetadata(movie),
-      source: getLocalCandidateSource(movie.tmdb_match_source),
-      tmdbId: movie.tmdb_id ?? movie.tmdbId ?? null,
-      tmdbMatchSource: movie.tmdb_match_source ?? movie.tmdbMatchSource ?? null,
-      originalLanguage: movie.original_language ?? movie.originalLanguage ?? null,
-      voteCount: movie.vote_count ?? movie.voteCount ?? null,
-      popularity: movie.popularity ?? movie.popularity ?? null,
-      metadataQualityScore: movie.metadata_quality_score ?? movie.metadataQualityScore ?? 0,
-      metadataQualityFlags:
-        normalizeMetadataQualityFlags(movie.metadata_quality_flags) ??
-        movie.metadataQualityFlags ??
-        [],
-    }))
+    .map(toEnhancedLocalMatch)
     .sort((a, b) => b.similarity - a.similarity);
+}
+
+function toEnhancedLocalMatch(movie: LocalMatchRow): EnhancedMovieMatch {
+  return {
+    ...movie,
+    metadataQualityFlags: getLocalMetadataQualityFlags(movie),
+    metadataQualityScore: getLocalMetadataQualityScore(movie),
+    originalLanguage: getLocalOriginalLanguage(movie),
+    popularity: getLocalPopularity(movie),
+    similarity: adjustLocalSimilarityForMetadata(movie),
+    source: getLocalCandidateSource(movie.tmdb_match_source),
+    tmdbId: getLocalTMDBId(movie),
+    tmdbMatchSource: getLocalTMDBMatchSource(movie),
+    voteCount: getLocalVoteCount(movie),
+  };
+}
+
+function getLocalMetadataQualityFlags(movie: LocalMatchRow) {
+  return (
+    normalizeMetadataQualityFlags(movie.metadata_quality_flags) ?? movie.metadataQualityFlags ?? []
+  );
+}
+
+function getLocalMetadataQualityScore(movie: LocalMatchRow) {
+  return movie.metadata_quality_score ?? movie.metadataQualityScore ?? 0;
+}
+
+function getLocalOriginalLanguage(movie: LocalMatchRow) {
+  return movie.original_language ?? movie.originalLanguage ?? null;
+}
+
+function getLocalPopularity(movie: LocalMatchRow) {
+  return movie.popularity ?? movie.popularity ?? null;
+}
+
+function getLocalTMDBId(movie: LocalMatchRow) {
+  return movie.tmdb_id ?? movie.tmdbId ?? null;
+}
+
+function getLocalTMDBMatchSource(movie: LocalMatchRow) {
+  return movie.tmdb_match_source ?? movie.tmdbMatchSource ?? null;
+}
+
+function getLocalVoteCount(movie: LocalMatchRow) {
+  return movie.vote_count ?? movie.voteCount ?? null;
 }
 
 /** Find similar movies in the local vector store. Returns an empty array if none found or DB unavailable. */

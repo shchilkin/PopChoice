@@ -41,13 +41,24 @@ function getLocaleSnapshot(): Locale {
 }
 
 function detectLocale(): Locale {
-  const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-  if (saved && (LOCALES as string[]).includes(saved)) return saved as Locale;
+  return getSavedLocale() ?? getBrowserLocale() ?? 'en';
+}
+
+function getSavedLocale(): Locale | null {
+  return normalizeLocale(localStorage.getItem(LOCALE_STORAGE_KEY));
+}
+
+function getBrowserLocale(): Locale | null {
   const browserLangs = navigator.languages ?? [navigator.language];
-  const detected = browserLangs
-    .map((l) => l.split('-')[0].toLowerCase())
-    .find((l) => (LOCALES as string[]).includes(l));
-  return (detected as Locale) ?? 'en';
+  return browserLangs.map(getBaseLanguage).map(normalizeLocale).find(Boolean) ?? null;
+}
+
+function getBaseLanguage(language: string) {
+  return language.split('-')[0].toLowerCase();
+}
+
+function normalizeLocale(value: string | null): Locale | null {
+  return value && (LOCALES as string[]).includes(value) ? (value as Locale) : null;
 }
 
 function notifyLocaleChange(): void {

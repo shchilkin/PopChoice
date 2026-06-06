@@ -25,36 +25,51 @@ async function postHandler(req: NextRequest): Promise<Response> {
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  const locale = parseLocaleFromRequest(req);
-
   try {
-    const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
-    const { quizData, page, excludeIds } = requestBodySchema.parse(body);
+    const tmdbConfigResponse = getTMDBConfigResponse();
+    if (tmdbConfigResponse) return tmdbConfigResponse;
 
-    if (!process.env.TMDB_API_KEY) {
-      return NextResponse.json({ error: 'TMDB not configured' }, { status: 503 });
-    }
-
+    const locale = parseLocaleFromRequest(req);
+    const { quizData, page, excludeIds } = await parseMorePicksRequest(req);
     const movies = await runMorePicksPipeline(quizData, excludeIds, page, locale);
     return NextResponse.json({ movies });
   } catch (error) {
-    const bodyErrorResponse = requestBodyErrorResponse(error);
-    if (bodyErrorResponse) return bodyErrorResponse;
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request', details: error.issues },
-        { status: 400 },
-      );
-    }
-    const isTimeout =
-      (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) ||
-      isOpenAITimeoutError(error);
-    if (isTimeout) {
-      return NextResponse.json({ error: 'Upstream request timed out' }, { status: 504 });
-    }
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return getMorePicksErrorResponse(error);
   }
+}
+
+function getTMDBConfigResponse() {
+  return process.env.TMDB_API_KEY
+    ? null
+    : NextResponse.json({ error: 'TMDB not configured' }, { status: 503 });
+}
+
+async function parseMorePicksRequest(req: NextRequest) {
+  const body = await readJsonBodyWithLimit(req, RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES);
+  return requestBodySchema.parse(body);
+}
+
+function getMorePicksErrorResponse(error: unknown) {
+  const bodyErrorResponse = requestBodyErrorResponse(error);
+  if (bodyErrorResponse) return bodyErrorResponse;
+
+  if (error instanceof z.ZodError) {
+    return NextResponse.json({ details: error.issues, error: 'Invalid request' }, { status: 400 });
+  }
+
+  if (isMorePicksTimeoutError(error)) {
+    return NextResponse.json({ error: 'Upstream request timed out' }, { status: 504 });
+  }
+
+  return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+}
+
+function isMorePicksTimeoutError(error: unknown) {
+  return isAbortOrTimeoutError(error) || isOpenAITimeoutError(error);
+}
+
+function isAbortOrTimeoutError(error: unknown) {
+  return error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError');
 }
 
 export const POST = withAuth(postHandler);

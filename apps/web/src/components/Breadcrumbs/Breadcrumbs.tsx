@@ -23,30 +23,52 @@ export function Breadcrumbs({ items, className }: BreadcrumbsProps) {
   return (
     <nav aria-label="Breadcrumb" className={className}>
       <ol className="flex flex-wrap items-center" style={labelStyle}>
-        {items.map((item, index) => {
-          const isCurrent = index === items.length - 1;
-          return (
-            <li key={index} className="flex items-center">
-              {index > 0 && (
-                <span aria-hidden="true" className="mx-1">
-                  {'/'}
-                </span>
-              )}
-              {item.href && !isCurrent ? (
-                <Link
-                  href={item.href}
-                  className="hover:opacity-70 transition-opacity duration-150"
-                  style={{ color: 'inherit' }}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <span aria-current={isCurrent ? 'page' : undefined}>{item.label}</span>
-              )}
-            </li>
-          );
-        })}
+        {items.map((item, index) => (
+          <BreadcrumbListItem
+            key={index}
+            item={item}
+            isCurrent={index === items.length - 1}
+            showSeparator={index > 0}
+          />
+        ))}
       </ol>
     </nav>
   );
+}
+
+function BreadcrumbListItem({
+  item,
+  isCurrent,
+  showSeparator,
+}: {
+  item: BreadcrumbItem;
+  isCurrent: boolean;
+  showSeparator: boolean;
+}) {
+  return (
+    <li className="flex items-center">
+      {showSeparator && (
+        <span aria-hidden="true" className="mx-1">
+          {'/'}
+        </span>
+      )}
+      <BreadcrumbLabel item={item} isCurrent={isCurrent} />
+    </li>
+  );
+}
+
+function BreadcrumbLabel({ item, isCurrent }: { item: BreadcrumbItem; isCurrent: boolean }) {
+  if (item.href && !isCurrent) {
+    return (
+      <Link
+        href={item.href}
+        className="hover:opacity-70 transition-opacity duration-150"
+        style={{ color: 'inherit' }}
+      >
+        {item.label}
+      </Link>
+    );
+  }
+
+  return <span aria-current={isCurrent ? 'page' : undefined}>{item.label}</span>;
 }
