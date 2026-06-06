@@ -16,42 +16,56 @@ const __dirname = path.dirname(__filename);
 // Dockerfile copies db/init/ to /app/db/init — two levels above this script.
 const migrationsDir = path.resolve(__dirname, '../../db/init');
 
-// One-shot deployment wrapper; extracted helpers would add little clarity.
-// fallow-ignore-next-line complexity
-async function main() {
+function requireDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('[db:migrate] DATABASE_URL is not set.');
     process.exit(1);
   }
 
+  return databaseUrl;
+}
+
+async function listMigrationFiles() {
+  return (await readdir(migrationsDir))
+    .filter((name) => name.endsWith('.sql'))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+async function applyMigrationFile(client, fileName) {
+  console.log(`[db:migrate] Applying ${fileName}`);
+  await client.query(await readFile(path.join(migrationsDir, fileName), 'utf8'));
+}
+
+async function applyMigrations(client, files) {
+  await client.query('BEGIN');
+  let committed = false;
+  try {
+    for (const fileName of files) {
+      await applyMigrationFile(client, fileName);
+    }
+    await client.query('COMMIT');
+    committed = true;
+  } catch (err) {
+    throw err;
+  } finally {
+    if (!committed) await client.query('ROLLBACK');
+  }
+}
+
+async function main() {
+  const databaseUrl = requireDatabaseUrl();
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
 
   try {
-    const files = (await readdir(migrationsDir))
-      .filter((name) => name.endsWith('.sql'))
-      .sort((a, b) => a.localeCompare(b));
-
+    const files = await listMigrationFiles();
     if (files.length === 0) {
       console.warn('[db:migrate] No SQL files found in', migrationsDir);
       return;
     }
 
-    await client.query('BEGIN');
-    try {
-      for (const fileName of files) {
-        const filePath = path.join(migrationsDir, fileName);
-        const sql = await readFile(filePath, 'utf8');
-        console.log(`[db:migrate] Applying ${fileName}`);
-        await client.query(sql);
-      }
-      await client.query('COMMIT');
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    }
-
+    await applyMigrations(client, files);
     console.log('[db:migrate] All migrations applied successfully.');
   } finally {
     await client.end();

@@ -17,7 +17,8 @@ import { cosineSimilarity, parseTMDBReleaseYear } from '@/lib/tmdb';
 import { getTraceCarrier, withTraceSpan } from '@/lib/tracing';
 
 import { morePicksPersonFormDataSchema } from './morePicksSchemas';
-import { formatTMDBMovieEmbeddingText, getTopTMDBGenreIds } from './tmdbDiscoverHelpers';
+import { formatTMDBMovieEmbeddingText } from './tmdb/embeddingText';
+import { getTopTMDBGenreIds } from './tmdb/genreSelection';
 
 import type { MorePicksPersonFormData } from './morePicksSchemas';
 import type { TMDBDiscoverMovie } from './tmdb';
