@@ -725,8 +725,8 @@ export async function updateCatalogRepairBatchItemEnqueueResult(
             result = COALESCE($8::jsonb, result),
             updated_at = now(),
             completed_at = CASE
-              WHEN $2 IN ('unavailable', 'enqueue_failed') THEN now()
-              WHEN $2 IN ('queued', 'deduped') THEN NULL
+              WHEN $2 IN ('deduped', 'unavailable', 'enqueue_failed') THEN now()
+              WHEN $2 = 'queued' THEN NULL
               ELSE completed_at
             END
       WHERE id = $1
@@ -833,14 +833,15 @@ export async function refreshCatalogRepairBatchCounts(
          *,
          CASE
            WHEN attempted_count = 0 THEN 'empty'
-           WHEN completed_count = attempted_count THEN 'completed'
+           WHEN completed_count + deduped_count = attempted_count THEN 'completed'
            WHEN failed_count = attempted_count THEN 'failed'
            WHEN unavailable_count = attempted_count THEN 'unavailable'
            WHEN completed_count
              + unresolved_count
              + skipped_count
              + failed_count
-             + unavailable_count = attempted_count
+             + unavailable_count
+             + deduped_count = attempted_count
              THEN 'partial'
            WHEN failed_count + unavailable_count + unresolved_count + skipped_count > 0 THEN 'partial'
            WHEN processing_count > 0 THEN 'processing'

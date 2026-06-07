@@ -1,12 +1,17 @@
-import { defineConfig, devices } from 'playwright/test';
 import { fileURLToPath } from 'node:url';
 
-const e2ePort = Number.parseInt(process.env.E2E_BACKOFFICE_PORT ?? '3101', 10);
+import { defineConfig, devices } from 'playwright/test';
+
+const e2ePort = Number.parseInt(process.env.E2E_BACKOFFICE_PORT ?? '3104', 10);
 const baseURL = process.env.E2E_BACKOFFICE_BASE_URL ?? `http://127.0.0.1:${e2ePort}`;
 const databaseUrl =
   process.env.E2E_DATABASE_URL ?? 'postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e';
 const redisUrl = process.env.E2E_REDIS_URL ?? 'redis://127.0.0.1:56379';
-const operatorCredentials = Buffer.from('e2e-operator:e2e-operator-secret').toString('base64');
+const operatorUsername = process.env.E2E_BACKOFFICE_OPERATOR_USERNAME ?? 'e2e-operator';
+const operatorPassword = process.env.E2E_BACKOFFICE_OPERATOR_PASSWORD ?? 'e2e-password';
+const operatorCredentials = Buffer.from(`${operatorUsername}:${operatorPassword}`).toString(
+  'base64',
+);
 const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 export default defineConfig({
@@ -26,28 +31,31 @@ export default defineConfig({
       Authorization: `Basic ${operatorCredentials}`,
     },
     httpCredentials: {
-      password: 'e2e-operator-secret',
-      username: 'e2e-operator',
+      password: operatorPassword,
+      username: operatorUsername,
     },
-    trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    trace: 'on-first-retry',
+    viewport: { height: 1000, width: 1440 },
   },
   webServer: {
     command: `npm run build --workspace=packages/shared && PORT=${e2ePort} npm run dev --workspace=apps/backoffice -- --hostname 127.0.0.1`,
     cwd: repoRoot,
-    url: `${baseURL}/healthz`,
-    reuseExistingServer: false,
-    timeout: 120_000,
     env: {
       BULL_BOARD_URL: '',
+      CATALOG_HEALTH_SAMPLE_LIMIT: '5',
       DATABASE_URL: databaseUrl,
-      OPERATOR_AUTH_PASSWORD: 'e2e-operator-secret',
+      OPERATOR_AUTH_PASSWORD: operatorPassword,
       OPERATOR_AUTH_REQUIRED: '1',
-      OPERATOR_AUTH_USERNAME: 'e2e-operator',
+      OPERATOR_AUTH_USERNAME: operatorUsername,
       REDIS_URL: redisUrl,
       RESEND_API_KEY: '',
       TMDB_API_KEY: '',
+      TMDB_LANGUAGE: 'en-US',
     },
+    reuseExistingServer: false,
+    timeout: 120_000,
+    url: baseURL,
   },
   projects: [
     {

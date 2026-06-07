@@ -8,7 +8,7 @@ import {
   logBackofficeError,
   wantsBackofficeJsonResponse,
 } from '../../../../lib/backoffice';
-import { isSameOriginRequest } from '../../../../lib/sameOriginRequest';
+import { backofficeRedirectUrl, isSameOriginRequest } from '../../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +47,10 @@ export async function POST(request: NextRequest, context: ReviewActionContext) {
       });
     }
 
-    return NextResponse.redirect(new URL(result.redirectTo, request.url), 303);
+    return NextResponse.redirect(
+      backofficeRedirectUrl(request, result.redirectTo, { trustRequestEvidence: true }),
+      303,
+    );
   } catch (error) {
     logBackofficeError('Failed to apply TMDB match review action', error);
     const status = getBackofficeErrorStatus(error);

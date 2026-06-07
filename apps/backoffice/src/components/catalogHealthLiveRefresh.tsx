@@ -42,6 +42,7 @@ export function CatalogHealthLiveRefresh({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const [hasMounted, setHasMounted] = useState(false);
   const [connectionState, setConnectionState] = useState<LiveConnectionState>('connecting');
   const [data, setData] = useState(initialData);
   const [isFallbackFetching, setIsFallbackFetching] = useState(false);
@@ -60,6 +61,10 @@ export function CatalogHealthLiveRefresh({
   const lastSearch = useRef(search);
   const refreshRequestId = useRef(0);
   const refreshSeconds = Math.max(fallbackIntervalSeconds, 30);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (lastSearch.current === search) return;
@@ -202,7 +207,7 @@ export function CatalogHealthLiveRefresh({
     <div className={`live-refresh ${connectionState}`} aria-live="polite">
       <span className={status.dotClassName} aria-hidden="true" />
       <span>{status.statusCopy}</span>
-      <span className="live-refresh-meta">{status.metaCopy}</span>
+      <span className="live-refresh-meta">{hasMounted ? status.metaCopy : 'Waiting'}</span>
       <LiveRefreshError text={status.errorText} />
     </div>
   );

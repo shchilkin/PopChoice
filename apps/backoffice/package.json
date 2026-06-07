@@ -9,6 +9,7 @@
     "quality:structure": "node ../../scripts/check-backoffice-module-size.mjs",
     "start": "next start",
     "test": "vitest run",
+    "test:e2e": "playwright test --config playwright.e2e.config.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {

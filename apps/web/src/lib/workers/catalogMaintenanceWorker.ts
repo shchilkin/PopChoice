@@ -1164,12 +1164,6 @@ function getRequiredTMDBApiKeyForBackfill(): string {
   return apiKey;
 }
 
-function getRequiredOpenAIKeyForBackfill(): string {
-  const openAIKey = process.env.OPENAI_API_KEY;
-  if (!openAIKey) throw new Error('OPENAI_API_KEY is required for catalog backfill jobs');
-  return openAIKey;
-}
-
 async function resolveBackfillMovieMatch(
   apiKey: string,
   movie: BackfillMovieRow,
@@ -1272,10 +1266,18 @@ function getBackfillEmbeddingText(prepared: Extract<PreparedBackfillMovie, { sta
 
 async function createBackfillEmbedding(
   prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>,
-): Promise<number[]> {
-  const [embedding] = await createEmbeddings(getRequiredOpenAIKeyForBackfill(), [
-    getBackfillEmbeddingText(prepared),
-  ]);
+  reason: CatalogBackfillMovieJobData['reason'],
+): Promise<number[] | null> {
+  const openAIKey = process.env.OPENAI_API_KEY;
+  if (!openAIKey) {
+    const requiresEmbeddingRefresh = reason === 'missing_tmdb_id' || !reason;
+    if (requiresEmbeddingRefresh) {
+      throw new Error('OPENAI_API_KEY is required for catalog backfill jobs');
+    }
+    return null;
+  }
+
+  const [embedding] = await createEmbeddings(openAIKey, [getBackfillEmbeddingText(prepared)]);
   if (!embedding) throw new Error(`Embedding missing for movie ${prepared.movie.id}`);
   return embedding;
 }
@@ -1316,7 +1318,7 @@ function getBackfillPopularity(details: TMDBMovieDetails): number | null {
 }
 
 async function updateBackfilledMovie(input: {
-  embedding: number[];
+  embedding: number[] | null;
   metadata: TMDBCatalogMetadata;
   prepared: Extract<PreparedBackfillMovie, { status: 'ready' }>;
 }): Promise<void> {
@@ -1332,7 +1334,7 @@ async function updateBackfilledMovie(input: {
             tmdb_matched_at = now(),
             poster_url = COALESCE($5, poster_url),
             localized_name = COALESCE($6, localized_name),
-            embedding = $7::vector,
+            embedding = COALESCE($7::vector, embedding),
             original_title = $8,
             original_language = $9,
             release_date = $10::date,
@@ -1348,7 +1350,7 @@ async function updateBackfilledMovie(input: {
       match.confidence,
       getBackfillPosterUrl(details),
       getBackfillLocalizedName(details, movie),
-      JSON.stringify(input.embedding),
+      input.embedding ? JSON.stringify(input.embedding) : null,
       getBackfillOriginalTitle(details),
       getBackfillOriginalLanguage(details),
       getBackfillReleaseDate(details),
@@ -1367,7 +1369,7 @@ async function persistBackfillMovie(input: {
   repairItem: CatalogRepairBatchItem | null;
 }): Promise<void> {
   const metadata = extractCatalogMetadata(input.prepared.details);
-  const embedding = await createBackfillEmbedding(input.prepared);
+  const embedding = await createBackfillEmbedding(input.prepared, input.job.data.reason);
 
   await updateBackfilledMovie({ embedding, metadata, prepared: input.prepared });
   await upsertSeedCatalogMetadata(input.prepared.movie.id, metadata);

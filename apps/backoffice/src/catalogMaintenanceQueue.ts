@@ -1,5 +1,4 @@
-import { Queue } from 'bullmq';
-import type { Job } from 'bullmq';
+import { Queue, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { logger } from '@pop-choice/shared';
@@ -20,8 +19,14 @@ import {
   summarizeCatalogMaintenanceJobPayload,
   type CatalogBackfillReason,
   type CatalogMaintenanceJobData,
-  type CatalogMaintenanceQueueCounts,
+  type CatalogMaintenanceQueueJobPage,
+  type CatalogMaintenanceQueueJobSummary,
   type CatalogMaintenanceQueueJobState,
+  type CatalogMaintenanceQueueSnapshot,
+  type EnqueueCatalogBackfillMovieInput,
+  type EnqueueCatalogBackfillMovieResult,
+  type EnqueueCatalogRepairBatchInput,
+  type EnqueueCatalogRepairBatchResult,
 } from './catalogMaintenanceQueueHelpers';
 
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
@@ -32,80 +37,44 @@ export {
   isCatalogMaintenanceQueueJobState,
   summarizeCatalogMaintenanceJobPayload,
 };
-export type { CatalogBackfillReason, CatalogMaintenanceQueueJobState };
+export type {
+  CatalogBackfillReason,
+  CatalogMaintenanceQueueJobPage,
+  CatalogMaintenanceQueueJobState,
+  CatalogMaintenanceQueueJobSummary,
+  CatalogMaintenanceQueueSnapshot,
+  EnqueueCatalogBackfillMovieInput,
+  EnqueueCatalogBackfillMovieResult,
+  EnqueueCatalogRepairBatchInput,
+  EnqueueCatalogRepairBatchResult,
+};
 
-export interface EnqueueCatalogBackfillMovieInput {
-  movieId: string | number;
-  reason: CatalogBackfillReason;
-  language?: string;
-  repairBatchId?: string | number;
-  repairBatchItemId?: string | number;
-}
-
-export interface EnqueueCatalogRepairBatchInput {
-  batchId: string | number;
-  issueKey: string;
-  limit: number;
-  pageSize: number;
-  language?: string;
-  staleAfterDays: number;
-}
-
-export interface EnqueueCatalogBackfillMovieResult {
-  queueName: string;
-  jobName: string;
+function enqueueResult({
+  jobId,
+  jobName,
+  language,
+  status,
+}: {
   jobId: string;
+  jobName: string;
   language: string;
   status: 'queued' | 'deduped';
-}
-
-export interface EnqueueCatalogRepairBatchResult {
-  queueName: string;
-  jobName: string;
-  jobId: string;
-  language: string;
-  status: 'queued' | 'deduped';
-}
-
-export interface CatalogMaintenanceQueueSnapshot {
-  queueName: string;
-  available: boolean;
-  counts: CatalogMaintenanceQueueCounts;
-  openJobs: number;
-  updatedAt: string;
-}
-
-export interface CatalogMaintenanceQueueJobSummary {
-  id: string;
-  name: string;
-  state: CatalogMaintenanceQueueJobState;
-  attemptsMade: number;
-  attemptsConfigured: number | null;
-  createdAt: string | null;
-  processedAt: string | null;
-  finishedAt: string | null;
-  failedReason: string | null;
-  payload: Array<{ label: string; value: string }>;
-  repairBatchId: string | null;
-  repairBatchItemId: string | null;
-  movieId: string | null;
-}
-
-export interface CatalogMaintenanceQueueJobPage {
-  queueName: string;
-  available: boolean;
-  state: CatalogMaintenanceQueueJobState;
-  jobs: CatalogMaintenanceQueueJobSummary[];
-  counts: CatalogMaintenanceQueueSnapshot['counts'];
-  openJobs: number;
-  totalCount: number;
-  limit: number;
-  offset: number;
-  updatedAt: string;
+}): EnqueueCatalogBackfillMovieResult {
+  return { queueName: CATALOG_MAINTENANCE_QUEUE_NAME, jobName, jobId, language, status };
 }
 
 let redisConnection: Redis | null = null;
 let catalogMaintenanceQueue: Queue<CatalogMaintenanceJobData> | null = null;
+
+function unavailableSnapshot(): CatalogMaintenanceQueueSnapshot {
+  return {
+    queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+    available: false,
+    counts: EMPTY_CATALOG_MAINTENANCE_QUEUE_COUNTS,
+    openJobs: 0,
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 function getCatalogMaintenanceQueue(
   redisUrl: string | undefined,
@@ -154,24 +123,24 @@ export async function getCatalogMaintenanceQueueSnapshot(
   const queue = getCatalogMaintenanceQueue(redisUrl);
 
   if (!queue) {
-    return {
-      queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
-      available: false,
-      counts: EMPTY_CATALOG_MAINTENANCE_QUEUE_COUNTS,
-      openJobs: 0,
-      updatedAt: new Date().toISOString(),
-    };
+    return unavailableSnapshot();
   }
 
-  const counts = await queue.getJobCounts(
-    'active',
-    'completed',
-    'delayed',
-    'failed',
-    'prioritized',
-    'waiting',
-    'waiting-children',
-  );
+  let counts: Record<string, number>;
+  try {
+    counts = await queue.getJobCounts(
+      'active',
+      'completed',
+      'delayed',
+      'failed',
+      'prioritized',
+      'waiting',
+      'waiting-children',
+    );
+  } catch (error) {
+    logger.error('Backoffice failed to read BullMQ catalog-maintenance counts', { err: error });
+    return unavailableSnapshot();
+  }
   const normalizedCounts: CatalogMaintenanceQueueSnapshot['counts'] = {
     active: counts.active ?? 0,
     completed: counts.completed ?? 0,
@@ -255,13 +224,12 @@ export async function enqueueCatalogBackfillMovieFromBackoffice(
   if (existingJob) {
     const state = await existingJob.getState();
     if (ACTIVE_DEDUPE_STATES.has(state)) {
-      return {
-        queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+      return enqueueResult({
         jobName: CATALOG_BACKFILL_MOVIE_JOB_NAME,
         jobId: String(existingJob.id ?? jobId),
         language,
         status: 'deduped',
-      };
+      });
     }
 
     await existingJob.remove();
@@ -283,13 +251,12 @@ export async function enqueueCatalogBackfillMovieFromBackoffice(
     },
   );
 
-  return {
-    queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+  return enqueueResult({
     jobName: CATALOG_BACKFILL_MOVIE_JOB_NAME,
     jobId: String(job.id ?? jobId),
     language,
     status: 'queued',
-  };
+  });
 }
 
 export async function enqueueCatalogRepairBatchFromBackoffice(
@@ -306,13 +273,12 @@ export async function enqueueCatalogRepairBatchFromBackoffice(
   if (existingJob) {
     const state = await existingJob.getState();
     if (ACTIVE_DEDUPE_STATES.has(state)) {
-      return {
-        queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+      return enqueueResult({
         jobName: CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
         jobId: String(existingJob.id ?? jobId),
         language,
         status: 'deduped',
-      };
+      });
     }
 
     await existingJob.remove();
@@ -335,11 +301,10 @@ export async function enqueueCatalogRepairBatchFromBackoffice(
     },
   );
 
-  return {
-    queueName: CATALOG_MAINTENANCE_QUEUE_NAME,
+  return enqueueResult({
     jobName: CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME,
     jobId: String(job.id ?? jobId),
     language,
     status: 'queued',
-  };
+  });
 }

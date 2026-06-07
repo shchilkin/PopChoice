@@ -1,4 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { mockGetJobCounts, MockQueue, MockRedis } = vi.hoisted(() => {
+  const mockGetJobCounts = vi.fn();
+
+  function MockQueue(this: { getJobCounts: ReturnType<typeof vi.fn> }) {
+    this.getJobCounts = mockGetJobCounts;
+  }
+
+  function MockRedis(this: { on: ReturnType<typeof vi.fn> }) {
+    this.on = vi.fn();
+  }
+
+  return { mockGetJobCounts, MockQueue, MockRedis };
+});
+
+vi.mock('bullmq', () => ({ Queue: MockQueue }));
+vi.mock('ioredis', () => ({ Redis: MockRedis }));
+vi.mock('@pop-choice/shared', () => ({
+  logger: { error: vi.fn() },
+}));
 
 import {
   enqueueCatalogBackfillMovieFromBackoffice,
@@ -11,6 +31,10 @@ import {
 } from './catalogMaintenanceQueue';
 
 describe('catalog maintenance queue helpers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('sanitizes BullMQ job ids so operator-supplied ids cannot contain colons', () => {
     expect(getCatalogBackfillMovieJobId('tmdb:331')).toBe('backfill-tmdb-331');
     expect(getCatalogRepairBatchJobId('batch:12')).toBe('repair-batch-batch-12');
@@ -109,5 +133,26 @@ describe('catalog maintenance queue helpers', () => {
       { label: 'Page size', value: '25' },
       { label: 'Language', value: 'en-US' },
     ]);
+  });
+
+  it('reports an unavailable queue snapshot when Redis count reads fail', async () => {
+    mockGetJobCounts.mockRejectedValueOnce(new Error('redis unavailable'));
+
+    await expect(
+      getCatalogMaintenanceQueueSnapshot('redis://localhost:6379'),
+    ).resolves.toMatchObject({
+      available: false,
+      counts: {
+        active: 0,
+        completed: 0,
+        delayed: 0,
+        failed: 0,
+        prioritized: 0,
+        waiting: 0,
+        waitingChildren: 0,
+      },
+      openJobs: 0,
+      queueName: 'catalog-maintenance',
+    });
   });
 });

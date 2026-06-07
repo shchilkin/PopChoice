@@ -62,6 +62,76 @@ export interface CatalogMaintenanceJobData {
   [key: string]: unknown;
 }
 
+export interface EnqueueCatalogBackfillMovieInput {
+  movieId: string | number;
+  reason: CatalogBackfillReason;
+  language?: string;
+  repairBatchId?: string | number;
+  repairBatchItemId?: string | number;
+}
+
+export interface EnqueueCatalogRepairBatchInput {
+  batchId: string | number;
+  issueKey: string;
+  limit: number;
+  pageSize: number;
+  language?: string;
+  staleAfterDays: number;
+}
+
+export interface EnqueueCatalogBackfillMovieResult {
+  queueName: string;
+  jobName: string;
+  jobId: string;
+  language: string;
+  status: 'queued' | 'deduped';
+}
+
+export interface EnqueueCatalogRepairBatchResult {
+  queueName: string;
+  jobName: string;
+  jobId: string;
+  language: string;
+  status: 'queued' | 'deduped';
+}
+
+export interface CatalogMaintenanceQueueSnapshot {
+  queueName: string;
+  available: boolean;
+  counts: CatalogMaintenanceQueueCounts;
+  openJobs: number;
+  updatedAt: string;
+}
+
+export interface CatalogMaintenanceQueueJobSummary {
+  id: string;
+  name: string;
+  state: CatalogMaintenanceQueueJobState;
+  attemptsMade: number;
+  attemptsConfigured: number | null;
+  createdAt: string | null;
+  processedAt: string | null;
+  finishedAt: string | null;
+  failedReason: string | null;
+  payload: Array<{ label: string; value: string }>;
+  repairBatchId: string | null;
+  repairBatchItemId: string | null;
+  movieId: string | null;
+}
+
+export interface CatalogMaintenanceQueueJobPage {
+  queueName: string;
+  available: boolean;
+  state: CatalogMaintenanceQueueJobState;
+  jobs: CatalogMaintenanceQueueJobSummary[];
+  counts: CatalogMaintenanceQueueCounts;
+  openJobs: number;
+  totalCount: number;
+  limit: number;
+  offset: number;
+  updatedAt: string;
+}
+
 type PayloadEntry = { label: string; value: string };
 
 export function normalizeLanguage(language?: string): string {
