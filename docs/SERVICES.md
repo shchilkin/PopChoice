@@ -12,7 +12,7 @@ This document describes the background services that populate and maintain the m
 
 | Service / Tool               | Type                  | Trigger                                                 | Source        |
 | ---------------------------- | --------------------- | ------------------------------------------------------- | ------------- |
-| `movie-seed`                 | One-shot              | Manual / CI                                             | `movies.txt`  |
+| `movie-seed`                 | One-shot              | Manual / CI                                             | Curated file  |
 | `movie-discovery`            | Scheduled             | Cron / One-shot                                         | TMDB API      |
 | `movie-backfill`             | One-shot              | Manual                                                  | TMDB API      |
 | `catalog:health`             | Read-only report      | Manual / CI                                             | PostgreSQL    |
@@ -159,13 +159,13 @@ See [Backoffice Plan](/docs/BACKOFFICE) and
 
 ## `services/movie-seed`
 
-**Purpose:** Seeds the database from the curated `movies.txt` file. Designed to be run once during initial setup (or on-demand to re-seed).
+**Purpose:** Seeds the database from the curated `services/movie-seed/movies.txt` file. Designed to be run once during initial setup (or on-demand to re-seed).
 
 **Location:** `services/movie-seed/`
 
 ### How it works
 
-1. Reads and parses `movies.txt` (one movie per entry, blank-line separated).
+1. Reads and parses `MOVIES_FILE_PATH`, defaulting first to `<cwd>/movies.txt` and then to `services/movie-seed/movies.txt` from the repo root (one movie per entry, blank-line separated).
 2. Checks which movies already exist in the database (deduplicates by name + year).
 3. Generates OpenAI embeddings for new movies.
 4. Inserts records into the `movies` table.
@@ -186,12 +186,12 @@ A cynical expatriate American café owner struggles to decide whether to help hi
 
 ### Environment Variables
 
-| Variable           | Required | Default            | Description                         |
-| ------------------ | -------- | ------------------ | ----------------------------------- |
-| `OPENAI_API_KEY`   | ✅       | —                  | OpenAI API key for embeddings       |
-| `DATABASE_URL`     | ✅       | —                  | PostgreSQL connection string        |
-| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt` | Path to the movies.txt file         |
-| `DRY_RUN`          | ❌       | `false`            | `"true"` to skip embeddings/inserts |
+| Variable           | Required | Default                                                   | Description                         |
+| ------------------ | -------- | --------------------------------------------------------- | ----------------------------------- |
+| `OPENAI_API_KEY`   | ✅       | —                                                         | OpenAI API key for embeddings       |
+| `DATABASE_URL`     | ✅       | —                                                         | PostgreSQL connection string        |
+| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt`, then `services/movie-seed/movies.txt` | Path to the movies.txt file         |
+| `DRY_RUN`          | ❌       | `false`                                                   | `"true"` to skip embeddings/inserts |
 
 ### Running
 

@@ -70,6 +70,7 @@ The main remaining risks are:
 - [x] OpenAI calls now use per-call timeout options and `AbortSignal` cancellation, with legacy recommendation requests mapping upstream OpenAI timeouts to HTTP 504.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
 - [x] PR CI has a consolidated `services-ci` pass for service workspaces and CodeQL runs for Actions and JavaScript/TypeScript.
+- [x] Legacy web-local movie text parsers were removed; curated movie seeding now stays centralized in `services/movie-seed`.
 
 ### Issues Still Present
 
