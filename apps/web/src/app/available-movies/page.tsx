@@ -142,7 +142,7 @@ export default function AvailableMoviesPage() {
   }
 
   return (
-    <section className="flex-1 flex flex-col px-4 md:px-8 py-10 max-w-5xl mx-auto w-full">
+    <section className="flex-1 flex flex-col px-4 md:px-8 py-10 max-w-6xl mx-auto w-full">
       <AvailableMoviesHeader
         labels={t.moviesPage}
         summary={getMoviesPageSummary({

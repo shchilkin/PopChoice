@@ -20,7 +20,7 @@ export function MoviesTableSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
     >
       {Array.from({ length: 8 }).map((_, i) => (
         <div
@@ -120,7 +120,7 @@ export function MoviesTable({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {movies.map((movie) => (
         <MovieDiscoveryCard key={movie.id} movie={movie} />
       ))}
