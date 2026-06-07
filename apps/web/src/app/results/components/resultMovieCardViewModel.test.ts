@@ -87,8 +87,8 @@ describe('buildResultMatchViewModel', () => {
   it('formats accessible match labels from the similarity tier', () => {
     const match = buildResultMatchViewModel(0.56, en.results);
 
-    expect(match.label).toBe(en.results.matchTiers.strong);
-    expect(match.exactLabel).toContain('90');
+    expect(match.label).toBe(en.results.matchTones.strong);
+    expect(match.exactLabel).toBe(en.results.matchTiers.strong);
     expect(match.color).toMatch(/^#/);
   });
 });

@@ -119,11 +119,11 @@ export function buildResultMatchViewModel(
   similarity: number,
   copy: ResultsCopy,
 ): ResultMatchViewModel {
-  const { pct, tier } = getSimilarityTier(similarity);
+  const { tier } = getSimilarityTier(similarity);
   return {
     color: MATCH_TIER_COLORS[tier],
-    exactLabel: copy.matchTierExact.replace('{pct}', String(pct)),
-    label: copy.matchTiers[tier],
+    exactLabel: copy.matchTiers[tier],
+    label: copy.matchTones[tier],
   };
 }
 

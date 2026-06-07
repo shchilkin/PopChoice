@@ -1,9 +1,9 @@
 'use client';
 
-import { SearchX, X } from 'lucide-react';
+import { Clock, SearchX, Star, X } from 'lucide-react';
+import Image from 'next/image';
 import { z } from 'zod';
 
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { useLanguage } from '@/i18n';
 import { ageRatings } from '@/utils/schemas/movieSchemas';
 
@@ -18,65 +18,41 @@ import type { Movie } from '@/features/movies/catalog';
  */
 export function MoviesTableSkeleton() {
   return (
-    <div
-      aria-hidden="true"
-      className="w-full overflow-x-auto rounded-2xl"
-      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
-    >
-      <table className="min-w-full">
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
-            {['40%', '12%', '12%', '12%'].map((w, i) => (
-              <th key={i} className="px-5 py-3">
-                <div
-                  className="h-3 rounded animate-pulse"
-                  style={{ width: w, background: 'var(--pc-bd2)' }}
-                />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid var(--pc-bd1)' }}>
-              <td className="px-5 py-3.5">
-                <div
-                  className="h-3.5 rounded animate-pulse mb-1.5"
-                  style={{ width: '55%', background: 'var(--pc-bd2)' }}
-                />
-                <div
-                  className="h-2.5 rounded animate-pulse"
-                  style={{ width: '20%', background: 'var(--pc-bd1)' }}
-                />
-              </td>
-              {[1, 2, 3].map((j) => (
-                <td key={j} className="px-5 py-3.5">
-                  <div
-                    className="h-3.5 rounded animate-pulse mx-auto"
-                    style={{ width: '60%', background: 'var(--pc-bd2)' }}
-                  />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div aria-hidden="true" className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-2xl"
+          style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+        >
+          <div className="aspect-[2/3] animate-pulse" style={{ background: 'var(--pc-bd2)' }} />
+          <div className="space-y-2 p-4">
+            <div className="h-4 w-4/5 rounded animate-pulse bg-[var(--pc-bd2)]" />
+            <div className="h-3 w-1/3 rounded animate-pulse bg-[var(--pc-bd1)]" />
+            <div className="flex gap-2 pt-2">
+              <div className="h-7 w-16 rounded-full animate-pulse bg-[var(--pc-bd1)]" />
+              <div className="h-7 w-20 rounded-full animate-pulse bg-[var(--pc-bd1)]" />
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-// Utility function to convert minutes to short hours and minutes format
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
+function formatDuration(minutes: number): string | null {
+  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+  const formatted = [
+    { suffix: 'h', value: hours },
+    { suffix: 'm', value: remainingMinutes },
+  ]
+    .filter(({ value }) => value > 0)
+    .map(({ suffix, value }) => `${value}${suffix}`)
+    .join(' ');
 
-  if (hours === 0) {
-    return `${minutes}m`;
-  } else if (remainingMinutes === 0) {
-    return `${hours}h`;
-  } else {
-    return `${hours}h ${remainingMinutes}m`;
-  }
+  return formatted || null;
 }
 
 export interface MoviesTableProps {
@@ -134,29 +110,18 @@ export function MoviesTable({
   hasActiveFilters = false,
   onClearFilters,
 }: MoviesTableProps) {
-  const isMobile = useIsMobile();
-
-  // Show the skeleton while the breakpoint is being measured to avoid a brief
-  // blank section between the loading skeleton disappearing and the correct
-  // layout being rendered.
-  if (isMobile === null) return <MoviesTableSkeleton />;
-
-  if (isMobile) {
+  if (movies.length === 0) {
     return (
-      <MobileMoviesTable
-        movies={movies}
-        hasActiveFilters={hasActiveFilters}
-        onClearFilters={onClearFilters}
-      />
+      <MoviesGridEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
     );
   }
 
   return (
-    <DesktopMoviesTable
-      movies={movies}
-      hasActiveFilters={hasActiveFilters}
-      onClearFilters={onClearFilters}
-    />
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {movies.map((movie) => (
+        <MovieDiscoveryCard key={movie.id} movie={movie} />
+      ))}
+    </div>
   );
 }
 
@@ -179,7 +144,7 @@ function ClearFiltersButton({
     <button
       type="button"
       onClick={onClearFilters}
-      className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-200"
+      className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={{
         background: 'var(--pc-surface-hover)',
         border: '1px solid var(--pc-bd2)',
@@ -192,25 +157,7 @@ function ClearFiltersButton({
   );
 }
 
-function MobileMoviesTable({ movies, hasActiveFilters, onClearFilters }: MoviesTableProps) {
-  if (movies.length === 0) {
-    return (
-      <div className="flex flex-col gap-3">
-        <MobileEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {movies.map((movie) => (
-        <MobileMovieCard key={movie.id} movie={movie} />
-      ))}
-    </div>
-  );
-}
-
-function MobileEmptyState({
+function MoviesGridEmptyState({
   hasActiveFilters,
   onClearFilters,
 }: Pick<MoviesTableProps, 'hasActiveFilters' | 'onClearFilters'>) {
@@ -231,137 +178,125 @@ function MobileEmptyState({
   );
 }
 
-function MobileMovieCard({ movie }: { movie: Movie }) {
+function getSafePosterUrl(movie: Movie): string | null {
+  const posterUrl = movie.poster_url?.trim();
+  if (!posterUrl) return null;
+  if (posterUrl.startsWith('/') || posterUrl.startsWith('https://image.tmdb.org/')) {
+    return posterUrl;
+  }
+  return null;
+}
+
+function MoviePosterFallback() {
   return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        background: 'var(--pc-surface)',
-        border: '1px solid var(--pc-bd2)',
-      }}
-    >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold" style={{ color: 'var(--pc-t1)' }}>
-            {movie.name}
-          </div>
-          <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
-            {movie.year}
-          </div>
-        </div>
-        <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
-      </div>
-      <div className="flex items-center gap-4 mt-2">
-        <span className="text-xs" style={{ color: 'var(--pc-t3)' }}>
-          {formatDuration(movie.duration)}
-        </span>
-        <span className="text-xs font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
-          ★ {movie.score_rating.toFixed(1)}
-          <span style={{ color: 'var(--pc-t4)', fontWeight: 400 }}>/10</span>
-        </span>
-      </div>
+    <div className="flex h-full items-center justify-center px-6 text-center">
+      <span
+        className="text-xs font-semibold tracking-[0.08em]"
+        style={{
+          color: 'var(--pc-t3)',
+        }}
+      >
+        Poster not available
+      </span>
     </div>
   );
 }
 
-function DesktopMoviesTable({ movies, hasActiveFilters, onClearFilters }: MoviesTableProps) {
-  const { t } = useLanguage();
+function MoviePoster({ movie }: { movie: Movie }) {
+  const posterUrl = getSafePosterUrl(movie);
 
   return (
     <div
-      className="w-full overflow-x-auto rounded-2xl"
+      className="relative aspect-[2/3] overflow-hidden rounded-t-2xl"
       style={{
-        background: 'var(--pc-surface)',
-        border: '1px solid var(--pc-bd2)',
+        background:
+          'linear-gradient(145deg, color-mix(in srgb, var(--pc-gold-subtle) 72%, transparent), var(--pc-bg))',
       }}
     >
-      <table className="min-w-full">
-        <thead>
-          <tr style={{ borderBottom: '1px solid var(--pc-bd2)' }}>
-            <th
-              className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--pc-t4)' }}
-            >
-              {t.moviesPage.columns.name}
-            </th>
-            <th
-              className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--pc-t4)' }}
-            >
-              {t.moviesPage.columns.ageRating}
-            </th>
-            <th
-              className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--pc-t4)' }}
-            >
-              {t.moviesPage.columns.duration}
-            </th>
-            <th
-              className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
-              style={{ color: 'var(--pc-t4)' }}
-            >
-              {t.moviesPage.columns.score}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {movies.length === 0 ? (
-            <DesktopEmptyRow hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
-          ) : (
-            movies.map((movie, i) => (
-              <tr
-                key={movie.id}
-                className="transition-colors duration-150 hover:bg-[var(--pc-surface-hover)]"
-                style={{
-                  borderBottom: i < movies.length - 1 ? '1px solid var(--pc-bd1)' : undefined,
-                }}
-              >
-                <td className="px-5 py-3.5">
-                  <div className="text-sm font-medium" style={{ color: 'var(--pc-t1)' }}>
-                    {movie.name}
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--pc-t4)' }}>
-                    {movie.year}
-                  </div>
-                </td>
-                <td className="px-5 py-3.5 text-center">
-                  <AgeRatingChip
-                    rating={movie.age_rating as z.infer<typeof ageRatings>}
-                    size="sm"
-                  />
-                </td>
-                <td className="px-5 py-3.5 text-sm" style={{ color: 'var(--pc-t2)' }}>
-                  {formatDuration(movie.duration)}
-                </td>
-                <td className="px-5 py-3.5 text-center">
-                  <span className="text-sm font-semibold" style={{ color: 'var(--pc-gold-text)' }}>
-                    {movie.score_rating.toFixed(1)}
-                  </span>
-                  <span className="text-xs ml-0.5" style={{ color: 'var(--pc-t4)' }}>
-                    /10
-                  </span>
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function DesktopEmptyRow({
-  hasActiveFilters,
-  onClearFilters,
-}: Pick<MoviesTableProps, 'hasActiveFilters' | 'onClearFilters'>) {
-  return (
-    <tr>
-      <td colSpan={4} className="px-0 py-0">
-        <MoviesTableEmptyState
-          hasActiveFilters={hasActiveFilters}
-          onClearFilters={onClearFilters}
+      {posterUrl ? (
+        <Image
+          src={posterUrl}
+          alt=""
+          fill
+          sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+          className="object-cover"
         />
-      </td>
-    </tr>
+      ) : (
+        <MoviePosterFallback />
+      )}
+      {movie.score_rating > 0 && (
+        <div
+          className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur"
+          style={{
+            background: 'color-mix(in srgb, var(--pc-bg) 82%, transparent)',
+            color: 'var(--pc-gold-text)',
+            border: '1px solid var(--pc-bd2)',
+          }}
+        >
+          <Star size={13} fill="currentColor" aria-hidden="true" />
+          {movie.score_rating.toFixed(1)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MovieTitleBlock({ movie }: { movie: Movie }) {
+  const title = movie.localized_name?.trim() || movie.name;
+  const secondaryTitle = title === movie.name ? null : movie.name;
+
+  return (
+    <div className="min-w-0">
+      <h2 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--pc-t1)]">
+        {title}
+      </h2>
+      {secondaryTitle && (
+        <p className="mt-1 truncate text-xs text-[var(--pc-t4)]">{secondaryTitle}</p>
+      )}
+    </div>
+  );
+}
+
+function MovieMetadataChips({ movie }: { movie: Movie }) {
+  const duration = formatDuration(movie.duration);
+  const showAgeRating = movie.age_rating && movie.age_rating !== 'NR';
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      {showAgeRating && (
+        <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
+      )}
+      {duration && (
+        <span
+          className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-semibold"
+          style={{
+            background: 'var(--pc-surface-hover)',
+            border: '1px solid var(--pc-bd1)',
+            color: 'var(--pc-t3)',
+          }}
+        >
+          <Clock size={13} aria-hidden="true" />
+          {duration}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function MovieDiscoveryCard({ movie }: { movie: Movie }) {
+  return (
+    <article
+      className="group overflow-hidden rounded-2xl transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      style={{ background: 'var(--pc-surface)', border: '1px solid var(--pc-bd2)' }}
+    >
+      <MoviePoster movie={movie} />
+      <div className="p-4">
+        <div className="flex min-h-14 items-start justify-between gap-3">
+          <MovieTitleBlock movie={movie} />
+          <span className="shrink-0 text-xs font-semibold text-[var(--pc-t4)]">{movie.year}</span>
+        </div>
+        <MovieMetadataChips movie={movie} />
+      </div>
+    </article>
   );
 }

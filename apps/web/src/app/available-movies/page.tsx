@@ -100,9 +100,16 @@ export default function AvailableMoviesPage() {
     setCurrentPage(1);
   };
 
+  const commitFilters = (filters: MovieFilters) => {
+    const normalized = normalizeMovieFilters(filters);
+    setDraftFilters(normalized);
+    setAppliedFilters(normalized);
+    setCurrentPage(1);
+  };
+
   const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    applyFilters(draftFilters);
+    commitFilters(draftFilters);
   };
 
   const handleClearFilters = () => {
@@ -135,7 +142,7 @@ export default function AvailableMoviesPage() {
   }
 
   return (
-    <section className="flex-1 flex flex-col px-4 md:px-8 py-10 max-w-5xl mx-auto w-full">
+    <section className="flex-1 flex flex-col px-4 md:px-8 py-10 max-w-6xl mx-auto w-full">
       <AvailableMoviesHeader
         labels={t.moviesPage}
         summary={getMoviesPageSummary({
@@ -153,6 +160,7 @@ export default function AvailableMoviesPage() {
         labels={t.moviesPage}
         onAgeRatingToggle={handleAgeRatingToggle}
         onClearFilters={handleClearFilters}
+        onCommitFilters={commitFilters}
         onDraftFiltersChange={setDraftFilters}
         onFilterSubmit={handleFilterSubmit}
         onImmediateFilterChange={applyFilters}
@@ -160,8 +168,10 @@ export default function AvailableMoviesPage() {
 
       <MoviesResultPanel
         appliedFilters={appliedFilters}
+        labels={t.moviesPage}
         loading={loading}
         movies={movies}
+        onApplyFilters={commitFilters}
         onClearFilters={handleClearFilters}
       />
 

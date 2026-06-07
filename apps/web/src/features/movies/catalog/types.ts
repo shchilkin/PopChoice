@@ -1,6 +1,8 @@
 export interface Movie {
   id: number;
   name: string;
+  localized_name?: string | null;
+  poster_url?: string | null;
   age_rating: string;
   duration: number;
   score_rating: number;

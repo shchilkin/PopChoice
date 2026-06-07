@@ -2,7 +2,7 @@
 
 import { Check } from 'lucide-react';
 
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 
 type StepHeaderProps = {
   accentBackground: string;
@@ -26,6 +26,14 @@ type SelectableOptionButtonProps = {
 
 type SelectionMarkProps = {
   color: string;
+};
+
+type FavoriteTextInputProps = {
+  name?: string;
+  onChange: (value: string) => void;
+  onEnter?: () => void;
+  placeholder: string;
+  value: string;
 };
 
 type SelectableLayout = 'row' | 'stack' | 'large-row';
@@ -163,6 +171,46 @@ export function SelectionMark({ color }: SelectionMarkProps) {
     >
       <Check size={12} style={{ color: 'var(--pc-cta-text)' }} />
     </span>
+  );
+}
+
+export function FavoriteTextInput({
+  name,
+  onChange,
+  onEnter,
+  placeholder,
+  value,
+}: FavoriteTextInputProps) {
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') onEnter?.();
+  };
+
+  return (
+    <div className="relative">
+      <input
+        autoFocus
+        name={name}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="w-full rounded-2xl px-5 py-4 outline-none transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+        style={{
+          background: 'var(--pc-surface)',
+          border: '1px solid var(--pc-bd2)',
+          color: 'var(--pc-t1)',
+          fontSize: '1rem',
+        }}
+        onFocus={(event) => {
+          event.currentTarget.style.borderColor = 'var(--pc-gold-focus)';
+          event.currentTarget.style.boxShadow = 'var(--pc-gold-ring)';
+        }}
+        onBlur={(event) => {
+          event.currentTarget.style.borderColor = 'var(--pc-bd2)';
+          event.currentTarget.style.boxShadow = 'none';
+        }}
+      />
+    </div>
   );
 }
 

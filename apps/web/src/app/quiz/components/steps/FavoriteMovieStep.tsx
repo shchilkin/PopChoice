@@ -4,6 +4,8 @@ import { Clapperboard } from 'lucide-react';
 
 import { useLanguage } from '@/i18n';
 
+import { FavoriteTextInput } from './StepPrimitives';
+
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteMovieStepProps {
@@ -65,30 +67,15 @@ export function FavoriteMovieStep({
         {t.quiz.favoriteMovie.hint}
       </p>
 
-      <div className="relative">
-        <input
-          autoFocus
-          value={person.favoriteMovie}
-          onChange={(e) => onUpdate({ favoriteMovie: e.target.value, hasNoReferenceMovie: false })}
-          onKeyDown={(e) => e.key === 'Enter' && canProceed && onSubmit()}
-          placeholder={t.quiz.favoriteMovie.placeholder}
-          className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
-          style={{
-            background: 'var(--pc-surface)',
-            border: '1px solid var(--pc-bd2)',
-            color: 'var(--pc-t1)',
-            fontSize: '1rem',
-          }}
-          onFocus={(e) => {
-            (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-gold-focus)';
-            (e.currentTarget as HTMLInputElement).style.boxShadow = 'var(--pc-gold-ring)';
-          }}
-          onBlur={(e) => {
-            (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
-            (e.currentTarget as HTMLInputElement).style.boxShadow = 'none';
-          }}
-        />
-      </div>
+      <FavoriteTextInput
+        name="favoriteMovie"
+        value={person.favoriteMovie}
+        onChange={(favoriteMovie) => onUpdate({ favoriteMovie, hasNoReferenceMovie: false })}
+        onEnter={() => {
+          if (canProceed) onSubmit();
+        }}
+        placeholder={t.quiz.favoriteMovie.placeholder}
+      />
 
       {/* Quick suggestions */}
       <div>
@@ -152,10 +139,11 @@ export function FavoriteMovieStep({
         </p>
         <textarea
           value={person.favoriteMovieWhy}
+          name="favoriteMovieWhy"
           onChange={(e) => onUpdate({ favoriteMovieWhy: e.target.value.slice(0, 300) })}
           placeholder={t.quiz.favoriteMovie.whyPlaceholder}
           rows={3}
-          className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200 resize-none"
+          className="w-full resize-none rounded-2xl px-5 py-4 outline-none transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
           style={{
             background: 'var(--pc-surface)',
             border: '1px solid var(--pc-bd2)',

@@ -4,6 +4,8 @@ import { User } from 'lucide-react';
 
 import { useLanguage } from '@/i18n';
 
+import { FavoriteTextInput } from './StepPrimitives';
+
 import type { PersonAnswers } from '../../types';
 
 interface FavoriteActorStepProps {
@@ -51,30 +53,12 @@ export function FavoriteActorStep({ person, onUpdate, onSubmit }: FavoriteActorS
         {t.quiz.actor.hint}
       </p>
 
-      <div className="relative">
-        <input
-          autoFocus
-          value={person.favoriteActor}
-          onChange={(e) => onUpdate({ favoriteActor: e.target.value })}
-          onKeyDown={(e) => e.key === 'Enter' && onSubmit()}
-          placeholder={t.quiz.actor.placeholder}
-          className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
-          style={{
-            background: 'var(--pc-surface)',
-            border: '1px solid var(--pc-bd2)',
-            color: 'var(--pc-t1)',
-            fontSize: '1rem',
-          }}
-          onFocus={(e) => {
-            (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-gold-focus)';
-            (e.currentTarget as HTMLInputElement).style.boxShadow = 'var(--pc-gold-ring)';
-          }}
-          onBlur={(e) => {
-            (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--pc-bd2)';
-            (e.currentTarget as HTMLInputElement).style.boxShadow = 'none';
-          }}
-        />
-      </div>
+      <FavoriteTextInput
+        value={person.favoriteActor}
+        onChange={(favoriteActor) => onUpdate({ favoriteActor })}
+        onEnter={onSubmit}
+        placeholder={t.quiz.actor.placeholder}
+      />
 
       {/* Quick suggestions */}
       <div>

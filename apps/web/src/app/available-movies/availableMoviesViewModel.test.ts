@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  applyQuickMovieFilter,
   buildMoviesCacheKey,
   buildMoviesUrl,
   cloneEmptyMovieFilters,
   generatePageNumbers,
+  getActiveMovieFilterCount,
   getMoviesPageSummary,
   hasActiveMovieFilters,
+  isQuickMovieFilterActive,
   normalizeMovieFilters,
   toggleAgeRatingFilter,
 } from './availableMoviesViewModel';
@@ -48,6 +51,11 @@ describe('available movies view model', () => {
       makeFilters({ query: 'Kurosawa', yearFrom: '1950' }),
     );
     expect(hasActiveMovieFilters(makeFilters({ minScore: '7' }))).toBe(true);
+    expect(
+      getActiveMovieFilterCount(
+        makeFilters({ query: 'Nolan', yearFrom: '2000', yearTo: '2020', minScore: '8' }),
+      ),
+    ).toBe(3);
   });
 
   it('toggles age ratings without mutating the original filters', () => {
@@ -57,6 +65,17 @@ describe('available movies view model', () => {
     expect(selected.ageRatings).toEqual(['PG-13']);
     expect(cleared.ageRatings).toEqual([]);
     expect(emptyFilters.ageRatings).toEqual([]);
+  });
+
+  it('applies quick filters as real catalog filters', () => {
+    const topRated = applyQuickMovieFilter(emptyFilters, 'topRated');
+    const family = applyQuickMovieFilter(emptyFilters, 'family');
+
+    expect(topRated.minScore).toBe('8');
+    expect(isQuickMovieFilterActive(topRated, 'topRated')).toBe(true);
+    expect(applyQuickMovieFilter(topRated, 'topRated').minScore).toBe('');
+    expect(family.ageRatings).toEqual(['G', 'PG']);
+    expect(isQuickMovieFilterActive(family, 'family')).toBe(true);
   });
 
   it('generates compact pagination numbers', () => {

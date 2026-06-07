@@ -1,6 +1,6 @@
 'use client';
 
-import { RotateCcw, Sparkles, Users } from 'lucide-react';
+import { RotateCcw, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -15,6 +15,7 @@ import {
   LocalSuggestionsSection,
   MainMovieCard,
   RecommendationFeedbackPanel,
+  ResultsDecisionNoteCard,
   ResultsHeader,
   TmdbSuggestionsSection,
   type FeedbackKind,
@@ -225,27 +226,6 @@ async function shareRecommendation({
   }
 }
 
-function BroaderSearchNotice({ label, show }: { label: string; show: boolean }) {
-  if (!show) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="mb-6 flex items-center justify-center gap-2 px-4 py-2 rounded-full text-xs"
-      style={{
-        background: 'var(--pc-ghost)',
-        border: '1px solid var(--pc-bd2)',
-        color: 'var(--pc-t3)',
-      }}
-    >
-      <Sparkles size={11} />
-      {label}
-    </motion.div>
-  );
-}
-
 function GroupInsightsSection({
   groupInsights,
   isGroupResult,
@@ -306,8 +286,9 @@ function ResultsActions({
       className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
     >
       <button
+        type="button"
         onClick={navigateToFreshQuiz}
-        className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
+        className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={{
           background: 'var(--pc-ghost)',
           border: '1px solid var(--pc-bd2)',
@@ -327,8 +308,9 @@ function ResultsActions({
       </button>
 
       <button
+        type="button"
         onClick={navigateToFreshQuiz}
-        className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 active:scale-95"
+        className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-transform duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={{
           background: `linear-gradient(135deg, ${palette.purple}, #6D28D9)`,
           color: '#F8F8FF',
@@ -468,20 +450,25 @@ export function RecommendationResultsView({
         audienceTitle={audienceCopy.title}
         audienceSubtitle={audienceCopy.subtitle}
         dbMovieCount={dbMovieCount}
-        decisionNote={decisionNote}
         isGroupResult={isGroupResult}
         isSharedResult={isSharedResult}
         onShare={handleShare}
         peopleCount={peopleCount}
         shareState={shareState}
-        usedBroaderSearch={usedBroaderSearch}
       />
-
-      <BroaderSearchNotice label={t.results.broaderSearch} show={usedBroaderSearch} />
 
       <GroupInsightsSection groupInsights={groupInsights} isGroupResult={isGroupResult} />
 
       <TopPickSection isGroupResult={isGroupResult} label={t.results.topPick} movie={mainMovie} />
+
+      <div className="mb-10">
+        <ResultsDecisionNoteCard
+          decisionNote={decisionNote}
+          isGroupResult={isGroupResult}
+          results={t.results}
+          usedBroaderSearch={usedBroaderSearch}
+        />
+      </div>
 
       <RecommendationFeedbackPanel
         feedbackState={feedbackState}

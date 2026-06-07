@@ -89,6 +89,11 @@ npm run test:e2e:down
 
 See `docs/BOUNDARIES.md` for the canonical boundary rules.
 
+## UI Implementation
+
+- Prefer existing shared UI components from `apps/web/src/components` and established route primitives before creating one-off buttons, inputs, chips, cards, or form controls.
+- If a reusable component is missing a needed state or size, extend the shared component conservatively instead of duplicating styling in page-local code.
+
 ## Recommendation Flow
 
 - Legacy synchronous API: `POST /api/movie-recommendation`.

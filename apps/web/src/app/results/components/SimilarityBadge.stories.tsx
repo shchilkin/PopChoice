@@ -11,7 +11,7 @@ const meta: Meta<typeof SimilarityBadge> = {
     docs: {
       description: {
         component:
-          'A colored badge showing a calibrated match tier. The exact experimental similarity percentage is available in the hover tooltip.',
+          'A colored badge showing a calibrated qualitative match tier without exposing raw experimental similarity percentages.',
       },
     },
   },
