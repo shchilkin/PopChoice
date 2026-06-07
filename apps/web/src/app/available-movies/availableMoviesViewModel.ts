@@ -6,6 +6,8 @@ export type MoviesFetchOutcome =
   | { ok: true; data: MoviesResponse }
   | { ok: false; errorMessage: string };
 
+export type QuickMovieFilterId = 'topRated' | 'short' | 'classic' | 'recent' | 'family';
+
 export interface MovieFilters {
   query: string;
   yearFrom: string;
@@ -65,6 +67,17 @@ export function hasActiveMovieFilters(filters: MovieFilters): boolean {
   );
 }
 
+export function getActiveMovieFilterCount(filters: MovieFilters): number {
+  const normalized = normalizeMovieFilters(filters);
+  return [
+    normalized.query,
+    normalized.yearFrom || normalized.yearTo,
+    normalized.duration,
+    normalized.minScore,
+    normalized.ageRatings.length > 0,
+  ].filter(Boolean).length;
+}
+
 export function normalizeMovieFilters(filters: MovieFilters): MovieFilters {
   return {
     query: filters.query.trim(),
@@ -81,6 +94,54 @@ export function toggleAgeRatingFilter(filters: MovieFilters, rating: string): Mo
     ? filters.ageRatings.filter((value) => value !== rating)
     : [...filters.ageRatings, rating];
   return { ...filters, ageRatings };
+}
+
+function hasFamilyRatings(filters: MovieFilters): boolean {
+  return filters.ageRatings.includes('G') && filters.ageRatings.includes('PG');
+}
+
+function withoutRatings(filters: MovieFilters, ratings: string[]): MovieFilters {
+  return {
+    ...filters,
+    ageRatings: filters.ageRatings.filter((rating) => !ratings.includes(rating)),
+  };
+}
+
+export function isQuickMovieFilterActive(filters: MovieFilters, id: QuickMovieFilterId): boolean {
+  const normalized = normalizeMovieFilters(filters);
+
+  switch (id) {
+    case 'topRated':
+      return normalized.minScore === '8';
+    case 'short':
+      return normalized.duration === 'under-90';
+    case 'classic':
+      return normalized.yearTo === '1999';
+    case 'recent':
+      return normalized.yearFrom === '2020';
+    case 'family':
+      return hasFamilyRatings(normalized);
+  }
+}
+
+export function applyQuickMovieFilter(filters: MovieFilters, id: QuickMovieFilterId): MovieFilters {
+  const normalized = normalizeMovieFilters(filters);
+  const isActive = isQuickMovieFilterActive(normalized, id);
+
+  switch (id) {
+    case 'topRated':
+      return { ...normalized, minScore: isActive ? '' : '8' };
+    case 'short':
+      return { ...normalized, duration: isActive ? '' : 'under-90' };
+    case 'classic':
+      return { ...normalized, yearFrom: '', yearTo: isActive ? '' : '1999' };
+    case 'recent':
+      return { ...normalized, yearFrom: isActive ? '' : '2020', yearTo: '' };
+    case 'family':
+      return isActive
+        ? withoutRatings(normalized, ['G', 'PG'])
+        : { ...withoutRatings(normalized, ['G', 'PG']), ageRatings: ['G', 'PG'] };
+  }
 }
 
 export function generatePageNumbers(currentPage: number, totalPages: number): (number | '...')[] {
