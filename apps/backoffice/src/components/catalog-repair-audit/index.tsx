@@ -1,7 +1,7 @@
 import type { CatalogRepairActionAudit } from '@pop-choice/shared';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
-import { JsonDetails } from '../shared';
+import { DataTable, JsonDetails } from '../shared';
 
 export function humanizeBackofficeIdentifier(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -132,42 +132,31 @@ export function RepairAuditRows({ audit }: { audit: CatalogRepairActionAudit[] }
   }
 
   return (
-    <div className="table-scroll">
-      <table className="repair-audit-table">
-        <thead>
-          <tr>
-            <th>When</th>
-            <th>Actor</th>
-            <th>Issue</th>
-            <th>Target</th>
-            <th>Action</th>
-            <th>Result</th>
-          </tr>
-        </thead>
-        <tbody>
-          {audit.map((entry) => (
-            <tr key={entry.id}>
-              <td>
-                <time dateTime={entry.createdAt} title={formatBackofficeDateTime(entry.createdAt)}>
-                  {formatCompactBackofficeDateTime(entry.createdAt)}
-                </time>
-              </td>
-              <td>{entry.actor}</td>
-              <td>
-                <span className="repair-issue-label">
-                  {humanizeBackofficeIdentifier(entry.issueKey)}
-                </span>
-                <span className="repair-issue-key">{entry.issueKey}</span>
-              </td>
-              <td>{formatRepairTarget(entry)}</td>
-              <td>{humanizeBackofficeIdentifier(entry.action)}</td>
-              <td>
-                <RepairResultSummary entry={entry} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      className="repair-audit-table"
+      columns={['When', 'Actor', 'Issue', 'Target', 'Action', 'Result']}
+    >
+      {audit.map((entry) => (
+        <tr key={entry.id}>
+          <td>
+            <time dateTime={entry.createdAt} title={formatBackofficeDateTime(entry.createdAt)}>
+              {formatCompactBackofficeDateTime(entry.createdAt)}
+            </time>
+          </td>
+          <td>{entry.actor}</td>
+          <td>
+            <span className="repair-issue-label">
+              {humanizeBackofficeIdentifier(entry.issueKey)}
+            </span>
+            <span className="repair-issue-key">{entry.issueKey}</span>
+          </td>
+          <td>{formatRepairTarget(entry)}</td>
+          <td>{humanizeBackofficeIdentifier(entry.action)}</td>
+          <td>
+            <RepairResultSummary entry={entry} />
+          </td>
+        </tr>
+      ))}
+    </DataTable>
   );
 }

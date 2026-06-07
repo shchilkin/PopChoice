@@ -9,7 +9,7 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
-import { PanelHeader, SimplePaginationControls, TableEmptyRow, TableScroll } from '../shared';
+import { DataTable, PanelHeader, SimplePaginationControls, TableEmptyRow } from '../shared';
 import { FilterLink } from './filterLink';
 import { buildRepairBatchListHref } from './helpers';
 
@@ -136,26 +136,22 @@ export function RepairBatchListPage({
           totalCount={batchPage.totalCount}
           hrefForPage={hrefForPage}
         />
-        <TableScroll>
-          <table className="repair-batch-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Status</th>
-                <th>Issue</th>
-                <th>Actor</th>
-                <th>Limit</th>
-                <th>Candidates</th>
-                <th>Outcomes</th>
-                <th>Created</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              <RepairBatchRows batches={batchPage.batches} />
-            </tbody>
-          </table>
-        </TableScroll>
+        <DataTable
+          className="repair-batch-table"
+          columns={[
+            'ID',
+            'Status',
+            'Issue',
+            'Actor',
+            'Limit',
+            'Candidates',
+            'Outcomes',
+            'Created',
+            'Actions',
+          ]}
+        >
+          <RepairBatchRows batches={batchPage.batches} />
+        </DataTable>
         <SimplePaginationControls
           ariaLabel="Catalog repair batch pagination bottom"
           emptyLabel="No repair batches"

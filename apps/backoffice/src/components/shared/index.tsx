@@ -49,6 +49,33 @@ export function TableScroll({ children, className }: { children: ReactNode; clas
   return <div className={joinClassNames('table-scroll', className)}>{children}</div>;
 }
 
+export function DataTable({
+  children,
+  className,
+  columns,
+  scrollClassName,
+}: {
+  children: ReactNode;
+  className?: string;
+  columns: ReactNode[];
+  scrollClassName?: string;
+}) {
+  return (
+    <TableScroll className={scrollClassName}>
+      <table className={className}>
+        <thead>
+          <tr>
+            {columns.map((column, index) => (
+              <th key={index}>{column}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </TableScroll>
+  );
+}
+
 export function TableEmptyRow({ children, colSpan }: { children: ReactNode; colSpan: number }) {
   return (
     <tr>
