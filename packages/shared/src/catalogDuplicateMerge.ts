@@ -249,14 +249,18 @@ function parseJsonArray<T>(value: string | T[] | null | undefined): T[] {
   return Array.isArray(parsed) ? (parsed as T[]) : [];
 }
 
-function classifyIdentity(
-  movies: CatalogDuplicateMergeMovieSnapshot[],
-): CatalogDuplicateMergeIdentityKind {
-  const tmdbIds = new Set(
+function getFiniteTmdbIds(movies: CatalogDuplicateMergeMovieSnapshot[]): Set<number> {
+  return new Set(
     movies
       .map((movie) => movie.tmdb_id)
       .filter((tmdbId): tmdbId is number => tmdbId !== null && Number.isFinite(tmdbId)),
   );
+}
+
+function classifyIdentity(
+  movies: CatalogDuplicateMergeMovieSnapshot[],
+): CatalogDuplicateMergeIdentityKind {
+  const tmdbIds = getFiniteTmdbIds(movies);
   if (tmdbIds.size === 1 && movies.every((movie) => movie.tmdb_id !== null)) {
     return 'confirmed_tmdb_duplicate';
   }
@@ -275,11 +279,7 @@ function buildWarnings(
   userMemoryConflictCount: number,
 ): string[] {
   const warnings: string[] = [];
-  const tmdbIds = new Set(
-    movies
-      .map((movie) => movie.tmdb_id)
-      .filter((tmdbId): tmdbId is number => tmdbId !== null && Number.isFinite(tmdbId)),
-  );
+  const tmdbIds = getFiniteTmdbIds(movies);
 
   if (identityKind === 'candidate_normalized_title_year') {
     warnings.push('Normalized title/year groups are candidate duplicates, not proof of identity.');
