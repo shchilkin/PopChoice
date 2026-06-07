@@ -6,7 +6,7 @@ import type {
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { CatalogStat } from '../shared';
+import { CatalogStat, DataTable } from '../shared';
 import { JsonBlock, recommendationEvalStatusLabel, RecommendationEvalStatusBadge } from './shared';
 
 function EvalRunSummary({ run }: { run: RecommendationEvalRun }) {
@@ -149,23 +149,12 @@ export function RecommendationEvalDetailPage({ detail }: { detail: Recommendatio
           <h2>Fixture results</h2>
           <span className="count">{results.length}</span>
         </div>
-        <div className="table-scroll">
-          <table className="recommendation-eval-table">
-            <thead>
-              <tr>
-                <th>Fixture</th>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Score</th>
-                <th>Checks</th>
-                <th>Error</th>
-              </tr>
-            </thead>
-            <tbody>
-              <EvalResultRows results={results} />
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          className="recommendation-eval-table"
+          columns={['Fixture', 'Name', 'Status', 'Score', 'Checks', 'Error']}
+        >
+          <EvalResultRows results={results} />
+        </DataTable>
       </section>
       <section className="panel">
         <div className="panel-header">

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { EmptyState, JsonDetails, PanelHeader, TableEmptyRow, TableScroll } from '.';
+import { DataTable, EmptyState, JsonDetails, PanelHeader, TableEmptyRow, TableScroll } from '.';
 
 describe('shared backoffice components', () => {
   it('renders panel headers with optional hints, counts, and actions', () => {
@@ -50,6 +50,26 @@ describe('shared backoffice components', () => {
     expect(empty).toBe('<p class="empty compact">No rows</p>');
     expect(table).toContain('class="table-scroll"');
     expect(table).toContain('<td colSpan="4" class="empty">No records</td>');
+  });
+
+  it('renders shared data tables with headers and scroll chrome', () => {
+    const html = renderToStaticMarkup(
+      <DataTable className="result-table" columns={['Name', 'Status', 'Actions']}>
+        <tr>
+          <td>Fixture A</td>
+          <td>passed</td>
+          <td>
+            <a href="/fixtures/a">Open</a>
+          </td>
+        </tr>
+      </DataTable>,
+    );
+
+    expect(html).toContain('class="table-scroll"');
+    expect(html).toContain('<table class="result-table">');
+    expect(html).toContain('<th>Name</th>');
+    expect(html).toContain('<th>Actions</th>');
+    expect(html).toContain('<td>Fixture A</td>');
   });
 
   it('renders JSON details with a fallback for unserializable values', () => {

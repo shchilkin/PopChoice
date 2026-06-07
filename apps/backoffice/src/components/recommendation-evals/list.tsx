@@ -2,7 +2,7 @@ import type { RecommendationEvalRun, RecommendationEvalRunPage } from '@pop-choi
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { SimplePaginationControls } from '../shared';
+import { DataTable, SimplePaginationControls } from '../shared';
 import { buildRecommendationEvalPageHref, RecommendationEvalStatusBadge } from './shared';
 
 function RecommendationEvalRows({ runs }: { runs: RecommendationEvalRun[] }) {
@@ -149,26 +149,22 @@ export function RecommendationEvalListPage({
           totalCount={runPage.totalCount}
           hrefForPage={(page) => buildRecommendationEvalPageHref({ page, pageSize: runPage.limit })}
         />
-        <div className="table-scroll">
-          <table className="recommendation-eval-table">
-            <thead>
-              <tr>
-                <th>Run</th>
-                <th>Status</th>
-                <th>Mode</th>
-                <th>Source</th>
-                <th>Actor</th>
-                <th>Passed</th>
-                <th>Failed</th>
-                <th>Created</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              <RecommendationEvalRows runs={runPage.runs} />
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          className="recommendation-eval-table"
+          columns={[
+            'Run',
+            'Status',
+            'Mode',
+            'Source',
+            'Actor',
+            'Passed',
+            'Failed',
+            'Created',
+            'Actions',
+          ]}
+        >
+          <RecommendationEvalRows runs={runPage.runs} />
+        </DataTable>
         <SimplePaginationControls
           ariaLabel="Recommendation eval run pagination bottom"
           emptyLabel="No recommendation eval runs"

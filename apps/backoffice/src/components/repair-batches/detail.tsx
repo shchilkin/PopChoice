@@ -8,7 +8,7 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
-import { PanelHeader, SimplePaginationControls, TableScroll } from '../shared';
+import { DataTable, PanelHeader, SimplePaginationControls } from '../shared';
 import {
   RepairBatchContextPanel,
   RepairBatchItemRows,
@@ -132,28 +132,24 @@ export function RepairBatchDetailPage({
           totalCount={items.totalCount}
           hrefForPage={hrefForItemPage}
         />
-        <TableScroll>
-          <table className="repair-batch-table">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Issue</th>
-                <th>Movie</th>
-                <th>Status</th>
-                <th>Job</th>
-                <th>Reason</th>
-                <th>Language</th>
-                <th>Error</th>
-                <th>Pressure</th>
-                <th>Updated</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <RepairBatchItemRows items={items.items} />
-            </tbody>
-          </table>
-        </TableScroll>
+        <DataTable
+          className="repair-batch-table"
+          columns={[
+            'Item',
+            'Issue',
+            'Movie',
+            'Status',
+            'Job',
+            'Reason',
+            'Language',
+            'Error',
+            'Pressure',
+            'Updated',
+            'Action',
+          ]}
+        >
+          <RepairBatchItemRows items={items.items} />
+        </DataTable>
         <SimplePaginationControls
           ariaLabel="Catalog repair batch item pagination bottom"
           emptyLabel="No repair batch items"

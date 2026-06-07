@@ -2,9 +2,9 @@ import type { CatalogMovieDetail, CatalogMovieDetailTMDBReview } from '@pop-choi
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import {
+  DataTable,
   EmptyState,
   PanelHeader,
-  TableScroll,
   formatDuration,
   formatTMDBMetadataValue,
 } from '../shared';
@@ -21,38 +21,24 @@ export function RelatedReviewsPanel({ reviews }: { reviews: CatalogMovieDetailTM
       {reviews.length === 0 ? (
         <EmptyState>No TMDB review rows are attached to this movie.</EmptyState>
       ) : (
-        <TableScroll>
-          <table>
-            <thead>
-              <tr>
-                <th>Review</th>
-                <th>Reason</th>
-                <th>Status</th>
-                <th>Candidates</th>
-                <th>Updated</th>
-                <th>Audit</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reviews.map((review) => (
-                <tr key={review.id}>
-                  <td>
-                    <a href={`/tmdb-reviews/${encodeURIComponent(review.id)}`}>#{review.id}</a>
-                  </td>
-                  <td>
-                    <ReasonBadge reason={review.reason} />
-                  </td>
-                  <td>
-                    <StatusBadge status={review.status} />
-                  </td>
-                  <td>{review.candidates.length}</td>
-                  <td>{formatBackofficeDateTime(review.updatedAt)}</td>
-                  <td>{review.audit.length}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </TableScroll>
+        <DataTable columns={['Review', 'Reason', 'Status', 'Candidates', 'Updated', 'Audit']}>
+          {reviews.map((review) => (
+            <tr key={review.id}>
+              <td>
+                <a href={`/tmdb-reviews/${encodeURIComponent(review.id)}`}>#{review.id}</a>
+              </td>
+              <td>
+                <ReasonBadge reason={review.reason} />
+              </td>
+              <td>
+                <StatusBadge status={review.status} />
+              </td>
+              <td>{review.candidates.length}</td>
+              <td>{formatBackofficeDateTime(review.updatedAt)}</td>
+              <td>{review.audit.length}</td>
+            </tr>
+          ))}
+        </DataTable>
       )}
     </section>
   );
