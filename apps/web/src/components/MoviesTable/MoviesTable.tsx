@@ -20,7 +20,7 @@ export function MoviesTableSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
     >
       {Array.from({ length: 8 }).map((_, i) => (
         <div
@@ -120,7 +120,7 @@ export function MoviesTable({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {movies.map((movie) => (
         <MovieDiscoveryCard key={movie.id} movie={movie} />
       ))}
@@ -215,7 +215,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
           src={posterUrl}
           alt=""
           fill
-          sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           className="object-cover"
         />
       ) : (

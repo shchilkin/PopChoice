@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { MoviesTable, MoviesTableSkeleton } from '@/components';
+import { Button, MoviesTable, MoviesTableSkeleton } from '@/components';
 
 import {
   AGE_RATING_FILTERS,
@@ -73,14 +73,14 @@ export function AvailableMoviesError({ error, labels, onRetry }: AvailableMovies
       <p className="text-sm mb-4" style={{ color: 'var(--rating-mature-text)' }}>
         {error}
       </p>
-      <button
+      <Button
+        variant="cta"
+        size="md"
         type="button"
         onClick={onRetry}
-        className="rounded-xl px-5 py-2.5 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-        style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
       >
         {labels.tryAgain}
-      </button>
+      </Button>
     </section>
   );
 }
@@ -131,16 +131,17 @@ export function MoviesFilterForm({
             onClearQuery={() => commitFilters({ ...draftFilters, query: '' })}
             onDraftFiltersChange={onDraftFiltersChange}
           />
-          <button
+          <Button
+            variant="ghost"
+            size="lg"
             type="button"
             onClick={() => setAdvancedOpen((current) => !current)}
             aria-expanded={advancedOpen}
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] md:w-auto"
-            style={{
-              background: advancedOpen ? 'var(--pc-gold-subtle)' : 'var(--pc-surface)',
-              border: `1px solid ${advancedOpen ? 'var(--pc-gold)' : 'var(--pc-bd2)'}`,
-              color: advancedOpen ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
-            }}
+            className={
+              advancedOpen
+                ? 'border-[var(--pc-gold)] bg-[var(--pc-gold-subtle)] text-[var(--pc-gold-text)] hover:brightness-105 md:w-auto'
+                : 'bg-[var(--pc-surface)] md:w-auto'
+            }
           >
             <SlidersHorizontal size={16} aria-hidden="true" />
             {activeFilterLabel}
@@ -149,7 +150,7 @@ export function MoviesFilterForm({
               aria-hidden="true"
               className={`transition-transform duration-150 ${advancedOpen ? 'rotate-180' : ''}`}
             />
-          </button>
+          </Button>
           <FilterButton
             icon={<Search size={17} aria-hidden="true" />}
             label={labels.searchButton}
@@ -199,12 +200,7 @@ function SearchFilterInput({
     <label className="min-w-0 flex-1">
       <span className="sr-only">{labels.searchLabel}</span>
       <span
-        className="flex h-12 items-center gap-3 rounded-2xl px-4"
-        style={{
-          background: 'var(--pc-surface)',
-          border: '1px solid var(--pc-bd2)',
-          color: 'var(--pc-t2)',
-        }}
+        className="flex h-12 items-center gap-3 rounded-2xl border border-[var(--pc-bd2)] bg-[var(--pc-surface)] px-4 text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] focus-within:border-[var(--pc-gold)] focus-within:shadow-[var(--pc-gold-ring)]"
       >
         <Search size={18} aria-hidden="true" />
         <input
@@ -218,19 +214,20 @@ function SearchFilterInput({
           }
           maxLength={80}
           placeholder={labels.searchPlaceholder}
-          className="min-w-0 flex-1 rounded-sm bg-transparent text-base outline-none placeholder:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:opacity-70"
           style={{ color: 'var(--pc-t1)' }}
         />
         {filters.query.trim() && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             type="button"
             onClick={onClearQuery}
             aria-label={labels.clearSearch}
-            className="rounded-full p-1 transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-            style={{ color: 'var(--pc-t3)' }}
+            className="h-7 w-7 border-0 text-[var(--pc-t3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)]"
           >
             <X size={16} aria-hidden="true" />
-          </button>
+          </Button>
         )}
       </span>
     </label>
@@ -268,12 +265,11 @@ function QuickFilterRow({
             type="button"
             onClick={() => onQuickFilterToggle(option.id)}
             aria-pressed={selected}
-            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-            style={{
-              background: selected ? 'var(--pc-gold-subtle)' : 'var(--pc-surface)',
-              border: `1px solid ${selected ? 'var(--pc-gold)' : 'var(--pc-bd2)'}`,
-              color: selected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
-            }}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] ${
+              selected
+                ? 'border-[var(--pc-gold)] bg-[var(--pc-gold-subtle)] text-[var(--pc-gold-text)] hover:brightness-105'
+                : 'border-[var(--pc-bd2)] bg-[var(--pc-surface)] text-[var(--pc-t3)] hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)]'
+            }`}
           >
             {option.label}
           </button>
@@ -380,12 +376,7 @@ function ActiveFilterRow({
           key={chip.id}
           type="button"
           onClick={() => onCommitFilters(chip.remove(filters))}
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-          style={{
-            background: 'var(--pc-surface)',
-            border: '1px solid var(--pc-bd2)',
-            color: 'var(--pc-t2)',
-          }}
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--pc-bd2)] bg-[var(--pc-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         >
           {chip.label}
           <X size={12} aria-hidden="true" />
@@ -394,8 +385,7 @@ function ActiveFilterRow({
       <button
         type="button"
         onClick={onClearFilters}
-        className="rounded-full px-2.5 py-1 text-xs font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-        style={{ color: 'var(--pc-gold-text)' }}
+        className="rounded-full px-2.5 py-1 text-xs font-semibold text-[var(--pc-gold-text)] transition-colors duration-150 hover:bg-[var(--pc-gold-subtle)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       >
         {labels.clearAllFilters}
       </button>
@@ -591,25 +581,17 @@ function FilterButton({
   onClick?: () => void;
   variant?: 'primary' | 'secondary';
 }) {
-  const style =
-    variant === 'primary'
-      ? { background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }
-      : {
-          background: 'var(--pc-ghost)',
-          border: '1px solid var(--pc-bd2)',
-          color: 'var(--pc-t2)',
-        };
-
   return (
-    <button
+    <Button
+      variant={variant === 'primary' ? 'cta' : 'ghost'}
+      size="md"
       type={onClick ? 'button' : 'submit'}
       onClick={onClick}
-      className="col-span-2 inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] lg:col-span-1"
-      style={style}
+      className={`col-span-2 lg:col-span-1 ${variant === 'secondary' ? 'bg-[var(--pc-ghost)]' : ''}`}
     >
       {icon}
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -650,22 +632,13 @@ function AgeRatingOption({
   rating: string;
   selected: boolean;
 }) {
-  const style = selected
-    ? {
-        background: 'var(--pc-gold-subtle)',
-        border: '1px solid var(--pc-gold)',
-        color: 'var(--pc-gold-text)',
-      }
-    : {
-        background: 'var(--pc-ghost)',
-        border: '1px solid var(--pc-bd2)',
-        color: 'var(--pc-t2)',
-      };
-
   return (
     <label
-      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--pc-gold)]"
-      style={style}
+      className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--pc-gold)] ${
+        selected
+          ? 'border-[var(--pc-gold)] bg-[var(--pc-gold-subtle)] text-[var(--pc-gold-text)] hover:brightness-105'
+          : 'border-[var(--pc-bd2)] bg-[var(--pc-ghost)] text-[var(--pc-t2)] hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)]'
+      }`}
     >
       <input
         name={`ageRating-${rating}`}
@@ -764,41 +737,35 @@ function MoviesEmptyState({
 
       {hasActiveFilters && (
         <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <button
+          <Button
+            variant="cta"
+            size="md"
             type="button"
             onClick={onClearFilters}
-            className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-            style={{ background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }}
           >
             {labels.clearAllFilters}
-          </button>
+          </Button>
           {normalized.query && (
-            <button
+            <Button
+              variant="ghost"
+              size="md"
               type="button"
               onClick={() => onApplyFilters({ ...normalized, query: '' })}
-              className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-              style={{
-                background: 'var(--pc-ghost)',
-                border: '1px solid var(--pc-bd2)',
-                color: 'var(--pc-t2)',
-              }}
+              className="bg-[var(--pc-ghost)]"
             >
               {labels.clearSearch}
-            </button>
+            </Button>
           )}
           {hasYearFilters && (
-            <button
+            <Button
+              variant="ghost"
+              size="md"
               type="button"
               onClick={() => onApplyFilters({ ...normalized, yearFrom: '', yearTo: '' })}
-              className="inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-              style={{
-                background: 'var(--pc-ghost)',
-                border: '1px solid var(--pc-bd2)',
-                color: 'var(--pc-t2)',
-              }}
+              className="bg-[var(--pc-ghost)]"
             >
               {labels.removeYearFilters}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -813,12 +780,7 @@ function MoviesEmptyState({
               key={suggestion.label}
               type="button"
               onClick={() => onApplyFilters(suggestion.filters)}
-              className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-              style={{
-                background: 'var(--pc-ghost)',
-                border: '1px solid var(--pc-bd2)',
-                color: 'var(--pc-t2)',
-              }}
+              className="rounded-full border border-[var(--pc-bd2)] bg-[var(--pc-ghost)] px-3 py-1.5 text-xs font-semibold text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
             >
               {suggestion.label}
             </button>
@@ -892,21 +854,18 @@ function PaginationButton({
   suffix?: ReactNode;
 }) {
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="md"
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:cursor-not-allowed disabled:opacity-40"
-      style={{
-        background: 'var(--pc-surface)',
-        border: '1px solid var(--pc-bd2)',
-        color: 'var(--pc-t2)',
-      }}
+      className="bg-[var(--pc-surface)]"
     >
       {prefix}
       {label}
       {suffix}
-    </button>
+    </Button>
   );
 }
 
@@ -928,21 +887,14 @@ function PaginationPageButton({
   }
 
   return (
-    <button
+    <Button
+      variant={page === currentPage ? 'cta' : 'ghost'}
+      size="icon"
       type="button"
       onClick={() => onPageChange(page)}
-      className="h-9 w-9 rounded-xl text-sm font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-      style={
-        page === currentPage
-          ? { background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }
-          : {
-              background: 'var(--pc-surface)',
-              border: '1px solid var(--pc-bd2)',
-              color: 'var(--pc-t2)',
-            }
-      }
+      className={`h-9 w-9 rounded-xl text-sm ${page === currentPage ? '' : 'bg-[var(--pc-surface)]'}`}
     >
       {page}
-    </button>
+    </Button>
   );
 }
