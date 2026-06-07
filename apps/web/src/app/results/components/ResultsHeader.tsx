@@ -47,7 +47,7 @@ function ShareResultButton({
     <button
       type="button"
       onClick={() => void onShare()}
-      className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-all duration-200 active:scale-95"
+      className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={{
         background: 'var(--pc-ghost)',
         border: '1px solid var(--pc-bd2)',
@@ -92,7 +92,7 @@ function DecisionNoteIcon({ isGroupResult }: { isGroupResult: boolean }) {
   return isGroupResult ? <Users size={14} /> : <Sparkles size={14} />;
 }
 
-function DecisionNoteCard({
+export function ResultsDecisionNoteCard({
   decisionNote,
   isGroupResult,
   results,
@@ -107,8 +107,8 @@ function DecisionNoteCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: 0.12 }}
-      className="mx-auto mt-5 max-w-xl rounded-2xl px-4 py-3 text-left"
+      transition={{ duration: 0.35, delay: 0.18 }}
+      className="mt-5 rounded-2xl px-4 py-3"
       style={{
         background: 'var(--pc-ghost)',
         border: '1px solid var(--pc-bd2)',
@@ -139,10 +139,16 @@ function DecisionNoteCard({
           </p>
           {usedBroaderSearch && (
             <p
-              className="mt-2"
-              style={{ color: 'var(--pc-t4)', fontSize: '0.76rem', lineHeight: 1.55 }}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
+              style={{
+                background: 'var(--pc-gold-subtle)',
+                color: 'var(--pc-gold-text)',
+                fontSize: '0.72rem',
+                lineHeight: 1.4,
+              }}
             >
-              {results.expandedDecisionNote}
+              <Sparkles size={11} />
+              {results.broaderSearch}
             </p>
           )}
         </div>
@@ -156,25 +162,21 @@ export function ResultsHeader({
   audienceTitle,
   audienceSubtitle,
   dbMovieCount,
-  decisionNote,
   isGroupResult,
   isSharedResult,
   onShare,
   peopleCount,
   shareState,
-  usedBroaderSearch,
 }: {
   audienceBadge: string;
   audienceTitle: string;
   audienceSubtitle: string;
   dbMovieCount?: number;
-  decisionNote: string;
   isGroupResult: boolean;
   isSharedResult: boolean;
   onShare: () => Promise<void>;
   peopleCount: number;
   shareState: ShareState;
-  usedBroaderSearch: boolean;
 }) {
   const { t, locale } = useLanguage();
   const subtitle = formatAudienceSubtitle({
@@ -223,12 +225,6 @@ export function ResultsHeader({
         <ShareResultButton onShare={onShare} shareState={shareState} results={t.results} />
       </div>
       <SharedResultNotice isSharedResult={isSharedResult} results={t.results} />
-      <DecisionNoteCard
-        decisionNote={decisionNote}
-        isGroupResult={isGroupResult}
-        results={t.results}
-        usedBroaderSearch={usedBroaderSearch}
-      />
     </motion.div>
   );
 }

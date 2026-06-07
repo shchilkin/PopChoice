@@ -226,12 +226,13 @@ export function AuthTextField({
       </div>
       <input
         id={id}
+        name={id}
         type={type}
         autoComplete={autoComplete}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full px-4 py-3 rounded-xl text-sm transition-colors duration-200 outline-none"
+        className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={{
           background: 'var(--pc-input-bg, rgba(255,255,255,0.05))',
           border: `1px solid ${error ? palette.red : 'var(--pc-bd2)'}`,

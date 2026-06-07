@@ -136,7 +136,7 @@ function FeedbackOptionButton({
       type="button"
       onClick={() => void onFeedback(kind)}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-all duration-200 active:scale-95"
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={getFeedbackButtonStyle({ disabled, isSelected })}
     >
       <FeedbackOptionIcon Icon={Icon} isBusy={isBusy} />

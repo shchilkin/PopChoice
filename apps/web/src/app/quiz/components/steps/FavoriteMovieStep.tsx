@@ -68,11 +68,12 @@ export function FavoriteMovieStep({
       <div className="relative">
         <input
           autoFocus
+          name="favoriteMovie"
           value={person.favoriteMovie}
           onChange={(e) => onUpdate({ favoriteMovie: e.target.value, hasNoReferenceMovie: false })}
           onKeyDown={(e) => e.key === 'Enter' && canProceed && onSubmit()}
           placeholder={t.quiz.favoriteMovie.placeholder}
-          className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200"
+          className="w-full rounded-2xl px-5 py-4 outline-none transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
           style={{
             background: 'var(--pc-surface)',
             border: '1px solid var(--pc-bd2)',
@@ -152,10 +153,11 @@ export function FavoriteMovieStep({
         </p>
         <textarea
           value={person.favoriteMovieWhy}
+          name="favoriteMovieWhy"
           onChange={(e) => onUpdate({ favoriteMovieWhy: e.target.value.slice(0, 300) })}
           placeholder={t.quiz.favoriteMovie.whyPlaceholder}
           rows={3}
-          className="w-full px-5 py-4 rounded-2xl outline-none transition-all duration-200 resize-none"
+          className="w-full resize-none rounded-2xl px-5 py-4 outline-none transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
           style={{
             background: 'var(--pc-surface)',
             border: '1px solid var(--pc-bd2)',

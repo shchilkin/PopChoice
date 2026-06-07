@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { type RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
@@ -13,7 +13,8 @@ import { SmallSuggestionCard } from './SmallSuggestionCard';
 import type { MovieRecommendation } from '@/utils/client';
 
 type CarouselDirection = 'left' | 'right';
-type MorePicksViewState = 'hidden' | 'stalled' | 'loading' | 'ready';
+type MorePicksLens = 'popular' | 'cozier' | 'bolder' | 'shorter';
+type MorePicksViewState = 'hidden' | 'completed' | 'stalled' | 'loading' | 'ready';
 
 type SuggestionSectionTitleProps = {
   label: string;
@@ -74,7 +75,7 @@ function CarouselArrowButton({
       onClick={() => onScrollCarousel(direction)}
       disabled={!enabled}
       aria-label={label}
-      className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
+      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={enabled ? enabledStyle : disabledStyle}
     >
       <Icon size={15} />
@@ -200,7 +201,7 @@ function SuggestionDot({
       onClick={onClick}
       aria-label={label}
       aria-pressed={active}
-      className="rounded-full transition-all duration-200"
+      className="rounded-full transition-[background,width] duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={active ? activeStyle : inactiveStyle}
     />
   );
@@ -386,10 +387,6 @@ function MorePicksButtonContent({
   );
 }
 
-function isTerminalMorePicks(noMorePicks: boolean, morePicksStatus?: string | null) {
-  return noMorePicks || morePicksStatus === 'completed';
-}
-
 function isMorePicksLoading(isFetchingMore: boolean, morePicksStatus?: string | null) {
   return isFetchingMore || morePicksStatus === 'pending' || morePicksStatus === 'processing';
 }
@@ -405,7 +402,8 @@ function getMorePicksViewState({
   morePicksTimedOut?: boolean;
   noMorePicks: boolean;
 }): MorePicksViewState {
-  if (isTerminalMorePicks(noMorePicks, morePicksStatus)) return 'hidden';
+  if (noMorePicks) return 'hidden';
+  if (morePicksStatus === 'completed') return 'completed';
   if (morePicksTimedOut) return 'stalled';
   if (isMorePicksLoading(isFetchingMore, morePicksStatus)) return 'loading';
   return 'ready';
@@ -423,12 +421,14 @@ function MorePicksStalledMessage({ label }: { label: string }) {
 
 function MorePicksButton({
   isLoading,
+  label,
+  loadingLabel,
   onMorePicks,
-  results,
 }: {
   isLoading: boolean;
+  label: string;
+  loadingLabel: string;
   onMorePicks: () => Promise<void>;
-  results: ReturnType<typeof useLanguage>['t']['results'];
 }) {
   const buttonStyle = {
     background: `linear-gradient(135deg, ${palette.teal}22, ${palette.blue}22)`,
@@ -441,20 +441,44 @@ function MorePicksButton({
   };
 
   return (
-    <div className="mt-5 flex justify-center">
+    <div className="flex justify-center">
       <button
         type="button"
         onClick={() => void onMorePicks()}
         disabled={isLoading}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-all duration-200 active:scale-95"
+        className="flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={buttonStyle}
       >
         <MorePicksButtonContent
           isLoading={isLoading}
-          label={results.morePicksButton}
-          loadingLabel={results.morePicksLoading}
+          label={label}
+          loadingLabel={loadingLabel}
         />
       </button>
+    </div>
+  );
+}
+
+function getMorePicksLensOptions(results: ReturnType<typeof useLanguage>['t']['results']) {
+  return [
+    { value: 'popular' as const, label: results.morePicksLensPopular },
+    { value: 'cozier' as const, label: results.morePicksLensCozier },
+    { value: 'bolder' as const, label: results.morePicksLensBolder },
+    { value: 'shorter' as const, label: results.morePicksLensShorter },
+  ];
+}
+
+function MorePicksCompletedMessage({ label }: { label: string }) {
+  return (
+    <div
+      className="mt-5 rounded-2xl px-4 py-3 text-sm"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+        color: 'var(--pc-t3)',
+      }}
+    >
+      {label}
     </div>
   );
 }
@@ -474,6 +498,7 @@ function MorePicksControl({
   onMorePicks: () => Promise<void>;
   results: ReturnType<typeof useLanguage>['t']['results'];
 }) {
+  const [lens, setLens] = useState<MorePicksLens>('popular');
   const viewState = getMorePicksViewState({
     isFetchingMore,
     morePicksStatus,
@@ -482,14 +507,65 @@ function MorePicksControl({
   });
 
   if (viewState === 'hidden') return null;
+  if (viewState === 'completed') {
+    return <MorePicksCompletedMessage label={results.morePicksCompleted} />;
+  }
   if (viewState === 'stalled') return <MorePicksStalledMessage label={results.morePicksStalled} />;
 
+  const lensOptions = getMorePicksLensOptions(results);
+  const selectedLens = lensOptions.find((option) => option.value === lens) ?? lensOptions[0];
+  const buttonLabel = results.morePicksButton.replace('{lens}', selectedLens.label);
+
   return (
-    <MorePicksButton
-      isLoading={viewState === 'loading'}
-      onMorePicks={onMorePicks}
-      results={results}
-    />
+    <div
+      className="mt-5 rounded-2xl p-4"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+      }}
+    >
+      <div className="flex flex-col gap-4">
+        <div>
+          <p
+            className="uppercase tracking-widest"
+            style={{ color: 'var(--pc-t2)', fontSize: '0.68rem' }}
+          >
+            {results.morePicksTitle}
+          </p>
+          <p className="mt-1 text-sm" style={{ color: 'var(--pc-t4)' }}>
+            {results.morePicksHint}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {lensOptions.map((option) => {
+            const isSelected = option.value === lens;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setLens(option.value)}
+                aria-pressed={isSelected}
+                disabled={viewState === 'loading'}
+                className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60"
+                style={{
+                  background: isSelected ? 'var(--pc-gold-subtle)' : 'transparent',
+                  border: '1px solid var(--pc-bd2)',
+                  color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <MorePicksButton
+          isLoading={viewState === 'loading'}
+          label={buttonLabel}
+          loadingLabel={results.morePicksLoading}
+          onMorePicks={onMorePicks}
+        />
+      </div>
+    </div>
   );
 }
 

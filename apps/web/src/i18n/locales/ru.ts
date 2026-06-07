@@ -310,6 +310,18 @@ export const ru: Translations = {
     showDetails: 'Показать подробности для {name}',
     aiPick: 'Выбор ИИ',
     match: 'совпадение',
+    matchTones: {
+      strong: 'Точное попадание',
+      good: 'Сильный вайб',
+      possible: 'Свежий угол',
+      wildcard: 'Шире через TMDB',
+    },
+    matchToneShort: {
+      strong: 'Точно',
+      good: 'Вайб',
+      possible: 'Свежо',
+      wildcard: 'Шире',
+    },
     matchTierExact:
       'Сырой score совпадения: {pct}%. Это экспериментальная близость, а не оценка качества.',
     matchTiers: {
@@ -368,10 +380,17 @@ export const ru: Translations = {
     broaderSearch: 'Расширенный поиск — включает результаты из TMDB',
     foundInDb: 'Найдено в нашей базе',
     foundOnTmdb: 'Найдено на TMDB',
-    morePicksButton: 'Ещё варианты из TMDB',
+    morePicksTitle: 'Куда расширить поиск?',
+    morePicksHint: 'Выберите направление — PopChoice добавит ещё варианты рядом с этим настроением.',
+    morePicksLensPopular: 'Популярнее',
+    morePicksLensCozier: 'Ближе к уюту',
+    morePicksLensBolder: 'Смелее',
+    morePicksLensShorter: 'Короче',
+    morePicksButton: 'Расширить: {lens}',
     morePicksLoading: 'Загружаем ещё…',
     morePicksEmpty: 'Больше вариантов пока нет.',
     morePicksStalled: 'Слишком долго — попробуйте позже.',
+    morePicksCompleted: 'Добавили новые варианты ниже — можно сравнить их с главным выбором.',
   },
   about: {
     title: 'ИИ, который чувствует ваш вкус',

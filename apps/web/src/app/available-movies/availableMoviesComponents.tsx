@@ -169,7 +169,7 @@ function SearchFilterInput({
           }
           maxLength={80}
           placeholder={labels.searchPlaceholder}
-          className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:opacity-70"
+          className="min-w-0 flex-1 rounded-sm bg-transparent text-sm outline-none placeholder:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
           style={{ color: 'var(--pc-t1)' }}
         />
       </span>
@@ -202,7 +202,7 @@ function YearFilterInput({
         inputMode="numeric"
         pattern="[0-9]*"
         maxLength={4}
-        className="h-10 rounded-lg px-3 text-sm outline-none"
+        className="h-10 rounded-lg px-3 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={inputStyle}
       />
     </label>
@@ -236,7 +236,7 @@ function DurationFilterSelect({
           onDraftFiltersChange(() => nextFilters);
           onImmediateFilterChange(nextFilters);
         }}
-        className="h-10 rounded-lg px-3 text-sm outline-none"
+        className="h-10 rounded-lg px-3 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={inputStyle}
       >
         <option value="">{labels.anyFilter}</option>
@@ -272,7 +272,7 @@ function ScoreFilterSelect({
           onDraftFiltersChange(() => nextFilters);
           onImmediateFilterChange(nextFilters);
         }}
-        className="h-10 rounded-lg px-3 text-sm outline-none"
+        className="h-10 rounded-lg px-3 text-sm outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={inputStyle}
       >
         <option value="">{labels.anyFilter}</option>
@@ -368,7 +368,7 @@ function AgeRatingOption({
 
   return (
     <label
-      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors duration-150"
+      className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors duration-150 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--pc-gold)]"
       style={style}
     >
       <input
@@ -472,7 +472,7 @@ function PaginationButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+      className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:cursor-not-allowed disabled:opacity-40"
       style={{
         background: 'var(--pc-surface)',
         border: '1px solid var(--pc-bd2)',
@@ -506,7 +506,7 @@ function PaginationPageButton({
   return (
     <button
       onClick={() => onPageChange(page)}
-      className="w-9 h-9 rounded-xl text-sm font-medium transition-colors duration-150"
+      className="h-9 w-9 rounded-xl text-sm font-medium transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={
         page === currentPage
           ? { background: 'var(--pc-cta)', color: 'var(--pc-cta-text)' }

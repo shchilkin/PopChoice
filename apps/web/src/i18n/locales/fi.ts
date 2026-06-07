@@ -321,6 +321,18 @@ export const fi: Translations = {
     showDetails: 'Näytä tiedot elokuvalle {name}',
     aiPick: 'Tekoälyn valinta',
     match: 'osuma',
+    matchTones: {
+      strong: 'Tarkka tunnelma',
+      good: 'Vahva fiilisosuma',
+      possible: 'Tuore kulma',
+      wildcard: 'Laajempi TMDB-löytö',
+    },
+    matchToneShort: {
+      strong: 'Tarkka',
+      good: 'Fiilis',
+      possible: 'Tuore',
+      wildcard: 'Laajempi',
+    },
     matchTierExact: 'Raaka osumapiste: {pct} %. Kokeellinen samankaltaisuus, ei laatuluokitus.',
     matchTiers: {
       strong: 'Vahva osuma',
@@ -376,10 +388,18 @@ export const fi: Translations = {
     broaderSearch: 'Laajennettu haku — sisältää TMDB-tuloksia',
     foundInDb: 'Löydetty kirjastostamme',
     foundOnTmdb: 'Löydetty TMDB:stä',
-    morePicksButton: 'Lisää valintoja TMDB:stä',
+    morePicksTitle: 'Mihin suuntaan laajennetaan?',
+    morePicksHint:
+      'Valitse suunta, niin PopChoice lisää vaihtoehtoja saman tunnelman ympäriltä.',
+    morePicksLensPopular: 'Suositumpi',
+    morePicksLensCozier: 'Kotoisampi',
+    morePicksLensBolder: 'Rohkeampi',
+    morePicksLensShorter: 'Lyhyempi',
+    morePicksButton: 'Laajenna: {lens}',
     morePicksLoading: 'Haetaan lisää…',
     morePicksEmpty: 'Ei enempää tuloksia juuri nyt.',
     morePicksStalled: 'Kestää liian kauan — yritä myöhemmin uudelleen.',
+    morePicksCompleted: 'Lisäsimme uusia vaihtoehtoja alle — vertaa niitä päävalintaan.',
   },
   about: {
     title: 'Tekoäly, joka ymmärtää makuasi',

@@ -42,7 +42,9 @@ export async function getMoviesPage(
   } = await applyMovieFilters(
     db
       .from<Movie>('movies')
-      .select('id, name, age_rating, duration, score_rating, year', { count: 'exact' }),
+      .select('id, name, localized_name, poster_url, age_rating, duration, score_rating, year', {
+        count: 'exact',
+      }),
     filters,
   )
     .range(offset, offset + pageSize - 1)

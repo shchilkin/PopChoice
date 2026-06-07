@@ -135,7 +135,7 @@ export async function getMoviesPageFromSql(
   const offsetParam = `$${values.length + 2}`;
   const moviesResult = await db.query<Movie>(
     `
-      SELECT id, name, age_rating, duration, score_rating, year
+      SELECT id, name, localized_name, poster_url, age_rating, duration, score_rating, year
       FROM movies
       ${whereSql}
       ORDER BY id ASC
