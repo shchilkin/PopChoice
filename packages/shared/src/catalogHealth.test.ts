@@ -45,7 +45,7 @@ describe('catalog health issue movie pages', () => {
           id: '334',
           name: 'Memento',
           year: 2000,
-          tmdb_id: null,
+          tmdb_id: 77,
           poster_url: null,
           localized_name: null,
           duration: 113,
@@ -68,7 +68,7 @@ describe('catalog health issue movie pages', () => {
       totalCount: 351,
       limit: MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE,
       offset: MAX_CATALOG_HEALTH_ISSUE_OFFSET,
-      movies: [{ id: '334', name: 'Memento', tmdb_id: null }],
+      movies: [{ id: '334', name: 'Memento', tmdb_id: 77 }],
     });
     expect(poolMock.query).toHaveBeenCalledTimes(2);
     expect(poolMock.query.mock.calls[0][1]).toEqual([]);
@@ -76,6 +76,62 @@ describe('catalog health issue movie pages', () => {
       MAX_CATALOG_HEALTH_ISSUE_PAGE_SIZE,
       MAX_CATALOG_HEALTH_ISSUE_OFFSET,
     ]);
+  });
+
+  it('keeps TMDB-dependent metadata counts behind the missing-tmdb-id hierarchy', async () => {
+    poolMock.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            total_movies: 1,
+            missing_poster_url: 0,
+            missing_localized_name: 0,
+            missing_tmdb_id: 1,
+            missing_runtime: 0,
+            missing_age_rating: 0,
+            missing_tmdb_matched_at: 0,
+            stale_tmdb_metadata: 0,
+            missing_cast_metadata: 0,
+            missing_director_metadata: 0,
+            missing_genre_metadata: 0,
+            missing_keyword_metadata: 0,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: '334',
+            name: 'Memento',
+            year: 2000,
+            tmdb_id: null,
+            poster_url: null,
+            localized_name: null,
+            duration: 0,
+            age_rating: '',
+            tmdb_matched_at: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const report = await getCatalogHealthReport({ sampleLimit: 5, staleAfterDays: 180 });
+
+    expect(report.issues.find((issue) => issue.key === 'missing_tmdb_id')).toMatchObject({
+      count: 1,
+      samples: [{ id: '334', tmdb_id: null }],
+    });
+    expect(report.issues.find((issue) => issue.key === 'missing_poster_url')?.count).toBe(0);
+    const summarySql = String(poolMock.query.mock.calls[0][0]);
+    expect(summarySql).toContain(
+      "tmdb_id IS NOT NULL AND (poster_url IS NULL OR btrim(poster_url) = '')",
+    );
+    expect(summarySql).toContain('tmdb_id IS NOT NULL AND duration <= 0');
+    expect(summarySql).toContain(
+      "tmdb_id IS NOT NULL AND (age_rating IS NULL OR btrim(age_rating) = '')",
+    );
+    expect(summarySql).toContain('tmdb_metadata_refreshed_at IS NULL');
   });
 
   it('keeps stale metadata threshold parameterized separately from pagination', async () => {
@@ -110,8 +166,25 @@ describe('catalog health issue movie pages', () => {
 
     expect(String(poolMock.query.mock.calls[0][0])).toContain('WHERE id = $1');
     expect(String(poolMock.query.mock.calls[0][0])).toContain(
-      "poster_url IS NULL OR btrim(poster_url) = ''",
+      "tmdb_id IS NOT NULL AND (poster_url IS NULL OR btrim(poster_url) = '')",
     );
+    expect(poolMock.query.mock.calls[0][1]).toEqual(['334']);
+  });
+
+  it('considers missing localized_name resolved after a TMDB metadata refresh', async () => {
+    poolMock.query.mockResolvedValueOnce({ rows: [{ issue_exists: false }] });
+
+    await expect(
+      isCatalogHealthIssueResolvedForMovie({
+        issueKey: 'missing_localized_name',
+        movieId: '334',
+        staleAfterDays: 180,
+      }),
+    ).resolves.toBe(true);
+
+    const sql = String(poolMock.query.mock.calls[0][0]);
+    expect(sql).toContain("(localized_name IS NULL OR btrim(localized_name) = '')");
+    expect(sql).toContain('tmdb_metadata_refreshed_at IS NULL');
     expect(poolMock.query.mock.calls[0][1]).toEqual(['334']);
   });
 

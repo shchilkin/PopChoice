@@ -8,6 +8,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   applyTMDBReviewFormAction: vi.fn(),
+  backofficeRedirectUrl: vi.fn(),
   backofficeActionErrorResponse: vi.fn(),
   backofficeActionFailureResponse: vi.fn(),
   getBackofficeErrorStatus: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('../../../../lib/backoffice', () => ({
 }));
 
 vi.mock('../../../../lib/sameOriginRequest', () => ({
+  backofficeRedirectUrl: mocks.backofficeRedirectUrl,
   isSameOriginRequest: mocks.isSameOriginRequest,
 }));
 
@@ -58,6 +60,9 @@ describe('TMDB review action route', () => {
       review: { id: 'review-1' },
     });
     mocks.getBackofficeErrorStatus.mockReturnValue(500);
+    mocks.backofficeRedirectUrl.mockImplementation(
+      (request: Request, path: string) => new URL(path, request.url),
+    );
     mocks.isSameOriginRequest.mockReturnValue(true);
     mocks.wantsBackofficeJsonResponse.mockImplementation((request: Request) => {
       const accept = request.headers.get('accept') ?? '';

@@ -222,7 +222,10 @@ describe('catalog repair audit pages', () => {
       null,
       JSON.stringify({ issueKey: 'missing_poster_url' }),
     ]);
-    expect(poolMock.query.mock.calls[2][0]).toContain("WHEN $2 IN ('queued', 'deduped') THEN NULL");
+    expect(poolMock.query.mock.calls[2][0]).toContain(
+      "WHEN $2 IN ('deduped', 'unavailable', 'enqueue_failed') THEN now()",
+    );
+    expect(poolMock.query.mock.calls[2][0]).toContain("WHEN $2 = 'queued' THEN NULL");
     expect(poolMock.query.mock.calls[2][1][7]).toBe(JSON.stringify({ status: 'queued' }));
   });
 
@@ -304,9 +307,56 @@ describe('catalog repair audit pages', () => {
       "status IN ('completed', 'completed_resolved')",
     );
     expect(String(poolMock.query.mock.calls[0][0])).toContain("status = 'completed_unresolved'");
+    expect(String(poolMock.query.mock.calls[0][0])).toContain(
+      'completed_count + deduped_count = attempted_count',
+    );
     expect(String(poolMock.query.mock.calls[0][0])).toContain("'completedUnresolved'");
     expect(String(poolMock.query.mock.calls[0][0])).toContain(
-      'WHEN completed_count = attempted_count THEN',
+      'WHEN completed_count + deduped_count = attempted_count THEN',
+    );
+  });
+
+  it('treats deduped enqueue outcomes as terminal batch progress', async () => {
+    poolMock.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: '11',
+          batch_id: '7',
+          movie_id: '334',
+          issue_key: 'missing_poster_url',
+          status: 'deduped',
+          queue_name: 'catalog-maintenance',
+          job_name: 'backfill-movie',
+          job_id: 'backfill-334',
+          language: 'en-US',
+          reason: 'missing_metadata',
+          error_message: null,
+          movie_snapshot: { id: '334' },
+          result: { status: 'deduped' },
+          created_at: '2026-05-28 09:00:01+00',
+          updated_at: '2026-05-28 09:00:02+00',
+          completed_at: '2026-05-28 09:00:02+00',
+        },
+      ],
+    });
+
+    const item = await updateCatalogRepairBatchItemEnqueueResult({
+      itemId: '11',
+      status: 'deduped',
+      queueName: 'catalog-maintenance',
+      jobName: 'backfill-movie',
+      jobId: 'backfill-334',
+      language: 'en-US',
+      result: { status: 'deduped' },
+    });
+
+    expect(item).toMatchObject({
+      completedAt: '2026-05-28 09:00:02+00',
+      id: '11',
+      status: 'deduped',
+    });
+    expect(String(poolMock.query.mock.calls[0][0])).toContain(
+      "WHEN $2 IN ('deduped', 'unavailable', 'enqueue_failed') THEN now()",
     );
   });
 

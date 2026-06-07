@@ -106,13 +106,19 @@ const SUMMARY_METRIC_KEYS: SummaryMetricKey[] = [
   'missing_keyword_metadata',
 ];
 
+const MISSING_LOCALIZED_NAME_WHERE = `
+      tmdb_id IS NOT NULL
+        AND (localized_name IS NULL OR btrim(localized_name) = '')
+        AND tmdb_metadata_refreshed_at IS NULL
+`;
+
 const SUMMARY_SQL = `SELECT
     COUNT(*)::int AS total_movies,
-    COUNT(*) FILTER (WHERE poster_url IS NULL OR btrim(poster_url) = '')::int AS missing_poster_url,
-    COUNT(*) FILTER (WHERE localized_name IS NULL OR btrim(localized_name) = '')::int AS missing_localized_name,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (poster_url IS NULL OR btrim(poster_url) = ''))::int AS missing_poster_url,
+    COUNT(*) FILTER (WHERE ${MISSING_LOCALIZED_NAME_WHERE})::int AS missing_localized_name,
     COUNT(*) FILTER (WHERE tmdb_id IS NULL)::int AS missing_tmdb_id,
-    COUNT(*) FILTER (WHERE duration <= 0)::int AS missing_runtime,
-    COUNT(*) FILTER (WHERE age_rating IS NULL OR btrim(age_rating) = '')::int AS missing_age_rating,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND duration <= 0)::int AS missing_runtime,
+    COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND (age_rating IS NULL OR btrim(age_rating) = ''))::int AS missing_age_rating,
     COUNT(*) FILTER (WHERE tmdb_id IS NOT NULL AND tmdb_matched_at IS NULL)::int AS missing_tmdb_matched_at,
     COUNT(*) FILTER (
       WHERE tmdb_id IS NOT NULL
@@ -179,12 +185,12 @@ export const CATALOG_HEALTH_ISSUE_DEFINITIONS: CatalogHealthIssueDefinition[] = 
   {
     key: 'missing_poster_url',
     label: 'Missing poster_url',
-    where: () => "poster_url IS NULL OR btrim(poster_url) = ''",
+    where: () => "tmdb_id IS NOT NULL AND (poster_url IS NULL OR btrim(poster_url) = '')",
   },
   {
     key: 'missing_localized_name',
     label: 'Missing localized_name',
-    where: () => "localized_name IS NULL OR btrim(localized_name) = ''",
+    where: () => MISSING_LOCALIZED_NAME_WHERE,
   },
   {
     key: 'missing_tmdb_id',
@@ -194,12 +200,12 @@ export const CATALOG_HEALTH_ISSUE_DEFINITIONS: CatalogHealthIssueDefinition[] = 
   {
     key: 'missing_runtime',
     label: 'Missing runtime',
-    where: () => 'duration <= 0',
+    where: () => 'tmdb_id IS NOT NULL AND duration <= 0',
   },
   {
     key: 'missing_age_rating',
     label: 'Missing age_rating',
-    where: () => "age_rating IS NULL OR btrim(age_rating) = ''",
+    where: () => "tmdb_id IS NOT NULL AND (age_rating IS NULL OR btrim(age_rating) = '')",
   },
   {
     key: 'missing_tmdb_matched_at',

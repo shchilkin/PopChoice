@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isSameOriginRequest } from './sameOriginRequest';
+import { backofficeRedirectUrl, isSameOriginRequest } from './sameOriginRequest';
 
 type SameOriginRequest = Parameters<typeof isSameOriginRequest>[0];
 
@@ -80,5 +80,45 @@ describe('isSameOriginRequest', () => {
         }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('backofficeRedirectUrl', () => {
+  it('prefers forwarded public hosts over bind addresses', () => {
+    expect(
+      backofficeRedirectUrl(
+        request('http://0.0.0.0:3000/catalog-health/actions', {
+          host: '0.0.0.0:3000',
+          'x-forwarded-host': 'backoffice.pop-choice.shchilkin.dev',
+          'x-forwarded-proto': 'https',
+        }),
+        '/?repair=queued',
+      ).toString(),
+    ).toBe('https://backoffice.pop-choice.shchilkin.dev/?repair=queued');
+  });
+
+  it('can use same-origin request evidence after validation', () => {
+    expect(
+      backofficeRedirectUrl(
+        request('http://0.0.0.0:3000/catalog-health/actions', {
+          origin: 'https://backoffice.pop-choice.shchilkin.dev',
+        }),
+        '/?repair=queued',
+        { trustRequestEvidence: true },
+      ).toString(),
+    ).toBe('https://backoffice.pop-choice.shchilkin.dev/?repair=queued');
+  });
+
+  it('does not trust bind-address origin evidence for redirects', () => {
+    expect(
+      backofficeRedirectUrl(
+        request('http://0.0.0.0:3000/catalog-health/actions', {
+          host: '0.0.0.0:3000',
+          origin: 'http://0.0.0.0:3000',
+        }),
+        '/?repair=queued',
+        { trustRequestEvidence: true },
+      ).toString(),
+    ).toBe('http://localhost/?repair=queued');
   });
 });

@@ -11,7 +11,7 @@ import {
   performCatalogRepairAction,
   wantsBackofficeJsonResponse,
 } from '../../../lib/backoffice';
-import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
+import { backofficeRedirectUrl, isSameOriginRequest } from '../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,7 @@ function buildRepairRedirectUrl({
   returnPath: string;
   repairStatus: string;
 }) {
-  const url = new URL(returnPath, request.url);
+  const url = backofficeRedirectUrl(request, returnPath, { trustRequestEvidence: true });
   url.searchParams.set('repair', repairStatus);
   return url;
 }
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
         return backofficeActionFailureResponse('Forbidden.', 403);
       }
 
-      return NextResponse.redirect(new URL('/?repair=forbidden', request.url), 303);
+      return NextResponse.redirect(backofficeRedirectUrl(request, '/?repair=forbidden'), 303);
     }
 
     const formData = await request.formData();

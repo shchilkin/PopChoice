@@ -7,6 +7,7 @@ import {
 } from '../../../test/backofficeActionRoute';
 
 const mocks = vi.hoisted(() => ({
+  backofficeRedirectUrl: vi.fn(),
   backofficeActionErrorResponse: vi.fn(),
   backofficeActionFailureResponse: vi.fn(),
   buildCatalogRepairActionBody: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock('../../../lib/backoffice', () => ({
 }));
 
 vi.mock('../../../lib/sameOriginRequest', () => ({
+  backofficeRedirectUrl: mocks.backofficeRedirectUrl,
   isSameOriginRequest: mocks.isSameOriginRequest,
 }));
 
@@ -95,6 +97,9 @@ describe('catalog health repair action route', () => {
       return 'unavailable';
     });
     mocks.getBackofficeErrorStatus.mockReturnValue(500);
+    mocks.backofficeRedirectUrl.mockImplementation(
+      (request: Request, path: string) => new URL(path, request.url),
+    );
     mocks.isSameOriginRequest.mockReturnValue(true);
     mocks.parseBackofficeReturnPath.mockImplementation((value: FormDataEntryValue | null) =>
       typeof value === 'string' ? value : '/',
