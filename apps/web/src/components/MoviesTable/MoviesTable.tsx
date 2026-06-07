@@ -181,15 +181,6 @@ function MoviesGridEmptyState({
   );
 }
 
-function getMovieInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join('');
-}
-
 function getSafePosterUrl(movie: Movie): string | null {
   const posterUrl = movie.poster_url?.trim();
   if (!posterUrl) return null;
@@ -199,11 +190,9 @@ function getSafePosterUrl(movie: Movie): string | null {
   return null;
 }
 
-function MoviePosterFallback({ movie }: { movie: Movie }) {
-  const initials = getMovieInitials(movie.name) || '?';
-
+function MoviePosterFallback() {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="flex h-full items-center justify-center px-6 text-center">
       <span
         className="text-xs font-semibold tracking-[0.08em]"
         style={{
@@ -212,15 +201,6 @@ function MoviePosterFallback({ movie }: { movie: Movie }) {
       >
         Poster not available
       </span>
-      <div
-        className="text-3xl font-bold"
-        style={{
-          color: 'var(--pc-t1)',
-          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-        }}
-      >
-        {initials}
-      </div>
     </div>
   );
 }
@@ -245,7 +225,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
           className="object-cover"
         />
       ) : (
-        <MoviePosterFallback movie={movie} />
+        <MoviePosterFallback />
       )}
       {movie.score_rating > 0 && (
         <div
