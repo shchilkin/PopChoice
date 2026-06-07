@@ -389,8 +389,7 @@ export const fi: Translations = {
     foundInDb: 'Löydetty kirjastostamme',
     foundOnTmdb: 'Löydetty TMDB:stä',
     morePicksTitle: 'Mihin suuntaan laajennetaan?',
-    morePicksHint:
-      'Valitse suunta, niin PopChoice lisää vaihtoehtoja saman tunnelman ympäriltä.',
+    morePicksHint: 'Valitse suunta, niin PopChoice lisää vaihtoehtoja saman tunnelman ympäriltä.',
     morePicksLensPopular: 'Suositumpi',
     morePicksLensCozier: 'Kotoisampi',
     morePicksLensBolder: 'Rohkeampi',

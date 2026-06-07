@@ -20,9 +20,10 @@ test('renders seeded catalog data and filters it through the real movies API', a
   await expect(page.getByText('PopChoice E2E Space Opera')).toBeVisible();
   await expect(page.getByText('PopChoice E2E Short Comedy')).toBeVisible();
 
-  await page.locator('select').first().selectOption('over-120');
-  await page.locator('select').nth(1).selectOption('8');
-  await page.locator('fieldset input[type="checkbox"]').nth(2).check();
+  await page.getByRole('button', { name: 'Filters' }).click();
+  await page.locator('select[name="duration"]').selectOption('over-120');
+  await page.locator('select[name="minScore"]').selectOption('8');
+  await page.locator('input[name="ageRating-PG-13"]').check();
 
   await expect(page.getByText(/Showing 1.1 of 1 movies/)).toBeVisible();
   await expect(page.getByText('PopChoice E2E Space Opera')).toBeVisible();
@@ -52,14 +53,16 @@ test('shows a useful empty state when catalog filters match nothing', async ({ p
   await expect(page.getByRole('heading', { name: 'Available Movies' })).toBeVisible();
   await expect(page.getByText(/Showing 1.7 of 7 movies/)).toBeVisible();
 
-  await page.getByPlaceholder('Title, actor, director, or genre').fill('No Such PopChoice Fixture');
-  await page.getByRole('button', { name: 'Apply' }).click();
+  await page.getByPlaceholder('Try Parasite, Nolan, thriller…').fill('No Such PopChoice Fixture');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   await expect(page.getByText('No movies found')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'No matches for this search' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: '0 movies for "No Such PopChoice Fixture"' }),
+  ).toBeVisible();
   await expect(page.getByText('PopChoice E2E Space Opera')).toHaveCount(0);
 
-  await page.locator('form').getByRole('button', { name: 'Clear' }).click();
+  await page.locator('form').getByRole('button', { name: 'Clear all' }).click();
 
   await expect(page.getByText(/Showing 1.7 of 7 movies/)).toBeVisible();
   await expect(page.getByText('PopChoice E2E Space Opera')).toBeVisible();

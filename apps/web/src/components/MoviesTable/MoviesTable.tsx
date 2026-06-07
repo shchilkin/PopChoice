@@ -18,10 +18,7 @@ import type { Movie } from '@/features/movies/catalog';
  */
 export function MoviesTableSkeleton() {
   return (
-    <div
-      aria-hidden="true"
-      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-    >
+    <div aria-hidden="true" className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
@@ -44,18 +41,18 @@ export function MoviesTableSkeleton() {
 }
 
 function formatDuration(minutes: number): string | null {
-  if (!Number.isFinite(minutes) || minutes <= 0) return null;
+  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
+  const hours = Math.floor(safeMinutes / 60);
+  const remainingMinutes = safeMinutes % 60;
+  const formatted = [
+    { suffix: 'h', value: hours },
+    { suffix: 'm', value: remainingMinutes },
+  ]
+    .filter(({ value }) => value > 0)
+    .map(({ suffix, value }) => `${value}${suffix}`)
+    .join(' ');
 
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-
-  if (hours === 0) {
-    return `${minutes}m`;
-  } else if (remainingMinutes === 0) {
-    return `${hours}h`;
-  } else {
-    return `${hours}h ${remainingMinutes}m`;
-  }
+  return formatted || null;
 }
 
 export interface MoviesTableProps {
@@ -244,12 +241,49 @@ function MoviePoster({ movie }: { movie: Movie }) {
   );
 }
 
-function MovieDiscoveryCard({ movie }: { movie: Movie }) {
+function MovieTitleBlock({ movie }: { movie: Movie }) {
   const title = movie.localized_name?.trim() || movie.name;
   const secondaryTitle = title === movie.name ? null : movie.name;
+
+  return (
+    <div className="min-w-0">
+      <h2 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--pc-t1)]">
+        {title}
+      </h2>
+      {secondaryTitle && (
+        <p className="mt-1 truncate text-xs text-[var(--pc-t4)]">{secondaryTitle}</p>
+      )}
+    </div>
+  );
+}
+
+function MovieMetadataChips({ movie }: { movie: Movie }) {
   const duration = formatDuration(movie.duration);
   const showAgeRating = movie.age_rating && movie.age_rating !== 'NR';
 
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      {showAgeRating && (
+        <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
+      )}
+      {duration && (
+        <span
+          className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-semibold"
+          style={{
+            background: 'var(--pc-surface-hover)',
+            border: '1px solid var(--pc-bd1)',
+            color: 'var(--pc-t3)',
+          }}
+        >
+          <Clock size={13} aria-hidden="true" />
+          {duration}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function MovieDiscoveryCard({ movie }: { movie: Movie }) {
   return (
     <article
       className="group overflow-hidden rounded-2xl transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
@@ -258,35 +292,10 @@ function MovieDiscoveryCard({ movie }: { movie: Movie }) {
       <MoviePoster movie={movie} />
       <div className="p-4">
         <div className="flex min-h-14 items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="line-clamp-2 text-base font-semibold leading-snug text-[var(--pc-t1)]">
-              {title}
-            </h2>
-            {secondaryTitle && (
-              <p className="mt-1 truncate text-xs text-[var(--pc-t4)]">{secondaryTitle}</p>
-            )}
-          </div>
+          <MovieTitleBlock movie={movie} />
           <span className="shrink-0 text-xs font-semibold text-[var(--pc-t4)]">{movie.year}</span>
         </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {showAgeRating && (
-            <AgeRatingChip rating={movie.age_rating as z.infer<typeof ageRatings>} size="sm" />
-          )}
-          {duration && (
-            <span
-              className="inline-flex h-7 items-center gap-1 rounded-full px-2.5 text-xs font-semibold"
-              style={{
-                background: 'var(--pc-surface-hover)',
-                border: '1px solid var(--pc-bd1)',
-                color: 'var(--pc-t3)',
-              }}
-            >
-              <Clock size={13} aria-hidden="true" />
-              {duration}
-            </span>
-          )}
-        </div>
+        <MovieMetadataChips movie={movie} />
       </div>
     </article>
   );

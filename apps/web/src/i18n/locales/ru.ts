@@ -381,7 +381,8 @@ export const ru: Translations = {
     foundInDb: 'Найдено в нашей базе',
     foundOnTmdb: 'Найдено на TMDB',
     morePicksTitle: 'Куда расширить поиск?',
-    morePicksHint: 'Выберите направление — PopChoice добавит ещё варианты рядом с этим настроением.',
+    morePicksHint:
+      'Выберите направление — PopChoice добавит ещё варианты рядом с этим настроением.',
     morePicksLensPopular: 'Популярнее',
     morePicksLensCozier: 'Ближе к уюту',
     morePicksLensBolder: 'Смелее',

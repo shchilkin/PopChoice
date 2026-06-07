@@ -402,11 +402,14 @@ function getMorePicksViewState({
   morePicksTimedOut?: boolean;
   noMorePicks: boolean;
 }): MorePicksViewState {
-  if (noMorePicks) return 'hidden';
-  if (morePicksStatus === 'completed') return 'completed';
-  if (morePicksTimedOut) return 'stalled';
-  if (isMorePicksLoading(isFetchingMore, morePicksStatus)) return 'loading';
-  return 'ready';
+  const orderedStates: [boolean, MorePicksViewState][] = [
+    [noMorePicks, 'hidden'],
+    [morePicksStatus === 'completed', 'completed'],
+    [Boolean(morePicksTimedOut), 'stalled'],
+    [isMorePicksLoading(isFetchingMore, morePicksStatus), 'loading'],
+  ];
+
+  return orderedStates.find(([matches]) => matches)?.[1] ?? 'ready';
 }
 
 function MorePicksStalledMessage({ label }: { label: string }) {
@@ -449,11 +452,7 @@ function MorePicksButton({
         className="flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={buttonStyle}
       >
-        <MorePicksButtonContent
-          isLoading={isLoading}
-          label={label}
-          loadingLabel={loadingLabel}
-        />
+        <MorePicksButtonContent isLoading={isLoading} label={label} loadingLabel={loadingLabel} />
       </button>
     </div>
   );
@@ -483,6 +482,28 @@ function MorePicksCompletedMessage({ label }: { label: string }) {
   );
 }
 
+function getSelectedMorePicksLens(
+  lensOptions: ReturnType<typeof getMorePicksLensOptions>,
+  lens: MorePicksLens,
+) {
+  return lensOptions.find((option) => option.value === lens) ?? lensOptions[0];
+}
+
+function getMorePicksStaticContent(
+  viewState: MorePicksViewState,
+  results: ReturnType<typeof useLanguage>['t']['results'],
+) {
+  const staticContent = {
+    completed: <MorePicksCompletedMessage label={results.morePicksCompleted} />,
+    hidden: null,
+    stalled: <MorePicksStalledMessage label={results.morePicksStalled} />,
+  };
+
+  return viewState in staticContent
+    ? staticContent[viewState as keyof typeof staticContent]
+    : undefined;
+}
+
 function MorePicksControl({
   isFetchingMore,
   morePicksStatus,
@@ -505,15 +526,12 @@ function MorePicksControl({
     morePicksTimedOut,
     noMorePicks,
   });
+  const staticContent = getMorePicksStaticContent(viewState, results);
 
-  if (viewState === 'hidden') return null;
-  if (viewState === 'completed') {
-    return <MorePicksCompletedMessage label={results.morePicksCompleted} />;
-  }
-  if (viewState === 'stalled') return <MorePicksStalledMessage label={results.morePicksStalled} />;
+  if (staticContent !== undefined) return staticContent;
 
   const lensOptions = getMorePicksLensOptions(results);
-  const selectedLens = lensOptions.find((option) => option.value === lens) ?? lensOptions[0];
+  const selectedLens = getSelectedMorePicksLens(lensOptions, lens);
   const buttonLabel = results.morePicksButton.replace('{lens}', selectedLens.label);
 
   return (

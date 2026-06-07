@@ -73,12 +73,7 @@ export function AvailableMoviesError({ error, labels, onRetry }: AvailableMovies
       <p className="text-sm mb-4" style={{ color: 'var(--rating-mature-text)' }}>
         {error}
       </p>
-      <Button
-        variant="cta"
-        size="md"
-        type="button"
-        onClick={onRetry}
-      >
+      <Button variant="cta" size="md" type="button" onClick={onRetry}>
         {labels.tryAgain}
       </Button>
     </section>
@@ -108,10 +103,7 @@ export function MoviesFilterForm({
 }: MoviesFilterFormProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const activeFilterCount = getActiveMovieFilterCount(draftFilters);
-  const activeFilterLabel =
-    activeFilterCount > 0
-      ? labels.filterToggleActive.replace('{count}', String(activeFilterCount))
-      : labels.filterToggle;
+  const activeFilterLabel = getFilterToggleLabel(activeFilterCount, labels);
 
   const commitFilters = (filters: MovieFilters) => onCommitFilters(normalizeMovieFilters(filters));
 
@@ -137,11 +129,7 @@ export function MoviesFilterForm({
             type="button"
             onClick={() => setAdvancedOpen((current) => !current)}
             aria-expanded={advancedOpen}
-            className={
-              advancedOpen
-                ? 'border-[var(--pc-gold)] bg-[var(--pc-gold-subtle)] text-[var(--pc-gold-text)] hover:brightness-105 md:w-auto'
-                : 'bg-[var(--pc-surface)] md:w-auto'
-            }
+            className={getFilterToggleClassName(advancedOpen)}
           >
             <SlidersHorizontal size={16} aria-hidden="true" />
             {activeFilterLabel}
@@ -185,6 +173,16 @@ export function MoviesFilterForm({
   );
 }
 
+function getFilterToggleLabel(activeFilterCount: number, labels: MoviesPageLabels): string {
+  if (activeFilterCount === 0) return labels.filterToggle;
+  return labels.filterToggleActive.replace('{count}', String(activeFilterCount));
+}
+
+function getFilterToggleClassName(advancedOpen: boolean): string {
+  if (!advancedOpen) return 'bg-[var(--pc-surface)] md:w-auto';
+  return 'border-[var(--pc-gold)] bg-[var(--pc-gold-subtle)] text-[var(--pc-gold-text)] hover:brightness-105 md:w-auto';
+}
+
 function SearchFilterInput({
   filters,
   labels,
@@ -199,9 +197,7 @@ function SearchFilterInput({
   return (
     <label className="min-w-0 flex-1">
       <span className="sr-only">{labels.searchLabel}</span>
-      <span
-        className="flex h-12 items-center gap-3 rounded-2xl border border-[var(--pc-bd2)] bg-[var(--pc-surface)] px-4 text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] focus-within:border-[var(--pc-gold)] focus-within:shadow-[var(--pc-gold-ring)]"
-      >
+      <span className="flex h-12 items-center gap-3 rounded-2xl border border-[var(--pc-bd2)] bg-[var(--pc-surface)] px-4 text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] focus-within:border-[var(--pc-gold)] focus-within:shadow-[var(--pc-gold-ring)]">
         <Search size={18} aria-hidden="true" />
         <input
           name="query"
@@ -287,60 +283,14 @@ interface ActiveFilterChip {
 
 function getActiveFilterChips(filters: MovieFilters, labels: MoviesPageLabels): ActiveFilterChip[] {
   const normalized = normalizeMovieFilters(filters);
-  const chips: ActiveFilterChip[] = [];
 
-  if (normalized.query) {
-    chips.push({
-      id: 'query',
-      label: labels.activeQuery.replace('{value}', normalized.query),
-      remove: (current) => ({ ...current, query: '' }),
-    });
-  }
-
-  if (normalized.yearFrom || normalized.yearTo) {
-    const label =
-      normalized.yearFrom && normalized.yearTo
-        ? labels.activeYearRange
-            .replace('{from}', normalized.yearFrom)
-            .replace('{to}', normalized.yearTo)
-        : normalized.yearFrom
-          ? labels.activeYearFrom.replace('{value}', normalized.yearFrom)
-          : labels.activeYearTo.replace('{value}', normalized.yearTo);
-    chips.push({
-      id: 'years',
-      label,
-      remove: (current) => ({ ...current, yearFrom: '', yearTo: '' }),
-    });
-  }
-
-  if (normalized.duration) {
-    chips.push({
-      id: 'duration',
-      label: getDurationFilterLabel(normalized.duration, labels),
-      remove: (current) => ({ ...current, duration: '' }),
-    });
-  }
-
-  if (normalized.minScore) {
-    chips.push({
-      id: 'score',
-      label: labels.activeScore.replace('{value}', normalized.minScore),
-      remove: (current) => ({ ...current, minScore: '' }),
-    });
-  }
-
-  normalized.ageRatings.forEach((rating) => {
-    chips.push({
-      id: `rating-${rating}`,
-      label: rating,
-      remove: (current) => ({
-        ...current,
-        ageRatings: current.ageRatings.filter((value) => value !== rating),
-      }),
-    });
-  });
-
-  return chips;
+  return [
+    getQueryFilterChip(normalized, labels),
+    getYearFilterChip(normalized, labels),
+    getDurationFilterChip(normalized, labels),
+    getScoreFilterChip(normalized, labels),
+    ...getAgeRatingFilterChips(normalized.ageRatings),
+  ].filter((chip): chip is ActiveFilterChip => Boolean(chip));
 }
 
 function getDurationFilterLabel(
@@ -350,6 +300,79 @@ function getDurationFilterLabel(
   if (duration === 'under-90') return labels.durationOptions.under90;
   if (duration === '90-120') return labels.durationOptions.between90And120;
   return labels.durationOptions.over120;
+}
+
+function getQueryFilterChip(
+  filters: MovieFilters,
+  labels: MoviesPageLabels,
+): ActiveFilterChip | null {
+  if (!filters.query) return null;
+
+  return {
+    id: 'query',
+    label: labels.activeQuery.replace('{value}', filters.query),
+    remove: (current) => ({ ...current, query: '' }),
+  };
+}
+
+function getYearFilterLabel(filters: MovieFilters, labels: MoviesPageLabels): string {
+  if (filters.yearFrom && filters.yearTo) {
+    return labels.activeYearRange
+      .replace('{from}', filters.yearFrom)
+      .replace('{to}', filters.yearTo);
+  }
+  if (filters.yearFrom) return labels.activeYearFrom.replace('{value}', filters.yearFrom);
+  return labels.activeYearTo.replace('{value}', filters.yearTo);
+}
+
+function getYearFilterChip(
+  filters: MovieFilters,
+  labels: MoviesPageLabels,
+): ActiveFilterChip | null {
+  if (!filters.yearFrom && !filters.yearTo) return null;
+
+  return {
+    id: 'years',
+    label: getYearFilterLabel(filters, labels),
+    remove: (current) => ({ ...current, yearFrom: '', yearTo: '' }),
+  };
+}
+
+function getDurationFilterChip(
+  filters: MovieFilters,
+  labels: MoviesPageLabels,
+): ActiveFilterChip | null {
+  if (!filters.duration) return null;
+
+  return {
+    id: 'duration',
+    label: getDurationFilterLabel(filters.duration, labels),
+    remove: (current) => ({ ...current, duration: '' }),
+  };
+}
+
+function getScoreFilterChip(
+  filters: MovieFilters,
+  labels: MoviesPageLabels,
+): ActiveFilterChip | null {
+  if (!filters.minScore) return null;
+
+  return {
+    id: 'score',
+    label: labels.activeScore.replace('{value}', filters.minScore),
+    remove: (current) => ({ ...current, minScore: '' }),
+  };
+}
+
+function getAgeRatingFilterChips(ageRatings: string[]): ActiveFilterChip[] {
+  return ageRatings.map((rating) => ({
+    id: `rating-${rating}`,
+    label: rating,
+    remove: (current) => ({
+      ...current,
+      ageRatings: current.ageRatings.filter((value) => value !== rating),
+    }),
+  }));
 }
 
 function ActiveFilterRow({
@@ -698,23 +721,8 @@ function MoviesEmptyState({
 }) {
   const hasActiveFilters = hasActiveMovieFilters(filters);
   const normalized = normalizeMovieFilters(filters);
-  const hasYearFilters = Boolean(normalized.yearFrom || normalized.yearTo);
-  const title =
-    hasActiveFilters && normalized.query
-      ? labels.emptySearchTitle.replace('{query}', normalized.query)
-      : hasActiveFilters
-        ? labels.emptyFilteredTitle
-        : labels.emptyCatalogTitle;
-  const body = hasActiveFilters
-    ? getActiveMovieFilterCount(filters) > 1
-      ? labels.emptyNarrowBody
-      : labels.emptyFilteredBody
-    : labels.emptyCatalogBody;
-  const suggestions = [
-    { label: labels.emptySuggestionDirector, filters: { ...cloneEmptyMovieFilters(), query: 'Tarantino' } },
-    { label: labels.emptySuggestionGenre, filters: { ...cloneEmptyMovieFilters(), query: 'thriller' } },
-    { label: labels.emptySuggestionScore, filters: { ...cloneEmptyMovieFilters(), minScore: '8' } },
-  ];
+  const copy = getMoviesEmptyStateCopy(filters, labels);
+  const suggestions = getMoviesEmptyStateSuggestions(labels);
 
   return (
     <section
@@ -729,65 +737,179 @@ function MoviesEmptyState({
         <Sparkles size={22} strokeWidth={1.8} />
       </div>
       <h2 className="text-lg font-semibold text-pretty" style={{ color: 'var(--pc-t1)' }}>
-        {title}
+        {copy.title}
       </h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6" style={{ color: 'var(--pc-t3)' }}>
-        {body}
+        {copy.body}
       </p>
 
-      {hasActiveFilters && (
-        <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <Button
-            variant="cta"
-            size="md"
-            type="button"
-            onClick={onClearFilters}
-          >
-            {labels.clearAllFilters}
-          </Button>
-          {normalized.query && (
-            <Button
-              variant="ghost"
-              size="md"
-              type="button"
-              onClick={() => onApplyFilters({ ...normalized, query: '' })}
-              className="bg-[var(--pc-ghost)]"
-            >
-              {labels.clearSearch}
-            </Button>
-          )}
-          {hasYearFilters && (
-            <Button
-              variant="ghost"
-              size="md"
-              type="button"
-              onClick={() => onApplyFilters({ ...normalized, yearFrom: '', yearTo: '' })}
-              className="bg-[var(--pc-ghost)]"
-            >
-              {labels.removeYearFilters}
-            </Button>
-          )}
-        </div>
-      )}
-
-      <div className="mt-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--pc-t4)]">
-          {labels.emptySuggestionsLabel}
-        </p>
-        <div className="mt-2 flex flex-wrap justify-center gap-2">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion.label}
-              type="button"
-              onClick={() => onApplyFilters(suggestion.filters)}
-              className="rounded-full border border-[var(--pc-bd2)] bg-[var(--pc-ghost)] px-3 py-1.5 text-xs font-semibold text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-            >
-              {suggestion.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <MoviesEmptyStateRecoveryActions
+        hasActiveFilters={hasActiveFilters}
+        labels={labels}
+        normalizedFilters={normalized}
+        onApplyFilters={onApplyFilters}
+        onClearFilters={onClearFilters}
+      />
+      <MoviesEmptyStateSuggestions
+        label={labels.emptySuggestionsLabel}
+        onApplyFilters={onApplyFilters}
+        suggestions={suggestions}
+      />
     </section>
+  );
+}
+
+function getMoviesEmptyStateCopy(filters: MovieFilters, labels: MoviesPageLabels) {
+  const hasActiveFilters = hasActiveMovieFilters(filters);
+  const normalized = normalizeMovieFilters(filters);
+
+  return {
+    title: getMoviesEmptyStateTitle(hasActiveFilters, normalized.query, labels),
+    body: getMoviesEmptyStateBody(hasActiveFilters, getActiveMovieFilterCount(filters), labels),
+  };
+}
+
+function getMoviesEmptyStateTitle(
+  hasActiveFilters: boolean,
+  query: string,
+  labels: MoviesPageLabels,
+) {
+  if (hasActiveFilters && query) return labels.emptySearchTitle.replace('{query}', query);
+  if (hasActiveFilters) return labels.emptyFilteredTitle;
+  return labels.emptyCatalogTitle;
+}
+
+function getMoviesEmptyStateBody(
+  hasActiveFilters: boolean,
+  activeFilterCount: number,
+  labels: MoviesPageLabels,
+) {
+  if (!hasActiveFilters) return labels.emptyCatalogBody;
+  if (activeFilterCount > 1) return labels.emptyNarrowBody;
+  return labels.emptyFilteredBody;
+}
+
+function getMoviesEmptyStateSuggestions(labels: MoviesPageLabels) {
+  return [
+    {
+      label: labels.emptySuggestionDirector,
+      filters: { ...cloneEmptyMovieFilters(), query: 'Tarantino' },
+    },
+    {
+      label: labels.emptySuggestionGenre,
+      filters: { ...cloneEmptyMovieFilters(), query: 'thriller' },
+    },
+    { label: labels.emptySuggestionScore, filters: { ...cloneEmptyMovieFilters(), minScore: '8' } },
+  ];
+}
+
+function MoviesEmptyStateRecoveryActions({
+  hasActiveFilters,
+  labels,
+  normalizedFilters,
+  onApplyFilters,
+  onClearFilters,
+}: {
+  hasActiveFilters: boolean;
+  labels: MoviesPageLabels;
+  normalizedFilters: MovieFilters;
+  onApplyFilters: (filters: MovieFilters) => void;
+  onClearFilters: () => void;
+}) {
+  if (!hasActiveFilters) return null;
+
+  return (
+    <div className="mt-5 flex flex-wrap justify-center gap-2">
+      <Button variant="cta" size="md" type="button" onClick={onClearFilters}>
+        {labels.clearAllFilters}
+      </Button>
+      <ClearSearchRecoveryAction
+        labels={labels}
+        normalizedFilters={normalizedFilters}
+        onApplyFilters={onApplyFilters}
+      />
+      <ClearYearRecoveryAction
+        labels={labels}
+        normalizedFilters={normalizedFilters}
+        onApplyFilters={onApplyFilters}
+      />
+    </div>
+  );
+}
+
+function ClearSearchRecoveryAction({
+  labels,
+  normalizedFilters,
+  onApplyFilters,
+}: {
+  labels: MoviesPageLabels;
+  normalizedFilters: MovieFilters;
+  onApplyFilters: (filters: MovieFilters) => void;
+}) {
+  if (!normalizedFilters.query) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="md"
+      type="button"
+      onClick={() => onApplyFilters({ ...normalizedFilters, query: '' })}
+      className="bg-[var(--pc-ghost)]"
+    >
+      {labels.clearSearch}
+    </Button>
+  );
+}
+
+function ClearYearRecoveryAction({
+  labels,
+  normalizedFilters,
+  onApplyFilters,
+}: {
+  labels: MoviesPageLabels;
+  normalizedFilters: MovieFilters;
+  onApplyFilters: (filters: MovieFilters) => void;
+}) {
+  if (!normalizedFilters.yearFrom && !normalizedFilters.yearTo) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="md"
+      type="button"
+      onClick={() => onApplyFilters({ ...normalizedFilters, yearFrom: '', yearTo: '' })}
+      className="bg-[var(--pc-ghost)]"
+    >
+      {labels.removeYearFilters}
+    </Button>
+  );
+}
+
+function MoviesEmptyStateSuggestions({
+  label,
+  onApplyFilters,
+  suggestions,
+}: {
+  label: string;
+  onApplyFilters: (filters: MovieFilters) => void;
+  suggestions: { label: string; filters: MovieFilters }[];
+}) {
+  return (
+    <div className="mt-6">
+      <p className="text-xs font-semibold uppercase tracking-widest text-[var(--pc-t4)]">{label}</p>
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
+        {suggestions.map((suggestion) => (
+          <button
+            key={suggestion.label}
+            type="button"
+            onClick={() => onApplyFilters(suggestion.filters)}
+            className="rounded-full border border-[var(--pc-bd2)] bg-[var(--pc-ghost)] px-3 py-1.5 text-xs font-semibold text-[var(--pc-t2)] transition-colors duration-150 hover:border-[var(--pc-bd3)] hover:bg-[var(--pc-surface-hover)] hover:text-[var(--pc-t1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+          >
+            {suggestion.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
