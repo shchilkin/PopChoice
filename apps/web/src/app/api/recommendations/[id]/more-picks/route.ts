@@ -4,7 +4,11 @@ import { startMorePicksRequest } from '@/features/recommendation/morePicksJobs';
 import { claimMorePicksRequest } from '@/features/recommendation/morePicksPersistence';
 import { parseLocaleFromRequest } from '@/lib/locale';
 import { applyRateLimit } from '@/lib/rateLimit';
-import { withAuth } from '@/lib/withAuth';
+
+import {
+  authenticatedRecommendationSlugPost,
+  recommendationIdValidationResponse,
+} from '../routeHelpers';
 
 // ---------------------------------------------------------------------------
 // POST /api/recommendations/[id]/more-picks
@@ -23,9 +27,8 @@ async function postHandler(
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  if (!slug || typeof slug !== 'string') {
-    return NextResponse.json({ error: 'Missing recommendation id' }, { status: 400 });
-  }
+  const validationResponse = recommendationIdValidationResponse(slug);
+  if (validationResponse) return validationResponse;
 
   // Atomically claim the slot — fails gracefully if already claimed
   const claimed = await claimMorePicksRequest(slug);
@@ -46,6 +49,5 @@ export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const { id: slug } = await context.params;
-  return withAuth((r, clientId) => postHandler(r, clientId, { slug }))(req);
+  return authenticatedRecommendationSlugPost(req, context, postHandler);
 }

@@ -14,6 +14,7 @@ import {
   RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES,
   readJsonBodyWithLimit,
   requestBodyErrorResponse,
+  requestValidationErrorResponse,
 } from '@/lib/requestBody';
 import { setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 import { withAuth } from '@/lib/withAuth';
@@ -150,13 +151,7 @@ function getLegacyRecommendationErrorResponse(error: unknown) {
 
 function getValidationErrorResponse(error: z.ZodError) {
   logger.warn({ err: error, issues: error.issues }, 'Invalid request body');
-  return NextResponse.json(
-    {
-      details: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', '),
-      error: 'Invalid request data',
-    },
-    { status: 400 },
-  );
+  return requestValidationErrorResponse(error.issues);
 }
 
 function getKnownRecommendationErrorResponse(error: unknown) {
