@@ -20,13 +20,8 @@ import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 const SCRYPT_OPTIONS = { N: 32_768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const;
 const KEY_LENGTH = 32;
 
-/**
- * Hashes a plaintext password with a fresh random salt.
- * Returns a `salt:hash` string safe to store in the database.
- */
-export async function hashPassword(plaintext: string): Promise<string> {
-  const salt = randomBytes(16).toString('hex');
-  const hash = await new Promise<string>((resolve, reject) => {
+function derivePasswordHash(plaintext: string, salt: string): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
     scrypt(plaintext, salt, KEY_LENGTH, SCRYPT_OPTIONS, (err, derivedKey) => {
       if (err) {
         reject(err);
@@ -35,6 +30,15 @@ export async function hashPassword(plaintext: string): Promise<string> {
       resolve(derivedKey.toString('hex'));
     });
   });
+}
+
+/**
+ * Hashes a plaintext password with a fresh random salt.
+ * Returns a `salt:hash` string safe to store in the database.
+ */
+export async function hashPassword(plaintext: string): Promise<string> {
+  const salt = randomBytes(16).toString('hex');
+  const hash = await derivePasswordHash(plaintext, salt);
   return `${salt}:${hash}`;
 }
 
@@ -47,15 +51,7 @@ export async function verifyPassword(plaintext: string, stored: string): Promise
   if (separatorIndex === -1) return false;
   const salt = stored.slice(0, separatorIndex);
   const storedHash = stored.slice(separatorIndex + 1);
-  const candidateHash = await new Promise<string>((resolve, reject) => {
-    scrypt(plaintext, salt, KEY_LENGTH, SCRYPT_OPTIONS, (err, derivedKey) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(derivedKey.toString('hex'));
-    });
-  });
+  const candidateHash = await derivePasswordHash(plaintext, salt);
   const storedBuf = Buffer.from(storedHash, 'hex');
   const candidateBuf = Buffer.from(candidateHash, 'hex');
   if (storedBuf.length !== candidateBuf.length) return false;
