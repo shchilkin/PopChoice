@@ -18,6 +18,8 @@ import {
   RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES,
   readJsonBodyWithLimit,
   requestBodyErrorResponse,
+  requestValidationErrorResponse,
+  type ValidationIssue,
 } from '@/lib/requestBody';
 import { withTraceSpan } from '@/lib/tracing';
 import { withAuth } from '@/lib/withAuth';
@@ -26,8 +28,6 @@ import type {
   RecommendationExperienceMode,
   RecommendationSourceStrategy,
 } from '@/features/recommendation/types';
-
-type CreateValidationIssue = { path: Array<string | number>; message: string };
 
 // ---------------------------------------------------------------------------
 // POST /api/recommendations — create a new recommendation job
@@ -171,18 +171,12 @@ function getCreateRecommendationErrorResponse(error: unknown) {
   return NextResponse.json({ error: 'Failed to create recommendation' }, { status: 500 });
 }
 
-function isCreateValidationError(error: unknown): error is { issues: CreateValidationIssue[] } {
+function isCreateValidationError(error: unknown): error is { issues: ValidationIssue[] } {
   return error instanceof Error && error.name === 'ZodError' && 'issues' in error;
 }
 
-function getCreateValidationErrorResponse(error: { issues: CreateValidationIssue[] }) {
-  return NextResponse.json(
-    {
-      details: error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(', '),
-      error: 'Invalid request data',
-    },
-    { status: 400 },
-  );
+function getCreateValidationErrorResponse(error: { issues: ValidationIssue[] }) {
+  return requestValidationErrorResponse(error.issues);
 }
 
 export const POST = withAuth(postHandler);

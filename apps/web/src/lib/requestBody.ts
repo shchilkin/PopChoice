@@ -3,6 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 export const RECOMMENDATION_REQUEST_BODY_LIMIT_BYTES = 16 * 1024;
 export const POSTER_REQUEST_BODY_LIMIT_BYTES = 32 * 1024;
 
+export type ValidationIssue = {
+  message: string;
+  path: PropertyKey[];
+};
+
 class RequestBodyTooLargeError extends Error {
   constructor(readonly limitBytes: number) {
     super(`Request body exceeds ${limitBytes} bytes`);
@@ -58,4 +63,16 @@ export function requestBodyErrorResponse(error: unknown): NextResponse | null {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
   return null;
+}
+
+export function requestValidationErrorResponse(issues: ValidationIssue[]): NextResponse {
+  return NextResponse.json(
+    {
+      details: issues
+        .map((issue) => `${issue.path.map(String).join('.')}: ${issue.message}`)
+        .join(', '),
+      error: 'Invalid request data',
+    },
+    { status: 400 },
+  );
 }

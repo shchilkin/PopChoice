@@ -4,6 +4,8 @@ import { getRecommendationRecord } from '@/features/recommendation/persistence';
 import logger from '@/lib/logger';
 import { withAuth } from '@/lib/withAuth';
 
+import { recommendationIdValidationResponse, userIdFromRecommendationClient } from './routeHelpers';
+
 // ---------------------------------------------------------------------------
 // GET /api/recommendations/[id]
 // ---------------------------------------------------------------------------
@@ -12,7 +14,7 @@ async function getHandler(
   clientId: string,
   { id }: { id: string },
 ): Promise<Response> {
-  const validationResponse = getRecommendationIdValidationResponse(id);
+  const validationResponse = recommendationIdValidationResponse(id);
   if (validationResponse) return validationResponse;
 
   try {
@@ -23,17 +25,9 @@ async function getHandler(
   }
 }
 
-function getRecommendationIdValidationResponse(id: string) {
-  return id ? null : NextResponse.json({ error: 'Missing recommendation id' }, { status: 400 });
-}
-
 async function getRecommendationResponse(id: string, clientId: string) {
-  const result = await getRecommendationRecord(id, getViewerUserId(clientId));
+  const result = await getRecommendationRecord(id, userIdFromRecommendationClient(clientId));
   return result ? NextResponse.json(result) : getRecommendationNotFoundResponse();
-}
-
-function getViewerUserId(clientId: string) {
-  return clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
 }
 
 function getRecommendationNotFoundResponse() {

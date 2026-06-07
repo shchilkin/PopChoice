@@ -7,7 +7,12 @@ import {
 } from '@/lib/db/recommendations';
 import logger from '@/lib/logger';
 import { applyRateLimit } from '@/lib/rateLimit';
-import { withAuth } from '@/lib/withAuth';
+
+import {
+  authenticatedRecommendationSlugPost,
+  recommendationIdValidationResponse,
+  userIdFromRecommendationClient,
+} from '../routeHelpers';
 
 const feedbackSchema = z
   .object({
@@ -30,9 +35,8 @@ async function postHandler(
   const rateLimitResponse = await applyRateLimit(req);
   if (rateLimitResponse) return rateLimitResponse;
 
-  if (!slug || typeof slug !== 'string') {
-    return NextResponse.json({ error: 'Missing recommendation id' }, { status: 400 });
-  }
+  const validationResponse = recommendationIdValidationResponse(slug);
+  if (validationResponse) return validationResponse;
 
   const parsed = feedbackSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
@@ -40,11 +44,10 @@ async function postHandler(
   }
 
   try {
-    const userId = clientId.startsWith('user:') ? clientId.slice('user:'.length) : undefined;
     const created = await createRecommendationFeedback({
       slug,
       kind: parsed.data.kind as RecommendationFeedbackKind,
-      userId,
+      userId: userIdFromRecommendationClient(clientId),
     });
 
     if (!created) {
@@ -65,6 +68,5 @@ export async function POST(
   req: NextRequest,
   context: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const { id: slug } = await context.params;
-  return withAuth((r, clientId) => postHandler(r, clientId, { slug }))(req);
+  return authenticatedRecommendationSlugPost(req, context, postHandler);
 }
