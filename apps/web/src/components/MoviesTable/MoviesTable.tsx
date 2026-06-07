@@ -1,6 +1,6 @@
 'use client';
 
-import { Clock, Film, SearchX, Star, X } from 'lucide-react';
+import { Clock, SearchX, Star, X } from 'lucide-react';
 import Image from 'next/image';
 import { z } from 'zod';
 
@@ -190,6 +190,21 @@ function getMovieInitials(name: string): string {
     .join('');
 }
 
+const POSTER_PLACEHOLDER_PALETTES = [
+  ['#ff9f1c', '#2a88ff', '#f5c518'],
+  ['#f97316', '#14b8a6', '#facc15'],
+  ['#ef4444', '#22c55e', '#f59e0b'],
+  ['#38bdf8', '#f59e0b', '#fb7185'],
+  ['#84cc16', '#0ea5e9', '#f97316'],
+  ['#f43f5e', '#06b6d4', '#f5c518'],
+] as const;
+
+function getPosterPlaceholderPalette(movie: Movie) {
+  const seed = `${movie.name}-${movie.year}`;
+  const hash = Array.from(seed).reduce((value, char) => value + char.charCodeAt(0), 0);
+  return POSTER_PLACEHOLDER_PALETTES[hash % POSTER_PLACEHOLDER_PALETTES.length];
+}
+
 function getSafePosterUrl(movie: Movie): string | null {
   const posterUrl = movie.poster_url?.trim();
   if (!posterUrl) return null;
@@ -197,6 +212,56 @@ function getSafePosterUrl(movie: Movie): string | null {
     return posterUrl;
   }
   return null;
+}
+
+function MoviePosterFallback({ movie }: { movie: Movie }) {
+  const [toneA, toneB, toneC] = getPosterPlaceholderPalette(movie);
+  const initials = getMovieInitials(movie.name) || '?';
+  const backgroundStyle = {
+    background: `
+      radial-gradient(circle at 24% 18%, ${toneA} 0, transparent 29%),
+      radial-gradient(circle at 82% 26%, ${toneB} 0, transparent 33%),
+      radial-gradient(circle at 48% 78%, ${toneC} 0, transparent 36%),
+      linear-gradient(160deg, #151527, #09090f)
+    `,
+  };
+
+  return (
+    <div className="absolute inset-0" style={backgroundStyle} aria-hidden="true">
+      <div className="absolute inset-0 backdrop-blur-[18px] backdrop-saturate-125">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(9, 9, 15, 0.05), rgba(9, 9, 15, 0.72))',
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-35"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(-18deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 11px)',
+          }}
+        />
+      </div>
+      <div
+        className="absolute inset-0 grid place-items-center text-5xl font-bold text-white/90 sm:text-6xl"
+        style={{
+          fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+          textShadow: '0 10px 34px rgba(0, 0, 0, 0.55)',
+        }}
+      >
+        {initials}
+      </div>
+      <div className="absolute inset-x-6 bottom-8 grid gap-2">
+        <span className="h-1.5 rounded-full bg-white/45" />
+        <span
+          className="h-1.5 w-3/4 rounded-full"
+          style={{ background: 'color-mix(in srgb, var(--pc-gold-text) 62%, transparent)' }}
+        />
+      </div>
+    </div>
+  );
 }
 
 function MoviePoster({ movie }: { movie: Movie }) {
@@ -219,18 +284,7 @@ function MoviePoster({ movie }: { movie: Movie }) {
           className="object-cover"
         />
       ) : (
-        <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-          <Film size={34} strokeWidth={1.6} style={{ color: 'var(--pc-gold-text)' }} />
-          <span
-            className="text-3xl font-bold"
-            style={{
-              color: 'var(--pc-t1)',
-              fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            }}
-          >
-            {getMovieInitials(movie.name)}
-          </span>
-        </div>
+        <MoviePosterFallback movie={movie} />
       )}
       {movie.score_rating > 0 && (
         <div
