@@ -1,19 +1,19 @@
 # movie-seed
 
-One-shot service that reads movies from a `movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database used by PopChoice.
+One-shot service that reads movies from the curated `services/movie-seed/movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database used by PopChoice.
 
 ## Purpose
 
-This service is designed to be run once (or on-demand) to populate the database from the curated `movies.txt` file. It skips movies that already exist (deduplicates by name + year), so it is safe to re-run.
+This service is designed to be run once (or on-demand) to populate the database from the curated movie list. It skips movies that already exist (deduplicates by name + year), so it is safe to re-run.
 
 ## Environment Variables
 
-| Variable           | Required | Default            | Description                                    |
-| ------------------ | -------- | ------------------ | ---------------------------------------------- |
-| `OPENAI_API_KEY`   | ✅       | —                  | OpenAI API key used to generate embeddings     |
-| `DATABASE_URL`     | ✅       | —                  | PostgreSQL connection string (with pgvector)   |
-| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt` | Path to the movies.txt file to parse           |
-| `DRY_RUN`          | ❌       | `false`            | Set to `"true"` to skip embeddings and inserts |
+| Variable           | Required | Default                                                               | Description                                    |
+| ------------------ | -------- | --------------------------------------------------------------------- | ---------------------------------------------- |
+| `OPENAI_API_KEY`   | ✅       | —                                                                     | OpenAI API key used to generate embeddings     |
+| `DATABASE_URL`     | ✅       | —                                                                     | PostgreSQL connection string (with pgvector)   |
+| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt`, then fallback to `services/movie-seed/movies.txt` | Path to the movies.txt file to parse           |
+| `DRY_RUN`          | ❌       | `false`                                                               | Set to `"true"` to skip embeddings and inserts |
 
 ## movies.txt Format
 
@@ -34,15 +34,18 @@ A cynical expatriate American café owner struggles to decide whether to help hi
 ## Running
 
 ```bash
-# Development
-npm run dev
+# Development from the repo root
+npm run populate-db
+
+# Direct service run from the repo root
+npm run dev --workspace=services/movie-seed
 
 # Production (after build)
-npm run build
-npm start
+npm run build --workspace=services/movie-seed
+npm run start --workspace=services/movie-seed
 
 # Dry run (no DB writes)
-DRY_RUN=true npm run dev
+DRY_RUN=true npm run dev --workspace=services/movie-seed
 ```
 
 ## Docker

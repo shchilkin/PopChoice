@@ -285,7 +285,7 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 
 ## 🗃 Background Services
 
-- **movie-seed** (`services/movie-seed/`) — One-shot service that reads movies from a `movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database. Safe to re-run (deduplicates by name + year). See [`services/movie-seed/README.md`](./services/movie-seed/README.md).
+- **movie-seed** (`services/movie-seed/`) — One-shot service that reads movies from the curated `services/movie-seed/movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database. Safe to re-run (deduplicates by name + year). See [`services/movie-seed/README.md`](./services/movie-seed/README.md).
 - **movie-discovery** (`services/movie-discovery/`) — Continuous TMDB-driven service that discovers new movies, applies quality filters (vote count, rating, overview length), generates embeddings, and inserts them into the database. Supports scheduled and one-shot modes. See [`services/movie-discovery/README.md`](./services/movie-discovery/README.md).
 - **movie-backfill** (`services/movie-backfill/`) — One-shot script that backfills missing `duration` and `age_rating` data for movies already in the database, re-generating their embeddings. Supports dry-run mode. See [`services/movie-backfill/README.md`](./services/movie-backfill/README.md).
 

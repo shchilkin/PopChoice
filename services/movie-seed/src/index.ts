@@ -6,7 +6,8 @@
  * Environment variables:
  *   OPENAI_API_KEY    — OpenAI API key (required)
  *   DATABASE_URL      — PostgreSQL connection string (required)
- *   MOVIES_FILE_PATH  — Path to movies.txt (default: <cwd>/movies.txt)
+ *   MOVIES_FILE_PATH  — Path to movies.txt (default: <cwd>/movies.txt,
+ *                       then services/movie-seed/movies.txt)
  *   DRY_RUN           — Set to "true" to skip embeddings/inserts
  */
 

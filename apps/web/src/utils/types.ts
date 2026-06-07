@@ -3,9 +3,7 @@ import {
   movieFileStatsSchema,
   movieMetadataSchema,
   movieRecordSchema,
-  movieSchema,
   parsedMovieSchema,
-  rawMovieEntrySchema,
 } from './schemas';
 
 import type { Document } from '@langchain/core/documents';
@@ -17,10 +15,6 @@ export type MovieChunk = z.infer<typeof movieChunkSchema>;
 export type MovieFileStats = z.infer<typeof movieFileStatsSchema>;
 export type MovieMetadata = z.infer<typeof movieMetadataSchema>;
 export type ParsedMovie = z.infer<typeof parsedMovieSchema>;
-
-// Movie parser types
-export type MovieEntry = z.infer<typeof movieSchema>;
-export type RawMovieEntry = z.infer<typeof rawMovieEntrySchema>;
 
 // LangChain document types
 /**
