@@ -8,23 +8,15 @@ export type ClassValue =
   | Record<string, boolean | null | undefined>;
 
 export function cn(...values: ClassValue[]): string {
-  const classes: string[] = [];
+  return values.flatMap(classNamesForValue).filter(Boolean).join(' ');
+}
 
-  for (const value of values) {
-    if (!value) continue;
-    if (typeof value === 'string' || typeof value === 'number') {
-      classes.push(String(value));
-      continue;
-    }
-    if (Array.isArray(value)) {
-      const nested = cn(...value);
-      if (nested) classes.push(nested);
-      continue;
-    }
-    for (const [key, enabled] of Object.entries(value)) {
-      if (enabled) classes.push(key);
-    }
-  }
+function classNamesForValue(value: ClassValue): string[] {
+  if (!value) return [];
+  if (typeof value === 'string' || typeof value === 'number') return [String(value)];
+  if (Array.isArray(value)) return [cn(...value)].filter(Boolean);
 
-  return classes.join(' ');
+  return Object.entries(value)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => key);
 }

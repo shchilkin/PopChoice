@@ -51,11 +51,6 @@ export interface DuplicateReportViewModel {
   state: 'healthy' | 'warning';
 }
 
-export type {
-  CatalogActionSectionsViewModel,
-  CatalogWorkQueueItemViewModel,
-  CatalogWorkQueueViewModel,
-} from './workflowViewModels';
 export {
   buildCatalogActionSectionsViewModel,
   buildCatalogWorkQueueViewModel,

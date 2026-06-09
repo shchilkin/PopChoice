@@ -1,3 +1,7 @@
+---
+title: UI Development
+---
+
 # UI Development
 
 PopChoice UI work uses one shared design workshop with app-specific stories and a small shared

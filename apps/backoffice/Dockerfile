@@ -12,6 +12,7 @@ COPY apps/docs/package.json ./apps/docs/
 COPY apps/web/package.json ./apps/web/
 COPY apps/web/public/popcorn.svg ./apps/web/public/popcorn.svg
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/ui/package.json ./packages/ui/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
@@ -20,12 +21,14 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --no-audit --fund
 
 COPY packages/shared/src ./packages/shared/src
 COPY packages/shared/tsconfig.json ./packages/shared/
+COPY packages/ui/src ./packages/ui/src
+COPY packages/ui/tsconfig.json ./packages/ui/
 COPY apps/backoffice/src ./apps/backoffice/src
 COPY apps/backoffice/public ./apps/backoffice/public
 COPY apps/backoffice/next.config.mjs ./apps/backoffice/
 COPY apps/backoffice/postcss.config.mjs ./apps/backoffice/
 COPY apps/backoffice/tsconfig.json ./apps/backoffice/
-RUN npm run build --workspace=packages/shared && npm run build --workspace=apps/backoffice
+RUN npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run build --workspace=apps/backoffice
 
 FROM node:24-slim
 
@@ -66,6 +69,7 @@ COPY apps/backoffice/package.json ./apps/backoffice/
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/ui/package.json ./packages/ui/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
@@ -73,6 +77,7 @@ COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-audit --fund=false
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/ui/src ./packages/ui/src
 COPY --from=builder /app/apps/backoffice/.next ./apps/backoffice/.next
 COPY --from=builder /app/apps/backoffice/next.config.mjs ./apps/backoffice/next.config.mjs
 COPY --from=builder /app/apps/backoffice/public ./apps/backoffice/public
