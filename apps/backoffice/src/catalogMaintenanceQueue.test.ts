@@ -1,17 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetJobCounts, MockQueue, MockRedis } = vi.hoisted(() => {
+const { mockGetJobCounts, mockRedisConstructor, MockQueue, MockRedis } = vi.hoisted(() => {
   const mockGetJobCounts = vi.fn();
+  const mockRedisConstructor = vi.fn();
 
   function MockQueue(this: { getJobCounts: ReturnType<typeof vi.fn> }) {
     this.getJobCounts = mockGetJobCounts;
   }
 
-  function MockRedis(this: { on: ReturnType<typeof vi.fn> }) {
+  function MockRedis(this: { on: ReturnType<typeof vi.fn> }, ...args: unknown[]) {
+    mockRedisConstructor(...args);
     this.on = vi.fn();
   }
 
-  return { mockGetJobCounts, MockQueue, MockRedis };
+  return { mockGetJobCounts, mockRedisConstructor, MockQueue, MockRedis };
 });
 
 vi.mock('bullmq', () => ({ Queue: MockQueue }));
@@ -139,7 +141,7 @@ describe('catalog maintenance queue helpers', () => {
     mockGetJobCounts.mockRejectedValueOnce(new Error('redis unavailable'));
 
     await expect(
-      getCatalogMaintenanceQueueSnapshot('redis://localhost:6379'),
+      getCatalogMaintenanceQueueSnapshot('redis://user:p%40ss@localhost:6379/2'),
     ).resolves.toMatchObject({
       available: false,
       counts: {
@@ -153,6 +155,14 @@ describe('catalog maintenance queue helpers', () => {
       },
       openJobs: 0,
       queueName: 'catalog-maintenance',
+    });
+    expect(mockRedisConstructor).toHaveBeenCalledWith({
+      db: 2,
+      host: 'localhost',
+      maxRetriesPerRequest: null,
+      password: 'p@ss',
+      port: 6379,
+      username: 'user',
     });
   });
 });

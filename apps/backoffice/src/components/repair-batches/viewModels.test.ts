@@ -35,7 +35,7 @@ describe('repair batch view models', () => {
         type: 'retry',
       },
       attemptsLabel: '3 attempts',
-      issueHref: '/#issue-missing_poster_url',
+      issueHref: '/catalog-health#issue-missing_poster_url',
       movieHref: '/movies/99',
       movieLabel: 'Primer',
       movieMeta: '#99 · 2004',

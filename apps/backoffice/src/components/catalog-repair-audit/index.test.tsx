@@ -79,7 +79,7 @@ describe('catalog repair audit presentation', () => {
     expect(html).toContain('25</strong> accepted');
     expect(html).toContain('2</strong> already queued');
     expect(html).toContain('1</strong> failed');
-    expect(html).toContain('/#issue-missing_poster_url');
+    expect(html).toContain('/catalog-health#issue-missing_poster_url');
   });
 
   it('renders an empty state when no repair actions exist', () => {

@@ -6,23 +6,20 @@ import type { CatalogHealthLiveData } from '../lib/catalogHealthLive';
 type CatalogStatState = 'healthy' | 'warning';
 type QueueState = 'healthy' | 'neutral' | 'warning';
 
-export interface CatalogMetricPill {
-  className: string;
-  label: string;
-}
-
-export interface CatalogStatusStripViewModel {
-  className: string;
-  copy: string;
-  heading: string;
-  metrics: CatalogMetricPill[];
-}
-
 export interface CatalogQueueStatusViewModel {
   bullBoardAction: 'link' | 'disabled';
   counts: Array<{ label: string; value: number }>;
+  diagnosticCopy: string | null;
   dotClassName: string;
   statusCopy: string;
+}
+
+export interface CatalogNextActionViewModel {
+  className: string;
+  copy: string;
+  href: string;
+  label: string;
+  title: string;
 }
 
 export interface CatalogSummaryStatViewModel {
@@ -35,8 +32,8 @@ export interface CatalogSummaryStatViewModel {
 export interface CatalogHealthOverviewViewModel {
   activeIssues: number;
   duplicateGroups: number;
+  nextAction: CatalogNextActionViewModel;
   queueSnapshot: CatalogMaintenanceQueueSnapshot;
-  status: CatalogStatusStripViewModel;
   queue: CatalogQueueStatusViewModel;
   summary: CatalogSummaryStatViewModel[];
 }
@@ -50,32 +47,76 @@ export function buildCatalogHealthOverviewViewModel(
   return {
     activeIssues,
     duplicateGroups,
+    nextAction: buildCatalogNextActionViewModel(data),
     queueSnapshot: data.queueSnapshot,
     queue: buildCatalogQueueStatusViewModel(data.queueSnapshot, bullBoardUrl),
-    status: buildCatalogStatusStripViewModel(activeIssues, duplicateGroups, data.queueSnapshot),
     summary: buildCatalogSummaryStats(data),
   };
 }
 
-function buildCatalogStatusStripViewModel(
-  activeIssues: number,
-  duplicateGroups: number,
-  queueSnapshot: CatalogMaintenanceQueueSnapshot,
-): CatalogStatusStripViewModel {
-  const isHealthy = activeIssues === 0 && duplicateGroups === 0;
+function buildCatalogNextActionViewModel(data: CatalogHealthLiveData): CatalogNextActionViewModel {
+  const missingTMDBCount = data.report.issueCounts.missing_tmdb_id ?? 0;
+  if (missingTMDBCount > 0) {
+    return {
+      className: 'next-action warning',
+      copy: `${missingTMDBCount} movies still need identity before poster, runtime, localized name, or metadata repairs can finish.`,
+      href: '/catalog-health?issue=missing_tmdb_id#issue-missing_tmdb_id',
+      label: 'Open identity queue',
+      title: 'Resolve TMDB identity first',
+    };
+  }
+
+  if (data.queueSnapshot.available && data.queueSnapshot.openJobs > 0) {
+    return {
+      className: 'next-action neutral',
+      copy: `${data.queueSnapshot.openJobs} catalog maintenance jobs are still open. Review failed or unresolved items before starting more bulk work.`,
+      href: '/repair-batches?sort=needs_review',
+      label: 'Review batches',
+      title: 'Monitor open repair work',
+    };
+  }
+
+  if (data.report.activeIssues > 0) {
+    const topIssue = getTopIssue(data.report.issueCounts);
+    return {
+      className: 'next-action warning',
+      copy: `Next highest-count panel is ${humanizeIssueKey(topIssue.key)} with ${topIssue.count} affected movies. Use movie detail manual fields for rows that need operator-confirmed metadata.`,
+      href: `/catalog-health#issue-${encodeURIComponent(topIssue.key)}`,
+      label: 'Go to repair panels',
+      title: 'Continue catalog repair',
+    };
+  }
+
+  if (data.report.duplicateGroups > 0) {
+    return {
+      className: 'next-action warning',
+      copy: 'No repair panels are active. Review duplicate groups before manual merges.',
+      href: '/catalog-health#duplicate-tmdb-ids',
+      label: 'Review duplicates',
+      title: 'Review duplicate identities',
+    };
+  }
 
   return {
-    className: `catalog-status ${isHealthy ? 'healthy' : 'needs-work'}`,
-    copy: isHealthy
-      ? 'No active issue categories or duplicate groups are currently reported.'
-      : 'Work the highest-count repairable panels first, then review duplicates before manual merges.',
-    heading: isHealthy ? 'Catalog is clear' : 'Catalog needs operator attention',
-    metrics: [
-      buildMetricPill(activeIssues, 'active issue categories'),
-      buildMetricPill(duplicateGroups, 'duplicate groups'),
-      buildQueueMetricPill(queueSnapshot),
-    ],
+    className: 'next-action healthy',
+    copy: 'No active catalog issue categories, duplicate groups, or open catalog queue work are currently reported.',
+    href: '/repair-batches',
+    label: 'Repair history',
+    title: 'Catalog is clear',
   };
+}
+
+function getTopIssue(issueCounts: Record<string, number>): { count: number; key: string } {
+  return (
+    Object.entries(issueCounts)
+      .filter(([, count]) => count > 0)
+      .sort((left, right) => right[1] - left[1])
+      .map(([key, count]) => ({ count, key }))[0] ?? { count: 0, key: 'missing_poster_url' }
+  );
+}
+
+function humanizeIssueKey(issueKey: string): string {
+  return issueKey.replace(/_/g, ' ');
 }
 
 function buildCatalogQueueStatusViewModel(
@@ -91,6 +132,7 @@ function buildCatalogQueueStatusViewModel(
       { label: 'failed', value: snapshot.counts.failed },
       { label: 'completed', value: snapshot.counts.completed },
     ],
+    diagnosticCopy: bullBoardUrl ? null : 'Bull Board URL is not configured.',
     dotClassName: `queue-dot ${queueState(snapshot)}`,
     statusCopy: snapshot.available
       ? `Queue updated ${formatLiveSyncTime(snapshot.updatedAt)}.`
@@ -120,22 +162,6 @@ function buildCatalogSummaryStats(data: CatalogHealthLiveData): CatalogSummarySt
       meta: 'TMDB metadata refresh window',
     },
   ];
-}
-
-function buildMetricPill(count: number, label: string): CatalogMetricPill {
-  return {
-    className: `pill ${count > 0 ? 'warning' : 'good'}`,
-    label: `${count} ${label}`,
-  };
-}
-
-function buildQueueMetricPill(queueSnapshot: CatalogMaintenanceQueueSnapshot): CatalogMetricPill {
-  return {
-    className: `pill ${queueSnapshot.available ? 'good' : 'warning'}`,
-    label: queueSnapshot.available
-      ? `${queueSnapshot.openJobs} catalog queue open`
-      : 'Catalog queue unavailable',
-  };
 }
 
 function queueState(snapshot: CatalogMaintenanceQueueSnapshot): QueueState {

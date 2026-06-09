@@ -23,6 +23,7 @@ COPY packages/shared/tsconfig.json ./packages/shared/
 COPY apps/backoffice/src ./apps/backoffice/src
 COPY apps/backoffice/public ./apps/backoffice/public
 COPY apps/backoffice/next.config.mjs ./apps/backoffice/
+COPY apps/backoffice/postcss.config.mjs ./apps/backoffice/
 COPY apps/backoffice/tsconfig.json ./apps/backoffice/
 RUN npm run build --workspace=packages/shared && npm run build --workspace=apps/backoffice
 

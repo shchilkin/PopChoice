@@ -1,4 +1,5 @@
 import type { CatalogMovieDetail } from '@pop-choice/shared';
+import { Badge } from '@pop-choice/ui';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { formatDuration, formatPercent, moviePosterSrc } from '../shared';
@@ -37,9 +38,9 @@ export function MovieIdentityPanel({ detail }: { detail: CatalogMovieDetail }) {
       <div className="movie-identity-copy">
         <div className="movie-title-line">
           <span className="small-note">Movie #{movie.id}</span>
-          <span className={activeFlags.length > 0 ? 'pill warning' : 'pill healthy'}>
+          <Badge variant={activeFlags.length > 0 ? 'warning' : 'success'}>
             {activeFlags.length > 0 ? `${activeFlags.length} active issue(s)` : 'Healthy'}
-          </span>
+          </Badge>
         </div>
         <h2>{movie.name}</h2>
         <div className="movie-subtitle">

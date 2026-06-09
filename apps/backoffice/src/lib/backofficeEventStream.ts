@@ -2,6 +2,7 @@ import { QueueEvents } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { recordBackofficeSseLifecycle } from './backofficeMetrics';
+import { redisOptionsFromUrl } from './redisConnection';
 
 const BACKOFFICE_STREAM_HEARTBEAT_INTERVAL_MS = 25_000;
 const BACKOFFICE_STREAM_SNAPSHOT_DEBOUNCE_MS = 350;
@@ -156,7 +157,9 @@ export function createBackofficeQueueEventStream({
         queueEvent?: SnapshotQueueEvent;
         trigger: BackofficeStreamSnapshotTrigger;
       } | null = null;
-      const connection = redisUrl ? new Redis(redisUrl, { maxRetriesPerRequest: null }) : null;
+      const connection = redisUrl
+        ? new Redis(redisOptionsFromUrl(redisUrl, { maxRetriesPerRequest: null }))
+        : null;
       const queueEvents = connection ? new QueueEvents(queueName, { connection }) : null;
       let cleanupQueueEventListeners: (() => void) | null = null;
 

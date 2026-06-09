@@ -3,6 +3,7 @@ import { Redis } from 'ioredis';
 
 import { logger } from '@pop-choice/shared';
 
+import { redisOptionsFromUrl } from './lib/redisConnection';
 import {
   ACTIVE_DEDUPE_STATES,
   CATALOG_BACKFILL_MOVIE_JOB_NAME,
@@ -83,7 +84,7 @@ function getCatalogMaintenanceQueue(
 
   if (!redisUrl) return null;
 
-  redisConnection = new Redis(redisUrl, { maxRetriesPerRequest: null });
+  redisConnection = new Redis(redisOptionsFromUrl(redisUrl, { maxRetriesPerRequest: null }));
   redisConnection.on('error', (error) => {
     logger.error('Backoffice BullMQ Redis client error', { err: error });
   });

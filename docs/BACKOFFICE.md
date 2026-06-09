@@ -143,6 +143,9 @@ Use shared boundaries deliberately:
 Use workspace scripts that mirror the other apps:
 
 ```bash
+npm run setup:backoffice:fixtures
+npm run dev:backoffice:fixtures
+npm run setup:backoffice:local-data
 npm run dev:backoffice
 npm run check:backoffice
 npm run build:backoffice
@@ -154,6 +157,16 @@ npm run test:e2e:backoffice
 Run `npm run copy:env` after editing root `.env`; it copies values into
 `apps/backoffice/.env` for the local dev script. Local dev defaults to port
 `3004`; use `PORT=4030 npm run dev:backoffice` when you want a specific port.
+For day-to-day operator UI development, `npm run setup:backoffice:fixtures` plus
+`npm run dev:backoffice:fixtures` is the fastest no-secrets path: it uses the
+deterministic e2e PostgreSQL/Redis fixtures instead of requiring a fully seeded
+catalog. Stop any existing `npm run dev:backoffice` process before switching to
+the fixture command because Next.js permits only one dev server per app
+directory.
+When you need the real seeded local catalog instead of fixtures, run
+`npm run setup:backoffice:local-data` once. It runs `setup:local-db`,
+`copy:env`, and `populate-db` in order; then start the app with
+`npm run dev:backoffice`.
 Use `npm run check:backoffice` before publishing most backoffice changes; it
 builds `packages/shared`, runs the module-size guard, type-checks
 `apps/backoffice`, and runs the backoffice Vitest suite. Use

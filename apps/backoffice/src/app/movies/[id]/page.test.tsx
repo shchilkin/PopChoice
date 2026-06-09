@@ -45,7 +45,7 @@ describe('CatalogMovieDetailRoute', () => {
 
     const element = await CatalogMovieDetailRoute({
       params: Promise.resolve({ id: '42' }),
-      searchParams: Promise.resolve({ repair: ['queued', 'failed'] }),
+      searchParams: Promise.resolve({ manual: 'updated', repair: ['queued', 'failed'] }),
     });
 
     expect(mocks.getCatalogMovieDetail).toHaveBeenCalledWith({
@@ -53,7 +53,11 @@ describe('CatalogMovieDetailRoute', () => {
       staleAfterDays: 11,
     });
     expect(element.type).toBe(mocks.CatalogMovieDetailPage);
-    expect(element.props).toMatchObject({ detail, repairStatus: 'queued' });
+    expect(element.props).toMatchObject({
+      detail,
+      manualStatus: 'updated',
+      repairStatus: 'queued',
+    });
   });
 
   it('renders the backoffice error page when detail loading fails', async () => {

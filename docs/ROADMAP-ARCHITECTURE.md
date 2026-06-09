@@ -104,6 +104,10 @@ PopChoice should continue evolving within the current workspace layout toward cl
 
 This is an extraction direction, not a mandate for large-scale file moves right now. Current work should optimize for clean boundaries inside the existing workspace first.
 
+UI extraction should follow [UI Development](./UI-DEVELOPMENT.md): one Storybook runner loads
+stories from app workspaces and future `packages/ui`, while shadcn-derived primitives move into the
+shared UI package only after a second real consumer appears.
+
 ## Guiding Principles
 
 - Prefer explicit boundaries over convenience imports.

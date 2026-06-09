@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
+COPY apps/backoffice/package.json ./apps/backoffice/
 COPY apps/web/package.json ./apps/web/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
@@ -24,6 +25,11 @@ COPY apps/web/public ./apps/web/public
 COPY apps/web/tsconfig.json ./apps/web/
 COPY apps/web/next.config.ts ./apps/web/
 COPY apps/web/postcss.config.mjs ./apps/web/
+COPY apps/backoffice/src ./apps/backoffice/src
+COPY apps/backoffice/next-env.d.ts ./apps/backoffice/
+COPY apps/backoffice/postcss.config.mjs ./apps/backoffice/
+COPY apps/backoffice/tsconfig.json ./apps/backoffice/
+COPY packages/ui/src ./packages/ui/src
 RUN npm run build-storybook --workspace=apps/web
 
 # Serve stage — nginx uses ~5MB RAM vs ~150MB for Node

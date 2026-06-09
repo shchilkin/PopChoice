@@ -24,6 +24,7 @@ export default async function CatalogMovieDetailRoute({
   const { id } = await params;
   const query = (await searchParams) ?? {};
   const repairStatus = getParamValue(query.repair)?.trim() ?? null;
+  const manualStatus = getParamValue(query.manual)?.trim() ?? null;
   let result: Awaited<ReturnType<typeof getCatalogMovieDetail>>;
 
   try {
@@ -47,5 +48,11 @@ export default async function CatalogMovieDetailRoute({
     notFound();
   }
 
-  return <CatalogMovieDetailPage detail={result.detail} repairStatus={repairStatus} />;
+  return (
+    <CatalogMovieDetailPage
+      detail={result.detail}
+      manualStatus={manualStatus}
+      repairStatus={repairStatus}
+    />
+  );
 }

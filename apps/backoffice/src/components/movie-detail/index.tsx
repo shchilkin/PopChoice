@@ -1,4 +1,5 @@
 import type { CatalogMovieDetail } from '@pop-choice/shared';
+import { ButtonLink } from '@pop-choice/ui';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
@@ -8,6 +9,7 @@ import {
   DuplicatePeersPanel,
   HealthFlagsPanel,
   LocalFactsPanel,
+  ManualMovieMetadataPanel,
   MetadataOverviewPanel,
   MovieIdentityPanel,
   MovieRepairPanel,
@@ -18,9 +20,11 @@ import {
 
 export function CatalogMovieDetailPage({
   detail,
+  manualStatus,
   repairStatus,
 }: {
   detail: CatalogMovieDetail;
+  manualStatus: string | null;
   repairStatus: string | null;
 }) {
   const { movie } = detail;
@@ -30,6 +34,11 @@ export function CatalogMovieDetailPage({
       active="health"
       title={movie.name}
       eyebrow="Catalog movie"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/catalog-health', label: 'Catalog health' },
+        { label: movie.name },
+      ]}
       description={
         <div className="toolbar-summary">
           <span>Movie #{movie.id}</span>
@@ -39,24 +48,27 @@ export function CatalogMovieDetailPage({
       }
       actions={
         <>
-          <a className="button" href="/">
-            Back to health
-          </a>
+          <ButtonLink href="/catalog-health">Back to health</ButtonLink>
           {movie.tmdbId === null ? null : (
-            <a
-              className="button quiet"
+            <ButtonLink
               href={`https://www.themoviedb.org/movie/${movie.tmdbId}`}
               rel="noreferrer"
               target="_blank"
+              variant="quiet"
             >
               TMDB
-            </a>
+            </ButtonLink>
           )}
         </>
       }
     >
-      <MovieIdentityPanel detail={detail} />
-      <MovieRepairPanel detail={detail} repairStatus={repairStatus} />
+      <section className="movie-cockpit" aria-label="Movie repair cockpit">
+        <MovieIdentityPanel detail={detail} />
+        <div className="movie-cockpit-actions">
+          <MovieRepairPanel detail={detail} repairStatus={repairStatus} />
+          <ManualMovieMetadataPanel detail={detail} manualStatus={manualStatus} />
+        </div>
+      </section>
       <section className="detail-grid">
         <LocalFactsPanel detail={detail} />
         <HealthFlagsPanel detail={detail} />
@@ -106,12 +118,13 @@ export function CatalogMovieNotFoundPage() {
       active="health"
       title="Movie Not Found"
       eyebrow="Catalog movie"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/catalog-health', label: 'Catalog health' },
+        { label: 'Movie not found' },
+      ]}
       description="No catalog movie exists for this id in the current backoffice database."
-      actions={
-        <a className="button" href="/">
-          Back to health
-        </a>
-      }
+      actions={<ButtonLink href="/catalog-health">Back to health</ButtonLink>}
     >
       <section className="panel">
         <EmptyState>

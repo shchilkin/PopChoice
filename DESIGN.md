@@ -108,6 +108,16 @@ Playfulness is earned through texture and motion, not decoration. The animated m
 - Restrained surface depth: flat at rest, depth earned by state
 - Motion in service of feedback, not spectacle
 
+### Backoffice Direction
+
+The backoffice is a working console, not a brand showcase. Prefer a minimal, clean, highly readable interface with direct hierarchy, compact controls, and calm surfaces. It should help an operator find the next action quickly, verify state, and move on.
+
+- Prefer spacing, grouping, and typography over divider lines. Add horizontal rules, borders, and line breaks only when they clarify a real boundary or prevent ambiguity.
+- Keep page headers quiet: title, short purpose, optional actions. Do not duplicate context badges when the product area is already named.
+- Show actionable work first. Healthy or resolved state belongs in compact secondary summaries below the work queue, not as full-size panels mixed into the action list.
+- Avoid decorative glow, ambient shine, or showcase effects in operational views. Reserve accent color for active navigation, warnings, repair actions, and status.
+- Prefer one-line labels and copy when they remain readable. Let layout breathe with vertical spacing instead of forced line breaks.
+
 ## 2. Colors: The Marquee Palette
 
 A committed accent strategy: gold and amber carry the brand, warm and cool neutrals carry the surfaces. Nothing competes with the accent; everything else steps back.
@@ -209,7 +219,7 @@ Buttons are the most-touched element in the quiz flow — they need to feel sati
 - **Position:** Sticky, `z-50`
 - **Background:** Frosted: `--pc-header-bg` (rgba 0.85–0.92 on base color) + `backdrop-filter: blur(16px)`
 - **Border-bottom:** 1px `--pc-bd1` (rgba(0,0,0,0.06))
-- **Logo:** Oswald 600, uppercase, 1.4rem, letter-spacing 0.12em, gold-to-amber gradient text (the one permitted gradient-text use)
+- **Logo:** Oswald 600, uppercase, 1.4rem, letter-spacing 0.12em, solid gold text. Emphasis comes from weight and spacing, not gradients.
 - **Nav links (active):** 12px radius pill, `--pc-gold-subtle` background, `--pc-gold-text` color
 - **Nav links (inactive):** Transparent, `--pc-t3` color. Hover: slight background tint.
 - **Transition:** `transition-colors 200ms`
@@ -248,7 +258,7 @@ The quiz step indicator. Dots morph between states — the shape change is the s
 - **Don't** copy streaming platform aesthetics: dark backgrounds with red or blue accents (Netflix, Disney, Max). Category-reflex palettes are prohibited.
 - **Don't** use Amazon-style "you might also like" card grids — transactional, invisible, soulless.
 - **Don't** over-design into heavy editorial film-festival territory — alienating, prioritizes aesthetic over instant comprehension.
-- **Don't** use gradient text (`background-clip: text` + gradient) on anything except the logo wordmark. The `.pc-gradient-text` class is the sole permitted use.
+- **Don't** use gradient text. Use a solid accent color with clear weight and spacing instead.
 - **Don't** use `border-left` or `border-right` greater than 1px as a colored accent stripe on cards, list items, or callouts.
 - **Don't** use Oswald in lowercase or without letter-spacing — it reads as an error, not a design choice.
 - **Don't** layer gold on gold. One gold-role element per visual cluster. When in doubt, the CTA is the gold element; everything else defers.

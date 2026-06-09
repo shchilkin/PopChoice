@@ -30,7 +30,7 @@ function buildRepairRedirectUrl({
 }
 
 export async function POST(request: NextRequest) {
-  let returnPath = '/';
+  let returnPath = '/catalog-health';
 
   try {
     if (!isSameOriginRequest(request)) {
@@ -38,11 +38,15 @@ export async function POST(request: NextRequest) {
         return backofficeActionFailureResponse('Forbidden.', 403);
       }
 
-      return NextResponse.redirect(backofficeRedirectUrl(request, '/?repair=forbidden'), 303);
+      return NextResponse.redirect(
+        backofficeRedirectUrl(request, '/catalog-health?repair=forbidden'),
+        303,
+      );
     }
 
     const formData = await request.formData();
-    returnPath = parseBackofficeReturnPath(formData.get('return_to'));
+    const returnToValue = formData.get('return_to');
+    returnPath = returnToValue === null ? returnPath : parseBackofficeReturnPath(returnToValue);
     const result = await performCatalogRepairAction(formData, request.headers);
 
     if (wantsBackofficeJsonResponse(request)) {

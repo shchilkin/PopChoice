@@ -238,6 +238,7 @@ renders the same files from `apps/docs`:
 npm run dev:docs     # http://localhost:3003
 npm run build:docs   # production docs build
 npm run dev:backoffice # catalog-health and TMDB-review operator UI
+npm run dev:backoffice:fixtures # backoffice against deterministic local fixtures
 ```
 
 - **[Setup Guide](./docs/SETUP.md)** — Complete setup instructions
@@ -296,6 +297,9 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 npm run dev                         # Start development server (repo root)
 npm run dev:docs                    # Start documentation site at http://localhost:3003
 npm run dev:backoffice              # Start catalog-health and TMDB-review operator UI
+npm run setup:backoffice:fixtures   # Prepare deterministic PostgreSQL/Redis fixtures
+npm run dev:backoffice:fixtures     # Start backoffice against local fixtures
+npm run setup:backoffice:local-data # Prepare seeded local DB/env/catalog for backoffice
 npm run build                       # Build for production (repo root)
 npm run build:bull-board            # Build Bull Board runtime entrypoint
 npm run build:docs                  # Build the documentation site
@@ -324,6 +328,7 @@ npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
 npm run copy:env             # Sync root .env into apps/services workspaces
 npm run migrate:db           # Apply idempotent SQL migrations
 npm run populate-db          # Populate database with movie data
+npm run setup:backoffice:local-data # Run setup:local-db, copy:env, and populate-db
 npm run catalog:health       # Report catalog metadata coverage and likely duplicates
 npm run analyze-movies       # Analyze movie data for embeddings
 npm run calibrate-similarity # Calibrate vector similarity thresholds

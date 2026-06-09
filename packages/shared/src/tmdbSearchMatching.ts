@@ -29,6 +29,8 @@ export type TMDBSearchMatchResult<TCandidate extends TMDBScoredSearchCandidate> 
     };
 
 const EXACT_TITLE_MATCH_SCORE = 0.75;
+const FUZZY_TITLE_MATCH_SCORE = 0.68;
+const STRONG_TOKEN_SIMILARITY = 0.82;
 
 export function normalizeTMDBTitle(title: string): string {
   return title
@@ -54,7 +56,32 @@ export function scoreTMDBTitleMatch(
 
   if (!target || (!title && !originalTitle)) return 0;
   if (target === title || target === originalTitle) return EXACT_TITLE_MATCH_SCORE;
+  if (isStrongFuzzyTitleMatch(target, title) || isStrongFuzzyTitleMatch(target, originalTitle)) {
+    return FUZZY_TITLE_MATCH_SCORE;
+  }
   return 0;
+}
+
+function titleTokens(title: string): string[] {
+  return title.split(' ').filter(Boolean);
+}
+
+function tokenDiceScore(left: string, right: string): number {
+  const leftTokens = new Set(titleTokens(left));
+  const rightTokens = new Set(titleTokens(right));
+  if (leftTokens.size < 2 || rightTokens.size < 2) return 0;
+
+  let intersection = 0;
+  for (const token of leftTokens) {
+    if (rightTokens.has(token)) intersection += 1;
+  }
+
+  return (2 * intersection) / (leftTokens.size + rightTokens.size);
+}
+
+function isStrongFuzzyTitleMatch(target: string, candidate: string): boolean {
+  if (!candidate) return false;
+  return tokenDiceScore(target, candidate) >= STRONG_TOKEN_SIMILARITY;
 }
 
 export async function collectTMDBSearchResults<TResult extends { id: number }>(input: {

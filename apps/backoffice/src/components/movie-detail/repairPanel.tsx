@@ -1,4 +1,5 @@
 import type { CatalogMovieDetail } from '@pop-choice/shared';
+import { Badge, Button } from '@pop-choice/ui';
 
 import { repairableHealthFlags, repairFlashMessage, repairFlashTone } from './helpers';
 
@@ -23,9 +24,9 @@ export function MovieRepairPanel({
             Queue one catalog-maintenance job for this movie through the existing paced worker path.
           </div>
         </div>
-        <span className={repairableFlags.length > 0 ? 'pill repairable' : 'pill'}>
+        <Badge variant={repairableFlags.length > 0 ? 'accent' : 'muted'}>
           {repairableFlags.length > 0 ? `${repairableFlags.length} repairable` : 'No action'}
-        </span>
+        </Badge>
       </div>
       {flash ? <p className={`repair-message ${flashTone}`}>{flash}</p> : null}
       {repairableFlags.length > 0 ? (
@@ -52,9 +53,9 @@ export function MovieRepairPanel({
               ))}
             </select>
           </label>
-          <button className="button primary" type="submit">
+          <Button type="submit" variant="primary">
             Queue focused repair
-          </button>
+          </Button>
         </form>
       ) : activeFlags.length > 0 ? (
         <p className="empty">

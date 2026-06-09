@@ -28,7 +28,7 @@ describe('catalog health issue panel presentation', () => {
         pageSize: 50,
       }),
     ).toBe(
-      '/?issue=missing+poster%2Furl&issuePage=2&issuePageSize=50#issue-missing%20poster%2Furl',
+      '/catalog-health?issue=missing+poster%2Furl&issuePage=2&issuePageSize=50#issue-missing%20poster%2Furl',
     );
   });
 
@@ -38,11 +38,30 @@ describe('catalog health issue panel presentation', () => {
     );
 
     expect(html).toContain('Repairable');
+    expect(html).toContain('class="issue-panel-actions"');
+    expect(html).toContain('class="bulk-repair-actions has-background-batch"');
     expect(html).toContain('Queue next 25');
-    expect(html).toContain('Queue first 1000');
-    expect(html).toContain('Browse all 1200 rows');
+    expect(html).toContain('Queues 25 paced jobs now. Verify the lane before batching.');
+    expect(html).toContain('Background batch');
+    expect(html).toContain('First 1000');
+    expect(html).toContain('Start batch for first 1000');
+    expect(html).toContain('Workers add jobs in chunks.');
+    expect(html).toContain('Inspect all 1200 affected rows');
+    expect(html).not.toContain('Browse rows');
     expect(html).toContain('data-repair-row');
     expect(html).toContain('Queue backfill');
+  });
+
+  it('stretches a single bulk repair action across the action cluster', () => {
+    const html = renderToStaticMarkup(
+      <CatalogIssuePanel issue={issue({ count: 7 })} issuePage={null} />,
+    );
+
+    expect(html).toContain('class="bulk-repair-actions single"');
+    expect(html).toContain('Queue next 7');
+    expect(html).toContain('Queues 7 paced jobs now. Verify the lane before batching.');
+    expect(html).not.toContain('Background batch');
+    expect(html).not.toContain('Queue all');
   });
 
   it('shows active page pagination instead of sample-only footer', () => {
@@ -60,9 +79,9 @@ describe('catalog health issue panel presentation', () => {
       />,
     );
 
-    expect(html).toContain('Browsing rows');
     expect(html).toContain('Showing 26-50 of 100 affected movies');
-    expect(html).not.toContain('Browse all 100 rows');
+    expect(html).not.toContain('Browse rows');
+    expect(html).not.toContain('Inspect all 100 affected rows');
   });
 
   it('does not show repair controls for healthy issues', () => {

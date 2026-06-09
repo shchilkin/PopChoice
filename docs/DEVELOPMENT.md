@@ -101,15 +101,17 @@ against an older schema until migrations run or the preview is recreated.
 
 ## Local Runbook
 
-For a full local environment that matches the async recommendation flow, use this sequence from the repo root:
+For seeded local data that matches the async recommendation flow, use this sequence from the repo root:
 
 ```bash
 cp .env.example .env
 npm install
-npm run setup:local-db
-npm run copy:env
-npm run populate-db
+npm run setup:backoffice:local-data
 ```
+
+`setup:backoffice:local-data` runs `setup:local-db`, `copy:env`, and
+`populate-db` in order. Use those individual scripts only when you need to
+inspect or rerun one step.
 
 Then run the app in separate terminals:
 
@@ -126,6 +128,29 @@ npm run bull-board
 ```
 
 If you change the root `.env`, re-run `npm run copy:env` before restarting the app or workers.
+
+### Local Backoffice Fixture Mode
+
+For backoffice UI development, prefer the deterministic local fixture path when
+you do not need the full seeded catalog or live TMDB/OpenAI credentials:
+
+```bash
+npm run setup:backoffice:fixtures
+npm run dev:backoffice:fixtures
+```
+
+`setup:backoffice:fixtures` starts the isolated e2e PostgreSQL and Redis services
+on `127.0.0.1:55432` and `127.0.0.1:56379`, applies migrations, and seeds a
+small deterministic catalog. `dev:backoffice:fixtures` starts the Next.js
+backoffice on `http://127.0.0.1:3004` against those fixtures with operator auth
+disabled. This is the fastest path for catalog-health, TMDB-review,
+repair-batch, and manual-metadata UI work. Use the seeded local data runbook
+above when you need real seed/discovery data or app/worker integration.
+
+Next.js allows only one dev server per app directory. If you already have
+`npm run dev:backoffice` running, stop that process before starting
+`npm run dev:backoffice:fixtures`; otherwise Next.js will report that another
+dev server is already running.
 
 ## Mock Data Fallback
 

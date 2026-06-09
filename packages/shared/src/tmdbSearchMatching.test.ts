@@ -23,6 +23,16 @@ describe('TMDB search matching', () => {
     );
   });
 
+  it('scores strong multi-token fuzzy title matches without accepting broad one-word titles', () => {
+    expect(
+      scoreTMDBTitleMatch(
+        { title: 'Ivan Vasilyevich Changes His Profession' },
+        'Ivan Vasilyevich Changes Profession',
+      ),
+    ).toBe(0.68);
+    expect(scoreTMDBTitleMatch({ title: 'Other Movie' }, 'Movie')).toBe(0);
+  });
+
   it('deduplicates year-scoped and broad TMDB search results by id', async () => {
     const results = await collectTMDBSearchResults({
       title: 'Movie',

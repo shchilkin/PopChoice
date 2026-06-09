@@ -116,6 +116,7 @@ export type {
   CatalogRepairActionAudit,
   CatalogRepairActionAuditPage,
   CatalogRepairBatch,
+  CatalogRepairBatchAction,
   CatalogRepairBatchDetail,
   CatalogRepairBatchItem,
   CatalogRepairBatchItemPage,
@@ -134,6 +135,16 @@ export type {
   UpdateCatalogRepairBatchItemEnqueueInput,
   UpdateCatalogRepairBatchItemStatusInput,
 } from './catalogRepairActions.js';
+export {
+  applyCatalogMovieManualFields,
+  catalogMovieManualFieldsError,
+} from './catalogMovieManualFields.js';
+export type {
+  ApplyCatalogMovieManualFieldsInput,
+  ApplyCatalogMovieManualFieldsResult,
+  CatalogMovieManualFieldKey,
+  CatalogMovieManualFields,
+} from './catalogMovieManualFields.js';
 export { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 export {
   applyCatalogDuplicateMovieMerge,

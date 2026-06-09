@@ -83,6 +83,11 @@ export function RecommendationEvalDetailPage({ detail }: { detail: Recommendatio
       active="recommendation-evals"
       title={`Recommendation Eval ${run.id.slice(0, 8)}`}
       eyebrow="Eval detail"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/recommendation-evals', label: 'Recommendation evals' },
+        { label: `Eval ${run.id.slice(0, 8)}` },
+      ]}
       description={
         <div className="toolbar-summary">
           <RecommendationEvalStatusBadge status={run.status} />
@@ -172,6 +177,11 @@ export function RecommendationEvalNotFoundPage({ runId }: { runId: string }) {
       active="recommendation-evals"
       title="Recommendation Eval Not Found"
       eyebrow="Eval detail"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/recommendation-evals', label: 'Recommendation evals' },
+        { label: 'Eval not found' },
+      ]}
       description={`No recommendation eval run exists for id ${runId}.`}
       actions={
         <a className="button" href="/recommendation-evals">

@@ -48,6 +48,11 @@ export function RepairBatchDetailPage({
       active="repair-batches"
       title={`Repair Batch #${batch.id}`}
       eyebrow="Repair detail"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/repair-batches', label: 'Repair batches' },
+        { label: `Batch #${batch.id}` },
+      ]}
       description={
         <div className="toolbar-summary">
           <RepairStatusBadge status={batch.status} />
@@ -170,6 +175,11 @@ export function RepairBatchNotFoundPage({ batchId }: { batchId: string }) {
       active="repair-batches"
       title="Repair Batch Not Found"
       eyebrow="Repair detail"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/repair-batches', label: 'Repair batches' },
+        { label: 'Batch not found' },
+      ]}
       description={`No durable catalog repair batch exists for id ${batchId}.`}
       actions={
         <a className="button" href="/repair-batches">
