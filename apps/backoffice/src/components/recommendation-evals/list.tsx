@@ -1,8 +1,9 @@
 import type { RecommendationEvalRun, RecommendationEvalRunPage } from '@pop-choice/shared';
+import { Button, ButtonLink } from '@pop-choice/ui';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
-import { DataTable, SimplePaginationControls } from '../shared';
+import { DataTable, EmptyState, SimplePaginationControls } from '../shared';
 import { buildRecommendationEvalPageHref, RecommendationEvalStatusBadge } from './shared';
 
 function RecommendationEvalRows({ runs }: { runs: RecommendationEvalRun[] }) {
@@ -33,12 +34,9 @@ function RecommendationEvalRows({ runs }: { runs: RecommendationEvalRun[] }) {
           <td>{typeof run.summary.failed === 'number' ? run.summary.failed : '-'}</td>
           <td>{formatBackofficeDateTime(run.createdAt)}</td>
           <td>
-            <a
-              className="button small"
-              href={`/recommendation-evals/${encodeURIComponent(run.id)}`}
-            >
+            <ButtonLink size="sm" href={`/recommendation-evals/${encodeURIComponent(run.id)}`}>
               Open
-            </a>
+            </ButtonLink>
           </td>
         </tr>
       ))}
@@ -48,8 +46,8 @@ function RecommendationEvalRows({ runs }: { runs: RecommendationEvalRun[] }) {
 
 function RecommendationEvalRunForm() {
   return (
-    <div className="eval-action-grid">
-      <form className="inline-action-form" action="/recommendation-evals/actions" method="post">
+    <div className="eval-run-stack">
+      <form className="eval-safe-form" action="/recommendation-evals/actions" method="post">
         <label>
           <span>Mode</span>
           <select name="mode" defaultValue="real-data">
@@ -57,28 +55,32 @@ function RecommendationEvalRunForm() {
             <option value="mock">Mock fixtures</option>
           </select>
         </label>
-        <button className="button success" type="submit">
+        <p>Runs deterministic, non-provider evals that are safe for routine validation.</p>
+        <Button type="submit" variant="success">
           Run safe eval
-        </button>
+        </Button>
       </form>
-      <form className="live-eval-form" action="/recommendation-evals/actions" method="post">
-        <input type="hidden" name="mode" value="live" />
-        <div className="issue-hint">
-          Live evals can call OpenAI and provider-backed recommendation paths. Use only for
-          intentional validation.
-        </div>
-        <label className="checkbox-line">
-          <input type="checkbox" name="acknowledge_live_cost" value="yes" />
-          <span>I understand this can spend provider credits and may be flaky.</span>
-        </label>
-        <label>
-          <span>Type RUN LIVE RECOMMENDATION EVAL</span>
-          <input name="live_confirmation" autoComplete="off" />
-        </label>
-        <button className="button danger" type="submit">
-          Run live eval
-        </button>
-      </form>
+      <details className="live-eval-disclosure">
+        <summary>Live provider eval</summary>
+        <form className="live-eval-form" action="/recommendation-evals/actions" method="post">
+          <input type="hidden" name="mode" value="live" />
+          <div className="issue-hint">
+            Live evals can call OpenAI and provider-backed recommendation paths. Use only for
+            intentional validation.
+          </div>
+          <label className="checkbox-line">
+            <input type="checkbox" name="acknowledge_live_cost" value="yes" />
+            <span>I understand this can spend provider credits and may be flaky.</span>
+          </label>
+          <label>
+            <span>Type RUN LIVE RECOMMENDATION EVAL</span>
+            <input name="live_confirmation" autoComplete="off" />
+          </label>
+          <Button type="submit" variant="danger">
+            Run live eval
+          </Button>
+        </form>
+      </details>
     </div>
   );
 }
@@ -112,68 +114,70 @@ export function RecommendationEvalListPage({
       description="Run safe recommendation evals, watch queue status, and inspect persisted fixture results."
       actions={
         <>
-          <a className="button" href="/recommendation-evals">
-            Refresh
-          </a>
-          <a className="button quiet" href="/api/recommendation-evals">
+          <ButtonLink href="/recommendation-evals">Refresh</ButtonLink>
+          <ButtonLink variant="quiet" href="/api/recommendation-evals">
             JSON
-          </a>
+          </ButtonLink>
         </>
       }
     >
       <RecommendationEvalFlash status={status} />
-      <section className="panel">
-        <div className="panel-header">
-          <div>
-            <h2>Run eval</h2>
-            <div className="issue-hint">
-              Safe evals are the default. Live provider evals require an explicit guard.
-            </div>
-          </div>
+      <section className="eval-run-panel" aria-labelledby="recommendation-eval-run-title">
+        <div className="eval-run-panel-heading">
+          <h2 id="recommendation-eval-run-title">Run eval</h2>
+          <p>Safe evals are the default. Live provider evals require an explicit guard.</p>
         </div>
-        <div className="panel-body">
-          <RecommendationEvalRunForm />
-        </div>
+        <RecommendationEvalRunForm />
       </section>
       <section className="panel">
         <div className="panel-header">
           <h2>Recent runs</h2>
           <span className="count">{runPage.totalCount}</span>
         </div>
-        <SimplePaginationControls
-          ariaLabel="Recommendation eval run pagination"
-          emptyLabel="No recommendation eval runs"
-          itemLabel="eval runs"
-          limit={runPage.limit}
-          offset={runPage.offset}
-          totalCount={runPage.totalCount}
-          hrefForPage={(page) => buildRecommendationEvalPageHref({ page, pageSize: runPage.limit })}
-        />
-        <DataTable
-          className="recommendation-eval-table"
-          columns={[
-            'Run',
-            'Status',
-            'Mode',
-            'Source',
-            'Actor',
-            'Passed',
-            'Failed',
-            'Created',
-            'Actions',
-          ]}
-        >
-          <RecommendationEvalRows runs={runPage.runs} />
-        </DataTable>
-        <SimplePaginationControls
-          ariaLabel="Recommendation eval run pagination bottom"
-          emptyLabel="No recommendation eval runs"
-          itemLabel="eval runs"
-          limit={runPage.limit}
-          offset={runPage.offset}
-          totalCount={runPage.totalCount}
-          hrefForPage={(page) => buildRecommendationEvalPageHref({ page, pageSize: runPage.limit })}
-        />
+        {runPage.totalCount === 0 ? (
+          <EmptyState>No recommendation eval runs have been recorded yet.</EmptyState>
+        ) : (
+          <>
+            <SimplePaginationControls
+              ariaLabel="Recommendation eval run pagination"
+              emptyLabel="No recommendation eval runs"
+              itemLabel="eval runs"
+              limit={runPage.limit}
+              offset={runPage.offset}
+              totalCount={runPage.totalCount}
+              hrefForPage={(page) =>
+                buildRecommendationEvalPageHref({ page, pageSize: runPage.limit })
+              }
+            />
+            <DataTable
+              className="recommendation-eval-table"
+              columns={[
+                'Run',
+                'Status',
+                'Mode',
+                'Source',
+                'Actor',
+                'Passed',
+                'Failed',
+                'Created',
+                'Actions',
+              ]}
+            >
+              <RecommendationEvalRows runs={runPage.runs} />
+            </DataTable>
+            <SimplePaginationControls
+              ariaLabel="Recommendation eval run pagination bottom"
+              emptyLabel="No recommendation eval runs"
+              itemLabel="eval runs"
+              limit={runPage.limit}
+              offset={runPage.offset}
+              totalCount={runPage.totalCount}
+              hrefForPage={(page) =>
+                buildRecommendationEvalPageHref({ page, pageSize: runPage.limit })
+              }
+            />
+          </>
+        )}
       </section>
     </BackofficeLayout>
   );

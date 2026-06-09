@@ -309,7 +309,7 @@ CREATE TABLE IF NOT EXISTS catalog_repair_audit (
   result jsonb NOT NULL DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT catalog_repair_audit_action_check CHECK (
-    action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
+    action IN ('enqueue_backfill', 'bulk_enqueue_backfill', 'manual_update')
   )
 );
 
@@ -318,7 +318,7 @@ ALTER TABLE catalog_repair_audit
 
 ALTER TABLE catalog_repair_audit
   ADD CONSTRAINT catalog_repair_audit_action_check CHECK (
-    action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
+    action IN ('enqueue_backfill', 'bulk_enqueue_backfill', 'manual_update')
   );
 
 CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_target_created_at

@@ -8,27 +8,20 @@ import { CatalogStat } from './shared';
 
 import type { CatalogHealthLiveData } from '../lib/catalogHealthLive';
 import type {
+  CatalogNextActionViewModel,
   CatalogQueueStatusViewModel,
-  CatalogStatusStripViewModel,
 } from './catalogHealthRealtimeViewModel';
 
-function CatalogStatusStrip({ status }: { status: CatalogStatusStripViewModel }) {
+function CatalogNextAction({ action }: { action: CatalogNextActionViewModel }) {
   return (
-    <section className={status.className} aria-label="Catalog health status">
+    <section className={action.className} aria-label="Next operator action">
       <div>
-        <div className="status-heading">
-          <span className="status-dot" aria-hidden="true" />
-          <span>{status.heading}</span>
-        </div>
-        <p className="status-copy">{status.copy}</p>
+        <div className="next-action-title">{action.title}</div>
+        <p>{action.copy}</p>
       </div>
-      <div className="status-metrics" aria-label="Open catalog signals">
-        {status.metrics.map((metric) => (
-          <span key={metric.label} className={metric.className}>
-            {metric.label}
-          </span>
-        ))}
-      </div>
+      <a className="button small primary" href={action.href}>
+        {action.label}
+      </a>
     </section>
   );
 }
@@ -94,6 +87,7 @@ function CatalogQueueStatus({
           </a>
         </div>
       </div>
+      {queue.diagnosticCopy ? <p className="queue-diagnostic">{queue.diagnosticCopy}</p> : null}
       <div className="queue-counts">
         {queue.counts.map((count) => (
           <span key={count.label}>
@@ -125,8 +119,8 @@ function BullBoardAction({
   }
 
   return (
-    <span className="button small disabled" aria-disabled="true">
-      Queue dashboard unavailable
+    <span className="queue-diagnostic-action" aria-disabled="true">
+      Bull Board unavailable
     </span>
   );
 }
@@ -150,7 +144,7 @@ export function CatalogHealthRealtimeOverview({
   return (
     <>
       <CatalogHealthLiveRefresh initialData={initialData} onSnapshot={setData} />
-      <CatalogStatusStrip status={view.status} />
+      <CatalogNextAction action={view.nextAction} />
       <CatalogQueueStatus
         bullBoardUrl={bullBoardUrl}
         queue={view.queue}

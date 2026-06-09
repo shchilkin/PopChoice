@@ -10,6 +10,7 @@ COPY package.json package-lock.json ./
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/ui/package.json ./packages/ui/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
@@ -62,6 +63,7 @@ COPY package.json package-lock.json ./
 COPY apps/docs/package.json ./apps/docs/
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/ui/package.json ./packages/ui/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/

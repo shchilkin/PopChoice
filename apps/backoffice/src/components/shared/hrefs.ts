@@ -11,12 +11,12 @@ export function buildCatalogIssuePageHref({
   params.set('issue', issueKey);
   params.set('issuePage', String(page));
   params.set('issuePageSize', String(pageSize));
-  return `/?${params.toString()}#issue-${encodeURIComponent(issueKey)}`;
+  return `/catalog-health?${params.toString()}#issue-${encodeURIComponent(issueKey)}`;
 }
 
 export function buildRepairAuditPageHref({ page, pageSize }: { page: number; pageSize: number }) {
   const params = new URLSearchParams();
   params.set('auditPage', String(page));
   params.set('auditPageSize', String(pageSize));
-  return `/?${params.toString()}#repair-audit`;
+  return `/catalog-health?${params.toString()}#repair-audit`;
 }

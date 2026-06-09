@@ -6,5 +6,6 @@ export * from './backofficeRuntime';
 export * from './catalogRepairActions';
 export * from './catalogRepairActionResponse';
 export * from './catalogRepairBatchActions';
+export * from './catalogMovieManualActions';
 export * from './recommendationEvalActions';
 export * from './tmdbReviewActions';

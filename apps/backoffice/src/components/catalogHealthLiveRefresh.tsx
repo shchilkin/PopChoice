@@ -202,6 +202,16 @@ export function CatalogHealthLiveRefresh({
     lastSnapshotAt,
     lastSnapshotTrigger,
   });
+  const shouldShowStatus =
+    hasMounted && (connectionState === 'fallback' || isBusy || Boolean(status.errorText));
+
+  if (!shouldShowStatus) {
+    return (
+      <div className="sr-only" aria-live="polite">
+        {status.statusCopy}. {hasMounted ? status.metaCopy : 'Waiting'}.
+      </div>
+    );
+  }
 
   return (
     <div className={`live-refresh ${connectionState}`} aria-live="polite">

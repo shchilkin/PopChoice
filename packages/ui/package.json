@@ -1,0 +1,53 @@
+{
+  "name": "@pop-choice/ui",
+  "version": "0.1.0-beta.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./button": {
+      "types": "./src/button.tsx",
+      "default": "./src/button.tsx"
+    },
+    "./badge": {
+      "types": "./src/badge.tsx",
+      "default": "./src/badge.tsx"
+    },
+    "./breadcrumb": {
+      "types": "./src/breadcrumb.tsx",
+      "default": "./src/breadcrumb.tsx"
+    },
+    "./tabs": {
+      "types": "./src/tabs.tsx",
+      "default": "./src/tabs.tsx"
+    },
+    "./table": {
+      "types": "./src/table.tsx",
+      "default": "./src/table.tsx"
+    },
+    "./utils": {
+      "types": "./src/utils.ts",
+      "default": "./src/utils.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "dev": "tsc --noEmit --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.16",
+    "typescript": "6.0.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  }
+}

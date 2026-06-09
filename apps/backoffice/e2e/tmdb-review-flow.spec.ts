@@ -8,13 +8,13 @@ test('serves the operator app against isolated e2e Postgres and Redis', async ({
   expect(health.ok()).toBe(true);
   await expect(health.text()).resolves.toBe('ok');
 
-  await page.goto('/');
+  await page.goto('/catalog-health');
   await expect(page.getByRole('heading', { name: 'Catalog Health' })).toBeVisible();
   await expect(page.getByText('Catalog maintenance queue')).toBeVisible();
 });
 
 test('operator queues a catalog repair and sees the queued job and audit row', async ({ page }) => {
-  await page.goto('/?issue=missing_poster_url');
+  await page.goto('/catalog-health?issue=missing_poster_url');
 
   await expect(page.getByRole('heading', { name: 'Catalog Health' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Missing poster_url' })).toBeVisible();
@@ -52,7 +52,7 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
   await expect(queuedJobRow).toBeVisible();
   await expect(queuedJobRow).toContainText('Reason: missing_metadata');
 
-  await page.goto('/#repair-audit');
+  await page.goto('/catalog-health#repair-audit');
 
   await expect(page.getByRole('heading', { name: 'Recent repair actions' })).toBeVisible();
   const auditRow = page

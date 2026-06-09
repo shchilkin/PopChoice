@@ -4,6 +4,7 @@ import type {
   CatalogRepairActionAuditPage,
   DuplicateIdentityGroup,
 } from '@pop-choice/shared';
+import { Badge, ButtonLink } from '@pop-choice/ui';
 
 import type { CatalogHealthLiveData } from '../../lib/catalogHealthLive';
 import { REPAIRABLE_CATALOG_ISSUE_KEYS } from '../../lib/backoffice';
@@ -11,11 +12,15 @@ import { BackofficeLayout } from '../backoffice-layout';
 import { RepairAuditRows } from '../catalog-repair-audit';
 import { CatalogHealthRealtimeOverview } from '../catalogHealthRealtimeOverview';
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
-import { formatLiveSyncTime } from '../liveRefreshTime';
 import { CountPill, SimplePaginationControls } from '../shared';
 import { buildRepairAuditPageHref } from '../shared/hrefs';
 import { CatalogIssuePanel } from './issuePanel';
-import { buildDuplicateReportViewModel, buildRepairFlashViewModel } from './viewModels';
+import {
+  buildCatalogActionSectionsViewModel,
+  buildCatalogWorkQueueViewModel,
+  buildDuplicateReportViewModel,
+  buildRepairFlashViewModel,
+} from './viewModels';
 
 function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
   const view = buildRepairFlashViewModel(repairStatus);
@@ -46,16 +51,18 @@ function DuplicateGroup({ group }: { group: DuplicateIdentityGroup }) {
 }
 
 function DuplicateReport({
+  id,
   title,
   report,
 }: {
+  id: string;
   title: string;
   report: CatalogHealthReport['duplicateTmdbIds'];
 }) {
   const view = buildDuplicateReportViewModel(report);
 
   return (
-    <section className={view.panelClassName}>
+    <section id={id} className={view.panelClassName}>
       <div className="panel-header">
         <div className="issue-title">
           <div className="issue-title-row">
@@ -77,6 +84,77 @@ function DuplicateReport({
   );
 }
 
+function CatalogWorkQueue({ report }: { report: CatalogHealthReport }) {
+  const view = buildCatalogWorkQueueViewModel(report);
+
+  return (
+    <section className="work-queue" aria-labelledby="catalog-work-queue-title">
+      <div className="work-queue-heading">
+        <div>
+          <p className="page-kicker">Operator queue</p>
+          <h2 id="catalog-work-queue-title">Start here</h2>
+          <p>{view.summary}</p>
+        </div>
+        <Badge variant={view.items.length > 0 ? 'warning' : 'success'}>
+          {view.items.length} open lane{view.items.length === 1 ? '' : 's'}
+        </Badge>
+      </div>
+      {view.items.length === 0 ? (
+        <p className="empty compact">No prioritized catalog work is open.</p>
+      ) : (
+        <ol className="work-queue-list">
+          {view.items.map((item) => (
+            <li className="work-queue-item" key={item.issueKey}>
+              <div className="work-queue-item-main">
+                <div className="work-queue-item-title">
+                  <Badge variant={item.lane === 'repair' ? 'accent' : 'warning'}>
+                    {item.priorityLabel}
+                  </Badge>
+                  <strong>{item.label}</strong>
+                  <span>{item.count}</span>
+                </div>
+                <p>{item.detail}</p>
+              </div>
+              <ButtonLink
+                href={item.actionHref}
+                size="sm"
+                variant={item.lane === 'repair' ? 'primary' : 'secondary'}
+              >
+                {item.actionLabel}
+              </ButtonLink>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function HealthyCatalogChecks({ checks }: { checks: CatalogHealthReport['issues'] }) {
+  if (checks.length === 0) return null;
+
+  return (
+    <section className="healthy-checks" aria-labelledby="healthy-catalog-checks-title">
+      <div className="healthy-checks-heading">
+        <div>
+          <p className="page-kicker">Resolved checks</p>
+          <h2 id="healthy-catalog-checks-title">No affected rows</h2>
+        </div>
+        <Badge variant="success">{checks.length} clear</Badge>
+      </div>
+      <ul className="healthy-checks-list">
+        {checks.map((issue) => (
+          <li aria-label={`${issue.label}: 0 affected`} key={issue.key}>
+            <span aria-hidden="true" className="healthy-checks-dot" />
+            <span>{issue.label}</span>
+            <span>0 affected</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function CatalogHealthPage({
   auditPage,
   bullBoardUrl,
@@ -92,17 +170,14 @@ export function CatalogHealthPage({
   issueMoviePage: CatalogHealthIssueMoviePage | null;
   repairStatus: string | null;
 }) {
+  const actionSections = buildCatalogActionSectionsViewModel(report);
+
   return (
     <BackofficeLayout
       active="health"
       title="Catalog Health"
       eyebrow="Catalog operations"
-      description={
-        <>
-          Updated {formatLiveSyncTime(report.generatedAt)}. Changes appear automatically while you
-          work.
-        </>
-      }
+      description="Resolve catalog data issues in priority order, then verify worker progress below."
     >
       <RepairFlash repairStatus={repairStatus} />
       <CatalogHealthRealtimeOverview
@@ -110,15 +185,35 @@ export function CatalogHealthPage({
         initialData={initialLiveData}
         repairableIssueKeys={Array.from(REPAIRABLE_CATALOG_ISSUE_KEYS)}
       />
+      <CatalogWorkQueue report={report} />
       <div className="grid">
-        {report.issues.map((issue) => (
+        {actionSections.issues.map((issue) => (
           <CatalogIssuePanel key={issue.key} issue={issue} issuePage={issueMoviePage} />
         ))}
-        <DuplicateReport title="Duplicate TMDB ids" report={report.duplicateTmdbIds} />
-        <DuplicateReport
-          title="Duplicate normalized title/year groups"
-          report={report.duplicateNormalizedTitleYears}
-        />
+        {actionSections.duplicateTmdbIdsVisible ? (
+          <DuplicateReport
+            id="duplicate-tmdb-ids"
+            title="Duplicate TMDB ids"
+            report={report.duplicateTmdbIds}
+          />
+        ) : null}
+        {actionSections.duplicateNormalizedTitleYearsVisible ? (
+          <DuplicateReport
+            id="duplicate-title-year"
+            title="Duplicate normalized title/year groups"
+            report={report.duplicateNormalizedTitleYears}
+          />
+        ) : null}
+        {actionSections.hasOpenWork ? null : (
+          <section className="panel healthy">
+            <div className="panel-header">
+              <h2>Catalog checks are clear</h2>
+              <span className="pill healthy">All clear</span>
+            </div>
+            <p className="empty">No catalog data issues need operator action.</p>
+          </section>
+        )}
+        <HealthyCatalogChecks checks={actionSections.healthyChecks} />
         <section className="panel" id="repair-audit">
           <div className="panel-header">
             <h2>Recent repair actions</h2>

@@ -3,6 +3,8 @@ import { Redis } from 'ioredis';
 
 import { logger } from '@pop-choice/shared';
 
+import { redisOptionsFromUrl } from './lib/redisConnection';
+
 const RECOMMENDATION_EVAL_QUEUE_NAME = 'recommendation-evals';
 const RECOMMENDATION_EVAL_JOB_NAME = 'run-recommendation-eval';
 
@@ -46,7 +48,7 @@ function getRecommendationEvalQueue(
   if (recommendationEvalQueue) return recommendationEvalQueue;
   if (!redisUrl) return null;
 
-  redisConnection = new Redis(redisUrl, { maxRetriesPerRequest: null });
+  redisConnection = new Redis(redisOptionsFromUrl(redisUrl, { maxRetriesPerRequest: null }));
   redisConnection.on('error', (error) => {
     logger.error('Backoffice recommendation eval Redis client error', { err: error });
   });

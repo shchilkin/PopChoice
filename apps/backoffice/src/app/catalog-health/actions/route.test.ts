@@ -49,18 +49,20 @@ function createRepairRequest({
 }: {
   accept?: string;
   action?: string;
-  returnTo?: string;
+  returnTo?: string | null;
   requestedWith?: string;
 } = {}) {
+  const fields: Record<string, string> = {
+    action,
+    issue_key: 'missing_poster_url',
+    movie_id: '42',
+  };
+  if (returnTo !== null) fields.return_to = returnTo;
+
   return createBackofficeFormRequest({
     accept,
     fetch: requestedWith === 'fetch',
-    fields: {
-      action,
-      issue_key: 'missing_poster_url',
-      movie_id: '42',
-      return_to: returnTo,
-    },
+    fields,
     url: 'https://backoffice.test/catalog-health/actions',
   });
 }
@@ -246,6 +248,24 @@ describe('catalog health repair action route', () => {
     expect(response.headers.get('location')).toBe(
       'https://backoffice.test/catalog-health?issue=missing_poster_url&repair=queued',
     );
+  });
+
+  it('keeps no-return browser forms on the catalog health route', async () => {
+    mocks.performCatalogRepairAction.mockResolvedValue({
+      issueKey: 'missing_poster_url',
+      job: { jobId: 'backfill-42', status: 'queued' },
+      mode: 'single',
+      movieId: '42',
+      status: 'queued',
+    });
+
+    const response = await POST(createRepairRequest({ returnTo: null }) as never);
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'https://backoffice.test/catalog-health?repair=queued',
+    );
+    expect(mocks.parseBackofficeReturnPath).not.toHaveBeenCalled();
   });
 
   it('returns the public JSON error contract when repair action fails', async () => {

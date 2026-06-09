@@ -89,7 +89,7 @@ export function snapshotValue(
 }
 
 export function issueHref(issueKey: string) {
-  return `/#issue-${encodeURIComponent(issueKey)}`;
+  return `/catalog-health#issue-${encodeURIComponent(issueKey)}`;
 }
 
 export function movieHref(movieId: string) {

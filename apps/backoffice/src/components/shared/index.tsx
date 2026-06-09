@@ -1,4 +1,12 @@
 import type { ReactNode } from 'react';
+import {
+  Badge,
+  ButtonLink,
+  DataTable as UiDataTable,
+  TableEmptyRow as UiTableEmptyRow,
+  TableScroll as UiTableScroll,
+  buttonVariants,
+} from '@pop-choice/ui';
 
 function joinClassNames(...values: Array<string | false | null | undefined>): string {
   return values.filter(Boolean).join(' ');
@@ -46,7 +54,9 @@ export function EmptyState({
 }
 
 export function TableScroll({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={joinClassNames('table-scroll', className)}>{children}</div>;
+  return (
+    <UiTableScroll className={joinClassNames('table-scroll', className)}>{children}</UiTableScroll>
+  );
 }
 
 export function DataTable({
@@ -61,29 +71,18 @@ export function DataTable({
   scrollClassName?: string;
 }) {
   return (
-    <TableScroll className={scrollClassName}>
-      <table className={className}>
-        <thead>
-          <tr>
-            {columns.map((column, index) => (
-              <th key={index}>{column}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </TableScroll>
+    <UiDataTable
+      className={className}
+      columns={columns}
+      scrollClassName={joinClassNames('table-scroll', scrollClassName)}
+    >
+      {children}
+    </UiDataTable>
   );
 }
 
 export function TableEmptyRow({ children, colSpan }: { children: ReactNode; colSpan: number }) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className="empty">
-        {children}
-      </td>
-    </tr>
-  );
+  return <UiTableEmptyRow colSpan={colSpan}>{children}</UiTableEmptyRow>;
 }
 
 export function BooleanDataPill({ value }: { value: boolean }) {
@@ -105,7 +104,20 @@ export function CountPill({
   count: number;
   state?: 'healthy' | 'warning' | 'repairable';
 }) {
-  return <span className={state ? `count ${state}` : 'count'}>{count}</span>;
+  const variant =
+    state === 'healthy'
+      ? 'success'
+      : state === 'warning'
+        ? 'warning'
+        : state === 'repairable'
+          ? 'accent'
+          : 'default';
+
+  return (
+    <Badge className="min-w-12 text-center text-base" variant={variant}>
+      {count}
+    </Badge>
+  );
 }
 
 export function SimplePaginationControls({
@@ -142,11 +154,14 @@ export function SimplePaginationControls({
       </span>
       <div className="pagination-actions">
         {currentPage > 1 ? (
-          <a className="button small" href={hrefForPage(currentPage - 1)}>
+          <ButtonLink size="sm" href={hrefForPage(currentPage - 1)}>
             Previous
-          </a>
+          </ButtonLink>
         ) : (
-          <span className="button small disabled" aria-disabled="true">
+          <span
+            className={buttonVariants({ size: 'sm', variant: 'quiet', className: 'disabled' })}
+            aria-disabled="true"
+          >
             Previous
           </span>
         )}
@@ -154,11 +169,14 @@ export function SimplePaginationControls({
           Page {currentPage} / {totalPages}
         </span>
         {currentPage < totalPages ? (
-          <a className="button small" href={hrefForPage(currentPage + 1)}>
+          <ButtonLink size="sm" href={hrefForPage(currentPage + 1)}>
             Next
-          </a>
+          </ButtonLink>
         ) : (
-          <span className="button small disabled" aria-disabled="true">
+          <span
+            className={buttonVariants({ size: 'sm', variant: 'quiet', className: 'disabled' })}
+            aria-disabled="true"
+          >
             Next
           </span>
         )}

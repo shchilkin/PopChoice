@@ -9,7 +9,13 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
-import { DataTable, PanelHeader, SimplePaginationControls, TableEmptyRow } from '../shared';
+import {
+  DataTable,
+  EmptyState,
+  PanelHeader,
+  SimplePaginationControls,
+  TableEmptyRow,
+} from '../shared';
 import { FilterLink } from './filterLink';
 import { buildRepairBatchListHref } from './helpers';
 
@@ -99,7 +105,7 @@ export function RepairBatchListPage({
           hint="Filter durable batches by operator recovery state before opening raw JSON."
           count={batchPage.totalCount}
         />
-        <div className="filter-bar" aria-label="Repair batch filters">
+        <div className="filter-bar joined" aria-label="Repair batch filters">
           {statusFilters.map((filter) => (
             <FilterLink
               key={filter.status}
@@ -127,40 +133,46 @@ export function RepairBatchListPage({
             />
           ))}
         </div>
-        <SimplePaginationControls
-          ariaLabel="Catalog repair batch pagination"
-          emptyLabel="No repair batches"
-          itemLabel="repair batches"
-          limit={batchPage.limit}
-          offset={batchPage.offset}
-          totalCount={batchPage.totalCount}
-          hrefForPage={hrefForPage}
-        />
-        <DataTable
-          className="repair-batch-table"
-          columns={[
-            'ID',
-            'Status',
-            'Issue',
-            'Actor',
-            'Limit',
-            'Candidates',
-            'Outcomes',
-            'Created',
-            'Actions',
-          ]}
-        >
-          <RepairBatchRows batches={batchPage.batches} />
-        </DataTable>
-        <SimplePaginationControls
-          ariaLabel="Catalog repair batch pagination bottom"
-          emptyLabel="No repair batches"
-          itemLabel="repair batches"
-          limit={batchPage.limit}
-          offset={batchPage.offset}
-          totalCount={batchPage.totalCount}
-          hrefForPage={hrefForPage}
-        />
+        {batchPage.totalCount === 0 ? (
+          <EmptyState>No durable catalog repair batches have been recorded yet.</EmptyState>
+        ) : (
+          <>
+            <SimplePaginationControls
+              ariaLabel="Catalog repair batch pagination"
+              emptyLabel="No repair batches"
+              itemLabel="repair batches"
+              limit={batchPage.limit}
+              offset={batchPage.offset}
+              totalCount={batchPage.totalCount}
+              hrefForPage={hrefForPage}
+            />
+            <DataTable
+              className="repair-batch-table"
+              columns={[
+                'ID',
+                'Status',
+                'Issue',
+                'Actor',
+                'Limit',
+                'Candidates',
+                'Outcomes',
+                'Created',
+                'Actions',
+              ]}
+            >
+              <RepairBatchRows batches={batchPage.batches} />
+            </DataTable>
+            <SimplePaginationControls
+              ariaLabel="Catalog repair batch pagination bottom"
+              emptyLabel="No repair batches"
+              itemLabel="repair batches"
+              limit={batchPage.limit}
+              offset={batchPage.offset}
+              totalCount={batchPage.totalCount}
+              hrefForPage={hrefForPage}
+            />
+          </>
+        )}
       </section>
     </BackofficeLayout>
   );

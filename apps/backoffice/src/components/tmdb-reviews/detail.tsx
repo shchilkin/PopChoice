@@ -155,6 +155,11 @@ export function ReviewDetailPage({
       active="reviews"
       title={`TMDB Review #${review.id}`}
       eyebrow="Catalog decision"
+      breadcrumbs={[
+        { href: '/', label: 'Backoffice' },
+        { href: '/tmdb-reviews', label: 'TMDB reviews' },
+        { label: `Review #${review.id}` },
+      ]}
       description={
         <div className="toolbar-summary">
           <ReasonBadge reason={review.reason} />

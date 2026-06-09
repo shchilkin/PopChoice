@@ -46,17 +46,16 @@ const liveData: CatalogHealthLiveData = {
 };
 
 describe('buildCatalogHealthOverviewViewModel', () => {
-  it('builds warning status, queue action, counts, and summary stats', () => {
+  it('builds queue action, counts, and summary stats', () => {
     const view = buildCatalogHealthOverviewViewModel(liveData, 'https://bull.example.test');
 
-    expect(view.status.className).toBe('catalog-status needs-work');
-    expect(view.status.heading).toBe('Catalog needs operator attention');
-    expect(view.status.metrics.map((metric) => metric.label)).toEqual([
-      '2 active issue categories',
-      '1 duplicate groups',
-      '6 catalog queue open',
-    ]);
+    expect(view.nextAction).toMatchObject({
+      href: '/repair-batches?sort=needs_review',
+      label: 'Review batches',
+      title: 'Monitor open repair work',
+    });
     expect(view.queue.bullBoardAction).toBe('link');
+    expect(view.queue.diagnosticCopy).toBeNull();
     expect(view.queue.dotClassName).toBe('queue-dot neutral');
     expect(view.queue.counts.find((count) => count.label === 'scheduled')?.value).toBe(3);
     expect(view.summary.map((stat) => stat.label)).toEqual([
@@ -82,10 +81,28 @@ describe('buildCatalogHealthOverviewViewModel', () => {
       },
     });
 
-    expect(view.status.className).toBe('catalog-status healthy');
-    expect(view.status.heading).toBe('Catalog is clear');
     expect(view.queue.bullBoardAction).toBe('disabled');
+    expect(view.queue.diagnosticCopy).toBe('Bull Board URL is not configured.');
     expect(view.queue.dotClassName).toBe('queue-dot warning');
+  });
+
+  it('prioritizes missing TMDB identity before downstream metadata repairs', () => {
+    const view = buildCatalogHealthOverviewViewModel({
+      ...liveData,
+      report: {
+        ...liveData.report,
+        issueCounts: {
+          missing_poster_url: 12,
+          missing_tmdb_id: 3,
+        },
+      },
+    });
+
+    expect(view.nextAction).toMatchObject({
+      href: '/catalog-health?issue=missing_tmdb_id#issue-missing_tmdb_id',
+      label: 'Open identity queue',
+      title: 'Resolve TMDB identity first',
+    });
   });
 });
 

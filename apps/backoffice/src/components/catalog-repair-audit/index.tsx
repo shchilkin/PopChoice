@@ -28,7 +28,7 @@ function formatRepairTarget(entry: CatalogRepairActionAudit) {
 
   if (entry.targetType === 'catalog_issue') {
     return (
-      <a href={`/#issue-${encodeURIComponent(entry.targetId)}`}>
+      <a href={`/catalog-health#issue-${encodeURIComponent(entry.targetId)}`}>
         {humanizeBackofficeIdentifier(entry.targetId)}
       </a>
     );

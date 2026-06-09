@@ -1,6 +1,7 @@
 import { getPool } from './db.js';
 
-export type CatalogRepairAction = 'enqueue_backfill' | 'bulk_enqueue_backfill';
+export type CatalogRepairBatchAction = 'enqueue_backfill' | 'bulk_enqueue_backfill';
+export type CatalogRepairAction = CatalogRepairBatchAction | 'manual_update';
 export type CatalogRepairBatchStatus =
   | 'enqueueing'
   | 'queued'
@@ -75,7 +76,7 @@ export interface RecordCatalogRepairActionInput {
 
 export interface CatalogRepairBatch {
   id: string;
-  action: CatalogRepairAction;
+  action: CatalogRepairBatchAction;
   actor: string;
   issueKey: string;
   targetType: string;
@@ -118,7 +119,7 @@ export interface CatalogRepairBatchItem {
 }
 
 export interface CreateCatalogRepairBatchInput {
-  action: CatalogRepairAction;
+  action: CatalogRepairBatchAction;
   actor: string;
   issueKey: string;
   targetType: string;
@@ -235,7 +236,7 @@ type CatalogRepairActionAuditRow = {
 
 type CatalogRepairBatchRow = {
   id: string | number;
-  action: CatalogRepairAction;
+  action: CatalogRepairBatchAction;
   actor: string;
   issue_key: string;
   target_type: string;
@@ -535,7 +536,7 @@ export async function ensureCatalogRepairActionSchema(): Promise<void> {
       result jsonb NOT NULL DEFAULT '{}'::jsonb,
       created_at timestamptz NOT NULL DEFAULT now(),
       CONSTRAINT catalog_repair_audit_action_check CHECK (
-        action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
+        action IN ('enqueue_backfill', 'bulk_enqueue_backfill', 'manual_update')
       )
     );
 
@@ -544,7 +545,7 @@ export async function ensureCatalogRepairActionSchema(): Promise<void> {
 
     ALTER TABLE catalog_repair_audit
       ADD CONSTRAINT catalog_repair_audit_action_check CHECK (
-        action IN ('enqueue_backfill', 'bulk_enqueue_backfill')
+        action IN ('enqueue_backfill', 'bulk_enqueue_backfill', 'manual_update')
       );
 
     CREATE INDEX IF NOT EXISTS idx_catalog_repair_audit_target_created_at

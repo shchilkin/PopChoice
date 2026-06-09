@@ -46,7 +46,9 @@ describe('repair batch helpers', () => {
   });
 
   it('formats backoffice links and compact values', () => {
-    expect(issueHref('missing keyword metadata')).toBe('/#issue-missing%20keyword%20metadata');
+    expect(issueHref('missing keyword metadata')).toBe(
+      '/catalog-health#issue-missing%20keyword%20metadata',
+    );
     expect(movieHref('123')).toBe('/movies/123');
     expect(truncateText('abcdef', 4)).toBe('abc...');
     expect(snapshotValue({ title: 'Memento', nested: {} }, 'title')).toBe('Memento');

@@ -8,12 +8,7 @@ import {
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
-import {
-  BooleanDataPill,
-  CountPill,
-  OptionalCatalogValue,
-  SimplePaginationControls,
-} from '../shared';
+import { BooleanDataPill, OptionalCatalogValue, SimplePaginationControls } from '../shared';
 import { buildCatalogIssuePageHref } from '../shared/hrefs';
 import {
   buildCatalogIssuePanelViewModel,
@@ -118,12 +113,36 @@ function SampleRows({
 
 function BulkRepairForm({ issue }: { issue: CatalogHealthIssue }) {
   const { bulkActions } = buildCatalogIssuePanelViewModel({ issue, issuePage: null });
+  const chunkAction = bulkActions.find((action) => action.intent === 'chunk');
+  const backgroundAction = bulkActions.find((action) => action.intent === 'background');
+  const className = [
+    'bulk-repair-actions',
+    bulkActions.length === 1 ? 'single' : null,
+    backgroundAction ? 'has-background-batch' : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (!chunkAction) return null;
 
   return (
-    <div className="bulk-repair-actions">
-      {bulkActions.map((action) => (
-        <BulkRepairActionForm key={action.action} action={action} issueKey={issue.key} />
-      ))}
+    <div className={className}>
+      <div className="bulk-repair-primary">
+        <BulkRepairActionForm action={chunkAction} issueKey={issue.key} />
+        <p className="bulk-repair-helper">{chunkAction.helperText}</p>
+      </div>
+      {backgroundAction ? (
+        <details className="bulk-repair-background">
+          <summary>
+            <span>Background batch</span>
+            <span>{backgroundAction.scopeLabel}</span>
+          </summary>
+          <div className="bulk-repair-background-body">
+            <p className="bulk-repair-helper">{backgroundAction.helperText}</p>
+            <BulkRepairActionForm action={backgroundAction} issueKey={issue.key} />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }
@@ -198,18 +217,11 @@ export function CatalogIssuePanel({
           <div className="issue-title-row">
             <h2>{issue.label}</h2>
             <span className={`pill ${view.countState}`}>{view.pillLabel}</span>
+            <span className={`issue-count-label ${view.countState}`}>{issue.count} affected</span>
           </div>
           <div className="issue-hint">{view.hint}</div>
         </div>
-        <div className="issue-panel-controls">
-          <div className="issue-panel-row-actions">
-            <CountPill count={issue.count} state={view.countState} />
-            {view.browseAction ? (
-              <a className={view.browseAction.className} href={view.browseAction.href}>
-                {view.browseAction.label}
-              </a>
-            ) : null}
-          </div>
+        <div className="issue-panel-actions">
           {view.canRepair && issue.count > 0 ? <BulkRepairForm issue={issue} /> : null}
         </div>
       </div>
@@ -234,7 +246,7 @@ export function CatalogIssuePanel({
           ) : view.footerBrowseHref ? (
             <div className="panel-footer">
               <a className="button small" href={view.footerBrowseHref}>
-                Browse all {issue.count} rows
+                Inspect all {issue.count} affected rows
               </a>
             </div>
           ) : null}
