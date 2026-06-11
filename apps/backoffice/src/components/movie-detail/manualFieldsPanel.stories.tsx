@@ -6,7 +6,7 @@ import { ManualMovieMetadataPanel } from './manualFieldsPanel';
 import '../../app/globals.css';
 
 const meta: Meta<typeof ManualMovieMetadataPanel> = {
-  title: 'Backoffice/Movie Detail/Manual Metadata Panel',
+  title: 'Backoffice/Movie Detail/Edit Metadata Fields',
   component: ManualMovieMetadataPanel,
   parameters: {
     layout: 'padded',

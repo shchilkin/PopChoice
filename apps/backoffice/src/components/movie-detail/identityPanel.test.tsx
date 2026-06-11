@@ -6,7 +6,9 @@ import { MovieIdentityPanel } from './identityPanel';
 
 describe('MovieIdentityPanel', () => {
   it('renders active issue, poster fallback, localized title, and TMDB metadata', () => {
-    const html = renderToStaticMarkup(<MovieIdentityPanel detail={catalogMovieDetail()} />);
+    const html = renderToStaticMarkup(
+      <MovieIdentityPanel detail={catalogMovieDetail()} manualStatus={null} />,
+    );
 
     expect(html).toContain('Movie #42');
     expect(html).toContain('1 active issue(s)');
@@ -16,6 +18,9 @@ describe('MovieIdentityPanel', () => {
     expect(html).toContain('href="https://www.themoviedb.org/movie/949"');
     expect(html).toContain('92%');
     expect(html).toContain('manual_review');
+    expect(html).toContain('Manual correction');
+    expect(html).toContain('Edit fields');
+    expect(html).not.toContain('name="poster_url"');
   });
 
   it('renders the healthy state and local fallbacks when metadata is missing', () => {
@@ -33,7 +38,7 @@ describe('MovieIdentityPanel', () => {
       },
     });
 
-    const html = renderToStaticMarkup(<MovieIdentityPanel detail={detail} />);
+    const html = renderToStaticMarkup(<MovieIdentityPanel detail={detail} manualStatus={null} />);
 
     expect(html).toContain('Healthy');
     expect(html).toContain('src="https://image.test/poster.jpg"');

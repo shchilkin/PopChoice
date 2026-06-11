@@ -38,6 +38,9 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
   guard used to keep operator UI/routes split into reviewable files
 - `$impeccable critique <target>` - Run before publishing UI PRs, then address
   actionable findings or document deferred follow-ups in the PR.
+  Raw `.impeccable/critique/*` snapshots are local working notes and should not be
+  committed. Move durable UI decisions into `DESIGN.md`, `docs/UI-DEVELOPMENT.md`,
+  roadmap docs, issues, or the PR description.
 
 ### Development
 
