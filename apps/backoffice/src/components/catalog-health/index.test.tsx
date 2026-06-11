@@ -90,7 +90,7 @@ describe('catalog health page action sections', () => {
     expect(html).not.toContain('No affected movies.');
     expect(html).not.toContain('Missing vote_count');
     expect(html).toContain('No affected rows');
-    expect(html).toContain('aria-label="Missing runtime: 0 affected"');
+    expect(html).toContain('aria-label="Missing runtime: clear"');
     expect(html).toContain('Missing runtime');
     expect(html.match(/class="panel issue-panel/g)?.length).toBe(2);
     expect(html.indexOf('Missing tmdb_id')).toBeLessThan(html.indexOf('Missing poster_url'));

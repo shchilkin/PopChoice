@@ -9,7 +9,6 @@ import {
   DuplicatePeersPanel,
   HealthFlagsPanel,
   LocalFactsPanel,
-  ManualMovieMetadataPanel,
   MetadataOverviewPanel,
   MovieIdentityPanel,
   MovieRepairPanel,
@@ -48,7 +47,7 @@ export function CatalogMovieDetailPage({
       }
       actions={
         <>
-          <ButtonLink href="/catalog-health">Back to health</ButtonLink>
+          <ButtonLink href="/catalog-health">Catalog health</ButtonLink>
           {movie.tmdbId === null ? null : (
             <ButtonLink
               href={`https://www.themoviedb.org/movie/${movie.tmdbId}`}
@@ -56,22 +55,21 @@ export function CatalogMovieDetailPage({
               target="_blank"
               variant="quiet"
             >
-              TMDB
+              Open in TMDB
             </ButtonLink>
           )}
         </>
       }
     >
-      <section className="movie-cockpit" aria-label="Movie repair cockpit">
-        <MovieIdentityPanel detail={detail} />
-        <div className="movie-cockpit-actions">
-          <MovieRepairPanel detail={detail} repairStatus={repairStatus} />
-          <ManualMovieMetadataPanel detail={detail} manualStatus={manualStatus} />
-        </div>
+      <section className="grid gap-5" aria-label="Movie workspace">
+        <MovieIdentityPanel detail={detail} manualStatus={manualStatus} />
+        <MovieRepairPanel detail={detail} repairStatus={repairStatus} />
+      </section>
+      <section className="my-8 grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] xl:items-start">
+        <HealthFlagsPanel detail={detail} />
+        <LocalFactsPanel detail={detail} />
       </section>
       <section className="detail-grid">
-        <LocalFactsPanel detail={detail} />
-        <HealthFlagsPanel detail={detail} />
         <MetadataOverviewPanel detail={detail} />
         <DuplicatePeersPanel detail={detail} />
       </section>

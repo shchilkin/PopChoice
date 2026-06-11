@@ -134,20 +134,33 @@ function HealthyCatalogChecks({ checks }: { checks: CatalogHealthReport['issues'
   if (checks.length === 0) return null;
 
   return (
-    <section className="healthy-checks" aria-labelledby="healthy-catalog-checks-title">
-      <div className="healthy-checks-heading">
-        <div>
-          <p className="page-kicker">Resolved checks</p>
-          <h2 id="healthy-catalog-checks-title">No affected rows</h2>
+    <section
+      className="mb-3 grid gap-3 rounded-lg border border-[color-mix(in_srgb,var(--good),var(--border)_74%)] bg-[rgba(21,24,29,0.52)] p-4"
+      aria-labelledby="healthy-catalog-checks-title"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="grid gap-1">
+          <p className="m-0 text-xs font-black uppercase tracking-[0.08em] text-[var(--good)]">
+            Resolved checks
+          </p>
+          <h2
+            id="healthy-catalog-checks-title"
+            className="text-base font-medium text-[var(--text)]"
+          >
+            No affected rows
+          </h2>
         </div>
         <Badge variant="success">{checks.length} clear</Badge>
       </div>
-      <ul className="healthy-checks-list">
+      <ul className="m-0 grid list-none gap-0 p-0">
         {checks.map((issue) => (
-          <li aria-label={`${issue.label}: 0 affected`} key={issue.key}>
-            <span aria-hidden="true" className="healthy-checks-dot" />
-            <span>{issue.label}</span>
-            <span>0 affected</span>
+          <li
+            aria-label={`${issue.label}: clear`}
+            className="flex min-h-9 items-center gap-3 border-t border-[rgba(139,151,170,0.16)] py-2 text-sm font-bold text-[var(--muted)] first:border-t-0"
+            key={issue.key}
+          >
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[var(--good)]" />
+            <span className="min-w-0 flex-1 truncate">{issue.label}</span>
           </li>
         ))}
       </ul>

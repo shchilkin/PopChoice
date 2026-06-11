@@ -108,3 +108,15 @@ Do not put domain components such as `CatalogHealthOverview`, `RepairBatchItemsT
   action-column width.
 - Add stories or browser tests for long labels, unavailable data, open confirmations, and narrow
   viewports before merging UI workflow changes.
+
+## Critique Artifacts
+
+Run `$impeccable critique <target>` for meaningful UI changes, but keep generated critique
+snapshots local. The `.impeccable/` directory is ignored because timestamped tool output makes PRs
+noisy and ages faster than the implementation. Carry forward only the decisions that should outlive
+the run:
+
+- Update `DESIGN.md` for visual principles, tone, hierarchy, and component rules.
+- Update this guide for reusable UI workflow or primitive guidance.
+- Update `docs/ROADMAP-ARCHITECTURE.md` or GitHub issues for deferred work.
+- Summarize critique score, fixed items, and accepted follow-ups in the PR description when useful.

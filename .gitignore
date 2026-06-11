@@ -52,6 +52,9 @@ storybook-static
 # Claude
 .claude/
 
+# local agent artifacts
+.impeccable/
+
 # Turborepo
 .turbo
 **/.turbo

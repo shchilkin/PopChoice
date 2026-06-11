@@ -140,6 +140,10 @@ Before opening or marking ready any PR that changes user-facing or operator-faci
 issues before publishing the PR. If a finding is intentionally deferred, document why in the PR
 description and add or link a follow-up issue.
 
+Do not commit raw `.impeccable/critique/*` snapshots. They are local agent working notes and are
+ignored by git. Promote durable decisions into `DESIGN.md`, `docs/UI-DEVELOPMENT.md`,
+`docs/ROADMAP-ARCHITECTURE.md`, or the PR description instead.
+
 ## Gotchas
 
 - Next.js uses `apps/web/src/proxy.ts` for the CSRF cookie path. Older docs or comments may still say middleware.

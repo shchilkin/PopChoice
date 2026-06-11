@@ -20,6 +20,10 @@
       "types": "./src/breadcrumb.tsx",
       "default": "./src/breadcrumb.tsx"
     },
+    "./dialog": {
+      "types": "./src/dialog.tsx",
+      "default": "./src/dialog.tsx"
+    },
     "./tabs": {
       "types": "./src/tabs.tsx",
       "default": "./src/tabs.tsx"
@@ -38,8 +42,11 @@
     "dev": "tsc --noEmit --watch",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.16"
+  },
   "devDependencies": {
-    "@types/react": "19.2.16",
+    "@types/react": "^19.2.17",
     "typescript": "6.0.3"
   },
   "peerDependencies": {
