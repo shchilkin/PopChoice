@@ -198,6 +198,20 @@ export const en = {
         },
       },
     },
+    normalAvoids: {
+      title: 'What should we rule out?',
+      hint: 'Optional. These hard stops help PopChoice avoid technically good but wrong-for-tonight picks.',
+      options: {
+        horror: 'No horror',
+        gore: 'No gore',
+        slow: 'Not too slow',
+        subtitles: 'No subtitles',
+        long: 'Not too long',
+        obvious: 'Nothing too obvious',
+        obscure: 'Nothing too obscure',
+        alreadySeen: 'Avoid things I may have seen',
+      },
+    },
     favoriteMovie: {
       title: 'Optional reference point',
       hint: 'Name a film only if it helps. Leaving this open gives PopChoice a fresher search.',
