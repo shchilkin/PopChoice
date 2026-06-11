@@ -46,40 +46,42 @@ export function RelatedReviewsPanel({ reviews }: { reviews: CatalogMovieDetailTM
 
 export function LocalFactsPanel({ detail }: { detail: CatalogMovieDetail }) {
   const { movie } = detail;
+  const factClassName =
+    'grid grid-cols-[120px_minmax(0,1fr)] gap-4 border-b border-[rgba(139,151,170,0.16)] py-2 last:border-b-0';
 
   return (
-    <article className="panel">
-      <PanelHeader title="Local facts" />
-      <dl className="facts">
-        <div>
+    <article className="grid gap-3 border-t border-[var(--border)] pt-5">
+      <h2 className="text-base font-medium text-[var(--text)]">Local facts</h2>
+      <dl className="grid gap-0">
+        <div className={factClassName}>
           <dt>Local id</dt>
           <dd>{movie.id}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Name</dt>
           <dd>{movie.name}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Localized</dt>
           <dd>{movie.localizedName ?? '-'}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Year</dt>
           <dd>{movie.year}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Runtime</dt>
           <dd>{formatDuration(movie.duration)}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Age rating</dt>
           <dd>{movie.ageRating || '-'}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Score</dt>
           <dd>{movie.scoreRating}</dd>
         </div>
-        <div>
+        <div className={factClassName}>
           <dt>Poster</dt>
           <dd>{movie.posterUrl ?? '-'}</dd>
         </div>

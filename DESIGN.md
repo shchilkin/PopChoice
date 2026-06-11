@@ -117,6 +117,7 @@ The backoffice is a working console, not a brand showcase. Prefer a minimal, cle
 - Show actionable work first. Healthy or resolved state belongs in compact secondary summaries below the work queue, not as full-size panels mixed into the action list.
 - Avoid decorative glow, ambient shine, or showcase effects in operational views. Reserve accent color for active navigation, warnings, repair actions, and status.
 - Prefer one-line labels and copy when they remain readable. Let layout breathe with vertical spacing instead of forced line breaks.
+- Treat design critiques as inputs, not source artifacts. Keep raw agent snapshots local; document lasting backoffice decisions here or in `docs/UI-DEVELOPMENT.md`.
 
 ## 2. Colors: The Marquee Palette
 
