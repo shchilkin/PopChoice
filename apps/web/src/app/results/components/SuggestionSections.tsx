@@ -1,6 +1,14 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Loader2,
+  SearchX,
+  Sparkles,
+} from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useState, type RefObject } from 'react';
 
@@ -14,7 +22,7 @@ import type { MovieRecommendation } from '@/utils/client';
 
 type CarouselDirection = 'left' | 'right';
 type MorePicksLens = 'popular' | 'cozier' | 'bolder' | 'shorter';
-type MorePicksViewState = 'hidden' | 'completed' | 'stalled' | 'loading' | 'ready';
+type MorePicksViewState = 'completed' | 'empty' | 'stalled' | 'loading' | 'ready';
 
 type SuggestionSectionTitleProps = {
   label: string;
@@ -403,7 +411,7 @@ function getMorePicksViewState({
   noMorePicks: boolean;
 }): MorePicksViewState {
   const orderedStates: [boolean, MorePicksViewState][] = [
-    [noMorePicks, 'hidden'],
+    [noMorePicks, 'empty'],
     [morePicksStatus === 'completed', 'completed'],
     [Boolean(morePicksTimedOut), 'stalled'],
     [isMorePicksLoading(isFetchingMore, morePicksStatus), 'loading'],
@@ -412,12 +420,34 @@ function getMorePicksViewState({
   return orderedStates.find(([matches]) => matches)?.[1] ?? 'ready';
 }
 
-function MorePicksStalledMessage({ label }: { label: string }) {
+function MorePicksStatusMessage({
+  icon,
+  label,
+  tone,
+}: {
+  icon: 'check' | 'clock' | 'empty';
+  label: string;
+  tone: 'muted' | 'success' | 'warning';
+}) {
+  const Icon = icon === 'check' ? CheckCircle2 : icon === 'clock' ? Clock3 : SearchX;
+  const color =
+    tone === 'success'
+      ? 'var(--pc-gold-text)'
+      : tone === 'warning'
+        ? palette.amber
+        : 'var(--pc-t4)';
+
   return (
-    <div className="mt-5 flex justify-center">
-      <p className="text-sm" style={{ color: 'var(--pc-t4)', fontStyle: 'italic' }}>
-        {label}
-      </p>
+    <div
+      className="mt-5 flex items-center gap-2 rounded-lg px-4 py-3 text-sm"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+        color,
+      }}
+    >
+      <Icon size={15} />
+      <p>{label}</p>
     </div>
   );
 }
@@ -467,21 +497,6 @@ function getMorePicksLensOptions(results: ReturnType<typeof useLanguage>['t']['r
   ];
 }
 
-function MorePicksCompletedMessage({ label }: { label: string }) {
-  return (
-    <div
-      className="mt-5 rounded-2xl px-4 py-3 text-sm"
-      style={{
-        background: 'var(--pc-ghost)',
-        border: '1px solid var(--pc-bd2)',
-        color: 'var(--pc-t3)',
-      }}
-    >
-      {label}
-    </div>
-  );
-}
-
 function getSelectedMorePicksLens(
   lensOptions: ReturnType<typeof getMorePicksLensOptions>,
   lens: MorePicksLens,
@@ -494,9 +509,13 @@ function getMorePicksStaticContent(
   results: ReturnType<typeof useLanguage>['t']['results'],
 ) {
   const staticContent = {
-    completed: <MorePicksCompletedMessage label={results.morePicksCompleted} />,
-    hidden: null,
-    stalled: <MorePicksStalledMessage label={results.morePicksStalled} />,
+    completed: (
+      <MorePicksStatusMessage icon="check" label={results.morePicksCompleted} tone="success" />
+    ),
+    empty: <MorePicksStatusMessage icon="empty" label={results.morePicksEmpty} tone="muted" />,
+    stalled: (
+      <MorePicksStatusMessage icon="clock" label={results.morePicksStalled} tone="warning" />
+    ),
   };
 
   return viewState in staticContent

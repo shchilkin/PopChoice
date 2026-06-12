@@ -15,6 +15,7 @@ import {
   LocalSuggestionsSection,
   MainMovieCard,
   RecommendationFeedbackPanel,
+  ResultEvidencePanel,
   ResultsDecisionNoteCard,
   ResultsHeader,
   TmdbSuggestionsSection,
@@ -25,6 +26,7 @@ import {
 } from '../components';
 
 import type { GroupResultInsights } from '@/features/recommendation/groupResultInsights';
+import type { RecommendationResultSignals } from '@/lib/db/recommendations';
 
 type ResultsCopy = ReturnType<typeof useLanguage>['t']['results'];
 
@@ -332,6 +334,7 @@ export function RecommendationResultsView({
   hasActorSignal = false,
   groupInsights,
   recommendationSlug,
+  resultSignals,
   morePicksStatus,
   morePicksTimedOut,
   viewerCanRate = false,
@@ -345,6 +348,7 @@ export function RecommendationResultsView({
   hasActorSignal?: boolean;
   groupInsights?: GroupResultInsights | null;
   recommendationSlug?: string;
+  resultSignals?: RecommendationResultSignals;
   morePicksStatus?: string | null;
   morePicksTimedOut?: boolean;
   viewerCanRate?: boolean;
@@ -455,11 +459,19 @@ export function RecommendationResultsView({
         onShare={handleShare}
         peopleCount={peopleCount}
         shareState={shareState}
+        viewerCanRate={viewerCanRate}
       />
 
       <GroupInsightsSection groupInsights={groupInsights} isGroupResult={isGroupResult} />
 
       <TopPickSection isGroupResult={isGroupResult} label={t.results.topPick} movie={mainMovie} />
+
+      <ResultEvidencePanel
+        isGroupResult={isGroupResult}
+        movie={mainMovie}
+        resultSignals={resultSignals}
+        usedBroaderSearch={usedBroaderSearch}
+      />
 
       <div className="mb-10">
         <ResultsDecisionNoteCard

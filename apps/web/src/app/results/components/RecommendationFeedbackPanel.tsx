@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Eye, Frown, Lightbulb, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { Check, Eye, Frown, Loader2, ThumbsDown } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { useLanguage } from '@/i18n';
@@ -27,10 +27,8 @@ function getFeedbackOptions(results: ResultsCopy): FeedbackOption[] {
   return [
     { kind: 'useful', label: results.feedbackUseful, icon: Check },
     { kind: 'already_watched', label: results.feedbackSeen, icon: Eye },
+    { kind: 'too_obvious', label: results.feedbackNotForMe, icon: ThumbsDown },
     { kind: 'wrong_mood', label: results.feedbackWrongMood, icon: Frown },
-    { kind: 'too_obvious', label: results.feedbackTooObvious, icon: Lightbulb },
-    { kind: 'too_obscure', label: results.feedbackTooObscure, icon: Sparkles },
-    { kind: 'close', label: results.feedbackClose, icon: RotateCcw },
   ];
 }
 
