@@ -1,7 +1,8 @@
 'use client';
 
-import { Check, Share2, Sparkles, Users } from 'lucide-react';
+import { BookmarkCheck, Check, LogIn, Share2, Sparkles, Users } from 'lucide-react';
 import { motion } from 'motion/react';
+import Link from 'next/link';
 
 import { useLanguage } from '@/i18n';
 
@@ -59,6 +60,50 @@ function ShareResultButton({
       {didCopy ? <Check size={13} /> : <Share2 size={13} />}
       {didCopy ? results.shareCopied : results.shareResult}
     </button>
+  );
+}
+
+function SaveCollectionButton({
+  results,
+  viewerCanRate,
+}: {
+  results: ResultsCopy;
+  viewerCanRate: boolean;
+}) {
+  if (viewerCanRate) {
+    return (
+      <Link
+        href="/account"
+        className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+        style={{
+          background: 'var(--pc-gold-subtle)',
+          border: '1px solid var(--pc-gold-bd-subtle)',
+          color: 'var(--pc-gold-text)',
+          fontSize: '0.78rem',
+          fontWeight: 600,
+        }}
+      >
+        <BookmarkCheck size={13} />
+        {results.savedCollection}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href="/login"
+      className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+      style={{
+        background: 'var(--pc-ghost)',
+        border: '1px solid var(--pc-bd2)',
+        color: 'var(--pc-t2)',
+        fontSize: '0.78rem',
+        fontWeight: 600,
+      }}
+    >
+      <LogIn size={13} />
+      {results.signInToSave}
+    </Link>
   );
 }
 
@@ -167,6 +212,7 @@ export function ResultsHeader({
   onShare,
   peopleCount,
   shareState,
+  viewerCanRate,
 }: {
   audienceBadge: string;
   audienceTitle: string;
@@ -177,6 +223,7 @@ export function ResultsHeader({
   onShare: () => Promise<void>;
   peopleCount: number;
   shareState: ShareState;
+  viewerCanRate: boolean;
 }) {
   const { t, locale } = useLanguage();
   const subtitle = formatAudienceSubtitle({
@@ -221,7 +268,11 @@ export function ResultsHeader({
       <p className="mt-2" style={{ color: 'var(--pc-t3)', fontSize: '0.88rem' }}>
         {subtitle}
       </p>
-      <div className="mt-5 flex justify-center">
+      <p className="mx-auto mt-4 max-w-xl" style={{ color: 'var(--pc-t4)', fontSize: '0.8rem' }}>
+        {t.results.collectionMomentHint}
+      </p>
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
+        <SaveCollectionButton results={t.results} viewerCanRate={viewerCanRate} />
         <ShareResultButton onShare={onShare} shareState={shareState} results={t.results} />
       </div>
       <SharedResultNotice isSharedResult={isSharedResult} results={t.results} />

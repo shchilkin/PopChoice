@@ -1,6 +1,7 @@
 export { GroupMatchBrief } from './GroupMatchBrief';
 export { MainMovieCard } from './MainMovieCard';
 export { RecommendationFeedbackPanel } from './RecommendationFeedbackPanel';
+export { ResultEvidencePanel } from './ResultEvidencePanel';
 export { ResultsDecisionNoteCard, ResultsHeader } from './ResultsHeader';
 export { LocalSuggestionsSection, TmdbSuggestionsSection } from './SuggestionSections';
 export type { FeedbackKind, FeedbackState } from './RecommendationFeedbackPanel';

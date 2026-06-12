@@ -38,6 +38,7 @@ export function getReadyResultsViewModel(renderState: ReadyResultsClientRenderSt
     morePicksStatus: renderState.data.morePicksStatus,
     movies: renderState.movies,
     peopleCount: renderState.data.peopleCount ?? 1,
+    resultSignals: renderState.data.resultSignals,
     usedBroaderSearch: renderState.data.usedBroaderSearch === true,
     viewerCanRate: renderState.data.viewerCanRate === true,
   };

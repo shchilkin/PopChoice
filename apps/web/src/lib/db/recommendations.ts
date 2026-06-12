@@ -9,6 +9,13 @@ import { nanoid } from 'nanoid';
 import pg from 'pg';
 
 import {
+  cleanString,
+  cleanStringArray,
+  cleanStringValues,
+  quizPeople,
+  uniqueStrings,
+} from '@/features/recommendation/groupResultInsightInput';
+import {
   buildGroupResultInsights,
   getQuizPeopleCount,
   hasFavoriteActorSignal,
@@ -85,6 +92,15 @@ export interface RecommendationMovie extends RecommendationMovieFields {
   id: number;
 }
 
+export interface RecommendationResultSignals {
+  actorSignals: string[];
+  avoidSignals: string[];
+  eraSignals: string[];
+  hasReferenceMovie: boolean;
+  moodSignals: string[];
+  toneSignals: string[];
+}
+
 export interface RecommendationWithMovies {
   status: RecommendationStatus;
   stage: RecommendationStage;
@@ -97,6 +113,7 @@ export interface RecommendationWithMovies {
   peopleCount?: number;
   hasActorSignal?: boolean;
   groupInsights?: ReturnType<typeof buildGroupResultInsights>;
+  resultSignals?: RecommendationResultSignals;
   morePicksStatus?: string | null;
   viewerCanRate?: boolean;
   isSharedResult?: boolean;
@@ -251,6 +268,37 @@ function getInteractionKindForFeedback(
     case 'close':
       return null;
   }
+}
+
+function isQuizPersonRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function getAvoidSignalsFromReason(reason: unknown): string[] {
+  const value = cleanString(reason);
+  if (!value) return [];
+
+  return Array.from(value.matchAll(/Avoid:\s*([^.]*)\./gi)).flatMap((match) =>
+    (match[1] ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0 && item.toLocaleLowerCase() !== 'no hard avoids'),
+  );
+}
+
+function getRecommendationResultSignals(quizData: unknown): RecommendationResultSignals {
+  const people = quizPeople(quizData).filter(isQuizPersonRecord);
+
+  return {
+    actorSignals: uniqueStrings(cleanStringValues(people.map((person) => person.favoriteActor))),
+    avoidSignals: uniqueStrings(
+      people.flatMap((person) => getAvoidSignalsFromReason(person.favoriteMovieWhy)),
+    ),
+    eraSignals: uniqueStrings(cleanStringValues(people.map((person) => person.newVsClassic))),
+    hasReferenceMovie: people.some((person) => cleanString(person.favoriteMovie) !== null),
+    moodSignals: uniqueStrings(people.flatMap((person) => cleanStringArray(person.moodPreference))),
+    toneSignals: uniqueStrings(cleanStringValues(people.map((person) => person.tonePreference))),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1133,6 +1181,7 @@ export async function getRecommendationWithMovies(
   const peopleCount = getQuizPeopleCount(rec.quiz_data);
   const hasActorSignal = hasFavoriteActorSignal(rec.quiz_data);
   const groupInsights = buildGroupResultInsights(rec.quiz_data);
+  const resultSignals = getRecommendationResultSignals(rec.quiz_data);
 
   if (rec.status !== 'completed') {
     return {
@@ -1145,6 +1194,7 @@ export async function getRecommendationWithMovies(
       peopleCount,
       hasActorSignal,
       groupInsights,
+      resultSignals,
       morePicksStatus: rec.more_picks_status ?? null,
       viewerCanRate,
       isSharedResult,
@@ -1196,6 +1246,7 @@ export async function getRecommendationWithMovies(
     peopleCount,
     hasActorSignal,
     groupInsights,
+    resultSignals,
     morePicksStatus: rec.more_picks_status ?? null,
     viewerCanRate,
     isSharedResult,

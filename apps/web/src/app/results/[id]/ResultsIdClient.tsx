@@ -83,6 +83,7 @@ function ReadyResultsView({
       hasActorSignal={viewModel.hasActorSignal}
       groupInsights={viewModel.groupInsights}
       recommendationSlug={recommendationSlug}
+      resultSignals={viewModel.resultSignals}
       morePicksStatus={viewModel.morePicksStatus}
       morePicksTimedOut={morePicksTimedOut}
       viewerCanRate={viewModel.viewerCanRate}
