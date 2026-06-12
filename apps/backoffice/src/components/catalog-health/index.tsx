@@ -135,7 +135,7 @@ function HealthyCatalogChecks({ checks }: { checks: CatalogHealthReport['issues'
 
   return (
     <section
-      className="mb-3 grid gap-3 rounded-lg border border-[color-mix(in_srgb,var(--good),var(--border)_74%)] bg-[rgba(21,24,29,0.52)] p-4"
+      className="healthy-checks mb-3 grid gap-3 rounded-lg border border-[color-mix(in_srgb,var(--good),var(--border)_74%)] bg-[rgba(21,24,29,0.52)] p-4"
       aria-labelledby="healthy-catalog-checks-title"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
