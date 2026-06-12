@@ -149,6 +149,7 @@ function HealthyCatalogChecks({ checks }: { checks: CatalogHealthReport['issues'
           >
             No affected rows
           </h2>
+          <span className="sr-only">0 affected</span>
         </div>
         <Badge variant="success">{checks.length} clear</Badge>
       </div>
