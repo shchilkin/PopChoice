@@ -23,6 +23,8 @@ import type { MovieRecommendation } from '@/utils/client';
 type CarouselDirection = 'left' | 'right';
 type MorePicksLens = 'popular' | 'cozier' | 'bolder' | 'shorter';
 type MorePicksViewState = 'completed' | 'empty' | 'stalled' | 'loading' | 'ready';
+type MorePicksStatusIcon = 'check' | 'clock' | 'empty';
+type MorePicksStatusTone = 'muted' | 'success' | 'warning';
 
 type SuggestionSectionTitleProps = {
   label: string;
@@ -420,22 +422,33 @@ function getMorePicksViewState({
   return orderedStates.find(([matches]) => matches)?.[1] ?? 'ready';
 }
 
+const MORE_PICKS_STATUS_ICONS = {
+  check: CheckCircle2,
+  clock: Clock3,
+  empty: SearchX,
+} as const;
+
+function getMorePicksStatusColor(tone: MorePicksStatusTone) {
+  const colors = {
+    muted: 'var(--pc-t4)',
+    success: 'var(--pc-gold-text)',
+    warning: palette.amber,
+  } as const;
+
+  return colors[tone];
+}
+
 function MorePicksStatusMessage({
   icon,
   label,
   tone,
 }: {
-  icon: 'check' | 'clock' | 'empty';
+  icon: MorePicksStatusIcon;
   label: string;
-  tone: 'muted' | 'success' | 'warning';
+  tone: MorePicksStatusTone;
 }) {
-  const Icon = icon === 'check' ? CheckCircle2 : icon === 'clock' ? Clock3 : SearchX;
-  const color =
-    tone === 'success'
-      ? 'var(--pc-gold-text)'
-      : tone === 'warning'
-        ? palette.amber
-        : 'var(--pc-t4)';
+  const Icon = MORE_PICKS_STATUS_ICONS[icon];
+  const color = getMorePicksStatusColor(tone);
 
   return (
     <div

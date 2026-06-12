@@ -1,5 +1,5 @@
-import type { RecommendationResultSignals } from '@/lib/db/recommendations';
 import type { Translations } from '@/i18n/locales/en';
+import type { RecommendationResultSignals } from '@/lib/db/recommendations';
 import type { MovieRecommendation } from '@/utils/client';
 
 type ResultsCopy = Translations['results'];
@@ -54,6 +54,46 @@ function addSignal(items: ResultEvidenceItem[], label: string, value: string | u
   items.push({ label, value });
 }
 
+function getReferenceSignalValue(
+  resultSignals: RecommendationResultSignals | undefined,
+  copy: ResultsCopy,
+): string | undefined {
+  return resultSignals?.hasReferenceMovie ? copy.evidenceReferenceValue : undefined;
+}
+
+function buildMatchSignal(movie: MovieRecommendation, copy: ResultsCopy): ResultEvidenceItem {
+  return {
+    label: copy.evidenceMatchLabel,
+    value: copy.evidenceMatchValue.replace(
+      '{pct}',
+      new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(movie.similarity * 100),
+    ),
+  };
+}
+
+function maybeAddGroupSignal(
+  fitSignals: ResultEvidenceItem[],
+  copy: ResultsCopy,
+  isGroupResult: boolean,
+) {
+  if (!isGroupResult) return;
+  fitSignals.push({ label: copy.evidenceGroupLabel, value: copy.evidenceGroupValue });
+}
+
+function keepGroupSignalVisible(
+  fitSignals: ResultEvidenceItem[],
+  copy: ResultsCopy,
+): ResultEvidenceItem[] {
+  const visibleSignals = fitSignals.slice(0, 5);
+  const groupSignal = fitSignals.find((item) => item.label === copy.evidenceGroupLabel);
+
+  if (groupSignal && !visibleSignals.includes(groupSignal)) {
+    visibleSignals[visibleSignals.length - 1] = groupSignal;
+  }
+
+  return visibleSignals;
+}
+
 function buildFitSignals({
   copy,
   isGroupResult,
@@ -71,31 +111,11 @@ function buildFitSignals({
   addSignal(fitSignals, copy.evidenceToneLabel, firstValues(resultSignals?.toneSignals));
   addSignal(fitSignals, copy.evidenceEraLabel, firstValues(resultSignals?.eraSignals));
   addSignal(fitSignals, copy.evidenceActorLabel, firstValues(resultSignals?.actorSignals, 1));
-  addSignal(
-    fitSignals,
-    copy.evidenceReferenceLabel,
-    resultSignals?.hasReferenceMovie ? copy.evidenceReferenceValue : undefined,
-  );
+  addSignal(fitSignals, copy.evidenceReferenceLabel, getReferenceSignalValue(resultSignals, copy));
+  fitSignals.push(buildMatchSignal(movie, copy));
+  maybeAddGroupSignal(fitSignals, copy, isGroupResult);
 
-  fitSignals.push({
-    label: copy.evidenceMatchLabel,
-    value: copy.evidenceMatchValue.replace(
-      '{pct}',
-      new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(movie.similarity * 100),
-    ),
-  });
-
-  if (isGroupResult) {
-    fitSignals.push({ label: copy.evidenceGroupLabel, value: copy.evidenceGroupValue });
-  }
-
-  const visibleSignals = fitSignals.slice(0, 5);
-  const groupSignal = fitSignals.find((item) => item.label === copy.evidenceGroupLabel);
-  if (groupSignal && !visibleSignals.includes(groupSignal)) {
-    visibleSignals[visibleSignals.length - 1] = groupSignal;
-  }
-
-  return visibleSignals;
+  return keepGroupSignalVisible(fitSignals, copy);
 }
 
 function getRuntimeSignal(

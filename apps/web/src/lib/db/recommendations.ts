@@ -9,17 +9,17 @@ import { nanoid } from 'nanoid';
 import pg from 'pg';
 
 import {
-  buildGroupResultInsights,
-  getQuizPeopleCount,
-  hasFavoriteActorSignal,
-} from '@/features/recommendation/groupResultInsights';
-import {
   cleanString,
   cleanStringArray,
   cleanStringValues,
   quizPeople,
   uniqueStrings,
 } from '@/features/recommendation/groupResultInsightInput';
+import {
+  buildGroupResultInsights,
+  getQuizPeopleCount,
+  hasFavoriteActorSignal,
+} from '@/features/recommendation/groupResultInsights';
 import { getMovieIdentityKey } from '@/lib/movieIdentity';
 
 import type { RecommendationStage } from '@/features/recommendation/stages';
