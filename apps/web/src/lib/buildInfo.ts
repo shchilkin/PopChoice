@@ -113,7 +113,10 @@ export function getBuildInfo(now = new Date()): BuildInfo {
     imageDigest: normalizeImageDigest(
       firstNonEmpty(process.env.APP_IMAGE_DIGEST, process.env.BUILD_APP_IMAGE_DIGEST),
     ),
-    environment: process.env.NODE_ENV ?? 'development',
+    environment:
+      firstNonEmpty(process.env.DEPLOYMENT_ENVIRONMENT, process.env.APP_ENVIRONMENT) ??
+      process.env.NODE_ENV ??
+      'development',
     resourceUuid: firstNonEmpty(
       process.env.COOLIFY_RESOURCE_UUID,
       process.env.BUILD_COOLIFY_RESOURCE_UUID,

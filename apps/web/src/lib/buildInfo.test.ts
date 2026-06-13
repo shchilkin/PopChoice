@@ -21,6 +21,8 @@ const buildMetadataEnvKeys = [
   'BUILD_APP_IMAGE_TAG',
   'APP_IMAGE_DIGEST',
   'BUILD_APP_IMAGE_DIGEST',
+  'DEPLOYMENT_ENVIRONMENT',
+  'APP_ENVIRONMENT',
   'APP_GIT_BRANCH',
   'BUILD_APP_GIT_BRANCH',
   'SOURCE_BRANCH',
@@ -81,6 +83,7 @@ describe('getBuildInfo', () => {
     vi.stubEnv('APP_PR_NUMBER', '42');
     vi.stubEnv('APP_IMAGE_REPOSITORY', 'ghcr.io/shchilkin/popchoice/web');
     vi.stubEnv('APP_IMAGE_TAG', 'sha-abcdef123456');
+    vi.stubEnv('DEPLOYMENT_ENVIRONMENT', 'production');
     vi.stubEnv(
       'APP_IMAGE_DIGEST',
       'sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
@@ -101,8 +104,19 @@ describe('getBuildInfo', () => {
       imageRepository: 'ghcr.io/shchilkin/popchoice/web',
       imageTag: 'sha-abcdef123456',
       imageDigest: 'sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      environment: 'production',
       baseUrl: 'https://pop-choice.shchilkin.dev',
     });
+  });
+
+  it('uses APP_ENVIRONMENT as a legacy deployment environment fallback', () => {
+    clearBuildMetadataEnv();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_ENVIRONMENT', 'development');
+
+    const info = getBuildInfo(new Date('2026-05-19T12:00:00.000Z'));
+
+    expect(info.environment).toBe('development');
   });
 
   it('ignores invalid commit values instead of exposing arbitrary env content', () => {
