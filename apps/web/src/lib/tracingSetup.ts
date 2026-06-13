@@ -87,12 +87,21 @@ function createTracingSdk({
 
 function getResourceAttributes(service: RuntimeService) {
   return {
-    'deployment.environment': process.env.NODE_ENV ?? 'development',
+    'deployment.environment': getDeploymentEnvironment(),
     'service.instance.id': process.env.HOSTNAME,
     'service.name': process.env.OTEL_SERVICE_NAME ?? `popchoice-${service}`,
     'service.namespace': 'popchoice',
     'service.version': process.env.APP_VERSION ?? 'development',
   };
+}
+
+function getDeploymentEnvironment() {
+  return (
+    process.env.DEPLOYMENT_ENVIRONMENT?.trim() ||
+    process.env.APP_ENVIRONMENT?.trim() ||
+    process.env.NODE_ENV ||
+    'development'
+  );
 }
 
 function createInstrumentations() {

@@ -48,16 +48,21 @@ and Redis so data survives redeploys.
 Use three long-lived environments instead of relying on many always-on PR
 previews:
 
-| Environment   | Purpose                                      | Source branch / tag                                                | Data model                        | Typical domains                                                                |
-| ------------- | -------------------------------------------- | ------------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------ |
-| `local`       | Fast iteration on a developer machine        | feature branches                                                   | Local Docker PostgreSQL and Redis | `http://localhost:3000`, `http://localhost:3003`, `http://localhost:4000`      |
-| `development` | Shared staging for merged `development` work | Moving `development` GHCR image tag                                | Shared staging volumes            | `dev.pop-choice.example`, `docs-dev.pop-choice.example`, admin-only tool hosts |
-| `production`  | Stable user-facing deployment                | Immutable `sha-<12-char-github-sha>` tag or a promoted release tag | Production volumes with backups   | `pop-choice.example`, `docs.pop-choice.example`, private/admin tool hosts      |
+| Environment   | Purpose                                      | Source branch / tag                                                           | Data model                        | Typical domains                                                                |
+| ------------- | -------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| `local`       | Fast iteration on a developer machine        | feature branches                                                              | Local Docker PostgreSQL and Redis | `http://localhost:3000`, `http://localhost:3003`, `http://localhost:4000`      |
+| `development` | Shared staging for merged `development` work | Moving `development` GHCR image tag                                           | Shared staging volumes            | `dev.pop-choice.example`, `docs-dev.pop-choice.example`, admin-only tool hosts |
+| `production`  | Stable user-facing deployment                | Gated `production` GHCR image tag or immutable `sha-<12-char-github-sha>` tag | Production volumes with backups   | `pop-choice.example`, `docs.pop-choice.example`, private/admin tool hosts      |
 
 In this model, `development` is the place to test merged work on the VPS.
 `production` should be promoted deliberately from a known image set after
 development is healthy. PR previews are still useful for risky branch testing,
 but they should be temporary and cleaned up quickly.
+
+Create separate Coolify Docker Compose resources for `development` and
+`production`. Do not share PostgreSQL or Redis named volumes between them. Both
+resources can use the same `coolify.compose.yml`, but their variables, domains,
+volumes, backups, and webhooks should be independent.
 
 Recommended domain layout:
 
@@ -135,11 +140,14 @@ IMAGE_TAG=development
 ```
 
 Use `IMAGE_TAG=development` for simple auto-deploys from the latest successful
-`development` build. Use `IMAGE_TAG=sha-<12-char-github-sha>` when you want to
-promote or roll back an exact immutable release. Keep the same `IMAGE_TAG` for
-`web`, `workers`, `bull-board`, `storybook`, `docs`, `backoffice`,
-`movie-seed`, `movie-discovery`, and `movie-backfill`; running mixed commits is
-intentionally not supported.
+`development` build. For the GitHub Actions production promotion path, set the
+production resource to `IMAGE_TAG=production`; the manual workflow run publishes
+that tag only after the image matrix passes and the GitHub `production`
+Environment is approved. Use `IMAGE_TAG=sha-<12-char-github-sha>` when you want
+to promote or roll back an exact immutable release manually. Keep the same
+`IMAGE_TAG` for `web`, `workers`, `bull-board`, `storybook`, `docs`,
+`backoffice`, `movie-seed`, `movie-discovery`, and `movie-backfill`; running
+mixed commits is intentionally not supported.
 
 If the GHCR packages are private, add registry credentials in Coolify so the VPS
 can pull `ghcr.io/shchilkin/popchoice/*`. Public packages do not need registry
@@ -155,6 +163,7 @@ POSTGRES_PASSWORD=...
 AUTH_SESSION_SECRET=...
 NEXT_PUBLIC_BASE_URL=https://your-domain.example
 IMAGE_TAG=development
+DEPLOYMENT_ENVIRONMENT=development
 ```
 
 For Docker Compose resources, these must exist in the resource's
@@ -167,6 +176,7 @@ POSTGRES_PASSWORD={{ environment.POSTGRES_PASSWORD }}
 AUTH_SESSION_SECRET={{ environment.AUTH_SESSION_SECRET }}
 NEXT_PUBLIC_BASE_URL=https://your-domain.example
 IMAGE_TAG=development
+DEPLOYMENT_ENVIRONMENT=development
 ```
 
 Use `{{ project.NAME }}` instead of `{{ environment.NAME }}` if the shared
@@ -176,12 +186,37 @@ resource so Coolify writes it into the generated `.env` file. The PostgreSQL
 password is required by Compose and by PostgreSQL on first database
 initialization, so a missing value now fails before containers are created.
 
+Recommended long-lived resource presets:
+
+```ini
+# development / staging resource
+IMAGE_TAG=development
+DEPLOYMENT_ENVIRONMENT=development
+APP_CHANNEL=development
+NEXT_PUBLIC_BASE_URL=https://dev.your-domain.example
+```
+
+```ini
+# production resource promoted by GitHub Actions
+IMAGE_TAG=production
+DEPLOYMENT_ENVIRONMENT=production
+APP_CHANNEL=production
+NEXT_PUBLIC_BASE_URL=https://your-domain.example
+```
+
+For a fully pinned production deploy or rollback, temporarily replace
+`IMAGE_TAG=production` with the exact `sha-<12-char-github-sha>` tag from a
+known-good image workflow run, redeploy the production resource, and switch back
+to the promotion tag only when you are ready for the next normal release.
+
 Recommended optional variables:
 
 ```ini
 APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 POSTGRES_USER=popchoice
 POSTGRES_DB=popchoice
+DEPLOYMENT_ENVIRONMENT=development
+APP_CHANNEL=development
 TMDB_API_KEY=...
 LOG_LEVEL=info
 API_KEY_HMAC_SECRET=...
@@ -290,7 +325,8 @@ Set these optional variables on the Coolify Compose resource:
 
 ```ini
 APP_VERSION=0.1.0-beta.0
-APP_CHANNEL=beta
+APP_CHANNEL=development
+DEPLOYMENT_ENVIRONMENT=development
 APP_COMMIT_SHA=<current git commit sha>
 APP_GIT_BRANCH=development
 APP_PR_NUMBER=<preview PR number, optional>
@@ -416,17 +452,21 @@ PopChoice app resource.
 For a simple continuous deployment path to the shared `development` resource:
 
 1. Set `IMAGE_TAG=development` on the Coolify Compose resource.
-2. Add the repository secret `COOLIFY_DEPLOY_WEBHOOK` with the development
-   Coolify deploy webhook URL.
-3. Add the repository secret `COOLIFY_TOKEN` with a Coolify API token that has
-   deploy permission.
-4. Optional but recommended: add `POPCHOICE_DEPLOY_VERIFY_BASE_URL`, for example
-   `https://dev.pop-choice.example`, so GitHub Actions can verify
-   `/api/health` and `/api/build` after the webhook runs.
-5. Optional if Grafana is reachable from GitHub Actions: add `GRAFANA_URL` and
-   `GRAFANA_SERVICE_ACCOUNT_TOKEN` so the deploy job can create a short silence
-   for deploy-sensitive alerts before triggering Coolify.
-6. Merge to `development`.
+2. Set `DEPLOYMENT_ENVIRONMENT=development` and `APP_CHANNEL=development` on
+   that resource.
+3. Create a GitHub Environment named `development`.
+4. Add the `development` environment secret `COOLIFY_DEPLOY_WEBHOOK` with the
+   development Coolify deploy webhook URL.
+5. Add the `development` environment secret `COOLIFY_TOKEN` with a Coolify API
+   token that has deploy permission.
+6. Optional but recommended: add `POPCHOICE_DEPLOY_VERIFY_BASE_URL`, for example
+   `https://dev.pop-choice.example`, to the same GitHub Environment so Actions
+   can verify `/api/health` and `/api/build` after the webhook runs.
+7. Optional if Grafana is reachable from GitHub Actions: add `GRAFANA_URL` and
+   `GRAFANA_SERVICE_ACCOUNT_TOKEN` to the GitHub Environment so the deploy job
+   can create a short silence for deploy-sensitive alerts before triggering
+   Coolify.
+8. Merge to `development`.
 
 GitHub Actions builds and publishes every PopChoice runtime image first. Only
 after the full image matrix succeeds does the workflow call the deploy webhook.
@@ -448,15 +488,28 @@ targets development.
 To smoke-test the same path without a new merge, manually run the
 `Container Images` workflow on the `development` branch. Manual runs rebuild and
 republish the same image set, update the `development` image tag, then call the
-Coolify deploy webhook after the matrix succeeds.
+development Coolify deploy webhook after the matrix succeeds when
+`deploy_environment=development`.
 
-For production release promotion, keep automatic deployment disabled on the
-production Coolify resource. Copy the `sha-<12-char-github-sha>` tag from the
-healthy workflow run, set production `IMAGE_TAG` to that exact tag, and redeploy
-manually. That makes rollback simple: set `IMAGE_TAG` back to the previous
-known-good sha tag and redeploy the same resource. Do not promote production
-from a branch build that has not already passed the image workflow and the
-development smoke checklist.
+For production release promotion:
+
+1. Keep production as a separate Coolify resource with `IMAGE_TAG=production`,
+   `DEPLOYMENT_ENVIRONMENT=production`, and production domains/secrets.
+2. Create a GitHub Environment named `production` and add production-scoped
+   `COOLIFY_DEPLOY_WEBHOOK`, `COOLIFY_TOKEN`, and
+   `POPCHOICE_DEPLOY_VERIFY_BASE_URL` secrets.
+3. Configure required reviewers on the GitHub `production` Environment.
+4. After the development resource passes the smoke checklist, manually run the
+   `Container Images` workflow on the `development` branch with
+   `deploy_environment=production`.
+5. Approve the GitHub Environment deployment. The workflow publishes the
+   `production` image tag for every service, triggers the production Coolify
+   webhook, and verifies `/api/health` plus `/api/build`.
+
+For a pinned rollback, set production `IMAGE_TAG` to the previous known-good
+`sha-<12-char-github-sha>` tag and redeploy the production resource manually.
+Do not promote production from a branch build that has not already passed the
+image workflow and the development smoke checklist.
 
 Do not point Coolify at source builds for production while also using GHCR
 images. Choose one deployment source of truth; the recommended production path

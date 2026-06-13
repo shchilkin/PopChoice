@@ -125,7 +125,9 @@ On pull requests from the same repository, the workflow publishes:
 - `sha-<12-char-github-sha>` – exact checked commit used by the workflow
 - `pr-<number>` – moving PR tag for the latest image built for that PR
 
-On pushes to `development`, it also publishes `development`.
+On pushes to `development`, it also publishes `development`. Manual
+`workflow_dispatch` runs can publish either `development` or `production`,
+depending on the selected deploy environment.
 
 Each image receives OCI labels for the repository, workflow run, checked
 commit, source PR branch, source PR head commit, and image role. Published runs
@@ -147,42 +149,53 @@ IMAGE_TAG=development
 ```
 
 For simple continuous deployment to the shared `development` Coolify resource,
-keep `IMAGE_TAG=development` and let the optional deploy webhook run after the
-image matrix succeeds. Treat this as staging, not production promotion.
+keep `IMAGE_TAG=development`, set `DEPLOYMENT_ENVIRONMENT=development`, and let
+the development deploy job run after the image matrix succeeds. Treat this as
+staging, not production promotion.
 
-For production, promote an immutable image set: copy the
-`sha-<12-char-github-sha>` tag from a healthy workflow run, set the production
-Coolify resource `IMAGE_TAG` to that exact tag, and redeploy manually. Rollback
-uses the same mechanism with the previous known-good sha tag. Every PopChoice
-service must use the same `IMAGE_TAG`; mixing `web`, `workers`, `bull-board`,
-`storybook`, `docs`, and service images from different commits is not a
-supported deployment shape.
+For production, create a separate Coolify resource with its own database,
+Redis, volumes, domains, and secrets. The GitHub workflow supports a gated
+promotion path: manually run `Container Images` on the `development` branch,
+choose `deploy_environment=production`, approve the GitHub Environment if
+required, and let the job publish the moving `production` image tag before
+triggering the production Coolify webhook. The production resource should use
+`IMAGE_TAG=production` and `DEPLOYMENT_ENVIRONMENT=production` for that path.
 
-Set the repository secrets `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` to
-enable redeploys after pushes to `development`. `COOLIFY_TOKEN` must be a
-Coolify API token with deploy permission because the deploy webhook is
-authenticated with `Authorization: Bearer <token>`. The same deploy step also
-runs for manual `workflow_dispatch` runs on `development`, which is useful for
-smoke-testing the image build and Coolify webhook path without merging another
-code change. Manual `development` runs publish the `development` image tag
-before the webhook is called, so Coolify pulls the images from that workflow
-run. When the webhook secret is absent, images are still published, but
-deployment remains manual. When the webhook is present but the token is missing,
-the deploy job fails to make the misconfiguration visible.
+The immutable `sha-<12-char-github-sha>` tags are still published for audit and
+rollback. If you need a fully pinned rollback, set the production Coolify
+resource `IMAGE_TAG` to the previous known-good sha tag and redeploy manually.
+Every PopChoice service must use the same `IMAGE_TAG`; mixing `web`, `workers`,
+`bull-board`, `storybook`, `docs`, and service images from different commits is
+not a supported deployment shape.
+
+Use GitHub Environments named `development` and `production` for deploy
+secrets. Store `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` separately in each
+environment so the same workflow can deploy either resource without sharing
+webhook URLs. `COOLIFY_TOKEN` must be a Coolify API token with deploy permission
+because the deploy webhook is authenticated with `Authorization: Bearer
+<token>`. The production GitHub Environment should require manual reviewers.
+When the webhook secret is absent, images are still published, but deployment
+is skipped for the `development` Environment. Production promotions fail when
+either production deploy secret is missing, because updating the `production`
+image tag without triggering the production resource would create an ambiguous
+release state. When the webhook is present but the token is missing, the deploy
+job fails to make the misconfiguration visible.
 
 The deploy job also supports deploy-aware observability hooks:
 
 - Set `GRAFANA_URL` and `GRAFANA_SERVICE_ACCOUNT_TOKEN` to create a short
   Grafana silence for alerts labeled `noise_profile=deploy-sensitive` before
   the Coolify webhook runs.
-- Set `POPCHOICE_DEPLOY_VERIFY_BASE_URL` to poll public `/api/health` and
-  `/api/build` after the webhook. The job fails if the deployed resource does
-  not recover within the retry budget. `POPCHOICE_PRODUCTION_BASE_URL` remains
-  supported as a backwards-compatible fallback.
+- Set `POPCHOICE_DEPLOY_VERIFY_BASE_URL` in each GitHub Environment to poll the
+  matching public `/api/health` and `/api/build` after the webhook. The job
+  fails if the deployed resource does not recover within the retry budget.
+  `POPCHOICE_PRODUCTION_BASE_URL` remains supported as a backwards-compatible
+  fallback.
 
-If these optional secrets are absent, the workflow keeps the older behavior:
-publish images and trigger Coolify without creating silences or performing
-post-deploy verification.
+If Grafana secrets are absent, deploys continue without creating a temporary
+silence. If `POPCHOICE_DEPLOY_VERIFY_BASE_URL` is absent, the deploy webhook
+can still run, but post-deploy health/build verification is skipped by
+`scripts/verify-production-deploy.sh`.
 
 For provenance in `/api/build`, pass these non-secret runtime variables to the
 deployed web container when using a prebuilt image:
@@ -259,10 +272,12 @@ on:
 If the PR is docs-only (`docs/**` and root-level `*.md`), heavy CI jobs are skipped and the lightweight `PR Validation` job still reports success. For non-doc PRs, the full CI suite runs and `PR Validation` verifies all required CI jobs succeeded.
 
 **`container-images.yml`** triggers on pull requests to `development`, pushes
-to `development`, and manual dispatches. It intentionally does not use
-docs-only path filtering: image-build changes often span workflow files,
-Dockerfiles, package manifests, and deployment docs, and the workflow itself is
-the source of truth for the deployable artifact.
+to `development`, and manual dispatches. Manual runs expose a
+`deploy_environment` input with `development`, `production`, and `none` choices;
+Coolify deploys are only allowed from the `development` ref. The workflow
+intentionally does not use docs-only path filtering: image-build changes often
+span workflow files, Dockerfiles, package manifests, and deployment docs, and
+the workflow itself is the source of truth for the deployable artifact.
 
 **`movie-discovery-ci.yml`** uses `paths` so that the service CI only runs when the service source actually changes:
 
@@ -301,8 +316,9 @@ The PR validation workflows are triggered on:
 
 `pr.yml` always runs and classifies docs-only PRs inside the workflow so `PR Validation` is always reported.
 `container-images.yml` builds production images on pull requests and on pushes
-to `development`. `movie-discovery-ci.yml` additionally **only runs** when at
-least one file under `services/movie-discovery/**` changes or when
+to `development`; manual runs can also publish `development` or `production`
+promotion tags before triggering the matching Coolify resource. `movie-discovery-ci.yml`
+additionally **only runs** when at least one file under `services/movie-discovery/**` changes or when
 `.github/workflows/movie-discovery-ci.yml` itself changes. `codeql.yml` runs on
 pushes and pull requests targeting `development`, plus its weekly scheduled
 scan.
