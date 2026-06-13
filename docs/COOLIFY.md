@@ -80,10 +80,10 @@ Recommended domain layout:
 
 The current long-lived VPS layout is:
 
-| Environment   | Branch        | Image tag     | Public app                                    | Docs                                            | Operator/review surfaces                                                                                                                                         |
-| ------------- | ------------- | ------------- | --------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `development` | `development` | `development` | `https://dev.pop-choice.shchilkin.dev`        | `https://dev-docs.pop-choice.shchilkin.dev`     | `https://dev-backoffice.pop-choice.shchilkin.dev`, `https://dev-bullboard.pop-choice.shchilkin.dev`, `https://dev-storybook.pop-choice.shchilkin.dev`           |
-| `production`  | `main`        | `production`  | `https://pop-choice.shchilkin.dev`            | `https://docs.pop-choice.shchilkin.dev`         | `https://backoffice.pop-choice.shchilkin.dev`, `https://bullboard.pop-choice.shchilkin.dev`, `https://storybook.pop-choice.shchilkin.dev`                       |
+| Environment   | Branch        | Image tag     | Public app                             | Docs                                        | Operator/review surfaces                                                                                                                              |
+| ------------- | ------------- | ------------- | -------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `development` | `development` | `development` | `https://dev.pop-choice.shchilkin.dev` | `https://dev-docs.pop-choice.shchilkin.dev` | `https://dev-backoffice.pop-choice.shchilkin.dev`, `https://dev-bullboard.pop-choice.shchilkin.dev`, `https://dev-storybook.pop-choice.shchilkin.dev` |
+| `production`  | `main`        | `production`  | `https://pop-choice.shchilkin.dev`     | `https://docs.pop-choice.shchilkin.dev`     | `https://backoffice.pop-choice.shchilkin.dev`, `https://bullboard.pop-choice.shchilkin.dev`, `https://storybook.pop-choice.shchilkin.dev`             |
 
 `development` is continuously deployed from the `development` branch after the
 image matrix succeeds. `production` is promoted manually from `main` after
@@ -283,7 +283,7 @@ APP_IMAGE_PREFIX={{ project.APP_IMAGE_PREFIX }}
 IMAGE_TAG=development
 DEPLOYMENT_ENVIRONMENT=development
 APP_CHANNEL=development
-APP_VERSION=0.1.0-beta.0
+APP_VERSION=0.1.0
 
 POSTGRES_USER={{ project.POSTGRES_USER }}
 POSTGRES_DB={{ project.POSTGRES_DB }}
@@ -363,7 +363,7 @@ APP_IMAGE_PREFIX={{ project.APP_IMAGE_PREFIX }}
 IMAGE_TAG=production
 DEPLOYMENT_ENVIRONMENT=production
 APP_CHANNEL=production
-APP_VERSION=0.1.0-beta.0
+APP_VERSION=0.1.0
 
 POSTGRES_USER={{ project.POSTGRES_USER }}
 POSTGRES_DB={{ project.POSTGRES_DB }}
@@ -527,7 +527,7 @@ await PopChoice.info();
 Set these optional variables on the Coolify Compose resource:
 
 ```ini
-APP_VERSION=0.1.0-beta.0
+APP_VERSION=0.1.0
 APP_CHANNEL=development
 DEPLOYMENT_ENVIRONMENT=development
 APP_COMMIT_SHA=<current git commit sha>
@@ -599,7 +599,7 @@ Run this checklist after production deploys and after any infrastructure change:
 - `https://docs.your-domain.example/docs` loads the documentation site if the
   `docs` service is enabled.
 - `https://your-domain.example/api/health` returns `200`.
-- `https://your-domain.example/api/build` shows the expected beta version and
+- `https://your-domain.example/api/build` shows the expected release version and
   commit hash.
 - `https://storybook.your-domain.example` loads the component workshop if the
   `storybook` service is enabled.
