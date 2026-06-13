@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { type Job, Queue } from 'bullmq';
 import IORedis from 'ioredis';
 
 import logger from '@/lib/logger';
@@ -14,8 +14,11 @@ import type { Locale } from '@/lib/locale';
 import type { TraceCarrier } from '@/lib/tracing';
 
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
+export const MOVIE_SEED_JOB_NAME = 'seed-movies';
 export const RECOMMENDATION_QUEUE_NAME = 'recommendation';
+export const RECOMMENDATION_JOB_NAME = 'recommendation';
 export const MORE_PICKS_QUEUE_NAME = 'more-picks';
+export const MORE_PICKS_JOB_NAME = 'more-picks';
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
 export const RECOMMENDATION_EVAL_QUEUE_NAME = 'recommendation-evals';
 
@@ -127,6 +130,16 @@ export type CatalogMaintenanceJobData =
   | CatalogBackfillMovieJobData
   | CatalogEnqueueRepairBatchJobData;
 
+export type MovieSeedJobName = typeof MOVIE_SEED_JOB_NAME;
+export type RecommendationJobName = typeof RECOMMENDATION_JOB_NAME;
+export type MorePicksJobName = typeof MORE_PICKS_JOB_NAME;
+
+type MovieSeedJob = Job<MovieSeedJobData, void, MovieSeedJobName>;
+type RecommendationJob = Job<RecommendationJobData, void, RecommendationJobName>;
+type MorePicksJob = Job<MorePicksJobData, void, MorePicksJobName>;
+type CatalogMaintenanceJob = Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>;
+type RecommendationEvalJob = Job<RecommendationEvalJobData, void, RecommendationEvalJobName>;
+
 export const MOVIE_SEED_JOB_OPTIONS = {
   attempts: 3,
   backoff: { type: 'exponential' as const, delay: 2000 },
@@ -186,11 +199,11 @@ export function createBullMQConnection(): IORedis | null {
 const queueConnection = createBullMQConnection();
 
 export const seedQueue = queueConnection
-  ? new Queue<MovieSeedJobData>(MOVIE_SEED_QUEUE_NAME, { connection: queueConnection })
+  ? new Queue<MovieSeedJob>(MOVIE_SEED_QUEUE_NAME, { connection: queueConnection })
   : null;
 
 export const recommendationQueue = queueConnection
-  ? new Queue<RecommendationJobData>(RECOMMENDATION_QUEUE_NAME, { connection: queueConnection })
+  ? new Queue<RecommendationJob>(RECOMMENDATION_QUEUE_NAME, { connection: queueConnection })
   : null;
 
 export const MORE_PICKS_JOB_OPTIONS = {
@@ -203,21 +216,19 @@ export const MORE_PICKS_JOB_OPTIONS = {
 };
 
 export const morePicksQueue = queueConnection
-  ? new Queue<MorePicksJobData>(MORE_PICKS_QUEUE_NAME, { connection: queueConnection })
+  ? new Queue<MorePicksJob>(MORE_PICKS_QUEUE_NAME, { connection: queueConnection })
   : null;
 
 export const catalogMaintenanceQueue = queueConnection
-  ? new Queue<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>(
-      CATALOG_MAINTENANCE_QUEUE_NAME,
-      { connection: queueConnection },
-    )
+  ? new Queue<CatalogMaintenanceJob>(CATALOG_MAINTENANCE_QUEUE_NAME, {
+      connection: queueConnection,
+    })
   : null;
 
 export const recommendationEvalQueue = queueConnection
-  ? new Queue<RecommendationEvalJobData, void, RecommendationEvalJobName>(
-      RECOMMENDATION_EVAL_QUEUE_NAME,
-      { connection: queueConnection },
-    )
+  ? new Queue<RecommendationEvalJob>(RECOMMENDATION_EVAL_QUEUE_NAME, {
+      connection: queueConnection,
+    })
   : null;
 
 export async function closeBullMQQueues(): Promise<void> {

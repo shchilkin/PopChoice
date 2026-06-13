@@ -10,22 +10,26 @@ import logger from '@/lib/logger';
 import { recordQueueJobEvent } from '@/lib/metrics';
 import { withTraceSpan } from '@/lib/tracing';
 
-import type { MovieSeedJobData } from '@/lib/jobQueue';
+import type { MovieSeedJobData, MovieSeedJobName } from '@/lib/jobQueue';
 
 const MAX_MOVIE_SEED_ATTEMPTS = MOVIE_SEED_JOB_OPTIONS.attempts;
 
 // Imported dynamically by startWorkers.ts.
 // fallow-ignore-next-line unused-export
-export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
+export function createMovieSeedWorker(): Worker<MovieSeedJobData, void, MovieSeedJobName> | null {
   const connection = createBullMQConnection();
   if (!connection) {
     logger.warn('REDIS_URL not set. Movie seeding worker is disabled.');
     return null;
   }
 
-  const worker = new Worker<MovieSeedJobData>(MOVIE_SEED_QUEUE_NAME, processMovieSeedJob, {
-    connection,
-  });
+  const worker = new Worker<MovieSeedJobData, void, MovieSeedJobName>(
+    MOVIE_SEED_QUEUE_NAME,
+    processMovieSeedJob,
+    {
+      connection,
+    },
+  );
 
   worker.on('completed', recordMovieSeedCompleted);
 
@@ -44,7 +48,7 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData> | null {
   return worker;
 }
 
-async function processMovieSeedJob(job: Job<MovieSeedJobData>) {
+async function processMovieSeedJob(job: Job<MovieSeedJobData, void, MovieSeedJobName>) {
   const { tmdbMovies, localKeys, tmdbEmbeddings } = job.data;
   await withTraceSpan(
     'movie_seed.worker.process',

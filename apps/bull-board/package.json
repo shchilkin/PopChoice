@@ -15,7 +15,7 @@
     "bullmq": "^5.78.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
-    "ioredis": "^5.11.1"
+    "ioredis": "5.10.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",

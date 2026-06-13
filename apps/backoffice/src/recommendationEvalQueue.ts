@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { type Job, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 
 import { logger } from '@pop-choice/shared';
@@ -34,9 +34,11 @@ type RecommendationEvalJobData = {
   runId: string;
   mode: BackofficeRecommendationEvalMode;
 };
+type RecommendationEvalJobName = typeof RECOMMENDATION_EVAL_JOB_NAME;
+type RecommendationEvalJob = Job<RecommendationEvalJobData, void, RecommendationEvalJobName>;
 
 let redisConnection: Redis | null = null;
-let recommendationEvalQueue: Queue<RecommendationEvalJobData> | null = null;
+let recommendationEvalQueue: Queue<RecommendationEvalJob> | null = null;
 
 function toBullMQJobIdPart(value: string): string {
   return value.replace(/[^a-zA-Z0-9_.-]/g, '-');
@@ -44,7 +46,7 @@ function toBullMQJobIdPart(value: string): string {
 
 function getRecommendationEvalQueue(
   redisUrl: string | undefined,
-): Queue<RecommendationEvalJobData> | null {
+): Queue<RecommendationEvalJob> | null {
   if (recommendationEvalQueue) return recommendationEvalQueue;
   if (!redisUrl) return null;
 
@@ -53,7 +55,7 @@ function getRecommendationEvalQueue(
     logger.error('Backoffice recommendation eval Redis client error', { err: error });
   });
 
-  recommendationEvalQueue = new Queue<RecommendationEvalJobData>(RECOMMENDATION_EVAL_QUEUE_NAME, {
+  recommendationEvalQueue = new Queue<RecommendationEvalJob>(RECOMMENDATION_EVAL_QUEUE_NAME, {
     connection: redisConnection,
   });
   return recommendationEvalQueue;

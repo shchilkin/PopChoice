@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { HTMLAttributes, ReactNode } from 'react';
+import type { DocData } from 'fumadocs-mdx/runtime/types';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
 import { source } from '@/lib/source';
@@ -48,14 +49,15 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
     notFound();
   }
 
-  const MDX = page.data.body;
+  const pageData = page.data as typeof page.data & DocData & { title: string; full?: boolean };
+  const MDX = pageData.body;
 
   return (
-    <DocsPage toc={page.data.toc} full={page.data.full}>
-      <DocsTitle>{page.data.title}</DocsTitle>
-      <DocsDescription>{page.data.description}</DocsDescription>
+    <DocsPage toc={pageData.toc} full={pageData.full}>
+      <DocsTitle>{pageData.title}</DocsTitle>
+      <DocsDescription>{pageData.description}</DocsDescription>
       <DocsBody>
-        <MDX components={createMdxComponents(page.data.title)} />
+        <MDX components={createMdxComponents(pageData.title)} />
       </DocsBody>
     </DocsPage>
   );

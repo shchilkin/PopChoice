@@ -1,6 +1,10 @@
 import { SpanStatusCode } from '@opentelemetry/api';
 
-import { RECOMMENDATION_JOB_OPTIONS, recommendationQueue } from '@/lib/jobQueue';
+import {
+  RECOMMENDATION_JOB_NAME,
+  RECOMMENDATION_JOB_OPTIONS,
+  recommendationQueue,
+} from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordRecommendationCompletion } from '@/lib/metrics';
 import { getTraceCarrier, setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
@@ -95,7 +99,7 @@ export async function createAndStartRecommendation(
         },
         async (span) => {
           const job = await queue.add(
-            'recommendation',
+            RECOMMENDATION_JOB_NAME,
             {
               recommendationId,
               quizData,
