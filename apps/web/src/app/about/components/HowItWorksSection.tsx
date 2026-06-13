@@ -54,7 +54,7 @@ export function HowItWorksSection() {
             return (
               <motion.div
                 key={stepNum}
-                initial={{ opacity: 0, x: -20 }}
+                initial={false}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}

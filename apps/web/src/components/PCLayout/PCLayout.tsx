@@ -20,7 +20,6 @@ import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 import { type Translations } from '@/i18n/locales/en';
 import { createFreshQuizHref } from '@/lib/quizNavigation';
-import { palette } from '@/styles/designTokens';
 
 type NavLink = {
   href: string;
@@ -464,7 +463,6 @@ export function PCLayout({ children }: { children: ReactNode }) {
   const navLinks = [
     { href: '/about', label: t.nav.howItWorks },
     { href: '/available-movies', label: t.nav.availableMovies },
-    { href: '/design-system', label: t.nav.styleGuide },
     ...(isAuthenticated
       ? [{ href: '/account', label: t.nav.account }]
       : [
@@ -498,15 +496,12 @@ export function PCLayout({ children }: { children: ReactNode }) {
           <span
             className="tracking-widest uppercase"
             style={{
+              color: 'var(--pc-gold-text)',
               fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
               fontWeight: '600',
               textTransform: 'uppercase',
               fontSize: '1.4rem',
               letterSpacing: '0.12em',
-              background: `linear-gradient(90deg, ${palette.gold}, ${palette.amber})`,
-              WebkitBackgroundClip: 'text',
-              backgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
             }}
           >
             PopChoice
@@ -558,7 +553,7 @@ export function PCLayout({ children }: { children: ReactNode }) {
         >
           {t.footer.authorName}
         </a>{' '}
-        {' - '}
+        {' · '}
         {t.footer.tagline}
       </footer>
     </div>

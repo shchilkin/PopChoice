@@ -53,7 +53,7 @@ export function FeaturesSection() {
   return (
     <section id="features" className="px-5 py-20 max-w-5xl mx-auto w-full">
       <motion.div
-        initial={{ opacity: 0, y: 30 }}
+        initial={false}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
@@ -114,7 +114,7 @@ function FeatureCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={false}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay: index * 0.1 }}

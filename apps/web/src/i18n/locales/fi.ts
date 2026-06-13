@@ -20,7 +20,7 @@ export const fi: Translations = {
   footer: {
     builtBy: 'Rakentanut',
     authorName: 'Aleksandr Shchilkin',
-    tagline: 'kurssin harjoitustyö, joka meni käsistä',
+    tagline: 'elokuvailta ilman loputonta selaamista',
   },
   tmdbAttribution: {
     disclaimer: 'PopChoice käyttää TMDB API:a, mutta ei ole TMDB:n hyväksymä tai sertifioima.',
@@ -28,38 +28,53 @@ export const fi: Translations = {
   },
   hero: {
     badge: 'Tekoäly löytää sinulle sopivan elokuvan',
-    descriptionPre: 'Viisi kysymystä kertoo maustasi. Tekoäly löytää',
-    perfectMovie: 'täydellisen elokuvan',
-    descriptionPost: 'yli 400 analysoidun elokuvan joukosta. Yksin tai ryhmässä.',
+    descriptionPre: 'Valitse illan tunnelma, kerro ehdottomat ei:t, ja tekoäly löytää',
+    perfectMovie: 'tämän illan elokuvan',
+    descriptionPost: 'yksin, kaksin tai ryhmässä katsottavaksi.',
     findMyMovie: 'Löydä elokuvani',
     howItWorks: 'Miten se toimii',
-    noSignup: 'Ei rekisteröitymistä · ~60 sekuntia · Toimii puhelimella',
+    noSignup: 'Ei rekisteröitymistä · Nopea tai tarkempi haku · Toimii puhelimella',
+  },
+  landingModes: {
+    headline: 'Valitse millainen elokuvailta on tulossa',
+    subheadline: 'Yksi painike aloittaa kyselyn. Sisällä valitset huoneeseen sopivan polun.',
+    fastPick: {
+      title: 'Pikavalinta',
+      desc: 'Kolme nopeaa signaalia iltoihin, jolloin hyvä lista on tärkeämpi kuin täydellinen kysely.',
+    },
+    normalMatch: {
+      title: 'Tarkempi haku',
+      desc: 'Syvempi kierros tunnelmaan, vältettäviin asioihin, löytöhaluun ja vertailuelokuviin.',
+    },
+    duoGroup: {
+      title: 'Kaksin & ryhmässä',
+      desc: 'Sama laite, eri maut. PopChoice etsii yhteistä aluetta, ei vain yhtä voittajaa.',
+    },
   },
   features: {
-    headline: 'Ei suodatin. Täsmäys.',
-    subheadline: 'Tunnelma, rytmi, tyyli — koodattuna lyhyeen kyselyyn, haettuna tekoälyllä.',
+    headline: 'Parempi tapa lopettaa selaaminen',
+    subheadline: 'Tunnelma, rajat, muisti ja elokuvatieto tekevät työn ennen kuin näet tuloksen.',
     aiPowered: {
-      title: 'Maku, ei tagit',
-      desc: 'Vastauksistasi muodostuu makuprofiili, jota verrataan ennalta analysoituihin elokuviin tunteen, rytmin ja tyylin perusteella — ei genrelaatikoihin.',
+      title: 'Tunnelma ja rajat',
+      desc: 'Kerro millainen illan pitäisi olla ja mitä vältetään: kauhu, hitaus, pitkät kestot, tekstitykset tai liian tutut valinnat.',
     },
     fiveQuestions: {
-      title: 'Viisi kysymystä',
-      desc: 'Anna vertailukohta, hakusuunta, illan fiilis, energia ja halutessasi näyttelijä. Nopeasti, ennen kuin ilta karkaa selaamiseen.',
+      title: 'TMDB-pohjainen löytö',
+      desc: 'Paikallinen makuhaku voi laajentua TMDB-hakuun, kun välimuisti on liian kapea, ja vahvat ehdokkaat järjestetään metadatan avulla.',
     },
     groupMode: {
-      title: 'Ryhmätila',
-      desc: 'Jokainen vastaa samalla laitteella. PopChoice löytää kohdan, jossa maut kohtaavat — ei väittelyä, ei arvontaa.',
-      worksFor: 'Sopii 2–6 henkilölle',
+      title: 'Oikea kompromissi',
+      desc: 'Yksin, kaksin ja ryhmässä ovat omat polkunsa. Tulos pisteytetään yleisölle, ei latisteta keskiarvoksi.',
+      worksFor: 'Yksi, kaksi tai 3–6 henkilöä',
     },
     instantResults: {
-      title: 'Kuusi harkittua ehdotusta',
-      desc: 'Paras osuma ja viisi vaihtoehtoa — jokaiselle tekoälyn kirjoittama selitys, miksi juuri tämä elokuva sopii sinulle.',
+      title: 'Muisti joka auttaa',
+      desc: 'Kirjautuneena palaute voi suodattaa katsotut, laskea väärän tunnelman osumia, nostaa tykkäyksiä ja vähentää toistoa.',
     },
   },
   cta: {
     headline: 'Oikea elokuva löytyy sieltä. Anna tekoälyn etsiä se.',
-    description:
-      'Lyhyt ohjattu kysely. Toimii sekä yksin katsomiseen että ryhmän elokuvaväittelyn ratkaisemiseen.',
+    description: 'Aloita yhdellä painikkeella. Nopea tai tarkempi haku valitaan kyselyn sisällä.',
     button: 'Löydä elokuvani',
   },
   quiz: {
@@ -439,16 +454,32 @@ export const fi: Translations = {
     morePicksCompleted: 'Uudet vaihtoehdot ovat valmiina alla — vertaa niitä päävalintaan.',
   },
   about: {
-    title: 'Tekoäly, joka ymmärtää makuasi',
-    originDescription:
-      'Alkoi Scrimba AI -insinöörikurssin harjoitustyönä. Kurssin jälkeen jatkoin kehitystä — muutin sen oikeaksi full-stack-järjestelmäksi oppiakseni osat, joita tutoriaalit sivuuttavat: vektoritietokannat, taustatyöjonot, monorepositorio-työkalut ja kontitetut käyttöönotot. Elokuvasuositukset ovat aitoja.',
+    title: 'Elokuvailta ilman loputonta selaamista',
+    introDescription:
+      'PopChoice auttaa valitsemaan tämän illan elokuvan yksin, kahdestaan tai ryhmälle. Kerro tunnelma, katsojat, ehdottomat ei:t ja kuinka seikkailunhaluinen olo on. Palvelu muuttaa kontekstin lyhyeksi listaksi, jossa on yksi selkeä päävalinta.',
+    primaryCta: 'Etsi elokuva',
     sourceCode: 'Tämän projektin lähdekoodi on saatavilla',
     sourceCodeLink: 'täällä',
     whatItDoesLabel: 'Mitä se tekee',
-    whatItDoesDescription:
-      'PopChoice tarjoaa ohjatun makukyselyn — vertailuelokuvat, aikakauden, nykyisen tunnelman, sävyn, ehdottomat ei:t ja näyttelijävihjeet — ja muuntaa vastauksesi vektorirepresentaatioksi OpenAI-rajapinnan avulla. Tätä vertaillaan yli 400 ennalta analysoituun elokuvaan PostgreSQL:ssä pgvector-laajennuksella. Jos paikallisesta kokoelmasta ei löydy laadukasta vastaavuutta, järjestelmä laajentaa hakua automaattisesti TMDb-tietokantaan. Läheisimmät vastaavuudet esitetään suosituksina, joista jokaiselle on GPT:n luoma selitys siitä, miksi se sopii juuri sinulle. Genre on vain yksi ulottuvuus — järjestelmä tunnistaa myös elokuvallisen tyylin, kerronnallisen monimutkaisuuden ja tunnesävyn.',
+    whatItDoesItems: [
+      {
+        title: 'Lukee tilanteen',
+        desc: 'Pikavalinta ja tarkempi haku mukautuvat yksin, kahdestaan tai ryhmässä katsomiseen sen sijaan, että jokainen ilta olisi sama.',
+      },
+      {
+        title: 'Kunnioittaa ehdottomia ei:ta',
+        desc: 'Tunnelma, sävy, löytöhalu ja rajat vaikuttavat valintaan ennen genreä tai suosiota.',
+      },
+      {
+        title: 'Oppii palautteesta',
+        desc: 'Kirjautuneilla käyttäjillä elokuvamuisti auttaa, joten katsottu, tykätty ja väärä tunnelma parantavat tulevia tuloksia.',
+      },
+    ],
     backgroundNote:
       'Kaikki tämä tapahtuu taustalla. Sinulle näkyy: 60 sekunnin testi ja elokuva, jota kannattaa katsoa.',
+    builderNoteTitle: 'Tekijän huomio',
+    builderNoteDescription:
+      'PopChoice alkoi Scrimba AI -insinöörikurssin harjoitustyönä ja kasvoi oikeaksi full-stack-järjestelmäksi, jolla opettelin asioita, jotka tutoriaaleissa usein ohitetaan: vektorihaun, taustatyöjonot, monorepositorion ja kontitetut käyttöönotot.',
     ctaTitle: 'Valmis löytämään tämän illan elokuvan?',
     ctaSubtitle: 'Lyhyt kysely. Täydellinen elokuva.',
     ctaButton: 'Aloita testi',
@@ -456,20 +487,20 @@ export const fi: Translations = {
       title: 'Prosessi',
       steps: [
         {
-          title: 'Vastaat 5 nopeaan kysymykseen',
-          desc: 'Kerro meille lempifilmisi (ja miksi!), suositko klassikkoja vai uutuuksia, nykyinen tunnelmasi (valitse useita genrejä!), haluamasi sävy ja lempinäyttelijäsi. Se kestää noin 60 sekuntia.',
+          title: 'Valitset nopeuden ja yleisön',
+          desc: 'Aloita pikavalinnalla tai tarkemmalla haulla, sitten valitse onko tulos sinulle, kahdelle vai samalle laitteelle kokoontuneelle ryhmälle.',
         },
         {
-          title: 'Rakennamme makuprofiilisi',
-          desc: 'Vastauksistasi muodostuu rikas makuprofiili, joka tallentaa mieltymystesi vivahteet — ei vain genrejä, vaan myös elokuvallista tyyliä, kerronnan syvyyttä ja tunnosävyä.',
+          title: 'Kerro tunnelma ja rajat',
+          desc: 'Anna tämän hetken fiilis, ehdottomat ei:t, löytöhalu ja vertailuelokuvat, jos ne auttavat kuvaamaan makua.',
         },
         {
-          title: 'Tekoäly etsii elokuvatietokannastamme',
-          desc: 'Tekoälyn avulla löydämme tietokannastamme elokuvat, jotka vastaavat parhaiten makuprofiiliasi. Jokainen elokuva on ennalta analysoitu sävyn, vauhdin, teemojen ja tunnelatauksen osalta.',
+          title: 'Tekoäly yhdistää lähteet',
+          desc: 'Matcher yhdistää paikallisen välimuistin, TMDB-löydöt, rikastetun metadatan ja kirjautuneen käyttäjän elokuvamuistin, kun signaaleja on saatavilla.',
         },
         {
-          title: 'Saat harkitut tulokset',
-          desc: 'Näytämme parhaan vastauksesi sekä 5 muuta hienoa vaihtoehtoa, joista jokaisen kohdalla on personoitu tekoälyn kirjoittama selitys siitä, miksi se sopii makuusi.',
+          title: 'Saat päätöksen, et julisteseinää',
+          desc: 'Näe päävalinta, vertaa vaihtoehtoja, jaa tulos, pyydä lisää ehdotuksia ja opeta PopChoicea seuraavaa kertaa varten.',
         },
       ],
     },
@@ -551,19 +582,19 @@ export const fi: Translations = {
       items: [
         {
           q: 'Tarvitaanko PopChoiceen tiliä?',
-          a: 'PopChoicea voi käyttää ilman rekisteröitymistä — vastaa vain testiin ja saat suosituksesi. Voit halutessasi luoda ilmaisen tilin tallentaaksesi tuloksesi.',
+          a: 'Ei. Voit aloittaa kyselyn ja saada ehdotukset ilman rekisteröitymistä. Tili lisää historian ja elokuvamuistin, jolloin palaute voi parantaa myöhempiä suosituksia.',
         },
         {
           q: 'Miten ryhmätila toimii?',
-          a: 'Jokainen ryhmän jäsen täyttää ohjatun kyselyn samalla laitteella. PopChoice löytää sitten elokuvia, jotka sopivat kaikkien makuun — kompromissi, joka yllättävän hyvin toimii.',
+          a: 'Kaikki vastaavat samalla laitteella, ja PopChoice etsii yhteistä aluetta sekä hyväksyttävää kompromissia. Kahden hengen ilta saa saman oman käsittelyn.',
         },
         {
-          q: 'Kuinka tarkkoja suositukset ovat?',
-          a: 'Tekoäly analysoi elokuvan useita ominaisuuksia — ei vain genreä — mikä johtaa yllättävän tarkkaan makujen yhteensovittamiseen. Elokuvamaku on subjektiivinen — siksi annamme sinulle 6 vaihtoehtoa.',
+          q: 'Mistä ehdokkaat tulevat?',
+          a: 'PopChoice aloittaa paikallisesta välimuistista ja voi laajentaa TMDB-löytöihin, kun laajempi peitto auttaa. Vahvat ehdokkaat rikastetaan ja järjestetään ennen lopullista vastausta.',
         },
         {
-          q: 'Mistä elokuvatiedot tulevat?',
-          a: 'Elokuvatietokantamme on koottu julkisista elokuvametadatoista, mukaan lukien arvostelut, kesto, ohjaaja, genretagit ja teemaanalyysi, jonka tekoälymme on suorittanut.',
+          q: 'Miksi jättää palautetta tuloksesta?',
+          a: 'Palaute ei ole vain arvio. Kirjautuneilla käyttäjillä katsottu, tykätty, ei kiinnosta ja väärä tunnelma -signaalit voivat muuttaa tulevia ehdotuksia.',
         },
       ],
     },

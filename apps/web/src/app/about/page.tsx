@@ -20,12 +20,12 @@ export default function AboutPage() {
 
   return (
     <div className="px-5 py-12 max-w-3xl mx-auto w-full">
-      {/* Why — origin story */}
+      {/* Why: product promise */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-16"
+        className="mb-14"
       >
         <Breadcrumbs className="mb-3" items={[{ label: t.techStackPage.breadcrumbAbout }]} />
         <h1
@@ -43,10 +43,104 @@ export default function AboutPage() {
           {t.about.title}
         </h1>
         <p
-          className="mb-6 max-w-xl"
+          className="mb-6 max-w-2xl"
           style={{ color: 'var(--pc-t2)', lineHeight: 1.75, fontSize: '0.95rem' }}
         >
-          {t.about.originDescription}
+          {t.about.introDescription}
+        </p>
+        <Link
+          href="/quiz"
+          onClick={(event) => {
+            event.preventDefault();
+            navigateToFreshQuiz();
+          }}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl transition-all duration-200 hover:opacity-90 active:scale-95"
+          style={{
+            background: 'var(--pc-cta)',
+            color: 'var(--pc-cta-text)',
+            fontWeight: 700,
+            fontSize: '0.92rem',
+          }}
+        >
+          <Play size={15} className="fill-current" />
+          {t.about.primaryCta}
+        </Link>
+      </motion.div>
+
+      {/* What — product explanation */}
+      <motion.section
+        initial={false}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.45 }}
+        className="mb-16"
+      >
+        <h2
+          className="mb-3"
+          style={{
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            fontSize: '0.75rem',
+            letterSpacing: '0.12em',
+            color: 'var(--pc-t3)',
+          }}
+        >
+          {t.about.whatItDoesLabel}
+        </h2>
+        <div
+          style={{
+            borderTop: '1px solid var(--pc-bd1)',
+            paddingTop: '1.25rem',
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-3">
+            {t.about.whatItDoesItems.map((item) => (
+              <div key={item.title}>
+                <h3
+                  className="mb-2"
+                  style={{ color: 'var(--pc-t1)', fontWeight: 700, fontSize: '0.94rem' }}
+                >
+                  {item.title}
+                </h3>
+                <p style={{ color: 'var(--pc-t3)', lineHeight: 1.7, fontSize: '0.84rem' }}>
+                  {item.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* How: technical pipeline */}
+      <HowItWorksSection />
+
+      {/* Why: origin story */}
+      <motion.section
+        initial={false}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.45 }}
+        className="mb-16"
+      >
+        <h2
+          className="mb-4"
+          style={{
+            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            fontSize: '1.45rem',
+            letterSpacing: '0.05em',
+            color: 'var(--pc-t1)',
+          }}
+        >
+          {t.about.builderNoteTitle}
+        </h2>
+        <p
+          className="mb-5 max-w-2xl"
+          style={{ color: 'var(--pc-t2)', lineHeight: 1.75, fontSize: '0.92rem' }}
+        >
+          {t.about.builderNoteDescription}
         </p>
         <p style={{ color: 'var(--pc-t3)', fontSize: '0.875rem' }}>
           {t.about.sourceCode}{' '}
@@ -61,55 +155,16 @@ export default function AboutPage() {
           </a>
           .
         </p>
-      </motion.div>
-
-      {/* What — product explanation */}
-      <motion.section
-        initial={{ opacity: 0, y: 16 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.45 }}
-        className="mb-16"
-      >
-        <p
-          className="mb-3"
-          style={{
-            fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-            fontWeight: '600',
-            textTransform: 'uppercase',
-            fontSize: '0.75rem',
-            letterSpacing: '0.12em',
-            color: 'var(--pc-t3)',
-          }}
-        >
-          {t.about.whatItDoesLabel}
-        </p>
-        <div
-          style={{
-            borderTop: '1px solid var(--pc-bd1)',
-            paddingTop: '1.25rem',
-          }}
-        >
-          <p
-            className="max-w-2xl"
-            style={{ color: 'var(--pc-t2)', lineHeight: 1.8, fontSize: '0.95rem' }}
-          >
-            {t.about.whatItDoesDescription}
-          </p>
-        </div>
       </motion.section>
 
-      {/* How — technical pipeline */}
-      <HowItWorksSection />
-
-      {/* Stack — tools and rationale */}
+      {/* Stack: tools and rationale */}
       <TechStackSection />
 
       {/* FAQ */}
       <FAQSection />
 
       <motion.p
-        initial={{ opacity: 0 }}
+        initial={false}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.4 }}
@@ -121,7 +176,7 @@ export default function AboutPage() {
 
       {/* CTA */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={false}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}

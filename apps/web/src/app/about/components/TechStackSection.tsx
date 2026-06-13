@@ -5,6 +5,8 @@ import Link from 'next/link';
 
 import { useLanguage } from '@/i18n';
 
+import { TechStackGroupLabel } from './TechStackGroupLabel';
+
 export function TechStackSection() {
   const { t } = useLanguage();
   const { title, linkText, groups } = t.about.techStack;
@@ -28,24 +30,12 @@ export function TechStackSection() {
       <div className="flex flex-col gap-10">
         {groups.map((group, gi) => (
           <div key={gi}>
-            <p
-              className="mb-3"
-              style={{
-                fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-                fontWeight: '600',
-                textTransform: 'uppercase',
-                fontSize: '0.75rem',
-                letterSpacing: '0.12em',
-                color: 'var(--pc-t3)',
-              }}
-            >
-              {group.label}
-            </p>
+            <TechStackGroupLabel>{group.label}</TechStackGroupLabel>
             <div style={{ borderTop: '1px solid var(--pc-bd1)' }}>
               {group.items.map((item, ii) => (
                 <motion.div
                   key={ii}
-                  initial={{ opacity: 0, y: 10 }}
+                  initial={false}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.35, delay: gi * 0.05 + ii * 0.06 }}

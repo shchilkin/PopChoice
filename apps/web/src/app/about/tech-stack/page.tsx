@@ -3,6 +3,7 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 
+import { TechStackGroupLabel } from '@/app/about/components/TechStackGroupLabel';
 import { Breadcrumbs } from '@/components';
 import { useLanguage } from '@/i18n';
 import { navigateToFreshQuiz } from '@/lib/quizNavigation';
@@ -60,19 +61,7 @@ export default function TechStackPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.45, delay: gi * 0.05 }}
             >
-              <p
-                className="mb-4"
-                style={{
-                  fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-                  fontWeight: '600',
-                  textTransform: 'uppercase',
-                  fontSize: '0.75rem',
-                  letterSpacing: '0.12em',
-                  color: 'var(--pc-t3)',
-                }}
-              >
-                {group.label}
-              </p>
+              <TechStackGroupLabel className="mb-4">{group.label}</TechStackGroupLabel>
               <div style={{ borderTop: '1px solid var(--pc-bd1)' }}>
                 {group.items.map((item, ii) => (
                   <motion.div
