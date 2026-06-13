@@ -275,6 +275,10 @@ routing, the app's public URL is usually just `https://your-domain.example`.
 Both long-lived Coolify Compose resources use the same contract. The resource
 environment bridges project/environment shared variables into the generated
 `.env` file and declares the service domains for that one environment.
+Do not set `APP_VERSION` in Coolify. Runtime build metadata reads the version
+from the built package when the environment variable is absent, so release
+versions come from the repository and image build rather than manual Coolify
+edits.
 
 Development resource:
 
@@ -283,7 +287,6 @@ APP_IMAGE_PREFIX={{ project.APP_IMAGE_PREFIX }}
 IMAGE_TAG=development
 DEPLOYMENT_ENVIRONMENT=development
 APP_CHANNEL=development
-APP_VERSION=0.1.0
 
 POSTGRES_USER={{ project.POSTGRES_USER }}
 POSTGRES_DB={{ project.POSTGRES_DB }}
@@ -363,7 +366,6 @@ APP_IMAGE_PREFIX={{ project.APP_IMAGE_PREFIX }}
 IMAGE_TAG=production
 DEPLOYMENT_ENVIRONMENT=production
 APP_CHANNEL=production
-APP_VERSION=0.1.0
 
 POSTGRES_USER={{ project.POSTGRES_USER }}
 POSTGRES_DB={{ project.POSTGRES_DB }}
@@ -524,10 +526,11 @@ PopChoice.commit;
 await PopChoice.info();
 ```
 
-Set these optional variables on the Coolify Compose resource:
+Set these optional variables on the Coolify Compose resource. Do not set
+`APP_VERSION`; when absent, `/api/build` reports the version baked into the
+deployed package.
 
 ```ini
-APP_VERSION=0.1.0
 APP_CHANNEL=development
 DEPLOYMENT_ENVIRONMENT=development
 APP_COMMIT_SHA=<current git commit sha>
