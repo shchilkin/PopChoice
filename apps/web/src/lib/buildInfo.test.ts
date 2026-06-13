@@ -48,7 +48,7 @@ describe('getBuildInfo', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns beta defaults without deployment metadata', () => {
+  it('returns release defaults without deployment metadata', () => {
     clearBuildMetadataEnv();
     vi.stubEnv('NODE_ENV', 'production');
 
@@ -56,8 +56,8 @@ describe('getBuildInfo', () => {
 
     expect(info).toMatchObject({
       app: 'PopChoice',
-      version: '0.1.0-beta.0',
-      channel: 'beta',
+      version: '0.1.0',
+      channel: 'development',
       commitSha: null,
       commitShortSha: null,
       branch: null,
