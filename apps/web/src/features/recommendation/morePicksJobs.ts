@@ -5,7 +5,7 @@ import {
   markMorePicksStatus,
   storeMorePicks,
 } from '@/features/recommendation/morePicksPersistence';
-import { MORE_PICKS_JOB_OPTIONS, morePicksQueue } from '@/lib/jobQueue';
+import { MORE_PICKS_JOB_NAME, MORE_PICKS_JOB_OPTIONS, morePicksQueue } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { getTraceCarrier, setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 
@@ -87,7 +87,7 @@ export async function startMorePicksRequest(
         },
         async (span) => {
           const job = await queue.add(
-            'more-picks',
+            MORE_PICKS_JOB_NAME,
             { recommendationId, slug, locale, trace: getTraceCarrier() },
             MORE_PICKS_JOB_OPTIONS,
           );

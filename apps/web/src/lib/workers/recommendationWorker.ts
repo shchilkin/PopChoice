@@ -17,22 +17,27 @@ import logger from '@/lib/logger';
 import { recordQueueJobEvent, recordRecommendationCompletion } from '@/lib/metrics';
 import { setActiveTraceAttributes, withTraceSpan } from '@/lib/tracing';
 
-import type { RecommendationJobData } from '@/lib/jobQueue';
+import type { RecommendationJobData, RecommendationJobName } from '@/lib/jobQueue';
 
 const MAX_RECOMMENDATION_ATTEMPTS = RECOMMENDATION_JOB_OPTIONS.attempts;
 
 type RecommendationPeopleData = Extract<RecommendationJobData['quizData'], unknown[]>;
+type RecommendationWorkerJob = Job<RecommendationJobData, void, RecommendationJobName>;
 
 // Imported dynamically by startWorkers.ts.
 // fallow-ignore-next-line unused-export
-export function createRecommendationWorker(): Worker<RecommendationJobData> | null {
+export function createRecommendationWorker(): Worker<
+  RecommendationJobData,
+  void,
+  RecommendationJobName
+> | null {
   const connection = createBullMQConnection();
   if (!connection) {
     logger.warn('REDIS_URL not set. Recommendation worker is disabled.');
     return null;
   }
 
-  const worker = new Worker<RecommendationJobData>(
+  const worker = new Worker<RecommendationJobData, void, RecommendationJobName>(
     RECOMMENDATION_QUEUE_NAME,
     processRecommendationJob,
     { connection },
@@ -55,7 +60,7 @@ export function createRecommendationWorker(): Worker<RecommendationJobData> | nu
   return worker;
 }
 
-async function processRecommendationJob(job: Job<RecommendationJobData>) {
+async function processRecommendationJob(job: RecommendationWorkerJob) {
   const context = getRecommendationJobContext(job);
 
   await withTraceSpan(

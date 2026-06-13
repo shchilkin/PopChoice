@@ -65,7 +65,12 @@ function enqueueResult({
 }
 
 let redisConnection: Redis | null = null;
-let catalogMaintenanceQueue: Queue<CatalogMaintenanceJobData> | null = null;
+type CatalogMaintenanceJobName =
+  | typeof CATALOG_BACKFILL_MOVIE_JOB_NAME
+  | typeof CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME;
+type CatalogMaintenanceBullJob = Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>;
+
+let catalogMaintenanceQueue: Queue<CatalogMaintenanceBullJob> | null = null;
 
 function unavailableSnapshot(): CatalogMaintenanceQueueSnapshot {
   return {
@@ -79,7 +84,7 @@ function unavailableSnapshot(): CatalogMaintenanceQueueSnapshot {
 
 function getCatalogMaintenanceQueue(
   redisUrl: string | undefined,
-): Queue<CatalogMaintenanceJobData> | null {
+): Queue<CatalogMaintenanceBullJob> | null {
   if (catalogMaintenanceQueue) return catalogMaintenanceQueue;
 
   if (!redisUrl) return null;
@@ -89,14 +94,14 @@ function getCatalogMaintenanceQueue(
     logger.error('Backoffice BullMQ Redis client error', { err: error });
   });
 
-  catalogMaintenanceQueue = new Queue<CatalogMaintenanceJobData>(CATALOG_MAINTENANCE_QUEUE_NAME, {
+  catalogMaintenanceQueue = new Queue<CatalogMaintenanceBullJob>(CATALOG_MAINTENANCE_QUEUE_NAME, {
     connection: redisConnection,
   });
   return catalogMaintenanceQueue;
 }
 
 function toJobSummary(
-  job: Job<CatalogMaintenanceJobData>,
+  job: Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>,
   state: CatalogMaintenanceQueueJobState,
 ): CatalogMaintenanceQueueJobSummary {
   const data = job.data;
@@ -203,7 +208,7 @@ export async function listCatalogMaintenanceQueueJobs({
   return {
     ...snapshot,
     state,
-    jobs: jobs.map((job) => toJobSummary(job as Job<CatalogMaintenanceJobData>, state)),
+    jobs: jobs.map((job) => toJobSummary(job as CatalogMaintenanceBullJob, state)),
     totalCount,
     limit,
     offset,

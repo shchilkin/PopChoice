@@ -10,18 +10,18 @@ import logger from '@/lib/logger';
 import { recordQueueJobEvent } from '@/lib/metrics';
 import { withTraceSpan } from '@/lib/tracing';
 
-import type { MorePicksJobData } from '@/lib/jobQueue';
+import type { MorePicksJobData, MorePicksJobName } from '@/lib/jobQueue';
 
 const MAX_ATTEMPTS = MORE_PICKS_JOB_OPTIONS.attempts;
 
-export function createMorePicksWorker(): Worker<MorePicksJobData> | null {
+export function createMorePicksWorker(): Worker<MorePicksJobData, void, MorePicksJobName> | null {
   const connection = createBullMQConnection();
   if (!connection) {
     logger.warn('REDIS_URL not set. More-picks worker is disabled.');
     return null;
   }
 
-  const worker = new Worker<MorePicksJobData>(
+  const worker = new Worker<MorePicksJobData, void, MorePicksJobName>(
     MORE_PICKS_QUEUE_NAME,
     async (job) => {
       const { recommendationId, slug, locale } = job.data;

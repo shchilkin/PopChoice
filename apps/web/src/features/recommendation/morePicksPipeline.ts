@@ -8,7 +8,7 @@ import z from 'zod';
 
 import { getOpenAIClient } from '@/clients/openaiClient';
 import { IMAGE_BASE_URL } from '@/integrations/tmdb';
-import { MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
+import { MOVIE_SEED_JOB_NAME, MOVIE_SEED_JOB_OPTIONS, seedQueue } from '@/lib/jobQueue';
 import { LOCALE_LANGUAGE, LOCALE_TO_TMDB_LANG } from '@/lib/locale';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
@@ -243,7 +243,7 @@ async function enqueueMorePicksSeedJob(candidates: MorePicksTMDBMovie[]): Promis
     },
     async (span) => {
       const job = await queue.add(
-        'seed-movies',
+        MOVIE_SEED_JOB_NAME,
         { tmdbMovies: tmdbMoviesForSeeding, localKeys: [], trace: getTraceCarrier() },
         MOVIE_SEED_JOB_OPTIONS,
       );
