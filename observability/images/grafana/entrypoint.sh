@@ -12,47 +12,50 @@ templates:
     name: popchoice.telegram.message
     template: |
       {{ define "popchoice.alert.target" -}}
-      {{- with index .Labels "service" }}{{ . }}{{ else }}{{ with index .Labels "job" }}{{ . }}{{ else }}target{{ end }}{{ end -}}
-      {{- with index .Labels "instance" }} ({{ . }}){{ end -}}
+      <code>{{- with index .Labels "service" }}{{ . | html }}{{ else }}{{ with index .Labels "job" }}{{ . | html }}{{ else }}target{{ end }}{{ end -}}
+      {{- with index .Labels "instance" }} ({{ . | html }}){{ end -}}</code>
       {{- end }}
-      {{ define "popchoice.telegram.message" }}
-      {{ if eq .Status "firing" }}FIRING{{ else }}RESOLVED{{ end }} {{ with index .CommonLabels "severity" }}{{ . }}{{ end }}: {{ with index .CommonLabels "alertname" }}{{ . }}{{ else }}Grafana alert{{ end }}
-      {{ with index .CommonAnnotations "summary" }}
-      {{ . }}
-      {{ end }}
-      {{ with index .CommonAnnotations "action" }}
-      Action: {{ . }}
-      {{ end }}
+      {{ define "popchoice.alert.links" -}}
+      {{- with .SilenceURL }}  🔕 <a href="{{ . | html }}">Silence</a>{{ "\n" }}{{- end }}
+      {{- with .DashboardURL }}  📊 <a href="{{ . | html }}">Dashboard</a>{{ "\n" }}{{- end }}
+      {{- with index .Annotations "runbook_url" }}  📘 Runbook: <code>{{ . | html }}</code>{{ "\n" }}{{- end }}
+      {{- end }}
+      {{ define "popchoice.telegram.message" -}}
+      {{ if eq .Status "firing" }}🔥 <b>FIRING</b>{{ else }}✅ <b>RESOLVED</b>{{ end }}{{ with index .CommonLabels "severity" }} <code>{{ . | html }}</code>{{ end }}
+      <b>{{ with index .CommonLabels "alertname" }}{{ . | html }}{{ else }}Grafana alert{{ end }}</b>
+      {{- with index .CommonAnnotations "summary" }}
+      {{ . | html }}
+      {{- end }}
+      {{- with index .CommonAnnotations "action" }}
 
-      {{ if .Alerts.Firing }}
-      Firing: {{ len .Alerts.Firing }}
-      {{ range .Alerts.Firing }}
-      - {{ template "popchoice.alert.target" . }}
-        {{ with index .Annotations "description" }}
-        {{ . }}
-        {{ end }}
-        {{ with .SilenceURL }}
-        Silence: {{ . }}
-        {{ end }}
-        {{ with index .Annotations "runbook_url" }}
-        Runbook: {{ . }}
-        {{ end }}
-      {{ end }}
-      {{ end }}
+      🛠 <b>Action:</b> {{ . | html }}
+      {{- end }}
+      {{- with index .CommonLabels "owner" }}
+      👤 <b>Owner:</b> <code>{{ . | html }}</code>
+      {{- end }}
+      {{- if .Alerts.Firing }}
 
-      {{ if .Alerts.Resolved }}
-      Resolved: {{ len .Alerts.Resolved }}
-      {{ range .Alerts.Resolved }}
-      - {{ template "popchoice.alert.target" . }}
-        {{ with .DashboardURL }}
-        Dashboard: {{ . }}
-        {{ end }}
-      {{ end }}
-      {{ end }}
+      🚨 <b>Firing:</b> {{ len .Alerts.Firing }}
+      {{- range .Alerts.Firing }}
+      • {{ template "popchoice.alert.target" . }}
+      {{- with index .Annotations "description" }}
+        ↳ {{ . | html }}
+      {{- end }}
+      {{ template "popchoice.alert.links" . }}
+      {{- end }}
+      {{- end }}
+      {{- if .Alerts.Resolved }}
 
-      {{ with .ExternalURL }}
-      Grafana: {{ . }}
-      {{ end }}
+      ✅ <b>Resolved:</b> {{ len .Alerts.Resolved }}
+      {{- range .Alerts.Resolved }}
+      • {{ template "popchoice.alert.target" . }}
+      {{ template "popchoice.alert.links" . }}
+      {{- end }}
+      {{- end }}
+      {{- with .ExternalURL -}}
+
+      🔎 <a href="{{ . | html }}">Open Grafana</a>
+      {{- end }}
       {{- end }}
 YAML
 
@@ -68,6 +71,7 @@ contactPoints:
           chatid: "${GRAFANA_TELEGRAM_CHAT_ID}"
           bottoken: "${GRAFANA_TELEGRAM_BOT_TOKEN}"
           uploadImage: false
+          parse_mode: HTML
           message: |
             {{ template "popchoice.telegram.message" . }}
 

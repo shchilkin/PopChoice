@@ -53,8 +53,9 @@ groups notifications by folder, alert name, and severity. After enabling it, use
 Grafana's contact point **Test** action before relying on alert delivery.
 
 Telegram messages use the `popchoice.telegram.message` template instead of
-Grafana's default message. The message is intentionally short for mobile triage
-and includes:
+Grafana's default message. The contact point sends Telegram HTML with compact
+emoji markers so mobile triage can scan state, severity, and links quickly. The
+message includes:
 
 - `FIRING` or `RESOLVED`, severity, and alert name.
 - The summary and action annotation when the alert provides them.

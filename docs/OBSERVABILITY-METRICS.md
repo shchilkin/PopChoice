@@ -99,9 +99,9 @@ GRAFANA_TELEGRAM_CHAT_ID=<telegram-chat-id>
 If either value is missing, Grafana starts without provisioning the Telegram
 contact point so the observability stack can still run safely.
 
-Telegram alert notifications use a PopChoice-specific plain-text template. Set
-`GF_SERVER_ROOT_URL` to the public Grafana URL if silence, dashboard, and
-Grafana links should be useful outside the Docker network.
+Telegram alert notifications use a PopChoice-specific HTML template with compact
+emoji markers. Set `GF_SERVER_ROOT_URL` to the public Grafana URL if silence,
+dashboard, and Grafana links should be useful outside the Docker network.
 
 The template is intentionally compact for mobile triage: firing or resolved
 state, severity, alert name, summary, action, affected targets, and links. Raw
