@@ -152,7 +152,8 @@ IMAGE_TAG=development
 For simple continuous deployment to the shared `development` Coolify resource,
 keep `IMAGE_TAG=development`, set `DEPLOYMENT_ENVIRONMENT=development`, and let
 the development deploy job run after the image matrix succeeds. Treat this as
-staging, not production promotion.
+staging, not production promotion. The current development VPS resource uses
+`https://dev.pop-choice.shchilkin.dev` as its deploy verification base URL.
 
 For production, create a separate Coolify resource with its own database,
 Redis, volumes, domains, and secrets. The GitHub workflow supports a gated
@@ -162,6 +163,8 @@ manually run `Container Images` on the `main` branch, choose
 and let the job publish the moving `production` image tag before triggering the
 production Coolify webhook. The production resource should use
 `IMAGE_TAG=production` and `DEPLOYMENT_ENVIRONMENT=production` for that path.
+The current production VPS resource uses `https://pop-choice.shchilkin.dev` as
+its deploy verification base URL.
 
 The immutable `sha-<12-char-github-sha>` tags are still published for audit and
 rollback. If you need a fully pinned rollback, set the production Coolify
