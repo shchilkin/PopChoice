@@ -500,7 +500,7 @@ For production release promotion:
    `POPCHOICE_DEPLOY_VERIFY_BASE_URL` secrets.
 3. Configure required reviewers on the GitHub `production` Environment.
 4. After the development resource passes the smoke checklist, manually run the
-   `Container Images` workflow on the `development` branch with
+   `Container Images` workflow on the `main` branch with
    `deploy_environment=production`.
 5. Approve the GitHub Environment deployment. The workflow publishes the
    `production` image tag for every service, triggers the production Coolify
