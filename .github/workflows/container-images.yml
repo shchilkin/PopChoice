@@ -36,11 +36,26 @@ jobs:
           DEPLOY_ENVIRONMENT: ${{ inputs.deploy_environment || 'none' }}
         run: echo "deploy_environment=${DEPLOY_ENVIRONMENT}" >> "$GITHUB_OUTPUT"
 
-      - name: Require development ref for Coolify deploys
-        if: github.event_name == 'workflow_dispatch' && inputs.deploy_environment != 'none' && github.ref_name != 'development'
+      - name: Require matching release ref for Coolify deploys
+        if: github.event_name == 'workflow_dispatch' && inputs.deploy_environment != 'none'
+        env:
+          DEPLOY_ENVIRONMENT: ${{ inputs.deploy_environment }}
+          SELECTED_REF: ${{ github.ref_name }}
         run: |
-          echo "Coolify deployments must be dispatched from the development branch."
-          echo "Selected ref: ${GITHUB_REF_NAME}"
+          case "${DEPLOY_ENVIRONMENT}:${SELECTED_REF}" in
+            development:development)
+              exit 0
+              ;;
+            production:main)
+              exit 0
+              ;;
+          esac
+
+          echo "Coolify deploys must be dispatched from the matching release ref."
+          echo "Development deploys use ref: development"
+          echo "Production deploys use ref: main"
+          echo "Selected deploy environment: ${DEPLOY_ENVIRONMENT}"
+          echo "Selected ref: ${SELECTED_REF}"
           exit 1
 
   build-images:
@@ -249,7 +264,7 @@ jobs:
 
   deploy-production:
     name: Deploy production
-    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'development' && inputs.deploy_environment == 'production'
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main' && inputs.deploy_environment == 'production'
     needs: build-images
     runs-on: ubuntu-latest
     environment: production
