@@ -51,7 +51,7 @@ previews:
 | Environment   | Purpose                                      | Source branch / tag                                                           | Data model                        | Typical domains                                                                |
 | ------------- | -------------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
 | `local`       | Fast iteration on a developer machine        | feature branches                                                              | Local Docker PostgreSQL and Redis | `http://localhost:3000`, `http://localhost:3003`, `http://localhost:4000`      |
-| `development` | Shared staging for merged `development` work | Moving `development` GHCR image tag                                           | Shared staging volumes            | `dev.pop-choice.example`, `docs-dev.pop-choice.example`, admin-only tool hosts |
+| `development` | Shared staging for merged `development` work | Moving `development` GHCR image tag                                           | Shared staging volumes            | `dev.pop-choice.example`, `dev-docs.pop-choice.example`, admin-only tool hosts |
 | `production`  | Stable user-facing deployment                | Gated `production` GHCR image tag or immutable `sha-<12-char-github-sha>` tag | Production volumes with backups   | `pop-choice.example`, `docs.pop-choice.example`, private/admin tool hosts      |
 
 In this model, `development` is the place to test merged work on the VPS.
@@ -69,7 +69,7 @@ Recommended domain layout:
 - Public app: `pop-choice.example` in production, `dev.pop-choice.example` in
   development.
 - Docs: `docs.pop-choice.example` in production,
-  `docs-dev.pop-choice.example` in development.
+  `dev-docs.pop-choice.example` in development.
 - Backoffice and Bull Board: use separate admin-only domains such as
   `backoffice.pop-choice.example` and `bullboard.pop-choice.example`, protected
   with operator auth. Avoid exposing these before credentials are configured.
@@ -77,6 +77,17 @@ Recommended domain layout:
   `grafana.pop-choice.example`, with its own auth and backup plan.
 - PR previews: if enabled, use one preview hostname per PR/service only while
   actively testing that PR.
+
+The current long-lived VPS layout is:
+
+| Environment   | Branch        | Image tag     | Public app                             | Docs                                        | Operator/review surfaces                                                                                                                              |
+| ------------- | ------------- | ------------- | -------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `development` | `development` | `development` | `https://dev.pop-choice.shchilkin.dev` | `https://dev-docs.pop-choice.shchilkin.dev` | `https://dev-backoffice.pop-choice.shchilkin.dev`, `https://dev-bullboard.pop-choice.shchilkin.dev`, `https://dev-storybook.pop-choice.shchilkin.dev` |
+| `production`  | `main`        | `production`  | `https://pop-choice.shchilkin.dev`     | `https://docs.pop-choice.shchilkin.dev`     | `https://backoffice.pop-choice.shchilkin.dev`, `https://bullboard.pop-choice.shchilkin.dev`, `https://storybook.pop-choice.shchilkin.dev`             |
+
+`development` is continuously deployed from the `development` branch after the
+image matrix succeeds. `production` is promoted manually from `main` after
+staging has been accepted.
 
 ## Service Links
 
@@ -209,29 +220,221 @@ For a fully pinned production deploy or rollback, temporarily replace
 known-good image workflow run, redeploy the production resource, and switch back
 to the promotion tag only when you are ready for the next normal release.
 
-Recommended optional variables:
+### Shared variable scopes
+
+Coolify project/environment shared variables are only reusable templates. They
+are not automatically injected into a Docker Compose resource. Every value that
+the app needs at runtime must still be present on the resource's **Environment
+Variables** page, usually as a `{{ project.NAME }}` or `{{ environment.NAME }}`
+reference.
+
+Keep stable non-secret or low-sensitivity values at the Coolify project scope:
 
 ```ini
 APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 POSTGRES_USER=popchoice
 POSTGRES_DB=popchoice
-DEPLOYMENT_ENVIRONMENT=development
-APP_CHANNEL=development
-TMDB_API_KEY=...
 LOG_LEVEL=info
+EMAIL_REPLY_TO=support@your-domain.example
+OPERATOR_AUTH_REALM=PopChoice Operators
+OPERATOR_AUTH_RATE_LIMIT_MAX=30
+OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS=900
+```
+
+Keep deployment-specific secrets and public origins at the Coolify environment
+scope. Create separate values for `development` and `production`:
+
+```ini
+POSTGRES_PASSWORD=...
+OPENAI_API_KEY=...
+TMDB_API_KEY=...
+RESEND_API_KEY=...
+AUTH_SESSION_SECRET=...
 API_KEY_HMAC_SECRET=...
 VALID_API_KEYS=...
-RESEND_API_KEY=...
-EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
-EMAIL_REPLY_TO=support@your-domain.example
+METRICS_BEARER_TOKEN=...
+NEXT_PUBLIC_BASE_URL=https://dev.pop-choice.shchilkin.dev
+EMAIL_FROM=PopChoice Dev <noreply@mail.pop-choice.shchilkin.dev>
 OPERATOR_AUTH_USERNAME=...
 OPERATOR_AUTH_PASSWORD=...
-OPERATOR_AUTH_REALM=PopChoice Operators
 ```
+
+Use URL-safe database passwords such as `openssl rand -hex 32`; PostgreSQL
+passwords that contain URL-reserved characters can break generated
+`DATABASE_URL` values if they are not encoded.
+
+Keep plaintext API keys outside Coolify in a password manager. Store only
+`VALID_API_KEYS` digests and `API_KEY_HMAC_SECRET` in Coolify.
 
 Set `NEXT_PUBLIC_BASE_URL` to the URL users see in their browser, without a
 trailing slash. Even though the Coolify domain field includes `:3000` for proxy
 routing, the app's public URL is usually just `https://your-domain.example`.
+
+### Resource environment contract
+
+Both long-lived Coolify Compose resources use the same contract. The resource
+environment bridges project/environment shared variables into the generated
+`.env` file and declares the service domains for that one environment.
+
+Development resource:
+
+```ini
+APP_IMAGE_PREFIX={{ project.APP_IMAGE_PREFIX }}
+IMAGE_TAG=development
+DEPLOYMENT_ENVIRONMENT=development
+APP_CHANNEL=development
+APP_VERSION=0.1.0
+
+POSTGRES_USER={{ project.POSTGRES_USER }}
+POSTGRES_DB={{ project.POSTGRES_DB }}
+POSTGRES_PASSWORD={{ environment.POSTGRES_PASSWORD }}
+
+OPENAI_API_KEY={{ environment.OPENAI_API_KEY }}
+TMDB_API_KEY={{ environment.TMDB_API_KEY }}
+RESEND_API_KEY={{ environment.RESEND_API_KEY }}
+
+AUTH_SESSION_SECRET={{ environment.AUTH_SESSION_SECRET }}
+API_KEY_HMAC_SECRET={{ environment.API_KEY_HMAC_SECRET }}
+VALID_API_KEYS={{ environment.VALID_API_KEYS }}
+
+NEXT_PUBLIC_BASE_URL={{ environment.NEXT_PUBLIC_BASE_URL }}
+SERVICE_FQDN_WEB=dev.pop-choice.shchilkin.dev
+SERVICE_URL_WEB=https://dev.pop-choice.shchilkin.dev
+
+EMAIL_FROM={{ environment.EMAIL_FROM }}
+EMAIL_REPLY_TO={{ project.EMAIL_REPLY_TO }}
+LOG_LEVEL={{ project.LOG_LEVEL }}
+
+METRICS_ENABLED=false
+METRICS_BEARER_TOKEN={{ environment.METRICS_BEARER_TOKEN }}
+
+TRACING_ENABLED=false
+TRACING_SAMPLE_RATE=0.05
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://observability-otel-collector:4318/v1/traces
+
+OPERATOR_AUTH_REQUIRED=1
+OPERATOR_AUTH_USERNAME={{ environment.OPERATOR_AUTH_USERNAME }}
+OPERATOR_AUTH_PASSWORD={{ environment.OPERATOR_AUTH_PASSWORD }}
+OPERATOR_AUTH_REALM={{ project.OPERATOR_AUTH_REALM }}
+OPERATOR_AUTH_RATE_LIMIT_MAX={{ project.OPERATOR_AUTH_RATE_LIMIT_MAX }}
+OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS={{ project.OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS }}
+
+SERVICE_NAME_DB=db
+SERVICE_NAME_REDIS=redis
+
+SERVICE_FQDN_DOCS=dev-docs.pop-choice.shchilkin.dev
+SERVICE_URL_DOCS=https://dev-docs.pop-choice.shchilkin.dev
+SERVICE_FQDN_BACKOFFICE=dev-backoffice.pop-choice.shchilkin.dev
+SERVICE_URL_BACKOFFICE=https://dev-backoffice.pop-choice.shchilkin.dev
+SERVICE_FQDN_BULL_BOARD=dev-bullboard.pop-choice.shchilkin.dev
+SERVICE_URL_BULL_BOARD=https://dev-bullboard.pop-choice.shchilkin.dev
+SERVICE_FQDN_STORYBOOK=dev-storybook.pop-choice.shchilkin.dev
+SERVICE_URL_STORYBOOK=https://dev-storybook.pop-choice.shchilkin.dev
+BULL_BOARD_URL=https://dev-bullboard.pop-choice.shchilkin.dev
+
+DRY_RUN=false
+SYNC_SCHEDULE=0 0 * * 0
+TMDB_SOURCES=
+MAX_PAGES_PER_SOURCE=3
+MIN_VOTE_COUNT=500
+MIN_VOTE_AVERAGE=6.5
+MAX_MOVIES_PER_RUN=50
+TMDB_LANGUAGE=en-US
+BATCH_SIZE=5
+MAX_MOVIES=0
+CATALOG_HEALTH_SAMPLE_LIMIT=5
+CATALOG_HEALTH_STALE_DAYS=180
+
+SOURCE_COMMIT=
+SOURCE_BRANCH=
+COOLIFY_BRANCH=
+COOLIFY_RESOURCE_UUID=
+APP_COMMIT_SHA=${SOURCE_COMMIT:-}
+APP_GIT_BRANCH=${SOURCE_BRANCH:-}
+
+SERVICE_FQDN_MOVIE_DISCOVERY=
+SERVICE_URL_MOVIE_DISCOVERY=
+```
+
+Production resource:
+
+```ini
+APP_IMAGE_PREFIX={{ project.APP_IMAGE_PREFIX }}
+IMAGE_TAG=production
+DEPLOYMENT_ENVIRONMENT=production
+APP_CHANNEL=production
+APP_VERSION=0.1.0
+
+POSTGRES_USER={{ project.POSTGRES_USER }}
+POSTGRES_DB={{ project.POSTGRES_DB }}
+POSTGRES_PASSWORD={{ environment.POSTGRES_PASSWORD }}
+
+OPENAI_API_KEY={{ environment.OPENAI_API_KEY }}
+TMDB_API_KEY={{ environment.TMDB_API_KEY }}
+RESEND_API_KEY={{ environment.RESEND_API_KEY }}
+
+AUTH_SESSION_SECRET={{ environment.AUTH_SESSION_SECRET }}
+API_KEY_HMAC_SECRET={{ environment.API_KEY_HMAC_SECRET }}
+VALID_API_KEYS={{ environment.VALID_API_KEYS }}
+
+NEXT_PUBLIC_BASE_URL={{ environment.NEXT_PUBLIC_BASE_URL }}
+SERVICE_FQDN_WEB=pop-choice.shchilkin.dev
+SERVICE_URL_WEB=https://pop-choice.shchilkin.dev
+
+EMAIL_FROM={{ environment.EMAIL_FROM }}
+EMAIL_REPLY_TO={{ project.EMAIL_REPLY_TO }}
+LOG_LEVEL={{ project.LOG_LEVEL }}
+
+METRICS_ENABLED=true
+METRICS_BEARER_TOKEN={{ environment.METRICS_BEARER_TOKEN }}
+
+TRACING_ENABLED=false
+TRACING_SAMPLE_RATE=0.05
+OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://observability-otel-collector:4318/v1/traces
+
+OPERATOR_AUTH_REQUIRED=1
+OPERATOR_AUTH_USERNAME={{ environment.OPERATOR_AUTH_USERNAME }}
+OPERATOR_AUTH_PASSWORD={{ environment.OPERATOR_AUTH_PASSWORD }}
+OPERATOR_AUTH_REALM={{ project.OPERATOR_AUTH_REALM }}
+OPERATOR_AUTH_RATE_LIMIT_MAX={{ project.OPERATOR_AUTH_RATE_LIMIT_MAX }}
+OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS={{ project.OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS }}
+
+SERVICE_NAME_DB=db
+SERVICE_NAME_REDIS=redis
+
+SERVICE_FQDN_DOCS=docs.pop-choice.shchilkin.dev
+SERVICE_URL_DOCS=https://docs.pop-choice.shchilkin.dev
+SERVICE_FQDN_BACKOFFICE=backoffice.pop-choice.shchilkin.dev
+SERVICE_URL_BACKOFFICE=https://backoffice.pop-choice.shchilkin.dev
+SERVICE_FQDN_BULL_BOARD=bullboard.pop-choice.shchilkin.dev
+SERVICE_URL_BULL_BOARD=https://bullboard.pop-choice.shchilkin.dev
+SERVICE_FQDN_STORYBOOK=storybook.pop-choice.shchilkin.dev
+SERVICE_URL_STORYBOOK=https://storybook.pop-choice.shchilkin.dev
+BULL_BOARD_URL=https://bullboard.pop-choice.shchilkin.dev
+
+DRY_RUN=false
+SYNC_SCHEDULE=0 0 * * 0
+TMDB_SOURCES=
+MAX_PAGES_PER_SOURCE=3
+MIN_VOTE_COUNT=500
+MIN_VOTE_AVERAGE=6.5
+MAX_MOVIES_PER_RUN=50
+TMDB_LANGUAGE=en-US
+BATCH_SIZE=5
+MAX_MOVIES=0
+CATALOG_HEALTH_SAMPLE_LIMIT=5
+CATALOG_HEALTH_STALE_DAYS=180
+
+SOURCE_COMMIT=
+SOURCE_BRANCH=
+COOLIFY_BRANCH=
+COOLIFY_RESOURCE_UUID=
+APP_COMMIT_SHA=${SOURCE_COMMIT:-}
+APP_GIT_BRANCH=${SOURCE_BRANCH:-}
+
+SERVICE_FQDN_MOVIE_DISCOVERY=
+SERVICE_URL_MOVIE_DISCOVERY=
+```
 
 ### API key variables
 
@@ -324,7 +527,7 @@ await PopChoice.info();
 Set these optional variables on the Coolify Compose resource:
 
 ```ini
-APP_VERSION=0.1.0-beta.0
+APP_VERSION=0.1.0
 APP_CHANNEL=development
 DEPLOYMENT_ENVIRONMENT=development
 APP_COMMIT_SHA=<current git commit sha>
@@ -396,7 +599,7 @@ Run this checklist after production deploys and after any infrastructure change:
 - `https://docs.your-domain.example/docs` loads the documentation site if the
   `docs` service is enabled.
 - `https://your-domain.example/api/health` returns `200`.
-- `https://your-domain.example/api/build` shows the expected beta version and
+- `https://your-domain.example/api/build` shows the expected release version and
   commit hash.
 - `https://storybook.your-domain.example` loads the component workshop if the
   `storybook` service is enabled.
@@ -500,7 +703,7 @@ For production release promotion:
    `POPCHOICE_DEPLOY_VERIFY_BASE_URL` secrets.
 3. Configure required reviewers on the GitHub `production` Environment.
 4. After the development resource passes the smoke checklist, manually run the
-   `Container Images` workflow on the `development` branch with
+   `Container Images` workflow on the `main` branch with
    `deploy_environment=production`.
 5. Approve the GitHub Environment deployment. The workflow publishes the
    `production` image tag for every service, triggers the production Coolify

@@ -48,6 +48,36 @@ npm run pretest:storybook --workspace=apps/web
 npm run test:storybook
 ```
 
+## Parallel Agent Workflow
+
+Use Git worktrees for parallel agent work. Keep the main checkout at
+`/Users/shchilkin/dev/PopChoice` as the clean integration base on `development`; do not start
+feature work directly there unless the user explicitly asks for it.
+
+- Before code changes, inspect `git status --short --branch` and `git worktree list`.
+- Create one dedicated worktree per non-trivial task: one task = one branch = one worktree.
+- Use task worktrees under `/Users/shchilkin/dev/PopChoice.worktrees/<task-name>`.
+- Use descriptive branches with the `codex/` prefix, for example `codex/backoffice-filters`.
+- Never let two agents work in the same worktree.
+- Base new task worktrees on fresh `development`:
+
+```bash
+cd /Users/shchilkin/dev/PopChoice
+git switch development
+git pull --ff-only
+git worktree add -b codex/<task-name> ../PopChoice.worktrees/<task-name> development
+```
+
+After the PR is merged, remove the task worktree and local branch from the main checkout:
+
+```bash
+git worktree remove ../PopChoice.worktrees/<task-name>
+git branch -d codex/<task-name>
+```
+
+If the branch was squash-merged and `git branch -d` refuses, `git branch -D codex/<task-name>`
+is acceptable after confirming the PR is merged and the worktree is clean.
+
 ## E2E Workflow
 
 Run browser e2e tests through the isolated Docker harness unless the user explicitly says the

@@ -126,8 +126,9 @@ On pull requests from the same repository, the workflow publishes:
 - `pr-<number>` – moving PR tag for the latest image built for that PR
 
 On pushes to `development`, it also publishes `development`. Manual
-`workflow_dispatch` runs can publish either `development` or `production`,
-depending on the selected deploy environment.
+`workflow_dispatch` runs can publish `development` from the `development` ref or
+promote `production` from the `main` ref, depending on the selected deploy
+environment.
 
 Each image receives OCI labels for the repository, workflow run, checked
 commit, source PR branch, source PR head commit, and image role. Published runs
@@ -151,15 +152,19 @@ IMAGE_TAG=development
 For simple continuous deployment to the shared `development` Coolify resource,
 keep `IMAGE_TAG=development`, set `DEPLOYMENT_ENVIRONMENT=development`, and let
 the development deploy job run after the image matrix succeeds. Treat this as
-staging, not production promotion.
+staging, not production promotion. The current development VPS resource uses
+`https://dev.pop-choice.shchilkin.dev` as its deploy verification base URL.
 
 For production, create a separate Coolify resource with its own database,
 Redis, volumes, domains, and secrets. The GitHub workflow supports a gated
-promotion path: manually run `Container Images` on the `development` branch,
-choose `deploy_environment=production`, approve the GitHub Environment if
-required, and let the job publish the moving `production` image tag before
-triggering the production Coolify webhook. The production resource should use
+promotion path: after staging is accepted, merge `development` into `main`,
+manually run `Container Images` on the `main` branch, choose
+`deploy_environment=production`, approve the GitHub Environment if required,
+and let the job publish the moving `production` image tag before triggering the
+production Coolify webhook. The production resource should use
 `IMAGE_TAG=production` and `DEPLOYMENT_ENVIRONMENT=production` for that path.
+The current production VPS resource uses `https://pop-choice.shchilkin.dev` as
+its deploy verification base URL.
 
 The immutable `sha-<12-char-github-sha>` tags are still published for audit and
 rollback. If you need a fully pinned rollback, set the production Coolify
@@ -274,7 +279,8 @@ If the PR is docs-only (`docs/**` and root-level `*.md`), heavy CI jobs are skip
 **`container-images.yml`** triggers on pull requests to `development`, pushes
 to `development`, and manual dispatches. Manual runs expose a
 `deploy_environment` input with `development`, `production`, and `none` choices;
-Coolify deploys are only allowed from the `development` ref. The workflow
+Coolify deploys are only allowed from the matching release ref: `development`
+deploys run from `development`, and `production` deploys run from `main`. The workflow
 intentionally does not use docs-only path filtering: image-build changes often
 span workflow files, Dockerfiles, package manifests, and deployment docs, and
 the workflow itself is the source of truth for the deployable artifact.

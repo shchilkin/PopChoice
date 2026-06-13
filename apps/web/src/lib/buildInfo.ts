@@ -1,6 +1,6 @@
 import packageJson from '../../package.json';
 
-const DEFAULT_CHANNEL = 'beta';
+const DEFAULT_CHANNEL = 'development';
 
 export type BuildInfo = {
   app: string;
