@@ -324,18 +324,3 @@ body {
     animation-duration: 0.01ms;
   }
 }
-
-/* Gradient text — reliable across theme switches (avoid inline background-clip) */
-.pc-gradient-text {
-  background: linear-gradient(135deg, #0d0d1a 0%, #c4950a 55%, #d4760c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  display: inline-block;
-}
-.dark .pc-gradient-text {
-  background: linear-gradient(135deg, #ffffff 0%, #f5c518 60%, #ff9f1c 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}

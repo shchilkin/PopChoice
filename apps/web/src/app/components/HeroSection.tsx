@@ -9,6 +9,8 @@ import { usePCTheme } from '@/hooks/usePCTheme';
 import { useLanguage } from '@/i18n';
 import { navigateToFreshQuiz } from '@/lib/quizNavigation';
 
+import type { MouseEvent } from 'react';
+
 // Loaded client-side only so Math.random() does not cause hydration mismatches
 const FilmParticles = dynamic(() => import('./FilmParticles'), { ssr: false });
 
@@ -18,13 +20,58 @@ const PosterBackground = dynamic(
   { ssr: false },
 );
 
+const HERO_THEMES = {
+  false: {
+    overlay:
+      'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(196,149,10,0.06) 0%, transparent 70%), linear-gradient(180deg, #F7F5EE 0%, rgba(247,245,238,0.72) 30%, rgba(247,245,238,0.86) 70%, #F7F5EE 100%)',
+    descriptionColor: 'var(--pc-t1)',
+    socialProofColor: 'var(--pc-t2)',
+    titleShadow: '0 18px 36px rgba(13, 13, 26, 0.12)',
+  },
+  true: {
+    overlay:
+      'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245,197,24,0.06) 0%, transparent 70%), linear-gradient(180deg, #09090F 0%, rgba(9,9,15,0.58) 30%, rgba(9,9,15,0.78) 70%, #09090F 100%)',
+    descriptionColor: 'var(--pc-t2)',
+    socialProofColor: 'var(--pc-t4)',
+    titleShadow: '0 0 40px rgba(245, 197, 24, 0.22)',
+  },
+} as const;
+
+function getHeroTheme(isDark: boolean) {
+  return HERO_THEMES[String(isDark) as keyof typeof HERO_THEMES];
+}
+
+function liftPrimaryCta(event: MouseEvent<HTMLButtonElement>) {
+  event.currentTarget.style.boxShadow = 'var(--pc-cta-shadow-hover)';
+  event.currentTarget.style.transform = 'translateY(-2px)';
+}
+
+function settlePrimaryCta(event: MouseEvent<HTMLButtonElement>) {
+  event.currentTarget.style.boxShadow = 'var(--pc-cta-shadow)';
+  event.currentTarget.style.transform = 'translateY(0)';
+}
+
+function highlightSecondaryCta(event: MouseEvent<HTMLButtonElement>) {
+  event.currentTarget.style.color = 'var(--pc-t1)';
+  event.currentTarget.style.borderColor = 'var(--pc-bd4)';
+}
+
+function settleSecondaryCta(event: MouseEvent<HTMLButtonElement>) {
+  event.currentTarget.style.color = 'var(--pc-t2)';
+  event.currentTarget.style.borderColor = 'var(--pc-bd2)';
+}
+
+function scrollToProcess() {
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document
+    .getElementById('how-it-works')
+    ?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
+}
+
 export function HeroSection() {
   const { isDark } = usePCTheme();
   const { t } = useLanguage();
-
-  const heroOverlay = isDark
-    ? 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(245,197,24,0.06) 0%, transparent 70%), linear-gradient(180deg, #09090F 0%, rgba(9,9,15,0.58) 30%, rgba(9,9,15,0.78) 70%, #09090F 100%)'
-    : 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(196,149,10,0.06) 0%, transparent 70%), linear-gradient(180deg, #F7F5EE 0%, rgba(247,245,238,0.72) 30%, rgba(247,245,238,0.86) 70%, #F7F5EE 100%)';
+  const theme = getHeroTheme(isDark);
 
   return (
     <section className="relative min-h-[92vh] flex flex-col items-center justify-center px-5 overflow-hidden">
@@ -32,7 +79,7 @@ export function HeroSection() {
       <PosterBackground />
 
       {/* Theme-aware gradient: gold tint at center, page colour fade at top/bottom */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: heroOverlay }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: theme.overlay }} />
 
       <FilmParticles />
 
@@ -73,14 +120,15 @@ export function HeroSection() {
           className="mb-3 tracking-tight"
         >
           <span
-            className="pc-gradient-text"
             style={{
+              color: 'var(--pc-gold-text)',
               fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
-              fontWeight: '600',
-              textTransform: 'uppercase',
               fontSize: 'clamp(3.5rem, 10vw, 6rem)',
-              lineHeight: 1,
+              fontWeight: '600',
               letterSpacing: '0.04em',
+              lineHeight: 1,
+              textShadow: theme.titleShadow,
+              textTransform: 'uppercase',
             }}
           >
             PopChoice
@@ -93,7 +141,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mb-10 max-w-lg"
           style={{
-            color: isDark ? 'var(--pc-t2)' : 'var(--pc-t1)',
+            color: theme.descriptionColor,
             fontSize: '1.1rem',
             lineHeight: 1.7,
           }}
@@ -119,40 +167,23 @@ export function HeroSection() {
               fontSize: '1.05rem',
               boxShadow: 'var(--pc-cta-shadow)',
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--pc-cta-shadow-hover)';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--pc-cta-shadow)';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-            }}
+            onMouseEnter={liftPrimaryCta}
+            onMouseLeave={settlePrimaryCta}
           >
             <Play size={18} className="fill-current" />
             <span style={{ fontWeight: 700 }}>{t.hero.findMyMovie}</span>
           </button>
 
           <button
-            onClick={() => {
-              const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-              document
-                .getElementById('how-it-works')
-                ?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth' });
-            }}
+            onClick={scrollToProcess}
             className="px-6 py-4 rounded-2xl text-sm transition-all duration-200"
             style={{
               color: 'var(--pc-t2)',
               border: '1px solid var(--pc-bd2)',
               background: 'var(--pc-ghost)',
             }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = 'var(--pc-t1)';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pc-bd4)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = 'var(--pc-t2)';
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--pc-bd2)';
-            }}
+            onMouseEnter={highlightSecondaryCta}
+            onMouseLeave={settleSecondaryCta}
           >
             {t.hero.howItWorks}
           </button>
@@ -164,7 +195,7 @@ export function HeroSection() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.6 }}
           className="mt-6 text-xs"
-          style={{ color: isDark ? 'var(--pc-t4)' : 'var(--pc-t2)' }}
+          style={{ color: theme.socialProofColor }}
         >
           {t.hero.noSignup}
         </motion.p>

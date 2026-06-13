@@ -20,7 +20,7 @@ export const en = {
   footer: {
     builtBy: 'Built by',
     authorName: 'Aleksandr Shchilkin',
-    tagline: 'a course project that got out of hand',
+    tagline: 'movie night, without the endless scroll',
   },
   tmdbAttribution: {
     disclaimer: 'PopChoice uses the TMDB API but is not endorsed or certified by TMDB.',
@@ -28,38 +28,55 @@ export const en = {
   },
   hero: {
     badge: 'Taste-Matched by AI',
-    descriptionPre: 'Five questions tell us your taste. AI finds your',
-    perfectMovie: 'perfect film',
-    descriptionPost: 'from 400+ pre-analyzed picks. Solo or group.',
+    descriptionPre: 'Pick the night, share the dealbreakers, and let AI find',
+    perfectMovie: "tonight's film",
+    descriptionPost: 'for solo, duo, or group watching.',
     findMyMovie: 'Find My Movie',
     howItWorks: 'How it works',
-    noSignup: 'No sign-up · ~60 seconds · Works on mobile',
+    noSignup: 'No sign-up · Fast or detailed match · Works on mobile',
+  },
+  landingModes: {
+    headline: 'Choose your kind of movie night',
+    subheadline: 'One button starts the quiz. Inside, pick the path that fits the room.',
+    fastPick: {
+      title: 'Fast Pick',
+      desc: 'Three quick signals for nights when the shortlist matters more than the perfect questionnaire.',
+    },
+    normalMatch: {
+      title: 'Normal Match',
+      desc: 'A richer pass through mood, avoids, discovery appetite, and optional reference films.',
+    },
+    duoGroup: {
+      title: 'Duo & Group',
+      desc: 'Same device, separate tastes. PopChoice looks for overlap instead of letting one person win.',
+    },
   },
   features: {
-    headline: 'Not a filter. A match.',
-    subheadline: 'Tone, pacing, cinematic style — encoded in a short quiz, searched by AI.',
+    headline: 'A better way to stop scrolling',
+    subheadline:
+      'Mood, limits, memory, and movie data work together before anything lands on the screen.',
     aiPowered: {
-      title: 'Taste, Not Tags',
-      desc: 'Your answers become a taste profile matched against pre-analyzed films by emotional tone, pacing, and style — not genre boxes.',
+      title: 'Mood With Boundaries',
+      desc: 'Tell PopChoice what the night should feel like and what to avoid: horror, slow pacing, long runtimes, subtitles, or obvious repeats.',
     },
     fiveQuestions: {
-      title: 'Guided Signals',
-      desc: 'Pick a reference point, the search lane, tonight’s vibe, energy, dealbreakers, and an optional actor. Fast enough for the room to stay with you.',
+      title: 'TMDB-Backed Discovery',
+      desc: 'Local taste matching can expand into TMDB discovery when the cache is too narrow, then rerank strong candidates with richer metadata.',
     },
     groupMode: {
-      title: 'Group Mode',
-      desc: 'Everyone answers on the same device. PopChoice finds where your tastes overlap — no arguing, no coin flip.',
-      worksFor: 'Works for 2–6 people',
+      title: 'Real Compromise',
+      desc: 'Solo, duo, and group modes are first-class. The result is scored for the audience, not just averaged into bland middle ground.',
+      worksFor: 'Solo, duo, or 3–6 people',
     },
     instantResults: {
-      title: 'Six Curated Picks',
-      desc: 'Top match plus five alternatives, each with an AI-written explanation of why it fits your taste specifically.',
+      title: 'Memory That Helps',
+      desc: 'Signed-in feedback can filter watched films, down-rank wrong-mood picks, boost likes, and keep future results from repeating the same lesson.',
     },
   },
   cta: {
     headline: 'The right film is in there. Let AI find it.',
     description:
-      'A short guided quiz. Works whether you are watching alone or settling a group debate.',
+      'Start with one quiz button. Choose fast or detailed matching once you are inside.',
     button: 'Find My Movie',
   },
   quiz: {
@@ -434,16 +451,32 @@ export const en = {
     morePicksCompleted: 'New options are ready below — compare them with the main pick.',
   },
   about: {
-    title: 'AI that gets your taste',
-    originDescription:
-      'Started as a Scrimba AI engineering course project. After finishing the course I kept building — turning it into a real full-stack system to learn the parts that tutorials skip: vector databases, background job pipelines, monorepo tooling, and containerized deployments. The movie recommendations are real.',
+    title: 'Movie night, without the endless scroll',
+    introDescription:
+      'PopChoice helps solo watchers, couples, and groups choose a film for tonight. Tell it the mood, the audience, the hard avoids, and how adventurous you feel. It turns that context into a short list with one clear top pick.',
+    primaryCta: 'Find My Movie',
     sourceCode: "This project's source code is available",
     sourceCodeLink: 'here',
     whatItDoesLabel: 'What it does',
-    whatItDoesDescription:
-      "PopChoice takes a guided taste quiz — reference films, preferred era, current mood, tone, dealbreakers, and optional actor cues — and transforms your answers into a vector embedding using the OpenAI API. That embedding is compared against a curated library of 400+ pre-analyzed films stored in PostgreSQL with the pgvector extension. If the local collection doesn't yield a high-quality match, the system automatically falls back to a broader search across the TMDb database. The closest matches surface as recommendations, each with a GPT-generated explanation of why it fits your specific taste profile. Genre is just one dimension; the system captures cinematographic style, narrative complexity, and emotional tone.",
+    whatItDoesItems: [
+      {
+        title: 'Reads the room',
+        desc: 'Fast Pick and Normal Match adapt to solo, duo, or group watching instead of treating every movie night the same.',
+      },
+      {
+        title: 'Respects hard avoids',
+        desc: 'Mood, tone, discovery appetite, and dealbreakers shape the match before genre or popularity gets a vote.',
+      },
+      {
+        title: 'Learns with feedback',
+        desc: 'Signed-in users can build movie memory, so watched, liked, and wrong-mood signals improve future results.',
+      },
+    ],
     backgroundNote:
       'All of this runs in the background. What you see: a 60-second quiz and a film worth watching.',
+    builderNoteTitle: 'Builder note',
+    builderNoteDescription:
+      'PopChoice started as a Scrimba AI engineering course project, then grew into a real full-stack system for learning the parts tutorials often skip: vector search, background job pipelines, monorepo tooling, and containerized deployments.',
     ctaTitle: "Ready to find tonight's film?",
     ctaSubtitle: 'A short quiz. The perfect movie.',
     ctaButton: 'Start the Quiz',
@@ -451,20 +484,20 @@ export const en = {
       title: 'The process',
       steps: [
         {
-          title: 'You answer a short guided quiz',
-          desc: "Tell us your favorite film (and optionally why you love it), whether you prefer classics or new releases, your current mood (pick multiple genres!), the tone you're after, and your favorite actor. It takes about 60 seconds.",
+          title: 'Choose speed and audience',
+          desc: 'Start with Fast Pick or Normal Match, then choose whether the result is for you, a duo, or a group on the same device.',
         },
         {
-          title: 'We build your taste profile',
-          desc: 'Your answers are transformed into a rich taste profile that captures nuances beyond genres: cinematographic style, narrative complexity, and emotional tone.',
+          title: 'Share the mood and limits',
+          desc: 'Give PopChoice the current vibe, hard avoids, discovery appetite, and optional reference films so the match has real context.',
         },
         {
-          title: 'AI searches our film database',
-          desc: 'Using AI, we find the films in our database closest to your taste profile. Every film has been pre-analyzed for tone, pacing, themes, and emotional resonance.',
+          title: 'AI blends sources',
+          desc: 'The matcher combines local cache, TMDB discovery, metadata enrichment, and signed-in movie memory when those signals are available.',
         },
         {
-          title: 'You get curated results',
-          desc: 'We surface your top match plus 5 additional great options, each with a personalized AI-written explanation of why it fits your taste.',
+          title: 'You get a decision, not a wall',
+          desc: 'See the top pick, compare alternatives, share the result, ask for more picks, and teach PopChoice what worked for next time.',
         },
       ],
     },
@@ -546,19 +579,19 @@ export const en = {
       items: [
         {
           q: 'Does PopChoice require an account?',
-          a: 'No sign-up needed to use PopChoice — just answer the quiz and get your picks. You can optionally create a free account to save your results.',
+          a: 'No. You can start the quiz and get picks without signing up. An account adds saved history and movie memory, so feedback can improve later recommendations.',
         },
         {
           q: 'How does group mode work?',
-          a: "Each person answers the guided quiz on the same device. Just pass it around. PopChoice then finds films that score well across everyone's taste profiles.",
+          a: 'Everyone answers on the same device, then PopChoice looks for overlap and acceptable compromise across the group. Duo gets the same first-class treatment for two people.',
         },
         {
-          q: 'How accurate are the recommendations?',
-          a: 'The AI analyzes multiple film attributes (not just genre), which leads to surprisingly accurate taste matching. Movie taste is subjective, so we give you 6 options.',
+          q: 'Where do the movie candidates come from?',
+          a: 'PopChoice starts with its local cache and can expand into TMDB-backed discovery when broader coverage is useful. Strong candidates are enriched and reranked before the final answer.',
         },
         {
-          q: 'Where does the film data come from?',
-          a: 'Our film database is curated from public film metadata, including ratings, runtime, director, genre tags, and thematic analysis performed by our AI pipeline.',
+          q: 'Why leave feedback after a result?',
+          a: 'Feedback is not just a rating. Watched, liked, not-interested, and wrong-mood signals can shape future matches for signed-in users.',
         },
       ],
     },

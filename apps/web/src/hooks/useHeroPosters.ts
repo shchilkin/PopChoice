@@ -98,7 +98,7 @@ function getCachedPosters() {
  *
  * @param initialPosters Optional server-fetched URLs to hydrate without flash.
  */
-export function usePosterPosters(initialPosters?: string[]): string[] {
+export function useHeroPosters(initialPosters?: string[]): string[] {
   // Lazy init reads cache synchronously — avoids calling setState inside an effect.
   const [posters, setPosters] = useState<string[]>(() => resolveInitialPosters(initialPosters));
 

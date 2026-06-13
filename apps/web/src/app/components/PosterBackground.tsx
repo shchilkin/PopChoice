@@ -3,8 +3,8 @@
 import { motion, useMotionValue, useSpring, useTransform } from 'motion/react';
 import { useCallback, useEffect } from 'react';
 
+import { useHeroPosters } from '@/hooks/useHeroPosters';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { usePosterPosters } from '@/hooks/usePosterPosters';
 
 // 8 cols × 5 rows = 40 cells on desktop (5 rows covers tall viewports after scale).
 // Mobile uses 5 columns so 40 cells = 8 rows — more than enough coverage.
@@ -29,7 +29,7 @@ interface PosterBackgroundProps {
  * see a tilt since the listener is never attached.
  */
 export function PosterBackground({ posters: initialPosters }: PosterBackgroundProps) {
-  const posters = usePosterPosters(initialPosters);
+  const posters = useHeroPosters(initialPosters);
   const isMobile = useIsMobile();
   // Treat null (pre-measurement) as desktop to avoid rotation flash on mobile
   const mobile = isMobile === true;
