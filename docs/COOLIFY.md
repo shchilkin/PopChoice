@@ -711,6 +711,22 @@ For production release promotion:
 5. Approve the GitHub Environment deployment. The workflow publishes the
    `production` image tag for every service, triggers the production Coolify
    webhook, and verifies `/api/health` plus `/api/build`.
+6. After the deploy, verify the public build metadata:
+
+   ```bash
+   curl -fsS https://pop-choice.example/api/build | jq .
+   curl -fsS https://pop-choice.example/api/health | jq .
+   ```
+
+   `/api/build` should report the release package version, `channel:
+   production`, `branch: main`, and the expected commit/image tag. Do not set
+   `APP_VERSION` in the Coolify project, environment, resource, or preview
+   variables; stale Coolify values override the package version baked into the
+   image.
+7. If `/api/build` reports an old version after a successful deploy, search the
+   resource environment variables for `APP_VERSION`, including preview
+   variables, remove every match, reload the Compose file if Coolify still
+   treats the variable as Compose-managed, then redeploy.
 
 For a pinned rollback, set production `IMAGE_TAG` to the previous known-good
 `sha-<12-char-github-sha>` tag and redeploy the production resource manually.
