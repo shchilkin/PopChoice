@@ -379,6 +379,13 @@ export const ru: Translations = {
     feedbackTooObvious: 'Слишком очевидно',
     feedbackTooObscure: 'Слишком нишево',
     feedbackClose: 'Почти',
+    feedbackActionTitle: 'Следующее действие',
+    feedbackActionHint:
+      'Сохраните сигнал и попросите PopChoice собрать ещё одну пачку от этого результата.',
+    feedbackMoreLikeThis: 'Ещё похожее',
+    feedbackSameVibe: 'Та же вайбовая зона',
+    feedbackFollowUpQueued: 'Сохранили — собираем ещё одну пачку от этого результата.',
+    feedbackFollowUpUnavailable: 'Сохранили. Для этого результата уже запрошены доп. варианты.',
     evidenceKicker: 'Логика совпадения',
     evidenceSubtitle:
       'Выбор опирается на ответы и метаданные, которые PopChoice действительно использовал.',

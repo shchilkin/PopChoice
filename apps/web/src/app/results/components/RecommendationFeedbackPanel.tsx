@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Eye, Frown, Loader2, ThumbsDown } from 'lucide-react';
+import { Ban, Check, Eye, Frown, Loader2, Radar, RefreshCw, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import { useLanguage } from '@/i18n';
@@ -14,9 +14,17 @@ export type FeedbackKind =
   | 'close';
 
 export type FeedbackState = 'idle' | 'saving' | 'saved' | 'error';
+export type FeedbackFollowUpKind = 'more_like_this' | 'same_vibe';
+export type FeedbackFollowUpState = 'idle' | 'requesting' | 'requested' | 'unavailable';
 
 type FeedbackOption = {
   kind: FeedbackKind;
+  label: string;
+  icon: typeof Check;
+};
+
+type FeedbackFollowUpOption = {
+  kind: FeedbackFollowUpKind;
   label: string;
   icon: typeof Check;
 };
@@ -27,21 +35,41 @@ function getFeedbackOptions(results: ResultsCopy): FeedbackOption[] {
   return [
     { kind: 'useful', label: results.feedbackUseful, icon: Check },
     { kind: 'already_watched', label: results.feedbackSeen, icon: Eye },
-    { kind: 'too_obvious', label: results.feedbackNotForMe, icon: ThumbsDown },
     { kind: 'wrong_mood', label: results.feedbackWrongMood, icon: Frown },
+    { kind: 'too_obvious', label: results.feedbackTooObvious, icon: Ban },
+    { kind: 'too_obscure', label: results.feedbackTooObscure, icon: Radar },
+    { kind: 'close', label: results.feedbackClose, icon: Sparkles },
+  ];
+}
+
+function getFollowUpOptions(results: ResultsCopy): FeedbackFollowUpOption[] {
+  return [
+    { kind: 'more_like_this', label: results.feedbackMoreLikeThis, icon: Sparkles },
+    { kind: 'same_vibe', label: results.feedbackSameVibe, icon: RefreshCw },
   ];
 }
 
 function FeedbackStatusText({
   feedbackState,
+  followUpState,
   results,
 }: {
   feedbackState: FeedbackState;
+  followUpState: FeedbackFollowUpState;
   results: ResultsCopy;
 }) {
-  if (feedbackState === 'saved') return results.feedbackThanks;
-  if (feedbackState === 'error') return results.feedbackError;
-  return results.feedbackHint;
+  const followUpStatusText: Partial<Record<FeedbackFollowUpState, string>> = {
+    requested: results.feedbackFollowUpQueued,
+    unavailable: results.feedbackFollowUpUnavailable,
+  };
+  const feedbackStatusText: Record<FeedbackState, string> = {
+    error: results.feedbackError,
+    idle: results.feedbackHint,
+    saved: results.feedbackThanks,
+    saving: results.feedbackHint,
+  };
+
+  return followUpStatusText[followUpState] ?? feedbackStatusText[feedbackState];
 }
 
 function SharedFeedbackHint({
@@ -75,9 +103,34 @@ function isFeedbackOptionBusy(feedbackState: FeedbackState, isSelected: boolean)
   return feedbackState === 'saving' && isSelected;
 }
 
-function isFeedbackOptionDisabled(feedbackState: FeedbackState, recommendationSlug?: string) {
-  if (feedbackState === 'saving') return true;
+function isFeedbackOptionDisabled({
+  feedbackState,
+  followUpState,
+  recommendationSlug,
+}: {
+  feedbackState: FeedbackState;
+  followUpState: FeedbackFollowUpState;
+  recommendationSlug?: string;
+}) {
+  if (feedbackState === 'saving' || followUpState === 'requesting') return true;
   return !recommendationSlug;
+}
+
+function isFollowUpOptionDisabled({
+  canRequestFollowUp,
+  feedbackState,
+  followUpState,
+  recommendationSlug,
+}: {
+  canRequestFollowUp: boolean;
+  feedbackState: FeedbackState;
+  followUpState: FeedbackFollowUpState;
+  recommendationSlug?: string;
+}) {
+  if (!recommendationSlug) return true;
+  if (!canRequestFollowUp) return true;
+  if (feedbackState === 'saving') return true;
+  return followUpState === 'requesting';
 }
 
 function getFeedbackButtonStyle({
@@ -106,6 +159,17 @@ function getFeedbackButtonStyle({
   };
 }
 
+function getFollowUpButtonStyle({ disabled }: { disabled: boolean }) {
+  return {
+    background: disabled ? 'var(--pc-bd1)' : 'var(--pc-gold-subtle)',
+    border: '1px solid var(--pc-bd2)',
+    color: disabled ? 'var(--pc-t4)' : 'var(--pc-gold-text)',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontSize: '0.74rem',
+    fontWeight: 700,
+  };
+}
+
 function FeedbackOptionIcon({ Icon, isBusy }: { Icon: FeedbackOption['icon']; isBusy: boolean }) {
   if (isBusy) return <Loader2 size={12} className="animate-spin" />;
   return <Icon size={12} />;
@@ -113,12 +177,14 @@ function FeedbackOptionIcon({ Icon, isBusy }: { Icon: FeedbackOption['icon']; is
 
 function FeedbackOptionButton({
   feedbackState,
+  followUpState,
   option,
   onFeedback,
   recommendationSlug,
   selectedFeedback,
 }: {
   feedbackState: FeedbackState;
+  followUpState: FeedbackFollowUpState;
   option: FeedbackOption;
   onFeedback: (kind: FeedbackKind) => Promise<void>;
   recommendationSlug?: string;
@@ -127,7 +193,7 @@ function FeedbackOptionButton({
   const { icon: Icon, kind, label } = option;
   const isSelected = selectedFeedback === kind;
   const isBusy = isFeedbackOptionBusy(feedbackState, isSelected);
-  const disabled = isFeedbackOptionDisabled(feedbackState, recommendationSlug);
+  const disabled = isFeedbackOptionDisabled({ feedbackState, followUpState, recommendationSlug });
 
   return (
     <button
@@ -143,23 +209,72 @@ function FeedbackOptionButton({
   );
 }
 
-export function RecommendationFeedbackPanel({
+function FeedbackFollowUpButton({
+  activeFollowUp,
+  canRequestFollowUp,
   feedbackState,
+  followUpState,
+  onFollowUp,
+  option,
+  recommendationSlug,
+}: {
+  activeFollowUp: FeedbackFollowUpKind | null;
+  canRequestFollowUp: boolean;
+  feedbackState: FeedbackState;
+  followUpState: FeedbackFollowUpState;
+  onFollowUp: (kind: FeedbackFollowUpKind) => Promise<void>;
+  option: FeedbackFollowUpOption;
+  recommendationSlug?: string;
+}) {
+  const { icon: Icon, kind, label } = option;
+  const isBusy = followUpState === 'requesting' && activeFollowUp === kind;
+  const disabled = isFollowUpOptionDisabled({
+    canRequestFollowUp,
+    feedbackState,
+    followUpState,
+    recommendationSlug,
+  });
+
+  return (
+    <button
+      type="button"
+      onClick={() => void onFollowUp(kind)}
+      disabled={disabled}
+      className="inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+      style={getFollowUpButtonStyle({ disabled })}
+    >
+      {isBusy ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
+      {label}
+    </button>
+  );
+}
+
+export function RecommendationFeedbackPanel({
+  activeFollowUp,
+  canRequestFollowUp,
+  feedbackState,
+  followUpState,
   isSharedResult,
   onFeedback,
+  onFollowUp,
   recommendationSlug,
   selectedFeedback,
   viewerCanRate,
 }: {
+  activeFollowUp: FeedbackFollowUpKind | null;
+  canRequestFollowUp: boolean;
   feedbackState: FeedbackState;
+  followUpState: FeedbackFollowUpState;
   isSharedResult: boolean;
   onFeedback: (kind: FeedbackKind) => Promise<void>;
+  onFollowUp: (kind: FeedbackFollowUpKind) => Promise<void>;
   recommendationSlug?: string;
   selectedFeedback: FeedbackKind | null;
   viewerCanRate: boolean;
 }) {
   const { t } = useLanguage();
   const feedbackOptions = getFeedbackOptions(t.results);
+  const followUpOptions = getFollowUpOptions(t.results);
 
   if (!viewerCanRate) {
     return <SharedFeedbackHint isSharedResult={isSharedResult} results={t.results} />;
@@ -176,7 +291,7 @@ export function RecommendationFeedbackPanel({
         border: '1px solid var(--pc-bd2)',
       }}
     >
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4">
         <div>
           <p
             className="uppercase tracking-widest"
@@ -185,7 +300,11 @@ export function RecommendationFeedbackPanel({
             {t.results.feedbackPrompt}
           </p>
           <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.78rem' }}>
-            <FeedbackStatusText feedbackState={feedbackState} results={t.results} />
+            <FeedbackStatusText
+              feedbackState={feedbackState}
+              followUpState={followUpState}
+              results={t.results}
+            />
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -193,12 +312,43 @@ export function RecommendationFeedbackPanel({
             <FeedbackOptionButton
               key={option.kind}
               feedbackState={feedbackState}
+              followUpState={followUpState}
               option={option}
               onFeedback={onFeedback}
               recommendationSlug={recommendationSlug}
               selectedFeedback={selectedFeedback}
             />
           ))}
+        </div>
+        <div
+          className="flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between"
+          style={{ borderColor: 'var(--pc-bd2)' }}
+        >
+          <div>
+            <p
+              className="uppercase tracking-widest"
+              style={{ color: 'var(--pc-t3)', fontSize: '0.66rem' }}
+            >
+              {t.results.feedbackActionTitle}
+            </p>
+            <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.76rem' }}>
+              {t.results.feedbackActionHint}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {followUpOptions.map((option) => (
+              <FeedbackFollowUpButton
+                key={option.kind}
+                activeFollowUp={activeFollowUp}
+                canRequestFollowUp={canRequestFollowUp}
+                feedbackState={feedbackState}
+                followUpState={followUpState}
+                onFollowUp={onFollowUp}
+                option={option}
+                recommendationSlug={recommendationSlug}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </motion.div>

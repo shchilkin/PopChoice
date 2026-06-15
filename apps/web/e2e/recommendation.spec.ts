@@ -97,10 +97,14 @@ test('submits the solo quiz, renders deterministic results, and records feedback
 
   await expectDeterministicSoloResults(page);
   await expect(page.getByText('Was this useful?')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Too obvious' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Too obscure' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
+  await expect(page.getByText('Next action')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Good pick' }).click();
+  await page.getByRole('button', { name: 'More like this' }).click();
 
-  await expect(page.getByText('Thanks — saved for future tuning.')).toBeVisible();
+  await expect(page.getByText('Saved — building another batch from this result.')).toBeVisible();
   await expect
     .poll(() => readMovieMemory(page))
     .toMatchObject({

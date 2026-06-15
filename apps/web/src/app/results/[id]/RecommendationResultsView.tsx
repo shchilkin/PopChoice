@@ -19,6 +19,8 @@ import {
   ResultsDecisionNoteCard,
   ResultsHeader,
   TmdbSuggestionsSection,
+  type FeedbackFollowUpKind,
+  type FeedbackFollowUpState,
   type FeedbackKind,
   type FeedbackState,
   type LocalSuggestionsSectionProps,
@@ -188,6 +190,38 @@ function getFeedbackSubmissionSlug({
 function getFeedbackResultState(didSave: boolean): FeedbackState {
   if (didSave) return 'saved';
   return 'error';
+}
+
+function getFeedbackKindForFollowUp(kind: FeedbackFollowUpKind): FeedbackKind {
+  if (kind === 'more_like_this') return 'useful';
+  return 'close';
+}
+
+function getFollowUpStateFromMorePicksResult(result: MorePicksResult): FeedbackFollowUpState {
+  if (result === 'requested') return 'requested';
+  if (result === 'empty') return 'unavailable';
+  return 'idle';
+}
+
+function isMorePicksAlreadyClaimed(morePicksStatus?: string | null) {
+  return (
+    morePicksStatus === 'pending' ||
+    morePicksStatus === 'processing' ||
+    morePicksStatus === 'completed'
+  );
+}
+
+function canRequestResultFollowUp({
+  isFetchingMore,
+  morePicksStatus,
+  noMorePicks,
+}: {
+  isFetchingMore: boolean;
+  morePicksStatus?: string | null;
+  noMorePicks: boolean;
+}) {
+  if (isFetchingMore || noMorePicks) return false;
+  return !isMorePicksAlreadyClaimed(morePicksStatus);
 }
 
 async function writeShareTarget({
@@ -361,6 +395,8 @@ export function RecommendationResultsView({
   const [noMorePicks, setNoMorePicks] = useState(false);
   const [shareState, setShareState] = useState<ShareState>('idle');
   const [feedbackState, setFeedbackState] = useState<FeedbackState>('idle');
+  const [followUpState, setFollowUpState] = useState<FeedbackFollowUpState>('idle');
+  const [activeFollowUp, setActiveFollowUp] = useState<FeedbackFollowUpKind | null>(null);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackKind | null>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const tmdbCarouselRef = useRef<HTMLDivElement>(null);
@@ -447,6 +483,37 @@ export function RecommendationResultsView({
     setFeedbackState(getFeedbackResultState(didSave));
   };
 
+  const handleFeedbackFollowUp = async (kind: FeedbackFollowUpKind) => {
+    const slug = getFeedbackSubmissionSlug({ feedbackState, recommendationSlug, viewerCanRate });
+    if (!slug) return;
+    if (!canRequestResultFollowUp({ isFetchingMore, morePicksStatus, noMorePicks })) return;
+
+    const feedbackKind = getFeedbackKindForFollowUp(kind);
+    setSelectedFeedback(feedbackKind);
+    setActiveFollowUp(kind);
+    setFeedbackState('saving');
+    setFollowUpState('requesting');
+
+    const didSave = await submitRecommendationFeedback({
+      kind: feedbackKind,
+      recommendationSlug: slug,
+    });
+    setFeedbackState(getFeedbackResultState(didSave));
+    if (!didSave) {
+      setFollowUpState('idle');
+      setActiveFollowUp(null);
+      return;
+    }
+
+    setIsFetchingMore(true);
+    const result = await requestMorePicks(slug)
+      .catch((): MorePicksResult => 'ignored')
+      .finally(() => setIsFetchingMore(false));
+    await applyMorePicksResult({ onMorePicksRequested, result, setNoMorePicks });
+    setFollowUpState(getFollowUpStateFromMorePicksResult(result));
+    setActiveFollowUp(null);
+  };
+
   return (
     <div className="px-4 md:px-8 py-8 max-w-3xl mx-auto w-full">
       <ResultsHeader
@@ -483,9 +550,17 @@ export function RecommendationResultsView({
       </div>
 
       <RecommendationFeedbackPanel
+        activeFollowUp={activeFollowUp}
+        canRequestFollowUp={canRequestResultFollowUp({
+          isFetchingMore,
+          morePicksStatus,
+          noMorePicks,
+        })}
         feedbackState={feedbackState}
+        followUpState={followUpState}
         isSharedResult={isSharedResult}
         onFeedback={handleFeedback}
+        onFollowUp={handleFeedbackFollowUp}
         recommendationSlug={recommendationSlug}
         selectedFeedback={selectedFeedback}
         viewerCanRate={viewerCanRate}
