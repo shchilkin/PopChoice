@@ -26,7 +26,7 @@ export function canProceedForStep({
 
   switch (questionsStep) {
     case 'favoriteMovie':
-      return person.hasNoReferenceMovie || person.favoriteMovie.trim().length >= 1;
+      return true;
     case 'era':
       return person.era !== '';
     case 'mood':
