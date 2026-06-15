@@ -176,20 +176,11 @@ group-oriented copy and insights when the persisted result includes them. The
 current model does not create room records, invite links, readiness state, QR
 codes, projector mode, or independent participant sessions.
 
-## Planned Product Direction
-
-Planned behavior should remain issue-backed and should not be described as
-current product behavior until implemented.
-
-Recommendation experience direction is tracked in
-[/docs/RECOMMENDATION-ROADMAP](/docs/RECOMMENDATION-ROADMAP). The likely next
-shape is a shared taste-signal model that can combine quiz answers, swipe
-reactions, account memory, and result feedback. Future quiz work should make
-favorite/reference movies less mandatory, capture more explicit avoid signals,
-and use more concrete "tonight" language.
+## Current 0.2.0 Taste-Control Scope
 
 The `v0.2.0` Better Taste Control milestone is tracked by
-[#826](https://github.com/shchilkin/PopChoice/issues/826). Planned scope:
+[#826](https://github.com/shchilkin/PopChoice/issues/826). The completed scope
+is:
 
 - [x] [#827](https://github.com/shchilkin/PopChoice/issues/827): explicit avoids
       and constraints in Fast Pick and Normal Match.
@@ -201,11 +192,24 @@ The `v0.2.0` Better Taste Control milestone is tracked by
       feedback loop v1.
 - [x] [#831](https://github.com/shchilkin/PopChoice/issues/831):
       deterministic eval coverage for taste-control signals.
-- [#832](https://github.com/shchilkin/PopChoice/issues/832): product docs and
-  release notes.
+- [x] [#832](https://github.com/shchilkin/PopChoice/issues/832): product docs
+      and release notes.
 
-Until those issues are implemented and verified, this section is planned
-behavior, not the current product contract.
+Release notes live in
+[/docs/releases/v0.2.0](/docs/releases/v0.2.0).
+
+## Planned Product Direction
+
+Planned behavior should remain issue-backed and should not be described as
+current product behavior until implemented.
+
+Recommendation experience direction is tracked in
+[/docs/RECOMMENDATION-ROADMAP](/docs/RECOMMENDATION-ROADMAP). The likely next
+shape is a shared taste-signal model that can combine quiz answers, swipe
+reactions, account memory, and result feedback. Future quiz and recommendation
+work should move the current structured-text bridge into a first-class backend
+contract so avoids, constraints, discovery appetite, and feedback no longer
+need to travel through legacy request fields.
 
 Group rooms are a larger milestone under
 [#359](https://github.com/shchilkin/PopChoice/issues/359), split into:
