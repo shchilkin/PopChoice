@@ -13,12 +13,14 @@ describe('toApiFormat', () => {
       era: 'both' as const,
       moods: ['drama'],
       tone: 'serious' as const,
+      fastDiscovery: 'surprise' as const,
       fastAvoids: ['slow', 'long', 'obscure'],
     };
 
     expect(toApiFormat(person)).toMatchObject({
       favoriteMovie: '',
-      favoriteMovieWhy: 'Avoid: slow pacing, long runtime, too obscure.',
+      favoriteMovieWhy:
+        'Discovery appetite: Surprise me. Avoid: slow pacing, long runtime, too obscure.',
       newVsClassic: 'Both new and classic',
       moodPreference: ['Drama'],
       tonePreference: 'Serious and thought-provoking',

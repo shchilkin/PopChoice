@@ -52,6 +52,14 @@ describe('quiz step view model', () => {
         fastStep: null,
       }),
     ).toBe(true);
+    expect(canProceedForStep({ person, questionsStep: 'discovery', fastStep: null })).toBe(false);
+    expect(
+      canProceedForStep({
+        person: { ...person, fastDiscovery: 'balanced' },
+        questionsStep: 'discovery',
+        fastStep: null,
+      }),
+    ).toBe(true);
     expect(canProceedForStep({ person, questionsStep: 'avoids', fastStep: null })).toBe(true);
     expect(canProceedForStep({ person, questionsStep: 'favoriteActor', fastStep: null })).toBe(
       true,

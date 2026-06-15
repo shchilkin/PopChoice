@@ -30,6 +30,7 @@ export const STEP_KEYS = [
   'era',
   'mood',
   'tone',
+  'discovery',
   'avoids',
   'favoriteActor',
 ] as const;
@@ -193,8 +194,12 @@ export function toApiFormat(person: PersonAnswers) {
   const trimmedName = person.name.trim().slice(0, PARTICIPANT_NAME_MAX_LENGTH);
   const favoriteMovie = person.hasNoReferenceMovie ? '' : person.favoriteMovie.trim();
   const avoidLabels = getAvoidLabels(person);
+  const discoveryLabel = person.fastDiscovery
+    ? FAST_DISCOVERY_API_LABELS[person.fastDiscovery]
+    : '';
   const favoriteMovieWhy = [
     person.favoriteMovieWhy.trim(),
+    discoveryLabel ? `Discovery appetite: ${discoveryLabel}.` : '',
     avoidLabels.length > 0 ? `Avoid: ${avoidLabels.join(', ')}.` : '',
   ]
     .filter(Boolean)

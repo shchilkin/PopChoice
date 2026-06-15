@@ -154,6 +154,7 @@ export const fi: Translations = {
       'Hakusuunta',
       'Illan fiilis',
       'Energia',
+      'Löytöhalu',
       'Ehdottomat ei:t',
       'Näyttelijä',
     ],
