@@ -116,6 +116,8 @@ export const FAST_AVOIDS: {
   { id: 'slow', icon: TimerOff, color: palette.amber },
   { id: 'subtitles', icon: Globe, color: palette.blue },
   { id: 'long', icon: Clock, color: palette.teal },
+  { id: 'obvious', icon: Star, color: palette.gold },
+  { id: 'obscure', icon: Compass, color: palette.green },
   { id: 'alreadySeen', icon: Film, color: palette.purple },
 ];
 
@@ -145,6 +147,8 @@ const FAST_AVOID_API_LABELS: Record<FastAvoid, string> = {
   slow: 'slow pacing',
   subtitles: 'subtitles',
   long: 'long runtime',
+  obvious: 'too obvious',
+  obscure: 'too obscure',
   alreadySeen: 'already-seen movies',
 };
 

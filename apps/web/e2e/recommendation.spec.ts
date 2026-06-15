@@ -53,6 +53,7 @@ async function completeNormalSoloQuestions(page: Page) {
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: /Long runtime/ }).click();
+  await page.getByRole('button', { name: /Too obvious/ }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByPlaceholder(/Tom Hanks/).fill('Cillian Murphy');
@@ -66,6 +67,7 @@ async function completeFastPickQuestions(
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: /Long runtime/ }).click();
+  await page.getByRole('button', { name: /Too obvious/ }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: /Balanced/ }).click();

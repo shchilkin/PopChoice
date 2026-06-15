@@ -13,12 +13,12 @@ describe('toApiFormat', () => {
       era: 'both' as const,
       moods: ['drama'],
       tone: 'serious' as const,
-      fastAvoids: ['slow', 'long'],
+      fastAvoids: ['slow', 'long', 'obscure'],
     };
 
     expect(toApiFormat(person)).toMatchObject({
       favoriteMovie: '',
-      favoriteMovieWhy: 'Avoid: slow pacing, long runtime.',
+      favoriteMovieWhy: 'Avoid: slow pacing, long runtime, too obscure.',
       newVsClassic: 'Both new and classic',
       moodPreference: ['Drama'],
       tonePreference: 'Serious and thought-provoking',
@@ -31,7 +31,7 @@ describe('toFastPickApiFormat', () => {
     const person: PersonAnswers = {
       ...emptyPerson('You'),
       fastIntent: ['funny', 'cozy'],
-      fastAvoids: ['horror', 'long'],
+      fastAvoids: ['horror', 'long', 'obvious'],
       fastDiscovery: 'safe' as const,
     };
 
@@ -39,7 +39,7 @@ describe('toFastPickApiFormat', () => {
       name: 'You',
       favoriteMovie: '',
       favoriteMovieWhy:
-        'Fast Pick intent: Funny, Cozy. Avoid: horror, long runtime. Discovery appetite: Safe hit.',
+        'Fast Pick intent: Funny, Cozy. Avoid: horror, long runtime, too obvious. Discovery appetite: Safe hit.',
       newVsClassic: 'Proven hits and familiar crowd-pleasers',
       moodPreference: ['Funny', 'Cozy'],
       tonePreference: 'Light and fun',
