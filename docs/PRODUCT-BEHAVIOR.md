@@ -171,6 +171,25 @@ reactions, account memory, and result feedback. Future quiz work should make
 favorite/reference movies less mandatory, capture more explicit avoid signals,
 and use more concrete "tonight" language.
 
+The `v0.2.0` Better Taste Control milestone is tracked by
+[#826](https://github.com/shchilkin/PopChoice/issues/826). Planned scope:
+
+- [#827](https://github.com/shchilkin/PopChoice/issues/827): explicit avoids
+  and constraints in Fast Pick and Normal Match.
+- [#828](https://github.com/shchilkin/PopChoice/issues/828): optional,
+  lower-friction reference movie UX.
+- [#829](https://github.com/shchilkin/PopChoice/issues/829): discovery
+  appetite for safe, balanced, and surprising picks.
+- [#830](https://github.com/shchilkin/PopChoice/issues/830): result feedback
+  loop v1.
+- [#831](https://github.com/shchilkin/PopChoice/issues/831): deterministic eval
+  coverage for taste-control signals.
+- [#832](https://github.com/shchilkin/PopChoice/issues/832): product docs and
+  release notes.
+
+Until those issues are implemented and verified, this section is planned
+behavior, not the current product contract.
+
 Group rooms are a larger milestone under
 [#359](https://github.com/shchilkin/PopChoice/issues/359), split into:
 
