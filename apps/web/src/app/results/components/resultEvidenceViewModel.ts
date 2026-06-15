@@ -18,6 +18,8 @@ const AVOID_SIGNAL_KEYS = {
   gore: ['gore'],
   horror: ['horror'],
   long: ['long runtime', 'too long', 'long'],
+  obvious: ['too obvious', 'obvious'],
+  obscure: ['too obscure', 'obscure'],
   repeat: ['already-seen', 'already seen', 'seen movies', 'repeat'],
   slow: ['slow pacing', 'slow'],
   subtitles: ['subtitles', 'subtitle'],
@@ -41,6 +43,8 @@ function getAvoidSignalLabels(signals: string[], copy: ResultsCopy): string[] {
     { keys: AVOID_SIGNAL_KEYS.slow, label: copy.evidenceAvoidSlow },
     { keys: AVOID_SIGNAL_KEYS.long, label: copy.evidenceAvoidLong },
     { keys: AVOID_SIGNAL_KEYS.subtitles, label: copy.evidenceAvoidSubtitles },
+    { keys: AVOID_SIGNAL_KEYS.obvious, label: copy.evidenceAvoidObvious },
+    { keys: AVOID_SIGNAL_KEYS.obscure, label: copy.evidenceAvoidObscure },
     { keys: AVOID_SIGNAL_KEYS.repeat, label: copy.evidenceAvoidRepeat },
   ];
 
