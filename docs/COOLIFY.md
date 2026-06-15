@@ -719,10 +719,11 @@ For production release promotion:
    ```
 
    `/api/build` should report the release package version, `channel:
-   production`, `branch: main`, and the expected commit/image tag. Do not set
+production`, `branch: main`, and the expected commit/image tag. Do not set
    `APP_VERSION` in the Coolify project, environment, resource, or preview
    variables; stale Coolify values override the package version baked into the
    image.
+
 7. If `/api/build` reports an old version after a successful deploy, search the
    resource environment variables for `APP_VERSION`, including preview
    variables, remove every match, reload the Compose file if Coolify still
