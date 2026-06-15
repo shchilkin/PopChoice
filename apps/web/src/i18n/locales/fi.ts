@@ -381,6 +381,13 @@ export const fi: Translations = {
     feedbackTooObvious: 'Liian ilmeinen',
     feedbackTooObscure: 'Liian outo',
     feedbackClose: 'Lähellä',
+    feedbackActionTitle: 'Seuraava teko',
+    feedbackActionHint:
+      'Tallenna signaali ja pyydä PopChoicea rakentamaan uusi erä tästä tuloksesta.',
+    feedbackMoreLikeThis: 'Lisää tällaista',
+    feedbackSameVibe: 'Sama tunnelma',
+    feedbackFollowUpQueued: 'Tallennettu — rakennetaan uusi erä tästä tuloksesta.',
+    feedbackFollowUpUnavailable: 'Tallennettu. Tälle tulokselle on jo pyydetty lisävalintoja.',
     evidenceKicker: 'Osumalogiikka',
     evidenceSubtitle:
       'Valinta perustuu vastauksiin ja metadataan, joita PopChoice oikeasti käytti.',

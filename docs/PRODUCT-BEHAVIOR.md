@@ -117,6 +117,18 @@ Recommendation feedback on completed results accepts:
 - `close`: records feedback on the recommendation but does not create a movie
   memory item.
 
+Completed result pages also expose follow-up actions that combine feedback with
+the existing one-shot more-picks queue:
+
+- "More like this" records `useful` feedback, then requests one additional
+  TMDB-backed batch from the same result.
+- "Try same vibe" records `close` feedback, then requests the same follow-up
+  batch.
+
+Only one more-picks batch can be claimed per recommendation, so repeated
+follow-up actions reuse the same duplicate protection as the direct more-picks
+control.
+
 Current recommendation behavior uses memory conservatively:
 
 - watched, not-interested, too-obvious, too-obscure, and recently recommended
@@ -185,8 +197,8 @@ The `v0.2.0` Better Taste Control milestone is tracked by
       lower-friction reference movie UX.
 - [x] [#829](https://github.com/shchilkin/PopChoice/issues/829): discovery
       appetite for safe, balanced, and surprising picks.
-- [#830](https://github.com/shchilkin/PopChoice/issues/830): result feedback
-  loop v1.
+- [x] [#830](https://github.com/shchilkin/PopChoice/issues/830): result
+      feedback loop v1.
 - [#831](https://github.com/shchilkin/PopChoice/issues/831): deterministic eval
   coverage for taste-control signals.
 - [#832](https://github.com/shchilkin/PopChoice/issues/832): product docs and
