@@ -226,6 +226,9 @@ The default eval path uses fixture prompts, fixture user-memory constraints, and
 - forbidden safety terms are absent
 - watched, rejected, and explicitly forbidden titles are not repeated
 - explanation text is specific enough for the fixture expectations
+- 0.2.0 taste-control signals remain visible and enforceable: explicit hard
+  avoids, runtime constraints, discovery appetite, optional reference movie
+  flows, and feedback-derived memory
 
 Run live-provider evals only when intentionally checking model/provider behavior:
 

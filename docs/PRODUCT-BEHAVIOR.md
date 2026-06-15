@@ -199,8 +199,8 @@ The `v0.2.0` Better Taste Control milestone is tracked by
       appetite for safe, balanced, and surprising picks.
 - [x] [#830](https://github.com/shchilkin/PopChoice/issues/830): result
       feedback loop v1.
-- [#831](https://github.com/shchilkin/PopChoice/issues/831): deterministic eval
-  coverage for taste-control signals.
+- [x] [#831](https://github.com/shchilkin/PopChoice/issues/831):
+      deterministic eval coverage for taste-control signals.
 - [#832](https://github.com/shchilkin/PopChoice/issues/832): product docs and
   release notes.
 

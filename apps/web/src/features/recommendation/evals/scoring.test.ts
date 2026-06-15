@@ -6,6 +6,7 @@ import {
   recommendationEvalFixtures,
   recommendationEvalScenarioMatrix,
   recommendationEvalSourceStrategies,
+  recommendationEvalTasteControlFixtures,
 } from './fixtures';
 import { buildRecommendationEvalReport, scoreRecommendationEvalFixture } from './scoring';
 
@@ -15,7 +16,9 @@ describe('recommendation eval scoring', () => {
       scoreRecommendationEvalFixture(fixture, fixture.mockResponse),
     );
 
-    expect(results).toHaveLength(recommendationEvalScenarioMatrix.length);
+    expect(results).toHaveLength(
+      recommendationEvalScenarioMatrix.length + recommendationEvalTasteControlFixtures.length,
+    );
     expect(results.every((result) => result.passed)).toBe(true);
     expect(results.every((result) => result.score === 100)).toBe(true);
   });
@@ -37,17 +40,38 @@ describe('recommendation eval scoring', () => {
     );
 
     expect(actualScenarioKeys).toEqual(expectedScenarioKeys);
-    expect(recommendationEvalFixtures).toHaveLength(
+    expect(recommendationEvalFixtures.length).toBeGreaterThanOrEqual(
       recommendationEvalAudiences.length *
         recommendationEvalDepths.length *
         recommendationEvalSourceStrategies.length,
     );
   });
 
+  it('covers the 0.2.0 taste-control fixture scenarios', () => {
+    expect(recommendationEvalTasteControlFixtures.map((fixture) => fixture.id)).toEqual([
+      'taste-dark-sci-fi-no-horror',
+      'taste-funny-date-night-not-obvious',
+      'taste-group-no-long-runtime',
+      'taste-surprise-no-gore',
+      'taste-feedback-memory-repeat-avoidance',
+    ]);
+
+    for (const fixture of recommendationEvalTasteControlFixtures) {
+      const result = scoreRecommendationEvalFixture(fixture, fixture.mockResponse);
+      expect(result.passed).toBe(true);
+      expect(result.checks.filter((check) => check.id.startsWith('taste-control-'))).toEqual([
+        expect.objectContaining({ id: 'taste-control-hard-avoids', passed: true }),
+        expect.objectContaining({ id: 'taste-control-discovery-appetite', passed: true }),
+        expect.objectContaining({ id: 'taste-control-optional-reference', passed: true }),
+        expect.objectContaining({ id: 'taste-control-feedback-memory', passed: true }),
+      ]);
+    }
+  });
+
   it('requires scenario metadata to be represented in deterministic fixture responses', () => {
-    const results = recommendationEvalFixtures.map((fixture) =>
-      scoreRecommendationEvalFixture(fixture, fixture.mockResponse),
-    );
+    const results = recommendationEvalFixtures
+      .filter((fixture) => !fixture.id.startsWith('taste-'))
+      .map((fixture) => scoreRecommendationEvalFixture(fixture, fixture.mockResponse));
 
     for (const result of results) {
       expect(
@@ -187,6 +211,85 @@ describe('recommendation eval scoring', () => {
     expect(result.checks.find((check) => check.id === 'repeat-avoidance')?.passed).toBe(false);
   });
 
+  it('fails when a hard-avoid candidate appears in a taste-control response', () => {
+    const fixture = getFixtureById('taste-dark-sci-fi-no-horror');
+    const result = scoreRecommendationEvalFixture(fixture, {
+      ...fixture.mockResponse,
+      title: 'PopChoice E2E Haunted Starship',
+      similarMovies: [
+        {
+          ...fixture.mockResponse.similarMovies![0]!,
+          aiDescription: 'A horror-leaning space thriller with haunted corridors.',
+          isMainRecommendation: true,
+          name: 'PopChoice E2E Haunted Starship',
+          year: 2022,
+        },
+        ...fixture.mockResponse.similarMovies!.slice(1),
+      ],
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.checks.find((check) => check.id === 'taste-control-hard-avoids')).toMatchObject({
+      passed: false,
+    });
+  });
+
+  it('fails when a runtime hard avoid is ignored', () => {
+    const fixture = getFixtureById('taste-group-no-long-runtime');
+    const result = scoreRecommendationEvalFixture(fixture, {
+      ...fixture.mockResponse,
+      similarMovies: [
+        {
+          ...fixture.mockResponse.similarMovies![0]!,
+          duration: 188,
+          name: 'PopChoice E2E Three-Hour Epic',
+          year: 2009,
+        },
+        ...fixture.mockResponse.similarMovies!.slice(1),
+      ],
+      title: 'PopChoice E2E Three-Hour Epic',
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.checks.find((check) => check.id === 'taste-control-hard-avoids')).toMatchObject({
+      passed: false,
+    });
+  });
+
+  it('fails when an optional reference fixture still depends on a missing reference movie', () => {
+    const fixture = getFixtureById('taste-dark-sci-fi-no-horror');
+    const result = scoreRecommendationEvalFixture(fixture, {
+      ...fixture.mockResponse,
+      description:
+        'For the solo viewer, this works because it follows the missing favorite movie reference movie and stays balanced.',
+    });
+
+    expect(result.passed).toBe(false);
+    expect(
+      result.checks.find((check) => check.id === 'taste-control-optional-reference'),
+    ).toMatchObject({
+      passed: false,
+    });
+  });
+
+  it('fails when feedback-derived memory expectations are not represented', () => {
+    const fixture = getFixtureById('taste-feedback-memory-repeat-avoidance');
+    const result = scoreRecommendationEvalFixture(
+      {
+        ...fixture,
+        userMemories: fixture.userMemories.filter((memory) => memory.kind !== 'wrong_mood'),
+      },
+      fixture.mockResponse,
+    );
+
+    expect(result.passed).toBe(false);
+    expect(
+      result.checks.find((check) => check.id === 'taste-control-feedback-memory'),
+    ).toMatchObject({
+      passed: false,
+    });
+  });
+
   it('summarizes eval reports in a machine-readable shape', () => {
     const results = recommendationEvalFixtures.map((fixture) =>
       scoreRecommendationEvalFixture(fixture, fixture.mockResponse),
@@ -220,5 +323,11 @@ function getFixture(
   if (!fixture) {
     throw new Error(`Missing eval fixture for ${audience}/${depth}/${sourceStrategy}`);
   }
+  return fixture;
+}
+
+function getFixtureById(id: string) {
+  const fixture = recommendationEvalFixtures.find((candidate) => candidate.id === id);
+  if (!fixture) throw new Error(`Missing eval fixture ${id}`);
   return fixture;
 }

@@ -39,6 +39,15 @@ export type RecommendationEvalExpectations = {
   minPassingScore?: number;
   minSimilarMovies?: number;
   requiredExplanationTerms?: string[];
+  tasteControl?: RecommendationEvalTasteControlExpectations;
+};
+
+export type RecommendationEvalTasteControlExpectations = {
+  discoveryAppetite?: 'balanced' | 'safe' | 'surprising';
+  feedbackMemoryKinds?: RecommendationEvalMemoryKind[];
+  hardAvoidTerms?: string[];
+  maxRuntimeMinutes?: number;
+  optionalReferenceMovie?: boolean;
 };
 
 export type RecommendationEvalFixture = {
