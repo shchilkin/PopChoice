@@ -156,6 +156,7 @@ export const en = {
       'Search lane',
       "Tonight's vibe",
       'Energy level',
+      'Discovery',
       'Hard avoids',
       'Optional actor',
     ],

@@ -54,6 +54,9 @@ async function completeNormalSoloQuestions(page: Page, options: { referenceMovie
   await page.getByRole('button', { name: /Balanced/ }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
 
+  await page.getByRole('button', { name: /Balanced/ }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
   await page.getByRole('button', { name: /Long runtime/ }).click();
   await page.getByRole('button', { name: /Too obvious/ }).click();
   await page.getByRole('button', { name: 'Continue' }).click();

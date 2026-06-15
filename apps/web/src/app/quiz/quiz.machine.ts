@@ -295,14 +295,20 @@ export const quizMachine = setup({
         },
         tone: {
           on: {
-            NEXT: { target: 'avoids', actions: 'setDirForward' },
+            NEXT: { target: 'discovery', actions: 'setDirForward' },
             BACK: { target: 'mood', actions: 'setDirBackward' },
+          },
+        },
+        discovery: {
+          on: {
+            NEXT: { target: 'avoids', actions: 'setDirForward' },
+            BACK: { target: 'tone', actions: 'setDirBackward' },
           },
         },
         avoids: {
           on: {
             NEXT: { target: 'favoriteActor', actions: 'setDirForward' },
-            BACK: { target: 'tone', actions: 'setDirBackward' },
+            BACK: { target: 'discovery', actions: 'setDirBackward' },
           },
         },
         favoriteActor: {

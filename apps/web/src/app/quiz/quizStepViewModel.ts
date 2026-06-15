@@ -33,6 +33,8 @@ export function canProceedForStep({
       return person.moods.length >= 1;
     case 'tone':
       return person.tone !== '';
+    case 'discovery':
+      return person.fastDiscovery !== '';
     case 'avoids':
     case 'favoriteActor':
       return true;

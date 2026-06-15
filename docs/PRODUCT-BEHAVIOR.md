@@ -27,13 +27,16 @@ Solo mode creates one participant named with the localized "you" label. Group
 mode first collects participant names, requires at least two non-empty names,
 and falls back to "Person 1" and "Person 2" if the setup is incomplete.
 
-Each participant answers the same five steps:
+Each participant answers the same seven steps:
 
-1. Reference movie: either one favorite/reference title or "no reference movie".
+1. Reference movie: optional favorite/reference title.
 2. Search lane: `new`, `classic`, or `both`.
 3. Tonight's vibe: one or more mood/genre ids from the current fixed list.
 4. Energy level: `light`, `balanced`, `serious`, or `dark`.
-5. Optional actor: free text.
+5. Discovery appetite: `safe`, `balanced`, or `surprise`.
+6. Hard avoids: optional explicit constraints such as slow pacing, long runtime,
+   too obvious, or too obscure.
+7. Optional actor: free text.
 
 The browser translates each participant into the recommendation API contract:
 
@@ -51,9 +54,11 @@ The browser translates each participant into the recommendation API contract:
 
 For one participant the payload is one object. For group mode the payload is an
 array of participant objects. Required product inputs are era, at least one
-mood, and tone. The favorite movie can be intentionally blank only when the user
-chooses the no-reference path. Favorite actor and favorite-movie reason are
-optional.
+mood, tone, and discovery appetite. The favorite movie can be intentionally
+blank. Favorite actor, favorite-movie reason, and hard avoids are optional.
+Discovery appetite and hard avoids are carried as structured text in
+`favoriteMovieWhy` until a broader taste-signal backend contract replaces the
+legacy recommendation request shape.
 
 ## Current Recommendation Lifecycle
 
@@ -174,12 +179,12 @@ and use more concrete "tonight" language.
 The `v0.2.0` Better Taste Control milestone is tracked by
 [#826](https://github.com/shchilkin/PopChoice/issues/826). Planned scope:
 
-- [#827](https://github.com/shchilkin/PopChoice/issues/827): explicit avoids
-  and constraints in Fast Pick and Normal Match.
-- [#828](https://github.com/shchilkin/PopChoice/issues/828): optional,
-  lower-friction reference movie UX.
-- [#829](https://github.com/shchilkin/PopChoice/issues/829): discovery
-  appetite for safe, balanced, and surprising picks.
+- [x] [#827](https://github.com/shchilkin/PopChoice/issues/827): explicit avoids
+      and constraints in Fast Pick and Normal Match.
+- [x] [#828](https://github.com/shchilkin/PopChoice/issues/828): optional,
+      lower-friction reference movie UX.
+- [x] [#829](https://github.com/shchilkin/PopChoice/issues/829): discovery
+      appetite for safe, balanced, and surprising picks.
 - [#830](https://github.com/shchilkin/PopChoice/issues/830): result feedback
   loop v1.
 - [#831](https://github.com/shchilkin/PopChoice/issues/831): deterministic eval
