@@ -56,7 +56,7 @@ describe('getBuildInfo', () => {
 
     expect(info).toMatchObject({
       app: 'PopChoice',
-      version: '0.1.0',
+      version: '0.2.0',
       channel: 'development',
       commitSha: null,
       commitShortSha: null,
