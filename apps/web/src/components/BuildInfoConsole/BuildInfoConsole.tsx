@@ -26,6 +26,10 @@ const POPCHOICE_CONSOLE_BANNER = String.raw`
              |_|
 `;
 
+const BANNER_STYLE =
+  'color:#f59e0b;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:12px;font-weight:400;letter-spacing:0;line-height:1.05;white-space:pre';
+const BADGE_STYLE = 'background:#111;color:#fff;border-radius:6px;padding:2px 8px;font-weight:700';
+
 async function fetchBuildInfo(): Promise<BuildInfo> {
   const response = await fetch('/api/build', { cache: 'no-store' });
   if (!response.ok) {
@@ -38,9 +42,12 @@ async function fetchBuildInfo(): Promise<BuildInfo> {
 function logBuildSummary(build: BuildInfo) {
   // eslint-disable-next-line no-console
   console.info(
-    '%c[PopChoice]%c %s (%s) - run %cPopChoice.info()%c for build data',
-    'color:#2563eb;font-weight:700',
-    'color:inherit',
+    '%c%s%c\n%cPopChoice%c %s (%s) - run %cPopChoice.info()%c for build data',
+    BANNER_STYLE,
+    POPCHOICE_CONSOLE_BANNER,
+    '',
+    BADGE_STYLE,
+    'color:#555;font-weight:600',
     build.version,
     build.commitShortSha ?? 'unknown',
     'font-weight:700',
@@ -51,12 +58,8 @@ function logBuildSummary(build: BuildInfo) {
 function logBuildDetails(build: BuildInfo) {
   // eslint-disable-next-line no-console
   console.groupCollapsed(
-    '%c%s%c %c%s%c %s (%s)',
-    'color:#f59e0b;font-weight:700;line-height:1',
-    POPCHOICE_CONSOLE_BANNER,
-    '',
-    'background:#111;color:#fff;border-radius:6px;padding:2px 8px;font-weight:700',
-    'PopChoice',
+    '%cPopChoice build data%c %s (%s)',
+    BADGE_STYLE,
     'color:#555;font-weight:600',
     build.version,
     build.commitShortSha ?? 'unknown',
