@@ -52,29 +52,31 @@ This creates a usable first recommendation, but the data is coarse. It asks user
 - Normal Match is producing promising qualitative results for specific intent prompts. A Russian dystopian/post-apocalyptic survival prompt returned a strong `Blade Runner`-style selection and explanation.
 - Duo and Group need more manual product QA after the entry-flow ordering is fixed, especially to verify whether compromise results feel meaningfully different from solo recommendations.
 
-## 0.2.0 Better Taste Control Release Plan
+## 0.2.0 Better Taste Control
 
-The next product release is tracked by
-[#826](https://github.com/shchilkin/PopChoice/issues/826). The release should
-make PopChoice more controllable without turning the quiz into a technical
-filter form. Users should be able to say what they want, what they want to
-avoid, and how safe or surprising the pick should feel.
+The Better Taste Control release is tracked by
+[#826](https://github.com/shchilkin/PopChoice/issues/826). It makes PopChoice
+more controllable without turning the quiz into a technical filter form. Users
+can say what they want, what they want to avoid, and how safe or surprising the
+pick should feel.
 
-The planned PR sequence is:
+Completed scope:
 
-1. [#827](https://github.com/shchilkin/PopChoice/issues/827): add explicit
-   avoids and constraints to Fast Pick and Normal Match.
-2. [#828](https://github.com/shchilkin/PopChoice/issues/828): make reference
-   movie input optional and lower-friction.
-3. [#829](https://github.com/shchilkin/PopChoice/issues/829): add discovery
-   appetite control for safe, balanced, and surprising recommendations.
-4. [#830](https://github.com/shchilkin/PopChoice/issues/830): improve the
-   result feedback loop so feedback can guide follow-up recommendations.
-5. [#831](https://github.com/shchilkin/PopChoice/issues/831): expand
-   deterministic recommendation eval coverage for the new taste-control
-   signals.
-6. [#832](https://github.com/shchilkin/PopChoice/issues/832): keep product docs
-   and release notes aligned as behavior lands.
+- [x] [#827](https://github.com/shchilkin/PopChoice/issues/827): add explicit
+      avoids and constraints to Fast Pick and Normal Match.
+- [x] [#828](https://github.com/shchilkin/PopChoice/issues/828): make reference
+      movie input optional and lower-friction.
+- [x] [#829](https://github.com/shchilkin/PopChoice/issues/829): add discovery
+      appetite control for safe, balanced, and surprising recommendations.
+- [x] [#830](https://github.com/shchilkin/PopChoice/issues/830): improve the
+      result feedback loop so feedback can guide follow-up recommendations.
+- [x] [#831](https://github.com/shchilkin/PopChoice/issues/831): expand
+      deterministic recommendation eval coverage for the new taste-control
+      signals.
+- [x] [#832](https://github.com/shchilkin/PopChoice/issues/832): keep product
+      docs and release notes aligned as behavior lands.
+
+Release notes: [/docs/releases/v0.2.0](/docs/releases/v0.2.0).
 
 Out of scope for `v0.2.0`:
 
