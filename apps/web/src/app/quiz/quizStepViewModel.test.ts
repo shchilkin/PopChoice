@@ -15,7 +15,7 @@ describe('quiz step view model', () => {
     const person = emptyPerson('Taylor');
 
     expect(canProceedForStep({ person, questionsStep: 'favoriteMovie', fastStep: null })).toBe(
-      false,
+      true,
     );
     expect(
       canProceedForStep({

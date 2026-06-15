@@ -39,8 +39,10 @@ async function expectDeterministicDuoResults(page: Page) {
   await expect(page.getByRole('heading', { name: 'PopChoice E2E Space Opera' })).toBeVisible();
 }
 
-async function completeNormalSoloQuestions(page: Page) {
-  await page.getByRole('button', { name: 'The Matrix' }).click();
+async function completeNormalSoloQuestions(page: Page, options: { referenceMovie?: string } = {}) {
+  if (options.referenceMovie) {
+    await page.getByRole('button', { name: options.referenceMovie }).click();
+  }
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await page.getByRole('button', { name: /Open field/ }).click();
@@ -119,10 +121,10 @@ test('submits the normal duo quiz and renders deterministic duo results', async 
   await inputs[1].fill('Bob');
   await page.getByRole('button', { name: 'Start Duo' }).click();
 
-  await completeNormalSoloQuestions(page);
+  await completeNormalSoloQuestions(page, { referenceMovie: 'The Matrix' });
   await page.getByRole('button', { name: /Hand to Bob/ }).click();
   await page.getByRole('button', { name: /ready, Bob/i }).click();
-  await completeNormalSoloQuestions(page);
+  await completeNormalSoloQuestions(page, { referenceMovie: 'The Matrix' });
   await page.getByRole('button', { name: /Find My Movie/ }).click();
 
   await expectDeterministicDuoResults(page);
@@ -141,13 +143,13 @@ test('submits the normal group quiz and renders deterministic group results', as
   await expect(page.getByRole('button', { name: "Let's go!" })).toBeEnabled();
   await page.getByRole('button', { name: "Let's go!" }).click();
 
-  await completeNormalSoloQuestions(page);
+  await completeNormalSoloQuestions(page, { referenceMovie: 'The Matrix' });
   await page.getByRole('button', { name: /Hand to Bob/ }).click();
   await page.getByRole('button', { name: /ready, Bob/i }).click();
-  await completeNormalSoloQuestions(page);
+  await completeNormalSoloQuestions(page, { referenceMovie: 'The Matrix' });
   await page.getByRole('button', { name: /Hand to Charlie/ }).click();
   await page.getByRole('button', { name: /ready, Charlie/i }).click();
-  await completeNormalSoloQuestions(page);
+  await completeNormalSoloQuestions(page, { referenceMovie: 'The Matrix' });
   await page.getByRole('button', { name: /Find My Movie/ }).click();
 
   await expectDeterministicGroupResults(page);
