@@ -189,17 +189,28 @@ The app needs:
 
 ## Catalog Seed Workflow
 
-The `Catalog seed` page lets an operator queue the curated movie seed without
+The `Catalog seed` page lets an operator prepare the base catalog without
 opening an SSH shell or running commands inside the backoffice container.
 Backoffice adds a `seed-movies` job to the `movie-seed` BullMQ queue; the
 `workers` service reads `services/movie-seed/movies.txt`, creates embeddings for
-new rows, and inserts only movies missing from the environment database.
+new rows, and inserts only movies missing from the environment database. After a
+successful non-dry seed, the same worker also creates a durable catalog repair
+batch and queues an `enqueue-catalog-repair-batch` job on
+`catalog-maintenance`. It repairs `missing_tmdb_id` first, then falls back to
+`missing_poster_url` when identities are already complete, so metadata and
+poster work stays paced by the existing TMDB worker controls.
 
 Use it after creating a fresh development or production environment, or when the
 catalog is unexpectedly empty. The seed job is idempotent and deduplicates by
 movie name and year, so reruns are safe. Repeated clicks while a seed is queued
-or active reuse the same BullMQ job id; watch the `workers` logs for provider or
-database errors.
+or active reuse the same BullMQ job id; completed runs keep distinct job ids in
+Bull Board. Watch the `movie-seed` job logs and return value for seed status,
+then use the linked repair batch or `catalog-maintenance` queue to follow
+metadata and poster repair progress.
+
+The automatic repair phase is bounded by `CATALOG_SEED_REPAIR_LIMIT` and chunked
+by `CATALOG_SEED_REPAIR_PAGE_SIZE`. Set the limit to `0` to keep the seed button
+as a seed-only action.
 
 CI can queue the same seed after a successful deploy through
 `POST /api/operator/catalog-seed`. Set `BACKOFFICE_AUTOMATION_TOKEN` in the

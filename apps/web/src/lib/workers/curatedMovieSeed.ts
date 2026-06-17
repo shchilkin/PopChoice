@@ -12,6 +12,7 @@ import {
 
 import logger from '@/lib/logger';
 
+import type { CuratedMovieSeedCatalogRepairSummary } from '@/lib/workers/curatedMovieSeedPostBackfill';
 import type { MovieRecord } from '@pop-choice/shared';
 
 type MovieSeedRecord = Omit<MovieRecord, 'embedding'>;
@@ -28,6 +29,7 @@ export type CuratedMovieSeedSummary = {
   movieCountBefore: number;
   moviesFilePath: string;
   newMovies: number;
+  catalogRepair?: CuratedMovieSeedCatalogRepairSummary;
   skippedInvalid: number;
   status: CuratedMovieSeedSummaryStatus;
   total: number;

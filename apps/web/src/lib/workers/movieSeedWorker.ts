@@ -13,6 +13,10 @@ import {
   runCuratedMovieSeedJob,
   type CuratedMovieSeedSummary,
 } from '@/lib/workers/curatedMovieSeed';
+import {
+  enqueueCuratedMovieSeedCatalogRepair,
+  failedCatalogRepairSummary,
+} from '@/lib/workers/curatedMovieSeedPostBackfill';
 
 import type {
   CuratedMovieSeedJobData,
@@ -76,6 +80,37 @@ function formatMovieSeedJobLog(message: string, context?: Record<string, unknown
   return `${message}: ${JSON.stringify(context)}`;
 }
 
+async function attachCatalogRepairPhase(input: {
+  data: CuratedMovieSeedJobData;
+  job: Job<MovieSeedJobData, MovieSeedJobResult, MovieSeedJobName>;
+  summary: CuratedMovieSeedSummary;
+}): Promise<CuratedMovieSeedSummary> {
+  try {
+    const catalogRepair = await enqueueCuratedMovieSeedCatalogRepair({
+      dryRun: input.summary.dryRun,
+      requestedBy: input.data.requestedBy,
+      runId: input.data.runId,
+      seedStatus: input.summary.status,
+    });
+
+    input.summary.catalogRepair = catalogRepair;
+    await input.job.log(
+      formatMovieSeedJobLog('Curated movie seed catalog repair phase', catalogRepair),
+    );
+    return input.summary;
+  } catch (error) {
+    const catalogRepair = failedCatalogRepairSummary();
+    input.summary.catalogRepair = catalogRepair;
+    await input.job.log(
+      formatMovieSeedJobLog('Curated movie seed catalog repair phase failed', {
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    logger.error({ err: error, jobId: input.job.id }, 'Curated movie seed catalog repair failed');
+    return input.summary;
+  }
+}
+
 async function processMovieSeedJob(
   job: Job<MovieSeedJobData, MovieSeedJobResult, MovieSeedJobName>,
 ): Promise<MovieSeedJobResult> {
@@ -97,8 +132,9 @@ async function processMovieSeedJob(
           },
           requestedBy: data.requestedBy,
         });
-        await job.updateProgress(summary);
-        return summary;
+        const enrichedSummary = await attachCatalogRepairPhase({ data, job, summary });
+        await job.updateProgress(enrichedSummary);
+        return enrichedSummary;
       },
     );
   }

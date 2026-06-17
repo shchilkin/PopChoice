@@ -169,6 +169,11 @@ See [Backoffice Plan](/docs/BACKOFFICE) and
 2. Checks which movies already exist in the database (deduplicates by name + year).
 3. Generates OpenAI embeddings for new movies.
 4. Inserts records into the `movies` table.
+5. When run through the `workers` service, queues a bounded catalog repair batch
+   on `catalog-maintenance` after a successful non-dry run. It prioritizes
+   `missing_tmdb_id`, then falls back to `missing_poster_url`, so one operator
+   action can prepare the curated catalog while TMDB metadata/poster work still
+   uses the catalog-maintenance retry and rate-limit controls.
 
 ### movies.txt Format
 
@@ -186,12 +191,14 @@ A cynical expatriate American café owner struggles to decide whether to help hi
 
 ### Environment Variables
 
-| Variable           | Required | Default                                                   | Description                         |
-| ------------------ | -------- | --------------------------------------------------------- | ----------------------------------- |
-| `OPENAI_API_KEY`   | ✅       | —                                                         | OpenAI API key for embeddings       |
-| `DATABASE_URL`     | ✅       | —                                                         | PostgreSQL connection string        |
-| `MOVIES_FILE_PATH` | ❌       | `<cwd>/movies.txt`, then `services/movie-seed/movies.txt` | Path to the movies.txt file         |
-| `DRY_RUN`          | ❌       | `false`                                                   | `"true"` to skip embeddings/inserts |
+| Variable                        | Required | Default                                                   | Description                                                   |
+| ------------------------------- | -------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| `OPENAI_API_KEY`                | ✅       | —                                                         | OpenAI API key for embeddings                                 |
+| `DATABASE_URL`                  | ✅       | —                                                         | PostgreSQL connection string                                  |
+| `MOVIES_FILE_PATH`              | ❌       | `<cwd>/movies.txt`, then `services/movie-seed/movies.txt` | Path to the movies.txt file                                   |
+| `CATALOG_SEED_REPAIR_LIMIT`     | ❌       | `50`                                                      | Worker-only cap for post-seed catalog repair; `0` disables it |
+| `CATALOG_SEED_REPAIR_PAGE_SIZE` | ❌       | `25`                                                      | Worker-only chunk size for the post-seed repair batch         |
+| `DRY_RUN`                       | ❌       | `false`                                                   | `"true"` to skip embeddings/inserts and post-seed repair      |
 
 ### Running
 
