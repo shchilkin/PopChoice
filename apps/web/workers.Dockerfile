@@ -22,6 +22,7 @@ RUN npm run build --workspace=packages/shared
 FROM node:24-slim
 
 ENV NODE_ENV=production
+ENV MOVIES_FILE_PATH=/app/services/movie-seed/movies.txt
 
 WORKDIR /app
 
