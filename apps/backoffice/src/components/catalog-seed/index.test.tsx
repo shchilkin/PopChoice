@@ -18,8 +18,9 @@ describe('CatalogSeedPage', () => {
     expect(html).toContain('Configured');
     expect(html).toContain('Ready');
     expect(html).toContain('movie-seed');
+    expect(html).toContain('catalog-maintenance');
     expect(html).toContain('seed-movies');
-    expect(html).toContain('Trigger movie seed');
+    expect(html).toContain('Prepare catalog');
     expect(html).not.toContain('Configuration required');
   });
 

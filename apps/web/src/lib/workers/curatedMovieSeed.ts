@@ -12,13 +12,38 @@ import {
 
 import logger from '@/lib/logger';
 
+import type { CuratedMovieSeedCatalogRepairSummary } from '@/lib/workers/curatedMovieSeedPostBackfill';
 import type { MovieRecord } from '@pop-choice/shared';
 
 type MovieSeedRecord = Omit<MovieRecord, 'embedding'>;
 
+export type CuratedMovieSeedSummaryStatus = 'completed' | 'dry_run' | 'empty' | 'no_new_movies';
+
+export type CuratedMovieSeedSummary = {
+  dryRun: boolean;
+  duplicates: number;
+  durationMs: number;
+  errors: number;
+  inserted: number;
+  movieCountAfter: number;
+  movieCountBefore: number;
+  moviesFilePath: string;
+  newMovies: number;
+  catalogRepair?: CuratedMovieSeedCatalogRepairSummary;
+  skippedInvalid: number;
+  status: CuratedMovieSeedSummaryStatus;
+  total: number;
+};
+
+type CuratedMovieSeedReporter = (
+  message: string,
+  context?: Record<string, unknown>,
+) => Promise<void> | void;
+
 type RunCuratedMovieSeedInput = {
   dryRun?: boolean;
   moviesFilePath?: string;
+  reporter?: CuratedMovieSeedReporter;
   requestedBy?: string;
 };
 
@@ -69,6 +94,44 @@ export function resolveDefaultMoviesFilePath(cwd = process.cwd()): string {
 function resolveMoviesFilePath(explicitPath: string | undefined): string {
   const envPath = process.env.MOVIES_FILE_PATH?.trim();
   return explicitPath?.trim() || envPath || resolveDefaultMoviesFilePath();
+}
+
+async function reportSeedProgress(
+  reporter: CuratedMovieSeedReporter | undefined,
+  message: string,
+  context?: Record<string, unknown>,
+): Promise<void> {
+  await reporter?.(message, context);
+}
+
+function buildSeedSummary(input: {
+  dryRun: boolean;
+  duplicates?: number;
+  errors?: number;
+  inserted?: number;
+  movieCountAfter?: number;
+  movieCountBefore: number;
+  moviesFilePath: string;
+  newMovies?: number;
+  skippedInvalid?: number;
+  startTime: number;
+  status: CuratedMovieSeedSummaryStatus;
+  total?: number;
+}): CuratedMovieSeedSummary {
+  return {
+    dryRun: input.dryRun,
+    duplicates: input.duplicates ?? 0,
+    durationMs: Date.now() - input.startTime,
+    errors: input.errors ?? 0,
+    inserted: input.inserted ?? 0,
+    movieCountAfter: input.movieCountAfter ?? input.movieCountBefore,
+    movieCountBefore: input.movieCountBefore,
+    moviesFilePath: input.moviesFilePath,
+    newMovies: input.newMovies ?? 0,
+    skippedInvalid: input.skippedInvalid ?? 0,
+    status: input.status,
+    total: input.total ?? 0,
+  };
 }
 
 function parseDuration(duration: string): number {
@@ -137,18 +200,18 @@ function parseMovieEntry(entry: string): ParseMovieEntryResult {
   };
 }
 
-function readMoviesFile(filePath: string): MovieSeedRecord[] {
+function readMoviesFile(filePath: string): { movies: MovieSeedRecord[]; skippedInvalid: number } {
   const content = readFileSync(filePath, 'utf-8');
   const chunks = content.split(/(?:\r?\n){2,}/);
   const movies: MovieSeedRecord[] = [];
-  let skipped = 0;
+  let skippedInvalid = 0;
 
   for (const chunk of chunks) {
     if (!chunk.trim()) continue;
 
     const result = parseMovieEntry(chunk);
     if (!result.movie) {
-      skipped++;
+      skippedInvalid++;
       if (result.warning) logger.warn(result.warning.context, result.warning.message);
       continue;
     }
@@ -156,11 +219,11 @@ function readMoviesFile(filePath: string): MovieSeedRecord[] {
     movies.push(result.movie);
   }
 
-  if (skipped > 0) {
-    logger.warn({ skipped }, 'Skipped invalid or unrecognized movie entries');
+  if (skippedInvalid > 0) {
+    logger.warn({ skipped: skippedInvalid }, 'Skipped invalid or unrecognized movie entries');
   }
 
-  return movies;
+  return { movies, skippedInvalid };
 }
 
 function movieToEmbeddingText(movie: MovieSeedRecord): string {
@@ -178,7 +241,9 @@ function requireEmbedding(embedding: number[] | undefined, movie: MovieSeedRecor
   throw new Error(`Missing embedding for curated movie seed record: ${movie.name}`);
 }
 
-export async function runCuratedMovieSeedJob(input: RunCuratedMovieSeedInput): Promise<void> {
+export async function runCuratedMovieSeedJob(
+  input: RunCuratedMovieSeedInput,
+): Promise<CuratedMovieSeedSummary> {
   const dryRun = input.dryRun ?? process.env.DRY_RUN === 'true';
   const moviesFilePath = resolveMoviesFilePath(input.moviesFilePath);
   const startTime = Date.now();
@@ -189,13 +254,30 @@ export async function runCuratedMovieSeedJob(input: RunCuratedMovieSeedInput): P
     { dryRun, moviesFilePath, requestedBy: input.requestedBy },
     'Curated movie seed started',
   );
+  await reportSeedProgress(input.reporter, 'Curated movie seed started', {
+    dryRun,
+    moviesFilePath,
+  });
 
   const countBefore = await getMovieCount();
-  const partialRecords = readMoviesFile(moviesFilePath);
+  const { movies: partialRecords, skippedInvalid } = readMoviesFile(moviesFilePath);
+  await reportSeedProgress(input.reporter, 'Curated movie file read', {
+    skippedInvalid,
+    total: partialRecords.length,
+  });
 
   if (partialRecords.length === 0) {
     logger.info({ moviesFilePath }, 'Curated movie seed found no movies');
-    return;
+    const summary = buildSeedSummary({
+      dryRun,
+      movieCountBefore: countBefore,
+      moviesFilePath,
+      skippedInvalid,
+      startTime,
+      status: 'empty',
+    });
+    await reportSeedProgress(input.reporter, 'Curated movie seed found no movies', summary);
+    return summary;
   }
 
   const recordsForCheck: MovieRecord[] = partialRecords.map((record) => ({
@@ -203,19 +285,36 @@ export async function runCuratedMovieSeedJob(input: RunCuratedMovieSeedInput): P
     embedding: [],
   }));
   const newIndices = await filterNewMovies(recordsForCheck);
+  const duplicates = partialRecords.length - newIndices.length;
 
   logger.info(
     {
-      duplicates: partialRecords.length - newIndices.length,
+      duplicates,
       new: newIndices.length,
       total: partialRecords.length,
     },
     'Curated movie seed duplicate check complete',
   );
+  await reportSeedProgress(input.reporter, 'Curated movie seed duplicate check complete', {
+    duplicates,
+    newMovies: newIndices.length,
+    total: partialRecords.length,
+  });
 
   if (newIndices.length === 0) {
     logger.info({ movieCount: countBefore }, 'Curated movie seed found no new movies');
-    return;
+    const summary = buildSeedSummary({
+      duplicates,
+      dryRun,
+      movieCountBefore: countBefore,
+      moviesFilePath,
+      skippedInvalid,
+      startTime,
+      status: 'no_new_movies',
+      total: partialRecords.length,
+    });
+    await reportSeedProgress(input.reporter, 'Curated movie seed found no new movies', summary);
+    return summary;
   }
 
   if (dryRun) {
@@ -229,11 +328,30 @@ export async function runCuratedMovieSeedJob(input: RunCuratedMovieSeedInput): P
       },
       'DRY RUN: curated movie seed would create embeddings and insert movies',
     );
-    return;
+    const summary = buildSeedSummary({
+      duplicates,
+      dryRun,
+      movieCountBefore: countBefore,
+      moviesFilePath,
+      newMovies: newIndices.length,
+      skippedInvalid,
+      startTime,
+      status: 'dry_run',
+      total: partialRecords.length,
+    });
+    await reportSeedProgress(
+      input.reporter,
+      'DRY RUN: curated movie seed would create embeddings and insert movies',
+      summary,
+    );
+    return summary;
   }
 
   const openaiApiKey = getRequiredEnv('OPENAI_API_KEY');
   const newMovies = newIndices.map((index) => partialRecords[index]).filter(isMovieSeedRecord);
+  await reportSeedProgress(input.reporter, 'Creating embeddings for curated movies', {
+    newMovies: newMovies.length,
+  });
   const embeddings = await createEmbeddings(openaiApiKey, newMovies.map(movieToEmbeddingText));
   const finalRecords: MovieRecord[] = newMovies.map((record, index) => ({
     ...record,
@@ -242,15 +360,31 @@ export async function runCuratedMovieSeedJob(input: RunCuratedMovieSeedInput): P
 
   const result = await insertMovies(finalRecords);
   const countAfter = await getMovieCount();
+  const summary = buildSeedSummary({
+    duplicates,
+    dryRun,
+    errors: result.errors,
+    inserted: result.success,
+    movieCountAfter: countAfter,
+    movieCountBefore: countBefore,
+    moviesFilePath,
+    newMovies: newIndices.length,
+    skippedInvalid,
+    startTime,
+    status: 'completed',
+    total: partialRecords.length,
+  });
 
   logger.info(
     {
-      durationMs: Date.now() - startTime,
-      errors: result.errors,
-      inserted: result.success,
+      durationMs: summary.durationMs,
+      errors: summary.errors,
+      inserted: summary.inserted,
       movieCountAfter: countAfter,
       movieCountBefore: countBefore,
     },
     'Curated movie seed complete',
   );
+  await reportSeedProgress(input.reporter, 'Curated movie seed complete', summary);
+  return summary;
 }

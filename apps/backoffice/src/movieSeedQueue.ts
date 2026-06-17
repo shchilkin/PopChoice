@@ -1,5 +1,6 @@
-import { type Job, Queue } from 'bullmq';
+import { type Job, type JobType, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
+import { randomUUID } from 'node:crypto';
 
 import { logger } from '@pop-choice/shared';
 
@@ -8,12 +9,18 @@ import { redisOptionsFromUrl } from './lib/redisConnection';
 export const MOVIE_SEED_QUEUE_NAME = 'movie-seed';
 export const MOVIE_SEED_JOB_NAME = 'seed-movies';
 
-const CURATED_MOVIE_SEED_JOB_ID = 'curated-movie-seed';
+const CURATED_MOVIE_SEED_JOB_ID_PREFIX = 'curated-movie-seed';
+const ACTIVE_CURATED_SEED_STATES: JobType[] = [
+  'active',
+  'delayed',
+  'prioritized',
+  'waiting',
+  'waiting-children',
+];
 
 const MOVIE_SEED_JOB_OPTIONS = {
   attempts: 3,
   backoff: { type: 'exponential' as const, delay: 2000 },
-  jobId: CURATED_MOVIE_SEED_JOB_ID,
   removeOnComplete: 100,
   removeOnFail: 50,
 };
@@ -33,6 +40,7 @@ type CuratedMovieSeedJobData = {
   version: 1;
   kind: 'curated-file';
   requestedBy: string;
+  runId: string;
 };
 type MovieSeedJobName = typeof MOVIE_SEED_JOB_NAME;
 type MovieSeedJob = Job<CuratedMovieSeedJobData, void, MovieSeedJobName>;
@@ -65,6 +73,21 @@ function enqueueResult(
   };
 }
 
+function getCuratedMovieSeedJobId(runId = randomUUID()): string {
+  return `${CURATED_MOVIE_SEED_JOB_ID_PREFIX}-${runId}`;
+}
+
+function isCuratedMovieSeedJob(job: Job<CuratedMovieSeedJobData, void, MovieSeedJobName>): boolean {
+  return job.name === MOVIE_SEED_JOB_NAME && job.data?.kind === 'curated-file';
+}
+
+async function findActiveCuratedMovieSeedJob(
+  queue: Queue<MovieSeedJob>,
+): Promise<Job<CuratedMovieSeedJobData, void, MovieSeedJobName> | null> {
+  const jobs = await queue.getJobs(ACTIVE_CURATED_SEED_STATES, 0, 25, false);
+  return jobs.find(isCuratedMovieSeedJob) ?? null;
+}
+
 export async function enqueueCuratedMovieSeedFromBackoffice(
   input: EnqueueCuratedMovieSeedInput,
   redisUrl = process.env.REDIS_URL,
@@ -72,30 +95,23 @@ export async function enqueueCuratedMovieSeedFromBackoffice(
   const queue = getMovieSeedQueue(redisUrl);
   if (!queue) return null;
 
-  const existingJob = await queue.getJob(CURATED_MOVIE_SEED_JOB_ID);
-  if (existingJob) {
-    const state = await existingJob.getState();
-    if (
-      state === 'active' ||
-      state === 'delayed' ||
-      state === 'prioritized' ||
-      state === 'waiting'
-    ) {
-      return enqueueResult(String(existingJob.id ?? CURATED_MOVIE_SEED_JOB_ID), 'deduped');
-    }
-
-    await existingJob.remove();
+  const activeJob = await findActiveCuratedMovieSeedJob(queue);
+  if (activeJob) {
+    return enqueueResult(String(activeJob.id ?? CURATED_MOVIE_SEED_JOB_ID_PREFIX), 'deduped');
   }
 
+  const runId = randomUUID();
+  const jobId = getCuratedMovieSeedJobId(runId);
   const job = await queue.add(
     MOVIE_SEED_JOB_NAME,
     {
       kind: 'curated-file',
       requestedBy: input.requestedBy,
+      runId,
       version: 1,
     },
-    MOVIE_SEED_JOB_OPTIONS,
+    { ...MOVIE_SEED_JOB_OPTIONS, jobId },
   );
 
-  return enqueueResult(String(job.id ?? CURATED_MOVIE_SEED_JOB_ID), 'queued');
+  return enqueueResult(String(job.id ?? jobId), 'queued');
 }

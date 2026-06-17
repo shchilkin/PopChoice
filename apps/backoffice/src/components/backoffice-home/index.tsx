@@ -31,7 +31,7 @@ const GROUPS: BackofficeHomeGroup[] = [
         title: 'Queue',
       },
       {
-        description: 'Run the curated movie seed job',
+        description: 'Seed movies and queue catalog repair',
         href: '/catalog-seed',
         title: 'Catalog seed',
       },

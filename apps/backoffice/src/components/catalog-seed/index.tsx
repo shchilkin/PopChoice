@@ -8,7 +8,7 @@ function statusLabel(value: boolean): string {
 
 function getFlashMessage(status: string | undefined): string | null {
   if (status === 'triggered') {
-    return 'Movie seed queued. Watch the workers logs in Coolify.';
+    return 'Catalog preparation queued. Check Bull Board for seed logs and repair batch progress.';
   }
   if (status === 'unavailable') {
     return 'REDIS_URL is not configured for this backoffice resource.';
@@ -36,7 +36,7 @@ export function CatalogSeedPage({
       active="catalog-seed"
       title="Catalog seed"
       eyebrow="One-shot catalog operation"
-      description="Queue the curated movie seed job when an environment needs its base catalog populated."
+      description="Queue the curated movie seed and follow-up catalog repair work when an environment needs its base movie set prepared."
     >
       {flashMessage ? (
         <div className={`queue-status ${actionStatus === 'triggered' ? '' : 'unavailable'}`}>
@@ -67,26 +67,31 @@ export function CatalogSeedPage({
           </div>
           <dl className="catalog-seed-facts">
             <div>
-              <dt>Queue</dt>
+              <dt>Seed queue</dt>
               <dd>{seedStatus.queueName}</dd>
             </div>
             <div>
-              <dt>Worker job</dt>
+              <dt>Repair queue</dt>
+              <dd>catalog-maintenance</dd>
+            </div>
+            <div>
+              <dt>Seed job</dt>
               <dd>seed-movies</dd>
             </div>
             <div>
               <dt>Mode</dt>
-              <dd>deduped</dd>
+              <dd>seed + catalog repair</dd>
             </div>
           </dl>
         </div>
 
         <div className="catalog-seed-action">
           <div>
-            <h2>Run curated seed</h2>
+            <h2>Prepare catalog</h2>
             <p>
-              Queues the curated movie file for workers. Existing movies are skipped, so retrying is
-              safe.
+              Queues the curated movie file, then asks catalog maintenance to backfill missing TMDB
+              identities and posters. Existing movies are skipped, active runs are deduped, and each
+              run stays visible in Bull Board.
             </p>
           </div>
           <form className="catalog-seed-form" action="/catalog-seed/actions" method="post">
@@ -96,7 +101,7 @@ export function CatalogSeedPage({
               type="submit"
               disabled={!canTrigger}
             >
-              Trigger movie seed
+              Prepare catalog
             </button>
           </form>
         </div>
