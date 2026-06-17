@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@pop-choice/shared": "*",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.3.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
