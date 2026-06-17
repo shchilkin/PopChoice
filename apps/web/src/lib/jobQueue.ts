@@ -51,12 +51,23 @@ export type TMDBCatalogCandidate = {
 
 export type TMDBDiscoverySource = 'now_playing' | 'upcoming' | 'top_rated' | 'popular';
 
-export type MovieSeedJobData = {
+export type MovieSeedTMDBJobData = {
   tmdbMovies: TMDBDiscoverMovie[];
   localKeys: string[];
   tmdbEmbeddings?: SerializableTMDBEmbeddings;
   trace?: TraceCarrier;
 };
+
+export type CuratedMovieSeedJobData = {
+  version: 1;
+  kind: 'curated-file';
+  dryRun?: boolean;
+  moviesFilePath?: string;
+  requestedBy?: string;
+  trace?: TraceCarrier;
+};
+
+export type MovieSeedJobData = MovieSeedTMDBJobData | CuratedMovieSeedJobData;
 
 export type RecommendationJobData = {
   recommendationId: string;

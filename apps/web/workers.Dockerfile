@@ -66,6 +66,7 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY apps/web/tsconfig.json ./apps/web/
 COPY apps/web/scripts/coolify-runtime-env.cjs ./apps/web/scripts/
 COPY apps/web/src/ ./apps/web/src/
+COPY services/movie-seed/movies.txt ./services/movie-seed/movies.txt
 
 EXPOSE 3000
 CMD ["npm", "run", "start:workers", "--workspace=apps/web"]

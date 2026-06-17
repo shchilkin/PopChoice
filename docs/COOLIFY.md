@@ -933,8 +933,22 @@ as a frontend-only bug.
 ## Seeding movie data
 
 The database schema is created automatically by the web service, but movie rows
-still need to be seeded. After the first successful web deploy, run this from a
-Coolify terminal or an SSH shell on the VPS:
+still need to be seeded. After the first successful web deploy, use Backoffice
+-> Catalog seed -> Trigger movie seed. Backoffice enqueues a `seed-movies` job on
+the `movie-seed` BullMQ queue, and the `workers` service performs the curated
+seed from `services/movie-seed/movies.txt`. The action requires `REDIS_URL` on
+backoffice and workers, and `DATABASE_URL` plus `OPENAI_API_KEY` on workers.
+Watch the `workers` logs for provider or database errors.
+
+For CI-driven post-deploy seeding, set `BACKOFFICE_AUTOMATION_TOKEN` in the
+backoffice Coolify environment and the same GitHub Environment secret, then set
+`BACKOFFICE_BASE_URL` to the environment's backoffice origin. Enable
+`POSTDEPLOY_SEED_ENABLED=true` as a GitHub Environment variable only for
+environments that should automatically queue the curated seed after a successful
+deploy verification.
+
+If backoffice is unavailable, run this from a Coolify terminal or an SSH shell
+on the VPS:
 
 ```bash
 docker compose --profile tools -f coolify.compose.yml run --rm movie-seed

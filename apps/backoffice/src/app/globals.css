@@ -647,6 +647,22 @@ input:disabled {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
+.catalog-seed-summary {
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+}
+.catalog-seed-panel {
+  display: grid;
+  gap: 16px;
+}
+.catalog-seed-form {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.catalog-seed-form .small-note {
+  max-width: 760px;
+}
 .queue-diagnostic,
 .queue-diagnostic-action {
   color: var(--subtle);

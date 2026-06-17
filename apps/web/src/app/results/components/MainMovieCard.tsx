@@ -1,9 +1,10 @@
 'use client';
 
-import { Clapperboard, Clock, Sparkles, Star } from 'lucide-react';
+import { Clapperboard, Clock, ImageIcon, Sparkles, Star, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import { useLanguage } from '@/i18n';
 import { palette } from '@/styles/designTokens';
@@ -30,6 +31,7 @@ export function MainMovieCard({
 }) {
   const { t } = useLanguage();
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [isPosterOpen, setIsPosterOpen] = useState(false);
   const view = buildResultMovieCardViewModel(movie, t.results, { isGroup });
 
   return (
@@ -48,10 +50,17 @@ export function MainMovieCard({
         imgLoaded={imgLoaded}
         movie={movie}
         onImageLoad={() => setImgLoaded(true)}
+        onPosterOpen={() => setIsPosterOpen(true)}
         view={view}
       />
 
       <MainMovieContent movie={movie} view={view} />
+      <PosterLightbox
+        movie={movie}
+        onClose={() => setIsPosterOpen(false)}
+        open={isPosterOpen}
+        view={view}
+      />
     </motion.div>
   );
 }
@@ -60,11 +69,13 @@ function MainPosterSection({
   imgLoaded,
   movie,
   onImageLoad,
+  onPosterOpen,
   view,
 }: {
   imgLoaded: boolean;
   movie: MovieRecommendation;
   onImageLoad: () => void;
+  onPosterOpen: () => void;
   view: ResultMovieCardViewModel;
 }) {
   if (!view.hasPoster) return null;
@@ -86,11 +97,134 @@ function MainPosterSection({
         onLoad={onImageLoad}
       />
       <div className="absolute inset-0" style={{ background: 'var(--pc-poster-grad)' }} />
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        <PosterOpenButton label={view.openPosterLabel} onClick={onPosterOpen} />
         <SimilarityBadge similarity={movie.similarity} />
       </div>
       <AiPickBadge label={view.aiPickLabel} />
       <MainPosterTitle view={view} />
+    </div>
+  );
+}
+
+function PosterOpenButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="grid h-9 w-9 place-items-center rounded-full transition"
+      style={{
+        background: 'var(--pc-overlay-bg)',
+        border: '1px solid var(--pc-bd3)',
+        color: 'var(--pc-overlay-text)',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      <ImageIcon size={15} />
+    </button>
+  );
+}
+
+function PosterLightbox({
+  movie,
+  onClose,
+  open,
+  view,
+}: {
+  movie: MovieRecommendation;
+  onClose: () => void;
+  open: boolean;
+  view: ResultMovieCardViewModel;
+}) {
+  if (!open || !view.hasPoster || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <PosterLightboxContent movie={movie} onClose={onClose} view={view} />,
+    document.body,
+  );
+}
+
+function PosterLightboxContent({
+  movie,
+  onClose,
+  view,
+}: {
+  movie: MovieRecommendation;
+  onClose: () => void;
+  view: ResultMovieCardViewModel;
+}) {
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      aria-label={view.posterDialogLabel}
+      aria-modal="true"
+      className="fixed inset-0 z-50 grid place-items-center p-4"
+      role="dialog"
+    >
+      <button
+        type="button"
+        aria-label={view.closePosterLabel}
+        className="absolute inset-0 cursor-default"
+        style={{ background: 'rgba(3, 4, 8, 0.78)', backdropFilter: 'blur(18px)' }}
+        onClick={onClose}
+      />
+      <div
+        className="relative grid w-full max-w-sm gap-3 rounded-3xl p-3"
+        style={{
+          background: 'var(--pc-surface)',
+          border: '1px solid var(--pc-bd2)',
+          boxShadow: 'var(--pc-card-shadow)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <p
+              className="truncate text-sm font-semibold"
+              style={{ color: 'var(--pc-overlay-text)' }}
+            >
+              {view.title}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--pc-t3)' }}>
+              {view.year}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label={view.closePosterLabel}
+            onClick={onClose}
+            className="grid h-9 w-9 flex-none place-items-center rounded-full transition"
+            style={{
+              background: 'var(--pc-surface-deep)',
+              border: '1px solid var(--pc-bd3)',
+              color: 'var(--pc-t2)',
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <div
+          className="relative aspect-[2/3] overflow-hidden rounded-2xl"
+          style={{ background: 'var(--pc-surface-deep)' }}
+        >
+          <Image
+            src={view.posterUrl!}
+            alt={movie.name}
+            fill
+            sizes="(max-width: 640px) 86vw, 360px"
+            className="object-contain"
+          />
+        </div>
+      </div>
     </div>
   );
 }

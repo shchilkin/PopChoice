@@ -1,3 +1,5 @@
+import { mergeConfig } from 'vite';
+
 import type { StorybookConfig } from '@storybook/nextjs-vite';
 
 const config: StorybookConfig = {
@@ -18,5 +20,11 @@ const config: StorybookConfig = {
     options: {},
   },
   staticDirs: ['../public'],
+  viteFinal: async (viteConfig) =>
+    mergeConfig(viteConfig, {
+      optimizeDeps: {
+        include: ['react-dom'],
+      },
+    }),
 };
 export default config;

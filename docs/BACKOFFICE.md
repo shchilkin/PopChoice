@@ -179,13 +179,34 @@ starting the backoffice Playwright suite.
 The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
-- `REDIS_URL` for catalog-health repair actions because they enqueue
-  `catalog-maintenance` jobs rather than mutating catalog rows inline, and for
-  recommendation eval actions because they enqueue `recommendation-evals` jobs;
+- `REDIS_URL` for catalog-health repair actions, recommendation eval actions,
+  and curated catalog seed actions because they enqueue worker jobs rather than
+  mutating catalog rows inline;
 - `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
   operator routes locally;
 - `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
   report shape.
+
+## Catalog Seed Workflow
+
+The `Catalog seed` page lets an operator queue the curated movie seed without
+opening an SSH shell or running commands inside the backoffice container.
+Backoffice adds a `seed-movies` job to the `movie-seed` BullMQ queue; the
+`workers` service reads `services/movie-seed/movies.txt`, creates embeddings for
+new rows, and inserts only movies missing from the environment database.
+
+Use it after creating a fresh development or production environment, or when the
+catalog is unexpectedly empty. The seed job is idempotent and deduplicates by
+movie name and year, so reruns are safe. Repeated clicks while a seed is queued
+or active reuse the same BullMQ job id; watch the `workers` logs for provider or
+database errors.
+
+CI can queue the same seed after a successful deploy through
+`POST /api/operator/catalog-seed`. Set `BACKOFFICE_AUTOMATION_TOKEN` in the
+backoffice Coolify environment, then store the same value as the matching GitHub
+Environment secret. The GitHub deploy job calls this endpoint only when
+`POSTDEPLOY_SEED_ENABLED=true`, and only after the Coolify deploy webhook and
+public health/build verification have succeeded.
 
 ## Catalog Repair Workflow
 

@@ -1,3 +1,5 @@
+import { expect, userEvent, within } from 'storybook/test';
+
 import { MainMovieCard } from './MainMovieCard';
 
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
@@ -43,6 +45,18 @@ type Story = StoryObj<typeof MainMovieCard>;
 
 export const WithPoster: Story = {
   args: { movie: mockMovie },
+};
+
+export const PosterLightboxOpen: Story = {
+  args: { movie: mockMovie },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Poster' }));
+
+    const dialog = within(document.body).getByRole('dialog', { name: 'Poster for Parasite' });
+    await expect(within(dialog).getByText('Parasite')).toBeVisible();
+  },
 };
 
 export const NoPoster: Story = {

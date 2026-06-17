@@ -9,6 +9,7 @@ type OperatorAuthConfig = {
 const failedAttempts = new Map<string, { count: number; resetAt: number }>();
 const CLEANUP_INTERVAL_MS = 60_000;
 const DEFAULT_MAX_ATTEMPT_KEYS = 1_000;
+const AUTOMATION_API_PATHS = new Set(['/api/operator/catalog-seed']);
 let cleanupTimerStarted = false;
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
@@ -152,6 +153,10 @@ function recordFailure(key: string): void {
 }
 
 export function proxy(request: NextRequest) {
+  if (AUTOMATION_API_PATHS.has(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   const config = readOperatorAuthConfig();
   if (!config) return NextResponse.next();
 
