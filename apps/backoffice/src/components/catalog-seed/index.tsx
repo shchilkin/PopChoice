@@ -1,14 +1,9 @@
 import { BackofficeLayout } from '../backoffice-layout';
-import { CatalogStat } from '../shared';
 
 import type { CatalogSeedStatus } from '../../lib/backoffice';
 
 function statusLabel(value: boolean): string {
   return value ? 'Configured' : 'Missing';
-}
-
-function statusState(value: boolean): 'healthy' | 'warning' {
-  return value ? 'healthy' : 'warning';
 }
 
 function getFlashMessage(status: string | undefined): string | null {
@@ -34,6 +29,7 @@ export function CatalogSeedPage({
 }) {
   const flashMessage = getFlashMessage(actionStatus);
   const canTrigger = seedStatus.queueConfigured;
+  const statusClassName = canTrigger ? 'healthy' : 'warning';
 
   return (
     <BackofficeLayout
@@ -57,37 +53,53 @@ export function CatalogSeedPage({
         </div>
       ) : null}
 
-      <div className="summary catalog-seed-summary">
-        <CatalogStat
-          label="Seed queue"
-          value={statusLabel(seedStatus.queueConfigured)}
-          meta={seedStatus.queueName}
-          state={statusState(seedStatus.queueConfigured)}
-        />
-      </div>
-
-      <section className="panel catalog-seed-panel">
-        <div className="panel-header">
-          <div>
-            <h2>Run curated seed</h2>
-            <div className="issue-hint">
-              This queues a BullMQ job for the workers service. Backoffice does not run the seed
-              process inline.
-            </div>
+      <section className={`catalog-seed-console ${statusClassName}`}>
+        <div className="catalog-seed-state">
+          <div className="catalog-seed-kicker">
+            <span className={`queue-dot ${canTrigger ? '' : 'warning'}`} />
+            Seed queue
           </div>
+          <div className="catalog-seed-status-row">
+            <h2>{statusLabel(seedStatus.queueConfigured)}</h2>
+            <span className={`status ${statusClassName}`}>
+              {canTrigger ? 'Ready' : 'Needs Redis'}
+            </span>
+          </div>
+          <dl className="catalog-seed-facts">
+            <div>
+              <dt>Queue</dt>
+              <dd>{seedStatus.queueName}</dd>
+            </div>
+            <div>
+              <dt>Worker job</dt>
+              <dd>seed-movies</dd>
+            </div>
+            <div>
+              <dt>Mode</dt>
+              <dd>deduped</dd>
+            </div>
+          </dl>
         </div>
 
-        <form className="catalog-seed-form" action="/catalog-seed/actions" method="post">
-          <input type="hidden" name="action" value="trigger_movie_seed" />
-          <button className="button success" type="submit" disabled={!canTrigger}>
-            Trigger movie seed
-          </button>
-          <p className="small-note">
-            Use this after creating a fresh environment or when the catalog is unexpectedly empty.
-            The seed job is idempotent, skips movies already present in the database, and dedupes
-            concurrent clicks.
-          </p>
-        </form>
+        <div className="catalog-seed-action">
+          <div>
+            <h2>Run curated seed</h2>
+            <p>
+              Queues the curated movie file for workers. Existing movies are skipped, so retrying is
+              safe.
+            </p>
+          </div>
+          <form className="catalog-seed-form" action="/catalog-seed/actions" method="post">
+            <input type="hidden" name="action" value="trigger_movie_seed" />
+            <button
+              className="button success catalog-seed-trigger"
+              type="submit"
+              disabled={!canTrigger}
+            >
+              Trigger movie seed
+            </button>
+          </form>
+        </div>
 
         {!canTrigger ? (
           <div className="next-action warning">

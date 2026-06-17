@@ -55,14 +55,15 @@ async function ensureMovieSeedSchema(): Promise<void> {
   await schemaReadyPromise;
 }
 
-function resolveDefaultMoviesFilePath(): string {
-  const cwdPath = path.resolve(process.cwd(), 'movies.txt');
-  if (existsSync(cwdPath)) return cwdPath;
+export function resolveDefaultMoviesFilePath(cwd = process.cwd()): string {
+  const candidates = [
+    path.resolve(cwd, 'movies.txt'),
+    path.resolve(cwd, '../../services/movie-seed/movies.txt'),
+    path.resolve(cwd, 'services/movie-seed/movies.txt'),
+  ];
+  const existingPath = candidates.find((candidate) => existsSync(candidate));
 
-  const serviceLocalPath = path.resolve(process.cwd(), 'services/movie-seed/movies.txt');
-  if (existsSync(serviceLocalPath)) return serviceLocalPath;
-
-  return cwdPath;
+  return existingPath ?? candidates[0];
 }
 
 function resolveMoviesFilePath(explicitPath: string | undefined): string {
