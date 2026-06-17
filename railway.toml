@@ -12,7 +12,6 @@
 #   • movie-seed worker — apps/web/workers.Dockerfile
 #   • Storybook         — apps/web/storybook.Dockerfile
 #   • movie-discovery   — services/movie-discovery/Dockerfile
-#   • movie-seed        — services/movie-seed/Dockerfile
 #   • movie-backfill    — no Dockerfile yet; set up build in the dashboard
 #   • db-migrate        — services/db-migrate/Dockerfile (one-shot, railway.toml in service dir)
 
@@ -25,7 +24,7 @@ builder = "DOCKERFILE"
 
 [deploy]
 # Default health-check and restart policy applied to all long-running services.
-# One-shot services (movie-seed, movie-backfill) override restartPolicyType to
+# One-shot services (movie-backfill) override restartPolicyType to
 # "never" in the Railway dashboard so they run once and stop.
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
@@ -50,7 +49,7 @@ DATABASE_URL = "${{Postgres.DATABASE_URL}}"
 REDIS_URL = "${{Redis.REDIS_URL}}"
 
 # ── OpenAI ────────────────────────────────────────────────────────────────────
-# Required by: web app, movie-discovery, movie-seed, movie-backfill.
+# Required by: web app, workers, movie-discovery, movie-backfill.
 # Set the actual secret value in the Railway dashboard (Variables tab).
 OPENAI_API_KEY = "${{shared.OPENAI_API_KEY}}"
 

@@ -7,7 +7,6 @@ PopChoice is a Next.js 16 / React 19 movie recommendation app built around OpenA
 - `apps/web` - user-facing Next.js app, API routes, feature modules, workers, and app-local scripts.
 - `apps/bull-board` - local/production BullMQ queue dashboard.
 - `packages/shared` - shared database, embedding, logging, and utility code used by root services.
-- `services/movie-seed` - one-shot curated movie seeding from `movies.txt`.
 - `services/movie-discovery` - scheduled or one-shot TMDB catalog expansion.
 - `services/movie-backfill` - one-shot TMDB identity/runtime/age-rating backfill with manual-review records.
 - `db/init` - idempotent SQL migrations used by Docker init and `apps/web/scripts/migrate-db.js`.
@@ -20,7 +19,6 @@ Use Node.js 24+ and npm 11+.
 npm install
 npm run setup:local-db
 npm run copy:env
-npm run populate-db
 npm run dev
 ```
 
@@ -30,6 +28,9 @@ Run workers separately when testing the async recommendation flow:
 cd apps/web
 npm run start:workers
 ```
+
+Use Backoffice `Catalog seed` to enqueue curated movie seeding when you need
+real local catalog rows.
 
 Useful checks from the repo root:
 

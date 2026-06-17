@@ -41,10 +41,11 @@ npm install
 cp .env.example .env        # add OPENAI_API_KEY (and optionally TMDB_API_KEY)
 npm run setup:local-db      # spin up local PostgreSQL + Redis via Docker
 npm run copy:env            # copy root .env into apps/services workspaces
-npm run populate-db         # seed the database with movie embeddings
 npm run dev                 # start the dev server at http://localhost:3000
 # in a second terminal:
 cd apps/web && npm run start:workers
+# in a third terminal:
+npm run dev:backoffice      # open Catalog seed and trigger the curated seed
 ```
 
 For a step-by-step walkthrough, see **[💻 Local Development Setup](#-local-development-setup)** below.
@@ -108,17 +109,17 @@ npm run copy:env
 This copies the root `.env` into the workspaces that run locally, including:
 
 - `apps/web/.env`
-- `services/movie-seed/.env`
 - `services/movie-discovery/.env`
 - `services/movie-backfill/.env`
 
 ### Step 5 — Seed the database
 
-```bash
-npm run populate-db
-```
+Run the web app, workers, and Backoffice in separate terminals, then open the
+Backoffice `Catalog seed` page and click `Trigger movie seed`.
 
-This reads the curated movie list, calls the OpenAI Embeddings API to generate vectors for each movie, and inserts the results into your local PostgreSQL database.
+Backoffice enqueues a BullMQ job, and the `apps/web` workers read the curated
+movie list from `apps/web/data/movies.txt`, generate OpenAI embeddings, and
+insert missing rows into PostgreSQL.
 
 > **Note:** Each run deduplicates by title + year, so it is safe to re-run.
 
@@ -133,6 +134,9 @@ npm run dev
 # terminal 2, apps/web workspace
 cd apps/web
 npm run start:workers
+
+# terminal 3, repo root
+npm run dev:backoffice
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to use the app.
@@ -277,7 +281,6 @@ packages/
 └── shared/                # Shared package reused by background services
 services/
 ├── movie-discovery/       # Continuous TMDB movie discovery service
-├── movie-seed/            # One-shot database seeding service
 └── movie-backfill/        # One-shot service to backfill missing movie metadata
 db/                        # Database migrations / schema
 ```
@@ -286,7 +289,10 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 
 ## 🗃 Background Services
 
-- **movie-seed** (`services/movie-seed/`) — One-shot service that reads movies from the curated `services/movie-seed/movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database. Safe to re-run (deduplicates by name + year). See [`services/movie-seed/README.md`](./services/movie-seed/README.md).
+- **curated catalog seed** — Backoffice queues a `seed-movies` job on the
+  BullMQ `movie-seed` queue. The `apps/web` workers read
+  `apps/web/data/movies.txt`, generate OpenAI embeddings, insert missing rows,
+  and optionally queue bounded catalog repair work for TMDB ids/posters.
 - **movie-discovery** (`services/movie-discovery/`) — Continuous TMDB-driven service that discovers new movies, applies quality filters (vote count, rating, overview length), generates embeddings, and inserts them into the database. Supports scheduled and one-shot modes. See [`services/movie-discovery/README.md`](./services/movie-discovery/README.md).
 - **movie-backfill** (`services/movie-backfill/`) — One-shot script that backfills missing `duration` and `age_rating` data for movies already in the database, re-generating their embeddings. Supports dry-run mode. See [`services/movie-backfill/README.md`](./services/movie-backfill/README.md).
 
@@ -327,8 +333,7 @@ npm run fix             # Fix all issues automatically
 npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
 npm run copy:env             # Sync root .env into apps/services workspaces
 npm run migrate:db           # Apply idempotent SQL migrations
-npm run populate-db          # Populate database with movie data
-npm run setup:backoffice:local-data # Run setup:local-db, copy:env, and populate-db
+npm run setup:backoffice:local-data # Run setup:local-db and copy:env
 npm run catalog:health       # Report catalog metadata coverage and likely duplicates
 npm run analyze-movies       # Analyze movie data for embeddings
 npm run calibrate-similarity # Calibrate vector similarity thresholds

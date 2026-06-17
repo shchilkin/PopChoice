@@ -164,9 +164,9 @@ catalog. Stop any existing `npm run dev:backoffice` process before switching to
 the fixture command because Next.js permits only one dev server per app
 directory.
 When you need the real seeded local catalog instead of fixtures, run
-`npm run setup:backoffice:local-data` once. It runs `setup:local-db`,
-`copy:env`, and `populate-db` in order; then start the app with
-`npm run dev:backoffice`.
+`npm run setup:backoffice:local-data` once. It runs `setup:local-db` and
+`copy:env`; then start workers and Backoffice and use the Catalog seed action
+to enqueue the curated seed.
 Use `npm run check:backoffice` before publishing most backoffice changes; it
 builds `packages/shared`, runs the module-size guard, type-checks
 `apps/backoffice`, and runs the backoffice Vitest suite. Use
@@ -192,7 +192,7 @@ The app needs:
 The `Catalog seed` page lets an operator prepare the base catalog without
 opening an SSH shell or running commands inside the backoffice container.
 Backoffice adds a `seed-movies` job to the `movie-seed` BullMQ queue; the
-`workers` service reads `services/movie-seed/movies.txt`, creates embeddings for
+`workers` service reads `apps/web/data/movies.txt`, creates embeddings for
 new rows, and inserts only movies missing from the environment database. After a
 successful non-dry seed, the same worker also creates a durable catalog repair
 batch and queues an `enqueue-catalog-repair-batch` job on

@@ -116,7 +116,6 @@ The `dependency-review` job uses `actions/dependency-review-action` to block any
 - `ghcr.io/<owner>/<repo>/storybook`
 - `ghcr.io/<owner>/<repo>/docs`
 - `ghcr.io/<owner>/<repo>/db-migrate`
-- `ghcr.io/<owner>/<repo>/movie-seed`
 - `ghcr.io/<owner>/<repo>/movie-discovery`
 - `ghcr.io/<owner>/<repo>/movie-backfill`
 
@@ -339,7 +338,6 @@ scan.
 Dependabot is configured in `.github/dependabot.yml` to monitor:
 
 - **npm (root)** – workspace dependencies, grouped by framework, AI, database, UI utilities, testing, Storybook, build tools, linting/formatting, and miscellaneous production/development buckets
-- **npm (services/movie-seed)** – movie-seed service dependencies, grouped by production, development, and security updates
 - **npm (services/movie-discovery)** – movie-discovery service dependencies, grouped by production, development, and security updates
 - **GitHub Actions** – workflow action versions
 

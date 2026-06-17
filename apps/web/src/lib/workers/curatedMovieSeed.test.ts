@@ -15,31 +15,31 @@ describe('resolveDefaultMoviesFilePath', () => {
     }
   });
 
-  function createRepoFixture(): { appsWebPath: string; repoPath: string; serviceFilePath: string } {
+  function createRepoFixture(): { appsWebPath: string; repoPath: string; dataFilePath: string } {
     const repoPath = mkdtempSync(path.join(tmpdir(), 'popchoice-movies-path-'));
     tempDirs.push(repoPath);
 
     const appsWebPath = path.join(repoPath, 'apps/web');
-    const servicePath = path.join(repoPath, 'services/movie-seed');
-    const serviceFilePath = path.join(servicePath, 'movies.txt');
+    const dataPath = path.join(appsWebPath, 'data');
+    const dataFilePath = path.join(dataPath, 'movies.txt');
 
     mkdirSync(appsWebPath, { recursive: true });
-    mkdirSync(servicePath, { recursive: true });
-    writeFileSync(serviceFilePath, 'Casablanca: 1942 | PG | 1h 42m | 8.5 rating\nDescription.');
+    mkdirSync(dataPath, { recursive: true });
+    writeFileSync(dataFilePath, 'Casablanca: 1942 | PG | 1h 42m | 8.5 rating\nDescription.');
 
-    return { appsWebPath, repoPath, serviceFilePath };
+    return { appsWebPath, repoPath, dataFilePath };
   }
 
   it('finds the curated movie file when workers run from apps/web', () => {
-    const { appsWebPath, serviceFilePath } = createRepoFixture();
+    const { appsWebPath, dataFilePath } = createRepoFixture();
 
-    expect(resolveDefaultMoviesFilePath(appsWebPath)).toBe(serviceFilePath);
+    expect(resolveDefaultMoviesFilePath(appsWebPath)).toBe(dataFilePath);
   });
 
   it('finds the curated movie file when workers run from the repo root', () => {
-    const { repoPath, serviceFilePath } = createRepoFixture();
+    const { repoPath, dataFilePath } = createRepoFixture();
 
-    expect(resolveDefaultMoviesFilePath(repoPath)).toBe(serviceFilePath);
+    expect(resolveDefaultMoviesFilePath(repoPath)).toBe(dataFilePath);
   });
 
   it('prefers a movies.txt file in the current working directory', () => {

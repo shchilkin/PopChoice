@@ -97,9 +97,9 @@ This application uses a generic database client abstraction (`apps/web/src/clien
    DATABASE_URL=postgresql://user:password@host:5432/dbname
    ```
 
-6. **Apply migrations and populate the database**
+6. **Apply migrations and seed the database**
    - Run `npm run migrate:db` if you are using an existing database
-   - Run `npm run populate-db`
+   - Start workers and Backoffice, then use the Backoffice Catalog seed action
 
 ## TMDB API Setup (Optional)
 
@@ -245,13 +245,21 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    npm run copy:env
    ```
 
-   This copies the root `.env` into `apps/web/.env` and the local services so the web app, workers, and seed service all use the same credentials.
+   This copies the root `.env` into `apps/web/.env` and the local services so the web app and workers use the same credentials.
 
 3. **Populate the database**
 
    ```bash
-   npm run populate-db
+   # terminal 1
+   cd apps/web && npm run start:workers
+
+   # terminal 2, repo root
+   npm run dev:backoffice
    ```
+
+   Open the Backoffice Catalog seed page and trigger the curated seed job. The
+   worker reads `apps/web/data/movies.txt`, creates embeddings, and inserts
+   missing movies.
 
 4. **Run the app locally**
 

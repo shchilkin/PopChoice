@@ -4,7 +4,6 @@
     { "path": "packages/shared" },
     { "path": "apps/web" },
     { "path": "services/movie-backfill" },
-    { "path": "services/movie-discovery" },
-    { "path": "services/movie-seed" }
+    { "path": "services/movie-discovery" }
   ]
 }

@@ -33,7 +33,7 @@ The main remaining risks are:
 
 - [x] Workspace layout exists: `apps/`, `packages/`, and `services/` are already in place.
 - [x] Shared package extraction has started with `packages/shared` reused by root services.
-- [x] Background service responsibilities are partially separated into `services/movie-discovery`, `services/movie-seed`, and `services/movie-backfill`.
+- [x] Background service responsibilities are partially separated into `services/movie-discovery`, `services/movie-backfill`, and BullMQ worker queues.
 - [x] Recommendation orchestration is extracted into reusable feature-owned modules instead of living only inside route handlers.
 - [x] Some recommendation thresholds/constants are separated into dedicated helper modules instead of being embedded directly in route handlers.
 - [x] Ownership boundaries for `src/app`, `src/integrations`, `src/lib`, `src/utils`, and `src/clients` are documented in `BOUNDARIES.md`.
@@ -70,7 +70,7 @@ The main remaining risks are:
 - [x] OpenAI calls now use per-call timeout options and `AbortSignal` cancellation, with legacy recommendation requests mapping upstream OpenAI timeouts to HTTP 504.
 - [x] `tmdb_match_reviews` persists ambiguous TMDB/local matches and runtime mismatches for later manual review.
 - [x] PR CI has a consolidated `services-ci` pass for service workspaces and CodeQL runs for Actions and JavaScript/TypeScript.
-- [x] Legacy web-local movie text parsers were removed; curated movie seeding now stays centralized in `services/movie-seed`.
+- [x] Legacy one-shot movie seeding was removed; curated movie seeding now runs through Backoffice and the BullMQ `movie-seed` worker queue.
 
 ### Issues Still Present
 
@@ -94,7 +94,6 @@ PopChoice should continue evolving within the current workspace layout toward cl
 - `apps/web`
 - `apps/bull-board`
 - `services/movie-discovery`
-- `services/movie-seed`
 - `services/movie-backfill`
 - `packages/domain`
 - `packages/config`

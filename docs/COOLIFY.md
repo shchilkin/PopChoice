@@ -157,7 +157,7 @@ that tag only after the image matrix passes and the GitHub `production`
 Environment is approved. Use `IMAGE_TAG=sha-<12-char-github-sha>` when you want
 to promote or roll back an exact immutable release manually. Keep the same
 `IMAGE_TAG` for `web`, `workers`, `bull-board`, `storybook`, `docs`,
-`backoffice`, `movie-seed`, `movie-discovery`, and `movie-backfill`; running
+`backoffice`, `movie-discovery`, and `movie-backfill`; running
 mixed commits is intentionally not supported.
 
 If the GHCR packages are private, add registry credentials in Coolify so the VPS
@@ -801,9 +801,9 @@ created from pull requests and reported back to GitHub.
    for port `3000`.
 7. Leave `bull-board` without a preview domain unless temporarily debugging a
    PR.
-8. Do not set `COMPOSE_PROFILES=tools` globally. It enables the profiled
-   `movie-seed` service during every production and preview deploy. Run seeding
-   manually or as a Coolify scheduled task instead.
+8. Do not set `COMPOSE_PROFILES=tools` globally. It enables profiled operator
+   tools during every production and preview deploy. Keep one-shot tools manual
+   or scheduled intentionally instead.
 
 Before relying on previews, verify that opening a PR creates a preview
 deployment and GitHub comment, the preview URL loads over HTTPS, quiz submission
@@ -822,7 +822,6 @@ ghcr.io/shchilkin/popchoice/bull-board
 ghcr.io/shchilkin/popchoice/storybook
 ghcr.io/shchilkin/popchoice/docs
 ghcr.io/shchilkin/popchoice/db-migrate
-ghcr.io/shchilkin/popchoice/movie-seed
 ghcr.io/shchilkin/popchoice/movie-discovery
 ghcr.io/shchilkin/popchoice/movie-backfill
 ```
@@ -936,7 +935,7 @@ The database schema is created automatically by the web service, but movie rows
 still need to be seeded. After the first successful web deploy, use Backoffice
 -> Catalog seed -> Trigger movie seed. Backoffice enqueues a `seed-movies` job on
 the `movie-seed` BullMQ queue, and the `workers` service performs the curated
-seed from `services/movie-seed/movies.txt`. The action requires `REDIS_URL` on
+seed from `apps/web/data/movies.txt`. The action requires `REDIS_URL` on
 backoffice and workers, and `DATABASE_URL` plus `OPENAI_API_KEY` on workers.
 Watch the `workers` logs for provider or database errors.
 
@@ -947,25 +946,16 @@ backoffice Coolify environment and the same GitHub Environment secret, then set
 environments that should automatically queue the curated seed after a successful
 deploy verification.
 
-If backoffice is unavailable, run this from a Coolify terminal or an SSH shell
-on the VPS:
+If backoffice is unavailable, fix the backoffice/worker deployment before
+seeding. The curated seed path intentionally goes through BullMQ so operators
+can see the job in Bull Board and reuse the same retry/dedupe behavior as
+production automation.
 
-```bash
-docker compose --profile tools -f coolify.compose.yml run --rm movie-seed
-```
-
-The same tools profile also exposes `movie-backfill` from the matching
+The tools profile exposes `movie-backfill` from the matching
 prebuilt image:
 
 ```bash
 docker compose --profile tools -f coolify.compose.yml run --rm movie-backfill
-```
-
-If you prefer doing this from your laptop against the production database, use
-the public PostgreSQL connection string and run:
-
-```bash
-DATABASE_URL=<production-database-url> npm run populate-db
 ```
 
 ## Optional movie discovery service
