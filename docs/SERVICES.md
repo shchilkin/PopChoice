@@ -173,11 +173,12 @@ and the `apps/web` worker process performs the work through the BullMQ
 3. Checks which movies already exist in the database (deduplicates by name + year).
 4. Generates OpenAI embeddings for new movies.
 5. Inserts records into the `movies` table.
-6. Queues a bounded catalog repair batch
-   on `catalog-maintenance` after a successful non-dry run. It prioritizes
-   `missing_tmdb_id`, then falls back to `missing_poster_url`, so one operator
-   action can prepare the curated catalog while TMDB metadata/poster work still
-   uses the catalog-maintenance retry and rate-limit controls.
+6. Queues a catalog repair batch on `catalog-maintenance` after a successful
+   non-dry run. It prioritizes `missing_tmdb_id`, then falls back to
+   `missing_poster_url`, and queues every current candidate unless
+   `CATALOG_SEED_REPAIR_LIMIT` is set. This lets one operator action prepare the
+   curated catalog while TMDB metadata/poster work still uses the
+   catalog-maintenance retry and rate-limit controls.
 
 ### movies.txt Format
 
@@ -195,14 +196,14 @@ A cynical expatriate American café owner struggles to decide whether to help hi
 
 ### Environment Variables
 
-| Variable                        | Required | Default                                             | Description                                                   |
-| ------------------------------- | -------- | --------------------------------------------------- | ------------------------------------------------------------- |
-| `OPENAI_API_KEY`                | ✅       | —                                                   | OpenAI API key for embeddings                                 |
-| `DATABASE_URL`                  | ✅       | —                                                   | PostgreSQL connection string                                  |
-| `MOVIES_FILE_PATH`              | ❌       | `<cwd>/movies.txt`, then `apps/web/data/movies.txt` | Path to the movies.txt file                                   |
-| `CATALOG_SEED_REPAIR_LIMIT`     | ❌       | `50`                                                | Worker-only cap for post-seed catalog repair; `0` disables it |
-| `CATALOG_SEED_REPAIR_PAGE_SIZE` | ❌       | `25`                                                | Worker-only chunk size for the post-seed repair batch         |
-| `DRY_RUN`                       | ❌       | `false`                                             | `"true"` to skip embeddings/inserts and post-seed repair      |
+| Variable                        | Required | Default                                             | Description                                                                                                   |
+| ------------------------------- | -------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`                | ✅       | —                                                   | OpenAI API key for embeddings                                                                                 |
+| `DATABASE_URL`                  | ✅       | —                                                   | PostgreSQL connection string                                                                                  |
+| `MOVIES_FILE_PATH`              | ❌       | `<cwd>/movies.txt`, then `apps/web/data/movies.txt` | Path to the movies.txt file                                                                                   |
+| `CATALOG_SEED_REPAIR_LIMIT`     | ❌       | All current candidates                              | Optional worker-only cap for post-seed catalog repair; `all` or unset queues every candidate; `0` disables it |
+| `CATALOG_SEED_REPAIR_PAGE_SIZE` | ❌       | `25`                                                | Worker-only chunk size for the post-seed repair batch                                                         |
+| `DRY_RUN`                       | ❌       | `false`                                             | `"true"` to skip embeddings/inserts and post-seed repair                                                      |
 
 ### Running
 

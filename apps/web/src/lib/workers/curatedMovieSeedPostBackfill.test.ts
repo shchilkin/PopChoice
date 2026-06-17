@@ -103,6 +103,7 @@ describe('enqueueCuratedMovieSeedCatalogRepair', () => {
       issueKey: 'missing_tmdb_id',
       jobId: 'repair-batch-42',
       limit: 10,
+      selectedCount: 10,
       status: 'queued',
       totalCandidates: 12,
     });
@@ -133,6 +134,39 @@ describe('enqueueCuratedMovieSeedCatalogRepair', () => {
     );
   });
 
+  it('queues all current repair candidates when no safety limit is configured', async () => {
+    mockListCatalogHealthIssueMoviePage.mockResolvedValue({ totalCount: 311 });
+
+    const summary = await enqueueCuratedMovieSeedCatalogRepair({
+      dryRun: false,
+      requestedBy: 'lexi',
+      runId: 'run-1',
+      seedStatus: 'completed',
+    });
+
+    expect(summary).toMatchObject({
+      issueKey: 'missing_tmdb_id',
+      limit: null,
+      selectedCount: 311,
+      status: 'queued',
+      totalCandidates: 311,
+    });
+    expect(mockCreateCatalogRepairBatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestedLimit: 311,
+        totalCandidates: 311,
+      }),
+    );
+    expect(mockQueueAdd).toHaveBeenCalledWith(
+      'enqueue-catalog-repair-batch',
+      expect.objectContaining({
+        issueKey: 'missing_tmdb_id',
+        limit: 311,
+      }),
+      expect.any(Object),
+    );
+  });
+
   it('falls back to poster repair when TMDB identities are already complete', async () => {
     vi.stubEnv('CATALOG_SEED_REPAIR_LIMIT', '10');
     mockListCatalogHealthIssueMoviePage
@@ -148,7 +182,8 @@ describe('enqueueCuratedMovieSeedCatalogRepair', () => {
 
     expect(summary).toMatchObject({
       issueKey: 'missing_poster_url',
-      limit: 7,
+      limit: 10,
+      selectedCount: 7,
       status: 'queued',
       totalCandidates: 7,
     });

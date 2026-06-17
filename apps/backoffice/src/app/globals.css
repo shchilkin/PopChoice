@@ -647,6 +647,14 @@ input:disabled {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
+.catalog-seed-flash-slot {
+  min-height: 54px;
+  margin-bottom: 14px;
+}
+.catalog-seed-flash-slot .queue-status {
+  min-height: 54px;
+  margin-bottom: 0;
+}
 .catalog-seed-console {
   display: grid;
   grid-template-columns: minmax(260px, 0.82fr) minmax(320px, 1.18fr);
@@ -730,8 +738,12 @@ input:disabled {
   justify-content: flex-end;
 }
 .catalog-seed-trigger {
+  min-width: 178px;
   min-height: 40px;
   white-space: nowrap;
+}
+.catalog-seed-trigger:active {
+  transform: none;
 }
 .queue-diagnostic,
 .queue-diagnostic-action {

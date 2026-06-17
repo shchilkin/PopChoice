@@ -38,20 +38,22 @@ export function CatalogSeedPage({
       eyebrow="One-shot catalog operation"
       description="Queue the curated movie seed and follow-up catalog repair work when an environment needs its base movie set prepared."
     >
-      {flashMessage ? (
-        <div className={`queue-status ${actionStatus === 'triggered' ? '' : 'unavailable'}`}>
-          <div className="queue-status-main">
-            <div>
-              <div className="queue-status-title">
-                <span
-                  className={`queue-dot ${actionStatus === 'triggered' ? 'neutral' : 'warning'}`}
-                />
-                <strong>{flashMessage}</strong>
+      <div className="catalog-seed-flash-slot" aria-live="polite">
+        {flashMessage ? (
+          <div className={`queue-status ${actionStatus === 'triggered' ? '' : 'unavailable'}`}>
+            <div className="queue-status-main">
+              <div>
+                <div className="queue-status-title">
+                  <span
+                    className={`queue-dot ${actionStatus === 'triggered' ? 'neutral' : 'warning'}`}
+                  />
+                  <strong>{flashMessage}</strong>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <section className={`catalog-seed-console ${statusClassName}`}>
         <div className="catalog-seed-state">

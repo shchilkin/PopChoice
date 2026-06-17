@@ -19,9 +19,8 @@ import type { CuratedMovieSeedSummaryStatus } from '@/lib/workers/curatedMovieSe
 import type { CatalogRepairBatch } from '@pop-choice/shared';
 
 const REPAIR_ISSUE_KEYS = ['missing_tmdb_id', 'missing_poster_url'] as const;
-const DEFAULT_CATALOG_SEED_REPAIR_LIMIT = 50;
 const DEFAULT_CATALOG_SEED_REPAIR_PAGE_SIZE = 25;
-const MAX_CATALOG_SEED_REPAIR_LIMIT = 250;
+const MAX_CATALOG_SEED_REPAIR_PAGE_SIZE = 250;
 const DEFAULT_CATALOG_HEALTH_STALE_DAYS = 180;
 const DEFAULT_TMDB_LANGUAGE = 'en-US';
 
@@ -39,8 +38,9 @@ export type CuratedMovieSeedCatalogRepairSummary = {
   batchId?: string;
   issueKey?: CatalogSeedRepairIssueKey;
   jobId?: string;
-  limit: number;
+  limit: number | null;
   pageSize: number;
+  selectedCount?: number;
   status: CuratedMovieSeedCatalogRepairStatus;
   totalCandidates?: number;
 };
@@ -58,23 +58,18 @@ function parsePositiveIntEnv(name: string, fallback: number): number {
   return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
 }
 
-function parseNonNegativeIntEnv(name: string, fallback: number): number {
-  const rawValue = process.env[name];
-  const parsedValue = rawValue ? Number.parseInt(rawValue, 10) : fallback;
-  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : fallback;
-}
+function getCatalogRepairLimit(): number | null {
+  const rawValue = process.env.CATALOG_SEED_REPAIR_LIMIT?.trim();
+  if (!rawValue || rawValue.toLowerCase() === 'all') return null;
 
-function getCatalogRepairLimit(): number {
-  return Math.min(
-    parseNonNegativeIntEnv('CATALOG_SEED_REPAIR_LIMIT', DEFAULT_CATALOG_SEED_REPAIR_LIMIT),
-    MAX_CATALOG_SEED_REPAIR_LIMIT,
-  );
+  const parsedValue = Number.parseInt(rawValue, 10);
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : null;
 }
 
 function getCatalogRepairPageSize(): number {
   return Math.min(
     parsePositiveIntEnv('CATALOG_SEED_REPAIR_PAGE_SIZE', DEFAULT_CATALOG_SEED_REPAIR_PAGE_SIZE),
-    MAX_CATALOG_SEED_REPAIR_LIMIT,
+    MAX_CATALOG_SEED_REPAIR_PAGE_SIZE,
   );
 }
 
@@ -103,7 +98,10 @@ function shouldRunCatalogRepair(input: CuratedMovieSeedCatalogRepairInput): bool
   return input.seedStatus === 'completed' || input.seedStatus === 'no_new_movies';
 }
 
-function disabledSummary(limit: number, pageSize: number): CuratedMovieSeedCatalogRepairSummary {
+function disabledSummary(
+  limit: number | null,
+  pageSize: number,
+): CuratedMovieSeedCatalogRepairSummary {
   return {
     limit,
     pageSize,
@@ -111,7 +109,10 @@ function disabledSummary(limit: number, pageSize: number): CuratedMovieSeedCatal
   };
 }
 
-function skippedSummary(limit: number, pageSize: number): CuratedMovieSeedCatalogRepairSummary {
+function skippedSummary(
+  limit: number | null,
+  pageSize: number,
+): CuratedMovieSeedCatalogRepairSummary {
   return {
     limit,
     pageSize,
@@ -120,7 +121,7 @@ function skippedSummary(limit: number, pageSize: number): CuratedMovieSeedCatalo
 }
 
 function emptySummary(input: {
-  limit: number;
+  limit: number | null;
   pageSize: number;
   totalCandidates: number;
 }): CuratedMovieSeedCatalogRepairSummary {
@@ -135,8 +136,9 @@ function emptySummary(input: {
 function unavailableSummary(input: {
   batchId: string;
   issueKey: CatalogSeedRepairIssueKey;
-  limit: number;
+  limit: number | null;
   pageSize: number;
+  selectedCount: number;
   totalCandidates: number;
 }): CuratedMovieSeedCatalogRepairSummary {
   return {
@@ -144,6 +146,7 @@ function unavailableSummary(input: {
     issueKey: input.issueKey,
     limit: input.limit,
     pageSize: input.pageSize,
+    selectedCount: input.selectedCount,
     status: 'unavailable',
     totalCandidates: input.totalCandidates,
   };
@@ -153,8 +156,9 @@ function queuedSummary(input: {
   batchId: string;
   issueKey: CatalogSeedRepairIssueKey;
   jobId: string;
-  limit: number;
+  limit: number | null;
   pageSize: number;
+  selectedCount: number;
   totalCandidates: number;
 }): CuratedMovieSeedCatalogRepairSummary {
   return {
@@ -163,6 +167,7 @@ function queuedSummary(input: {
     jobId: input.jobId,
     limit: input.limit,
     pageSize: input.pageSize,
+    selectedCount: input.selectedCount,
     status: 'queued',
     totalCandidates: input.totalCandidates,
   };
@@ -170,7 +175,7 @@ function queuedSummary(input: {
 
 export function failedCatalogRepairSummary(
   input: {
-    limit?: number;
+    limit?: number | null;
     pageSize?: number;
   } = {},
 ): CuratedMovieSeedCatalogRepairSummary {
@@ -183,9 +188,10 @@ export function failedCatalogRepairSummary(
 
 async function createCatalogSeedRepairBatch(input: {
   issueKey: CatalogSeedRepairIssueKey;
-  limit: number;
+  limit: number | null;
   requestedBy?: string;
   runId?: string;
+  selectedCount: number;
   totalCandidates: number;
 }): Promise<CatalogRepairBatch> {
   return createCatalogRepairBatch({
@@ -194,14 +200,16 @@ async function createCatalogSeedRepairBatch(input: {
     issueKey: input.issueKey,
     targetType: 'catalog_issue',
     targetId: input.issueKey,
-    requestedLimit: input.limit,
+    requestedLimit: input.selectedCount,
     totalCandidates: input.totalCandidates,
     attemptedCount: 0,
     note: 'Automatically queued after curated movie seed.',
     previousState: {
       issueKey: input.issueKey,
-      requestedLimit: input.limit,
+      configuredLimit: input.limit,
+      requestedLimit: input.selectedCount,
       runId: input.runId ?? null,
+      selectedCount: input.selectedCount,
       totalCandidates: input.totalCandidates,
       trigger: 'curated_movie_seed',
     },
@@ -211,8 +219,9 @@ async function createCatalogSeedRepairBatch(input: {
 async function markCatalogRepairUnavailable(input: {
   batch: CatalogRepairBatch;
   issueKey: CatalogSeedRepairIssueKey;
-  limit: number;
+  limit: number | null;
   pageSize: number;
+  selectedCount: number;
   totalCandidates: number;
 }): Promise<CuratedMovieSeedCatalogRepairSummary> {
   const summary = unavailableSummary({
@@ -220,6 +229,7 @@ async function markCatalogRepairUnavailable(input: {
     issueKey: input.issueKey,
     limit: input.limit,
     pageSize: input.pageSize,
+    selectedCount: input.selectedCount,
     totalCandidates: input.totalCandidates,
   });
 
@@ -235,8 +245,9 @@ async function markCatalogRepairUnavailable(input: {
 async function enqueueCatalogRepairBatch(input: {
   batch: CatalogRepairBatch;
   issueKey: CatalogSeedRepairIssueKey;
-  limit: number;
+  limit: number | null;
   pageSize: number;
+  selectedCount: number;
   staleAfterDays: number;
   totalCandidates: number;
 }): Promise<CuratedMovieSeedCatalogRepairSummary> {
@@ -249,7 +260,7 @@ async function enqueueCatalogRepairBatch(input: {
     version: 1,
     batchId: input.batch.id,
     issueKey: input.issueKey,
-    limit: input.limit,
+    limit: input.selectedCount,
     pageSize: input.pageSize,
     language: getTMDBLanguage(),
     staleAfterDays: input.staleAfterDays,
@@ -269,6 +280,7 @@ async function enqueueCatalogRepairBatch(input: {
     jobId: String(job.id ?? jobId),
     limit: input.limit,
     pageSize: input.pageSize,
+    selectedCount: input.selectedCount,
     totalCandidates: input.totalCandidates,
   });
 
@@ -336,11 +348,14 @@ export async function enqueueCuratedMovieSeedCatalogRepair(
 
   const staleAfterDays = getCatalogHealthStaleDays();
   const target = await findCatalogSeedRepairTarget({ staleAfterDays });
-  const requestedLimit = Math.min(limit, target?.totalCandidates ?? 0);
+  const selectedCount =
+    target && limit !== null
+      ? Math.min(limit, target.totalCandidates)
+      : (target?.totalCandidates ?? 0);
 
-  if (!target || requestedLimit === 0) {
+  if (!target || selectedCount === 0) {
     return emptySummary({
-      limit: requestedLimit,
+      limit,
       pageSize,
       totalCandidates: target?.totalCandidates ?? 0,
     });
@@ -348,16 +363,18 @@ export async function enqueueCuratedMovieSeedCatalogRepair(
 
   const batch = await createCatalogSeedRepairBatch({
     issueKey: target.issueKey,
-    limit: requestedLimit,
+    limit,
     requestedBy: input.requestedBy,
     runId: input.runId,
+    selectedCount,
     totalCandidates: target.totalCandidates,
   });
   const summary = await enqueueCatalogRepairBatch({
     batch,
     issueKey: target.issueKey,
-    limit: requestedLimit,
+    limit,
     pageSize,
+    selectedCount,
     staleAfterDays,
     totalCandidates: target.totalCandidates,
   });
