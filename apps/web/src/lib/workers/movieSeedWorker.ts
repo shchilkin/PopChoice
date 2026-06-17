@@ -9,7 +9,10 @@ import {
 import logger from '@/lib/logger';
 import { recordQueueJobEvent } from '@/lib/metrics';
 import { withTraceSpan } from '@/lib/tracing';
-import { runCuratedMovieSeedJob } from '@/lib/workers/curatedMovieSeed';
+import {
+  runCuratedMovieSeedJob,
+  type CuratedMovieSeedSummary,
+} from '@/lib/workers/curatedMovieSeed';
 
 import type {
   CuratedMovieSeedJobData,
@@ -19,6 +22,8 @@ import type {
 } from '@/lib/jobQueue';
 
 const MAX_MOVIE_SEED_ATTEMPTS = MOVIE_SEED_JOB_OPTIONS.attempts;
+
+type MovieSeedJobResult = CuratedMovieSeedSummary | void;
 
 function isCuratedMovieSeedJobData(data: MovieSeedJobData): data is CuratedMovieSeedJobData {
   return 'kind' in data && data.kind === 'curated-file';
@@ -30,14 +35,18 @@ function isTMDBMovieSeedJobData(data: MovieSeedJobData): data is MovieSeedTMDBJo
 
 // Imported dynamically by startWorkers.ts.
 // fallow-ignore-next-line unused-export
-export function createMovieSeedWorker(): Worker<MovieSeedJobData, void, MovieSeedJobName> | null {
+export function createMovieSeedWorker(): Worker<
+  MovieSeedJobData,
+  MovieSeedJobResult,
+  MovieSeedJobName
+> | null {
   const connection = createBullMQConnection();
   if (!connection) {
     logger.warn('REDIS_URL not set. Movie seeding worker is disabled.');
     return null;
   }
 
-  const worker = new Worker<MovieSeedJobData, void, MovieSeedJobName>(
+  const worker = new Worker<MovieSeedJobData, MovieSeedJobResult, MovieSeedJobName>(
     MOVIE_SEED_QUEUE_NAME,
     processMovieSeedJob,
     {
@@ -62,24 +71,36 @@ export function createMovieSeedWorker(): Worker<MovieSeedJobData, void, MovieSee
   return worker;
 }
 
-async function processMovieSeedJob(job: Job<MovieSeedJobData, void, MovieSeedJobName>) {
+function formatMovieSeedJobLog(message: string, context?: Record<string, unknown>): string {
+  if (!context || Object.keys(context).length === 0) return message;
+  return `${message}: ${JSON.stringify(context)}`;
+}
+
+async function processMovieSeedJob(
+  job: Job<MovieSeedJobData, MovieSeedJobResult, MovieSeedJobName>,
+): Promise<MovieSeedJobResult> {
   if (isCuratedMovieSeedJobData(job.data)) {
     const data = job.data;
-    await withTraceSpan(
+    return withTraceSpan(
       'movie_seed.worker.process_curated_file',
       {
         carrier: data.trace,
         attributes: getMovieSeedTraceAttributes(job, null),
       },
       async () => {
-        await runCuratedMovieSeedJob({
+        const summary = await runCuratedMovieSeedJob({
           dryRun: data.dryRun,
           moviesFilePath: data.moviesFilePath,
+          reporter: async (message, context) => {
+            await job.log(formatMovieSeedJobLog(message, context));
+            if (context) await job.updateProgress(context);
+          },
           requestedBy: data.requestedBy,
         });
+        await job.updateProgress(summary);
+        return summary;
       },
     );
-    return;
   }
 
   if (!isTMDBMovieSeedJobData(job.data)) {

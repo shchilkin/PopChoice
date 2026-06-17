@@ -8,7 +8,7 @@ function statusLabel(value: boolean): string {
 
 function getFlashMessage(status: string | undefined): string | null {
   if (status === 'triggered') {
-    return 'Movie seed queued. Watch the workers logs in Coolify.';
+    return 'Movie seed queued. Check Bull Board for job logs and summary.';
   }
   if (status === 'unavailable') {
     return 'REDIS_URL is not configured for this backoffice resource.';
@@ -76,7 +76,7 @@ export function CatalogSeedPage({
             </div>
             <div>
               <dt>Mode</dt>
-              <dd>deduped</dd>
+              <dd>traceable runs</dd>
             </div>
           </dl>
         </div>
@@ -86,7 +86,7 @@ export function CatalogSeedPage({
             <h2>Run curated seed</h2>
             <p>
               Queues the curated movie file for workers. Existing movies are skipped, so retrying is
-              safe.
+              safe. Active runs are deduped; completed runs stay visible in Bull Board.
             </p>
           </div>
           <form className="catalog-seed-form" action="/catalog-seed/actions" method="post">

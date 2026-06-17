@@ -64,6 +64,7 @@ export type CuratedMovieSeedJobData = {
   dryRun?: boolean;
   moviesFilePath?: string;
   requestedBy?: string;
+  runId?: string;
   trace?: TraceCarrier;
 };
 
