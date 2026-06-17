@@ -10,16 +10,15 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service / Tool               | Type                  | Trigger                                                 | Source        |
-| ---------------------------- | --------------------- | ------------------------------------------------------- | ------------- |
-| `movie-seed`                 | One-shot              | Manual / CI                                             | Curated file  |
-| `movie-discovery`            | Scheduled             | Cron / One-shot                                         | TMDB API      |
-| `movie-backfill`             | One-shot              | Manual                                                  | TMDB API      |
-| `catalog:health`             | Read-only report      | Manual / CI                                             | PostgreSQL    |
-| BullMQ `recommendation`      | Per-request           | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
-| BullMQ `more-picks`          | On demand             | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
-| BullMQ `movie-seed`          | Triggered by pipeline | Internal recommendation/more-picks JIT seeding          | TMDB          |
-| BullMQ `catalog-maintenance` | Maintenance jobs      | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
+| Service / Tool               | Type             | Trigger                                                 | Source        |
+| ---------------------------- | ---------------- | ------------------------------------------------------- | ------------- |
+| `movie-discovery`            | Scheduled        | Cron / One-shot                                         | TMDB API      |
+| `movie-backfill`             | One-shot         | Manual                                                  | TMDB API      |
+| `catalog:health`             | Read-only report | Manual / CI                                             | PostgreSQL    |
+| BullMQ `recommendation`      | Per-request      | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
+| BullMQ `more-picks`          | On demand        | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
+| BullMQ `movie-seed`          | Worker queue     | Recommendation JIT seeding, Backoffice curated seed     | TMDB + file   |
+| BullMQ `catalog-maintenance` | Maintenance jobs | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
 
 ---
 
@@ -55,7 +54,7 @@ Browser → POST /api/recommendations/[id]/more-picks
 | ---------------------- | ------------------------------------------------------ | ---------------------------------------------------------------- |
 | `recommendation`       | `apps/web/src/lib/workers/recommendationWorker.ts`     | `recommendationId`, `quizData`, `locale`                         |
 | `more-picks`           | `apps/web/src/lib/workers/morePicksWorker.ts`          | `recommendationId`, `slug`, `locale`                             |
-| `movie-seed`           | `apps/web/src/lib/workers/movieSeedWorker.ts`          | `tmdbMovies`, `localKeys`                                        |
+| `movie-seed`           | `apps/web/src/lib/workers/movieSeedWorker.ts`          | `tmdbMovies`, `localKeys`, `kind: curated-file`                  |
 | `catalog-maintenance`  | `apps/web/src/lib/workers/catalogMaintenanceWorker.ts` | `discover-tmdb-source-page`, `seed-tmdb-movie`, `backfill-movie` |
 | `recommendation-evals` | `apps/web/src/lib/workers/recommendationEvalWorker.ts` | `runId`, `mode`, `requestedBy`, `source`                         |
 
@@ -157,19 +156,24 @@ See [Backoffice Plan](/docs/BACKOFFICE) and
 
 ---
 
-## `services/movie-seed`
+## Curated catalog seed
 
-**Purpose:** Seeds the database from the curated `services/movie-seed/movies.txt` file. Designed to be run once during initial setup (or on-demand to re-seed).
-
-**Location:** `services/movie-seed/`
+**Purpose:** Seeds the database from the curated `apps/web/data/movies.txt`
+file without a separate one-shot service. Operators trigger it from Backoffice,
+and the `apps/web` worker process performs the work through the BullMQ
+`movie-seed` queue.
 
 ### How it works
 
-1. Reads and parses `MOVIES_FILE_PATH`, defaulting first to `<cwd>/movies.txt` and then to `services/movie-seed/movies.txt` from the repo root (one movie per entry, blank-line separated).
-2. Checks which movies already exist in the database (deduplicates by name + year).
-3. Generates OpenAI embeddings for new movies.
-4. Inserts records into the `movies` table.
-5. When run through the `workers` service, queues a bounded catalog repair batch
+1. Backoffice adds a `seed-movies` job with `kind: curated-file` to the
+   `movie-seed` queue.
+2. The worker reads and parses `MOVIES_FILE_PATH`, defaulting first to
+   `<cwd>/movies.txt` and then to `apps/web/data/movies.txt` from likely local
+   and container working directories (one movie per entry, blank-line separated).
+3. Checks which movies already exist in the database (deduplicates by name + year).
+4. Generates OpenAI embeddings for new movies.
+5. Inserts records into the `movies` table.
+6. Queues a bounded catalog repair batch
    on `catalog-maintenance` after a successful non-dry run. It prioritizes
    `missing_tmdb_id`, then falls back to `missing_poster_url`, so one operator
    action can prepare the curated catalog while TMDB metadata/poster work still
@@ -191,24 +195,20 @@ A cynical expatriate American café owner struggles to decide whether to help hi
 
 ### Environment Variables
 
-| Variable                        | Required | Default                                                   | Description                                                   |
-| ------------------------------- | -------- | --------------------------------------------------------- | ------------------------------------------------------------- |
-| `OPENAI_API_KEY`                | ✅       | —                                                         | OpenAI API key for embeddings                                 |
-| `DATABASE_URL`                  | ✅       | —                                                         | PostgreSQL connection string                                  |
-| `MOVIES_FILE_PATH`              | ❌       | `<cwd>/movies.txt`, then `services/movie-seed/movies.txt` | Path to the movies.txt file                                   |
-| `CATALOG_SEED_REPAIR_LIMIT`     | ❌       | `50`                                                      | Worker-only cap for post-seed catalog repair; `0` disables it |
-| `CATALOG_SEED_REPAIR_PAGE_SIZE` | ❌       | `25`                                                      | Worker-only chunk size for the post-seed repair batch         |
-| `DRY_RUN`                       | ❌       | `false`                                                   | `"true"` to skip embeddings/inserts and post-seed repair      |
+| Variable                        | Required | Default                                             | Description                                                   |
+| ------------------------------- | -------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| `OPENAI_API_KEY`                | ✅       | —                                                   | OpenAI API key for embeddings                                 |
+| `DATABASE_URL`                  | ✅       | —                                                   | PostgreSQL connection string                                  |
+| `MOVIES_FILE_PATH`              | ❌       | `<cwd>/movies.txt`, then `apps/web/data/movies.txt` | Path to the movies.txt file                                   |
+| `CATALOG_SEED_REPAIR_LIMIT`     | ❌       | `50`                                                | Worker-only cap for post-seed catalog repair; `0` disables it |
+| `CATALOG_SEED_REPAIR_PAGE_SIZE` | ❌       | `25`                                                | Worker-only chunk size for the post-seed repair batch         |
+| `DRY_RUN`                       | ❌       | `false`                                             | `"true"` to skip embeddings/inserts and post-seed repair      |
 
 ### Running
 
-```bash
-cd services/movie-seed
-npm install
-npm run dev          # development
-npm run build && npm start  # production
-DRY_RUN=true npm run dev    # dry run
-```
+Start Redis, the web workers, and Backoffice, then use the Backoffice Catalog
+seed page. The job is visible in Bull Board under the `movie-seed` queue; the
+post-seed repair batch is visible under `catalog-maintenance`.
 
 ---
 

@@ -12,7 +12,6 @@ COPY apps/web/package.json ./apps/web/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
-COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --no-audit --fund=false
 
 COPY packages/shared/tsconfig.json ./packages/shared/
@@ -22,7 +21,7 @@ RUN npm run build --workspace=packages/shared
 FROM node:24-slim
 
 ENV NODE_ENV=production
-ENV MOVIES_FILE_PATH=/app/services/movie-seed/movies.txt
+ENV MOVIES_FILE_PATH=/app/apps/web/data/movies.txt
 
 WORKDIR /app
 
@@ -60,14 +59,13 @@ COPY apps/web/package.json ./apps/web/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
-COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-audit --fund=false
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY apps/web/tsconfig.json ./apps/web/
 COPY apps/web/scripts/coolify-runtime-env.cjs ./apps/web/scripts/
 COPY apps/web/src/ ./apps/web/src/
-COPY services/movie-seed/movies.txt ./services/movie-seed/movies.txt
+COPY apps/web/data/movies.txt ./apps/web/data/movies.txt
 
 EXPOSE 3000
 CMD ["npm", "run", "start:workers", "--workspace=apps/web"]

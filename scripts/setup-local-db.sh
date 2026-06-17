@@ -41,4 +41,4 @@ docker compose up -d --wait
 echo ""
 echo "PostgreSQL is healthy and ready."
 echo "Redis is running at localhost:6379."
-echo "Run 'npm run populate-db' to seed the database."
+echo "Start apps/web workers and Backoffice, then use Catalog seed to seed the database."

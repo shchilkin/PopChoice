@@ -83,8 +83,6 @@ jobs:
             dockerfile: apps/docs/Dockerfile
           - name: db-migrate
             dockerfile: services/db-migrate/Dockerfile
-          - name: movie-seed
-            dockerfile: services/movie-seed/Dockerfile
           - name: movie-discovery
             dockerfile: services/movie-discovery/Dockerfile
           - name: movie-backfill
@@ -308,7 +306,7 @@ jobs:
 
       - name: Promote production image tag
         env:
-          IMAGE_NAMES: web workers bull-board storybook backoffice docs db-migrate movie-seed movie-discovery movie-backfill
+          IMAGE_NAMES: web workers bull-board storybook backoffice docs db-migrate movie-discovery movie-backfill
         run: |
           image_namespace="${GITHUB_REPOSITORY,,}"
           short_sha="${GITHUB_SHA::12}"

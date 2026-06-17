@@ -271,7 +271,7 @@ export const extractUSCertification = extractTMDBUSCertification;
 
 /**
  * Convert movie data into a text description suitable for embedding.
- * Format must match the format used by services/movie-seed/src/sync.ts.
+ * Format must match the curated seed embedding text in apps/web workers.
  * The `description` parameter should be the value from the DB (not TMDB overview),
  * to keep embeddings consistent with the stored row.
  */

@@ -14,7 +14,6 @@ TARGETS=(
   apps/web
   services/movie-backfill
   services/movie-discovery
-  services/movie-seed
   packages/shared
 )
 

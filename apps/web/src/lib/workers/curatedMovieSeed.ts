@@ -83,8 +83,9 @@ async function ensureMovieSeedSchema(): Promise<void> {
 export function resolveDefaultMoviesFilePath(cwd = process.cwd()): string {
   const candidates = [
     path.resolve(cwd, 'movies.txt'),
-    path.resolve(cwd, '../../services/movie-seed/movies.txt'),
-    path.resolve(cwd, 'services/movie-seed/movies.txt'),
+    path.resolve(cwd, 'data/movies.txt'),
+    path.resolve(cwd, '../../apps/web/data/movies.txt'),
+    path.resolve(cwd, 'apps/web/data/movies.txt'),
   ];
   const existingPath = candidates.find((candidate) => existsSync(candidate));
 

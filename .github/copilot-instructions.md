@@ -30,7 +30,7 @@ PopChoice is a Next.js application focused on movie recommendations, leveraging 
   - Fix all: `npm run fix` (runs lint:fix + format:write + format:package)
 - **Build:** `npm run build`
 - **Storybook:** `npm run storybook` (dev), `npm run build-storybook` (prod)
-- **Database:** `npm run populate-db` (populate database with movie data)
+- **Database:** use Backoffice `Catalog seed` with `apps/web` workers running to populate curated movie data
 - **Analysis:** `npm run analyze-movies` (analyze movie data)
 
 ## Environment Variables
