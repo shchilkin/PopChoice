@@ -196,6 +196,11 @@ The deploy job also supports deploy-aware observability hooks:
   fails if the deployed resource does not recover within the retry budget.
   `POPCHOICE_PRODUCTION_BASE_URL` remains supported as a backwards-compatible
   fallback.
+- Set `POSTDEPLOY_SEED_ENABLED=true`, `BACKOFFICE_BASE_URL`, and
+  `BACKOFFICE_AUTOMATION_TOKEN` in a GitHub Environment to queue the curated
+  movie seed through backoffice after deploy verification succeeds. The
+  automation token must match `BACKOFFICE_AUTOMATION_TOKEN` in the deployed
+  backoffice runtime.
 
 If Grafana secrets are absent, deploys continue without creating a temporary
 silence. If `POPCHOICE_DEPLOY_VERIFY_BASE_URL` is absent, the deploy webhook

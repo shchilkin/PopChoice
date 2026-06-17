@@ -337,6 +337,9 @@ export const fi: Translations = {
     scrollLeft: 'Vieritä vasemmalle',
     scrollRight: 'Vieritä oikealle',
     showDetails: 'Näytä tiedot elokuvalle {name}',
+    openPoster: 'Juliste',
+    closePoster: 'Sulje juliste',
+    posterDialogTitle: 'Juliste elokuvalle {name}',
     aiPick: 'Tekoälyn valinta',
     match: 'osuma',
     matchTones: {

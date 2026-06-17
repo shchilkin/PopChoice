@@ -25,6 +25,9 @@ export interface ResultMovieCardViewModel {
   matchColor: string;
   matchExactLabel: string;
   matchLabel: string;
+  closePosterLabel: string;
+  openPosterLabel: string;
+  posterDialogLabel: string;
   posterUrl?: string;
   rationaleLabel: string;
   score: number;
@@ -82,6 +85,9 @@ export function buildResultMovieCardViewModel(
     matchColor: match.color,
     matchExactLabel: match.exactLabel,
     matchLabel: match.label,
+    closePosterLabel: copy.closePoster,
+    openPosterLabel: copy.openPoster,
+    posterDialogLabel: copy.posterDialogTitle.replace('{name}', title),
     posterUrl: movie.posterURL,
     rationaleLabel: getRationaleLabel(copy, options),
     score,

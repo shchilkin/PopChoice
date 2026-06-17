@@ -231,6 +231,9 @@ jobs:
       GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
       POPCHOICE_DEPLOY_VERIFY_BASE_URL: ${{ secrets.POPCHOICE_DEPLOY_VERIFY_BASE_URL || secrets.POPCHOICE_PRODUCTION_BASE_URL }}
       POPCHOICE_PRODUCTION_BASE_URL: ${{ secrets.POPCHOICE_PRODUCTION_BASE_URL }}
+      BACKOFFICE_BASE_URL: ${{ secrets.BACKOFFICE_BASE_URL }}
+      BACKOFFICE_AUTOMATION_TOKEN: ${{ secrets.BACKOFFICE_AUTOMATION_TOKEN }}
+      POSTDEPLOY_SEED_ENABLED: ${{ vars.POSTDEPLOY_SEED_ENABLED || 'false' }}
       EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
     steps:
       - name: Checkout deploy scripts
@@ -258,6 +261,10 @@ jobs:
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
         run: scripts/verify-production-deploy.sh
 
+      - name: Queue post-deploy movie seed
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        run: bash scripts/trigger-postdeploy-movie-seed.sh
+
       - name: Skip deploy when webhook is not configured
         if: env.COOLIFY_DEPLOY_WEBHOOK == ''
         run: echo "COOLIFY_DEPLOY_WEBHOOK is not configured for the development environment; images were published but deployment was not triggered."
@@ -278,6 +285,9 @@ jobs:
       GRAFANA_SERVICE_ACCOUNT_TOKEN: ${{ secrets.GRAFANA_SERVICE_ACCOUNT_TOKEN }}
       POPCHOICE_DEPLOY_VERIFY_BASE_URL: ${{ secrets.POPCHOICE_DEPLOY_VERIFY_BASE_URL || secrets.POPCHOICE_PRODUCTION_BASE_URL }}
       POPCHOICE_PRODUCTION_BASE_URL: ${{ secrets.POPCHOICE_PRODUCTION_BASE_URL }}
+      BACKOFFICE_BASE_URL: ${{ secrets.BACKOFFICE_BASE_URL }}
+      BACKOFFICE_AUTOMATION_TOKEN: ${{ secrets.BACKOFFICE_AUTOMATION_TOKEN }}
+      POSTDEPLOY_SEED_ENABLED: ${{ vars.POSTDEPLOY_SEED_ENABLED || 'false' }}
       EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
     steps:
       - name: Require production Coolify deploy secrets
@@ -333,3 +343,7 @@ jobs:
       - name: Verify production recovered
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
         run: scripts/verify-production-deploy.sh
+
+      - name: Queue post-deploy movie seed
+        if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
+        run: bash scripts/trigger-postdeploy-movie-seed.sh

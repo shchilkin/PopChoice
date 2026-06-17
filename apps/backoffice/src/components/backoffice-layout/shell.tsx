@@ -16,6 +16,7 @@ type ShellProps = {
 };
 
 const SECTION_BREADCRUMB_LABELS: Record<BackofficeSection, string> = {
+  'catalog-seed': 'Catalog seed',
   health: 'Catalog health',
   home: 'Backoffice',
   queue: 'Queue',

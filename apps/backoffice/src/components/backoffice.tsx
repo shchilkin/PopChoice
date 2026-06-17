@@ -2,6 +2,7 @@ export { BackofficeErrorPage, BackofficeLoadingPage } from './backoffice-layout'
 export { BackofficeHomePage } from './backoffice-home';
 export { CatalogHealthPage } from './catalog-health';
 export { CatalogMaintenanceQueuePage } from './catalog-queue';
+export { CatalogSeedPage } from './catalog-seed';
 export { CatalogMovieDetailPage, CatalogMovieNotFoundPage } from './movie-detail';
 export {
   RepairBatchDetailPage,

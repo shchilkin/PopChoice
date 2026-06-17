@@ -337,6 +337,9 @@ export const en = {
     scrollLeft: 'Scroll left',
     scrollRight: 'Scroll right',
     showDetails: 'Show details for {name}',
+    openPoster: 'Poster',
+    closePoster: 'Close poster',
+    posterDialogTitle: 'Poster for {name}',
     aiPick: 'AI Pick',
     match: 'match',
     matchTones: {

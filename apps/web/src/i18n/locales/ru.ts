@@ -334,6 +334,9 @@ export const ru: Translations = {
     scrollLeft: 'Прокрутить влево',
     scrollRight: 'Прокрутить вправо',
     showDetails: 'Показать подробности для {name}',
+    openPoster: 'Постер',
+    closePoster: 'Закрыть постер',
+    posterDialogTitle: 'Постер фильма {name}',
     aiPick: 'Выбор ИИ',
     match: 'совпадение',
     matchTones: {
