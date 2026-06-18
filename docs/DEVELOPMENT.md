@@ -187,10 +187,12 @@ npm run test:e2e
 The command prepares an isolated environment:
 
 - `docker-compose.e2e.yml` starts PostgreSQL with pgvector on `127.0.0.1:55432` and Redis on `127.0.0.1:56379`.
-- `scripts/e2e/setup-db.mjs` resets the e2e compose project, applies every `db/init/*.sql` migration through `apps/web/scripts/migrate-db.js`, and seeds deterministic movie fixtures.
+- `scripts/e2e/setup-db.mjs` resets the e2e compose project, applies every `db/init/*.sql` migration through `apps/web/scripts/migrate-db.js`, and seeds deterministic real-movie fixtures.
 - `apps/web/playwright.e2e.config.ts` starts the app on `http://127.0.0.1:3100` with `DATABASE_URL` and `REDIS_URL` pointed at the isolated services.
 - `apps/backoffice/playwright.e2e.config.ts` starts the operator app on `http://127.0.0.1:3101` against the same isolated services after the web e2e suite completes.
 - `E2E_DETERMINISTIC_RECOMMENDATIONS=1` makes quiz submissions complete from seeded fixtures instead of calling live OpenAI/TMDB services or requiring a worker process.
+
+Keep the default e2e seed curated and deterministic. A sanitized dev dump can be useful for one-off local catalog investigations, but it should not become the CI/default e2e source unless users, sessions, recommendation history, feedback, secrets, and operational records are stripped first.
 
 To run only the backoffice browser smoke suite while still preparing the
 isolated database and Redis services:

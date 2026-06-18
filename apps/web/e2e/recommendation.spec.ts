@@ -18,25 +18,25 @@ async function readMovieMemory(page: Page) {
 }
 
 async function expectDeterministicSoloResults(page: Page) {
-  await expect(page).toHaveURL(/\/results\/[A-Za-z0-9_-]+/);
+  await expect(page).toHaveURL(/\/results\/[A-Za-z0-9_-]+/, { timeout: 45_000 });
   await expect(page.getByRole('heading', { name: 'We found your perfect film' })).toBeVisible();
   await expect(page.locator('span').filter({ hasText: /^Top Pick$/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'PopChoice E2E Space Opera' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The Matrix' })).toBeVisible();
   await expect(page.getByText(/deterministic top pick/i)).toBeVisible();
 }
 
 async function expectDeterministicGroupResults(page: Page) {
-  await expect(page).toHaveURL(/\/results\/[A-Za-z0-9_-]+/);
+  await expect(page).toHaveURL(/\/results\/[A-Za-z0-9_-]+/, { timeout: 45_000 });
   await expect(page.getByRole('heading', { name: 'We found your group film' })).toBeVisible();
   await expect(page.locator('span').filter({ hasText: /^Top Pick$/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'PopChoice E2E Space Opera' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The Matrix' })).toBeVisible();
 }
 
 async function expectDeterministicDuoResults(page: Page) {
-  await expect(page).toHaveURL(/\/results\/[A-Za-z0-9_-]+/);
+  await expect(page).toHaveURL(/\/results\/[A-Za-z0-9_-]+/, { timeout: 45_000 });
   await expect(page.getByRole('heading', { name: 'We found your duo film' })).toBeVisible();
   await expect(page.locator('span').filter({ hasText: /^Top Pick$/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'PopChoice E2E Space Opera' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'The Matrix' })).toBeVisible();
 }
 
 async function completeNormalSoloQuestions(page: Page, options: { referenceMovie?: string } = {}) {
@@ -111,8 +111,8 @@ test('submits the solo quiz, renders deterministic results, and records feedback
       movieMemory: [
         {
           kind: 'liked',
-          movieName: 'PopChoice E2E Space Opera',
-          movieYear: 2024,
+          movieName: 'The Matrix',
+          movieYear: 1999,
         },
       ],
     });

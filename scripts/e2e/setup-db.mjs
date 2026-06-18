@@ -14,6 +14,94 @@ export const e2eDatabaseUrl =
 
 const skipDocker = process.env.E2E_SKIP_DOCKER === '1';
 const composeCommand = ['compose', '-p', 'popchoice-e2e', '-f', 'docker-compose.e2e.yml'];
+const tmdbPosterBase = 'https://image.tmdb.org/t/p/w500';
+
+const movieFixtures = [
+  {
+    name: 'The Matrix',
+    ageRating: 'R',
+    description:
+      'A hacker discovers that everyday reality is a simulated prison and joins a rebellion against the machines.',
+    duration: 136,
+    scoreRating: 8.2,
+    year: 1999,
+    tmdbId: 603,
+    posterUrl: `${tmdbPosterBase}/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg`,
+    localizedName: 'The Matrix',
+  },
+  {
+    name: 'Paddington 2',
+    ageRating: 'PG',
+    description:
+      'Paddington searches for the perfect birthday gift and gets pulled into a warm, comic adventure.',
+    duration: 104,
+    scoreRating: 7.8,
+    year: 2017,
+    tmdbId: 346648,
+    posterUrl: `${tmdbPosterBase}/1OJ9vkD5xPt3skC6KguyXAgagRZ.jpg`,
+    localizedName: 'Paddington 2',
+  },
+  {
+    name: 'Parasite',
+    ageRating: 'R',
+    description:
+      'A poor family schemes its way into a wealthy household in a sharp, escalating social thriller.',
+    duration: 132,
+    scoreRating: 8.5,
+    year: 2019,
+    tmdbId: 496243,
+    posterUrl: `${tmdbPosterBase}/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg`,
+    localizedName: 'Parasite',
+  },
+  {
+    name: 'Spirited Away',
+    ageRating: 'PG',
+    description:
+      'A young girl enters a spirit world and must find courage, kindness, and a way home.',
+    duration: 125,
+    scoreRating: 8.6,
+    year: 2001,
+    tmdbId: 129,
+    posterUrl: `${tmdbPosterBase}/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg`,
+    localizedName: 'Spirited Away',
+  },
+  {
+    name: 'Knives Out',
+    ageRating: 'PG-13',
+    description:
+      'A detective investigates a family gathering after a wealthy crime novelist dies unexpectedly.',
+    duration: 131,
+    scoreRating: 7.9,
+    year: 2019,
+    tmdbId: 546554,
+    posterUrl: `${tmdbPosterBase}/pThyQovXQrw2m0s9x82twj48Jq4.jpg`,
+    localizedName: 'Knives Out',
+  },
+  {
+    name: 'The Grand Budapest Hotel',
+    ageRating: 'R',
+    description:
+      'A concierge and lobby boy race through a stylish caper about loyalty, art, and a vanished world.',
+    duration: 100,
+    scoreRating: 8.1,
+    year: 2014,
+    tmdbId: 120467,
+    posterUrl: `${tmdbPosterBase}/eWdyYQreja6JGCzqHWXpWHDrrPo.jpg`,
+    localizedName: 'The Grand Budapest Hotel',
+  },
+  {
+    name: 'Arrival',
+    ageRating: 'PG-13',
+    description:
+      'A linguist works to understand alien visitors before fear pushes the world toward conflict.',
+    duration: 116,
+    scoreRating: 7.6,
+    year: 2016,
+    tmdbId: 329865,
+    posterUrl: `${tmdbPosterBase}/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg`,
+    localizedName: 'Arrival',
+  },
+];
 
 async function main() {
   if (!skipDocker) {
@@ -59,79 +147,24 @@ async function seedDatabase(databaseUrl) {
         INSERT INTO movies
           (name, age_rating, description, duration, score_rating, year, tmdb_id, poster_url, localized_name)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9),
-          ($10, $11, $12, $13, $14, $15, $16, $17, $18),
-          ($19, $20, $21, $22, $23, $24, $25, $26, $27),
-          ($28, $29, $30, $31, $32, $33, $34, $35, $36),
-          ($37, $38, $39, $40, $41, $42, $43, $44, $45),
-          ($46, $47, $48, $49, $50, $51, $52, $53, $54),
-          ($55, $56, $57, $58, $59, $60, $61, $62, $63)
+          ${movieFixtures
+            .map((_, index) => {
+              const offset = index * 9;
+              return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9})`;
+            })
+            .join(',\n          ')}
       `,
-      [
-        'PopChoice E2E Space Opera',
-        'PG-13',
-        'A deterministic fixture for catalog filtering and e2e smoke tests.',
-        142,
-        8.7,
-        2024,
-        900001,
-        null,
-        'PopChoice E2E Space Opera',
-        'PopChoice E2E Short Comedy',
-        'PG',
-        'A compact comedy fixture with a lower runtime.',
-        84,
-        7.4,
-        2021,
-        900002,
-        null,
-        'PopChoice E2E Short Comedy',
-        'PopChoice E2E Classic Drama',
-        'R',
-        'A mature drama fixture for rating filters.',
-        126,
-        9.1,
-        1998,
-        900003,
-        null,
-        'PopChoice E2E Classic Drama',
-        'PopChoice E2E Family Adventure',
-        'G',
-        'A family-friendly fixture for broad catalog smoke tests.',
-        101,
-        8.1,
-        2018,
-        900004,
-        null,
-        'PopChoice E2E Family Adventure',
-        'PopChoice E2E Cozy Mystery',
-        'PG',
-        'A cozy mystery fixture for recommendation eval candidate availability.',
-        108,
-        7.8,
-        2021,
-        900005,
-        null,
-        'PopChoice E2E Cozy Mystery',
-        'PopChoice E2E Ensemble Comedy',
-        'PG-13',
-        'A playful ensemble fixture for mixed group recommendation evals.',
-        115,
-        8.3,
-        2020,
-        900006,
-        null,
-        'PopChoice E2E Ensemble Comedy',
-        'PopChoice E2E Grounded Thriller',
-        'PG-13',
-        'A precise thriller fixture for focused recommendation eval candidate availability.',
-        112,
-        7.9,
-        2016,
-        900007,
-        null,
-        'PopChoice E2E Grounded Thriller',
-      ],
+      movieFixtures.flatMap((movie) => [
+        movie.name,
+        movie.ageRating,
+        movie.description,
+        movie.duration,
+        movie.scoreRating,
+        movie.year,
+        movie.tmdbId,
+        movie.posterUrl,
+        movie.localizedName,
+      ]),
     );
 
     await client.query(
@@ -141,7 +174,7 @@ async function seedDatabase(databaseUrl) {
           ($1, $2),
           ($3, $4)
       `,
-      [910001, 'Astra Fixture', 910002, 'Moonlit Director'],
+      [6384, 'Keanu Reeves', 9339, 'Lana Wachowski'],
     );
 
     await client.query(
@@ -151,7 +184,7 @@ async function seedDatabase(databaseUrl) {
           ($1, $2),
           ($3, $4)
       `,
-      [920001, 'Nebula Noir', 920002, 'Fixture Comedy'],
+      [878, 'Science Fiction', 35, 'Comedy'],
     );
 
     await client.query(`
@@ -159,7 +192,7 @@ async function seedDatabase(databaseUrl) {
         (movie_id, person_id, role, character_name, billing_order)
       SELECT 1, id, 'cast', 'Captain Test', 0
       FROM catalog_people
-      WHERE name = 'Astra Fixture'
+      WHERE name = 'Keanu Reeves'
     `);
 
     await client.query(`
@@ -167,21 +200,21 @@ async function seedDatabase(databaseUrl) {
         (movie_id, person_id, role, job, department)
       SELECT 1, id, 'director', 'Director', 'Directing'
       FROM catalog_people
-      WHERE name = 'Moonlit Director'
+      WHERE name = 'Lana Wachowski'
     `);
 
     await client.query(`
       INSERT INTO movie_genres (movie_id, genre_id, source)
       SELECT 1, id, 'manual'
       FROM catalog_genres
-      WHERE name = 'Nebula Noir'
+      WHERE name = 'Science Fiction'
     `);
 
     await client.query(`
       INSERT INTO movie_genres (movie_id, genre_id, source)
       SELECT 2, id, 'manual'
       FROM catalog_genres
-      WHERE name = 'Fixture Comedy'
+      WHERE name = 'Comedy'
     `);
 
     await client.query(
@@ -191,28 +224,28 @@ async function seedDatabase(databaseUrl) {
         VALUES
           (
             1,
-            'PopChoice E2E Space Opera',
-            2024,
+            'The Matrix',
+            1999,
             'ambiguous_match',
             'open',
             $1::jsonb,
-            'E2E fixture for the backoffice TMDB review decision flow.'
+            'E2E fixture for the backoffice TMDB review decision flow using real movie metadata.'
           )
       `,
       [
         JSON.stringify([
           {
-            id: 990001,
-            title: 'PopChoice E2E Space Opera Definitive Match',
-            originalTitle: 'PopChoice E2E Space Opera Definitive Match',
-            releaseYear: 2024,
+            id: 603,
+            title: 'The Matrix',
+            originalTitle: 'The Matrix',
+            releaseYear: 1999,
             confidence: 0.96,
           },
           {
-            id: 990002,
-            title: 'PopChoice E2E Space Opera Alternate',
-            originalTitle: 'PopChoice E2E Space Opera Alternate',
-            releaseYear: 2023,
+            id: 604,
+            title: 'The Matrix Reloaded',
+            originalTitle: 'The Matrix Reloaded',
+            releaseYear: 2003,
             confidence: 0.72,
           },
         ]),
@@ -220,7 +253,7 @@ async function seedDatabase(databaseUrl) {
     );
 
     await client.query('COMMIT');
-    console.log('[e2e:db] Seeded deterministic movie fixtures.');
+    console.log('[e2e:db] Seeded deterministic real-movie fixtures.');
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
