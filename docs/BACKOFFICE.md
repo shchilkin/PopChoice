@@ -208,9 +208,11 @@ Bull Board. Watch the `movie-seed` job logs and return value for seed status,
 then use the linked repair batch or `catalog-maintenance` queue to follow
 metadata and poster repair progress.
 
-The automatic repair phase is bounded by `CATALOG_SEED_REPAIR_LIMIT` and chunked
-by `CATALOG_SEED_REPAIR_PAGE_SIZE`. Set the limit to `0` to keep the seed button
-as a seed-only action.
+The automatic repair phase queues every current candidate for the selected
+issue by default and is chunked by `CATALOG_SEED_REPAIR_PAGE_SIZE`. Set
+`CATALOG_SEED_REPAIR_LIMIT` to a positive number only when an environment needs
+an explicit safety cap; unset it or set it to `all` for full-catalog repair, and
+set it to `0` to keep the seed button as a seed-only action.
 
 CI can queue the same seed after a successful deploy through
 `POST /api/operator/catalog-seed`. Set `BACKOFFICE_AUTOMATION_TOKEN` in the
