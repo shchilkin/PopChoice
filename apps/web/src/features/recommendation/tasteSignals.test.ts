@@ -88,6 +88,11 @@ describe('tasteSignals', () => {
         movieYear: 2016,
       },
       {
+        kind: 'not_for_me',
+        movieName: 'Moon',
+        movieYear: 2009,
+      },
+      {
         kind: 'recently_recommended',
         movieKey: 'title:past-lives:2023',
         movieName: 'Past Lives',
@@ -112,6 +117,12 @@ describe('tasteSignals', () => {
         source: 'feedback',
         title: 'Arrival',
         movieKey: 'title:arrival:2016',
+      }),
+      expect.objectContaining({
+        type: 'not_interested_movie',
+        source: 'feedback',
+        title: 'Moon',
+        movieKey: 'title:moon:2009',
       }),
       expect.objectContaining({
         type: 'seen_movie',

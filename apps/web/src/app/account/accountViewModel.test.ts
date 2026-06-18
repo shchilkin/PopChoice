@@ -49,6 +49,7 @@ const labels = {
   feedback: {
     useful: 'Useful',
     already_watched: 'Already watched',
+    not_for_me: 'Not for me',
     wrong_mood: 'Wrong mood',
     too_obvious: 'Too obvious',
     too_obscure: 'Too obscure',
@@ -153,10 +154,11 @@ describe('accountViewModel', () => {
     const recommendations = [
       baseRecommendation,
       { ...baseRecommendation, slug: 'rec-2', movieName: 'Heat', feedbackKind: 'too_obvious' },
+      { ...baseRecommendation, slug: 'rec-4', movieName: 'Primer', feedbackKind: 'not_for_me' },
       { ...baseRecommendation, slug: 'rec-3', movieName: 'Alien', feedbackKind: 'useful' },
     ] satisfies RecommendationSummary[];
 
-    expect(filterRecommendations(recommendations, '', 'not_interested', labels)).toHaveLength(1);
+    expect(filterRecommendations(recommendations, '', 'not_interested', labels)).toHaveLength(2);
     expect(filterRecommendations(recommendations, 'Alien', 'rated', labels)).toHaveLength(1);
     expect(filterRecommendations(recommendations, 'missing', 'all', labels)).toEqual([]);
   });

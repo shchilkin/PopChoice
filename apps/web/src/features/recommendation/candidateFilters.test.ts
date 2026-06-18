@@ -139,16 +139,21 @@ describe('candidateFilters', () => {
   it('filters exact repeat candidates with negative feedback', () => {
     const signals = getFeedbackCandidateSignals([
       { kind: 'wrong_mood', movieName: 'Arrival', movieYear: 2016 },
+      { kind: 'not_for_me', movieName: 'Moon', movieYear: 2009 },
       { kind: 'too_obvious', movieName: 'Interstellar', movieYear: 2014 },
       { kind: 'too_obscure', movieName: 'Primer', movieYear: 2004 },
       { kind: 'useful', movieName: 'Past Lives', movieYear: 2023 },
     ]);
     const arrival = { ...movie('Arrival'), similarity: 0.91 };
     const interstellar = { ...movie('Interstellar'), similarity: 0.9 };
+    const moon = { ...movie('Moon'), similarity: 0.88 };
     const primer = { ...movie('Primer'), similarity: 0.89 };
     const pastLives = { ...movie('Past Lives'), similarity: 0.85 };
 
-    const result = applyFeedbackToLocalMovies([arrival, interstellar, primer, pastLives], signals);
+    const result = applyFeedbackToLocalMovies(
+      [arrival, interstellar, moon, primer, pastLives],
+      signals,
+    );
 
     expect(result.map((candidate) => candidate.name)).toEqual(['Past Lives', 'Arrival']);
     expect(result.find((candidate) => candidate.name === 'Arrival')?.similarity).toBeCloseTo(0.83);

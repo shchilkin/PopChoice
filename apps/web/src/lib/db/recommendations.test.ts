@@ -248,6 +248,38 @@ describe('createRecommendationFeedback', () => {
     expect(mockRelease).toHaveBeenCalledOnce();
   });
 
+  it('maps generic not-for-me feedback to not-interested movie memory', async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({}) // BEGIN
+      .mockResolvedValueOnce({
+        rows: [{ id: 'feedback-id', recommendation_id: 'rec-id' }],
+      }) // INSERT feedback
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            tmdb_id: 456,
+            movie_name: 'Primer',
+            movie_year: 2004,
+            poster_url: null,
+            localized_name: null,
+          },
+        ],
+      }) // SELECT main movie
+      .mockResolvedValueOnce({}) // UPSERT interaction
+      .mockResolvedValueOnce({}); // COMMIT
+
+    await createRecommendationFeedback({
+      slug: 'rec-slug',
+      kind: 'not_for_me',
+      userId: '42',
+    });
+
+    const [, params] = mockClientQuery.mock.calls[1] as [string, unknown[]];
+    expect(params).toEqual(['rec-slug', '42', 'not_for_me']);
+    const [, interactionParams] = mockClientQuery.mock.calls[3] as [string, unknown[]];
+    expect(interactionParams).toContain('not_interested');
+  });
+
   it('returns null when no completed recommendation is found', async () => {
     mockClientQuery
       .mockResolvedValueOnce({}) // BEGIN

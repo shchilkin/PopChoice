@@ -402,6 +402,7 @@ export const en = {
     feedbackActionHint: 'Save a signal and ask PopChoice for one more batch from this result.',
     feedbackMoreLikeThis: 'More like this',
     feedbackSameVibe: 'Try same vibe',
+    feedbackTryAnother: 'Try another',
     feedbackFollowUpQueued: 'Saved — building another batch from this result.',
     feedbackFollowUpUnavailable: 'Saved. More picks were already requested for this result.',
     evidenceKicker: 'Match logic',
@@ -1251,6 +1252,7 @@ export const en = {
     feedback: {
       useful: 'Good pick',
       already_watched: 'Seen it',
+      not_for_me: 'Not for me',
       wrong_mood: 'Wrong mood',
       too_obvious: 'Too obvious',
       too_obscure: 'Too obscure',

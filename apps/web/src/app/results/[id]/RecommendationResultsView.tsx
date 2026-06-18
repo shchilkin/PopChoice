@@ -194,7 +194,7 @@ function getFeedbackResultState(didSave: boolean): FeedbackState {
 
 function getFeedbackKindForFollowUp(kind: FeedbackFollowUpKind): FeedbackKind {
   if (kind === 'more_like_this') return 'useful';
-  return 'close';
+  return 'not_for_me';
 }
 
 function getFollowUpStateFromMorePicksResult(result: MorePicksResult): FeedbackFollowUpState {

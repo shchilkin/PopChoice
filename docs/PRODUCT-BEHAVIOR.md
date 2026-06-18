@@ -113,6 +113,7 @@ Recommendation feedback on completed results accepts:
 
 - `useful`: records the main pick as `liked`.
 - `already_watched`: records the main pick as `watched`.
+- `not_for_me`: records the main pick as `not_interested`.
 - `wrong_mood`: records the main pick as `wrong_mood`.
 - `too_obvious`: records the main pick as `not_interested`.
 - `too_obscure`: records the main pick as `not_interested`.
@@ -124,7 +125,7 @@ the existing one-shot more-picks queue:
 
 - "More like this" records `useful` feedback, then requests one additional
   TMDB-backed batch from the same result.
-- "Try same vibe" records `close` feedback, then requests the same follow-up
+- "Try another" records `not_for_me` feedback, then requests the same follow-up
   batch.
 
 Only one more-picks batch can be claimed per recommendation, so repeated

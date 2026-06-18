@@ -64,6 +64,7 @@ const MOVIE_SIGNAL_TYPES = {
   close: null,
   liked: 'liked_movie',
   not_interested: 'not_interested_movie',
+  not_for_me: 'not_interested_movie',
   not_seen: null,
   recently_recommended: 'seen_movie',
   too_obscure: 'not_interested_movie',
