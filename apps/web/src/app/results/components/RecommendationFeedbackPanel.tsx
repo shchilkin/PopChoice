@@ -8,13 +8,14 @@ import { useLanguage } from '@/i18n';
 export type FeedbackKind =
   | 'useful'
   | 'already_watched'
+  | 'not_for_me'
   | 'wrong_mood'
   | 'too_obvious'
   | 'too_obscure'
   | 'close';
 
 export type FeedbackState = 'idle' | 'saving' | 'saved' | 'error';
-export type FeedbackFollowUpKind = 'more_like_this' | 'same_vibe';
+export type FeedbackFollowUpKind = 'more_like_this' | 'try_another';
 export type FeedbackFollowUpState = 'idle' | 'requesting' | 'requested' | 'unavailable';
 
 type FeedbackOption = {
@@ -35,9 +36,9 @@ function getFeedbackOptions(results: ResultsCopy): FeedbackOption[] {
   return [
     { kind: 'useful', label: results.feedbackUseful, icon: Check },
     { kind: 'already_watched', label: results.feedbackSeen, icon: Eye },
+    { kind: 'not_for_me', label: results.feedbackNotForMe, icon: Ban },
     { kind: 'wrong_mood', label: results.feedbackWrongMood, icon: Frown },
-    { kind: 'too_obvious', label: results.feedbackTooObvious, icon: Ban },
-    { kind: 'too_obscure', label: results.feedbackTooObscure, icon: Radar },
+    { kind: 'too_obvious', label: results.feedbackTooObvious, icon: Radar },
     { kind: 'close', label: results.feedbackClose, icon: Sparkles },
   ];
 }
@@ -45,7 +46,7 @@ function getFeedbackOptions(results: ResultsCopy): FeedbackOption[] {
 function getFollowUpOptions(results: ResultsCopy): FeedbackFollowUpOption[] {
   return [
     { kind: 'more_like_this', label: results.feedbackMoreLikeThis, icon: Sparkles },
-    { kind: 'same_vibe', label: results.feedbackSameVibe, icon: RefreshCw },
+    { kind: 'try_another', label: results.feedbackTryAnother, icon: RefreshCw },
   ];
 }
 

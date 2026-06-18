@@ -52,6 +52,21 @@ describe('POST /api/recommendations/[id]/feedback', () => {
     });
   });
 
+  it('accepts generic not-for-me feedback', async () => {
+    mockCreateRecommendationFeedback.mockResolvedValueOnce({ id: 'feedback-id' });
+
+    const response = await POST(makeRequest({ kind: 'not_for_me' }), {
+      params: Promise.resolve({ id: 'test-slug' }),
+    });
+
+    expect(response.status).toBe(201);
+    expect(mockCreateRecommendationFeedback).toHaveBeenCalledWith({
+      slug: 'test-slug',
+      kind: 'not_for_me',
+      userId: '42',
+    });
+  });
+
   it('rejects invalid feedback kinds', async () => {
     const response = await POST(makeRequest({ kind: 'please_retry' }), {
       params: Promise.resolve({ id: 'test-slug' }),

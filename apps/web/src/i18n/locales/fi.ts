@@ -403,6 +403,7 @@ export const fi: Translations = {
       'Tallenna signaali ja pyydä PopChoicea rakentamaan uusi erä tästä tuloksesta.',
     feedbackMoreLikeThis: 'Lisää tällaista',
     feedbackSameVibe: 'Sama tunnelma',
+    feedbackTryAnother: 'Kokeile toista',
     feedbackFollowUpQueued: 'Tallennettu — rakennetaan uusi erä tästä tuloksesta.',
     feedbackFollowUpUnavailable: 'Tallennettu. Tälle tulokselle on jo pyydetty lisävalintoja.',
     evidenceKicker: 'Osumalogiikka',
@@ -1260,6 +1261,7 @@ export const fi: Translations = {
     feedback: {
       useful: 'Hyvä valinta',
       already_watched: 'Nähty jo',
+      not_for_me: 'Ei minulle',
       wrong_mood: 'Väärä tunnelma',
       too_obvious: 'Liian ilmeinen',
       too_obscure: 'Liian outo',

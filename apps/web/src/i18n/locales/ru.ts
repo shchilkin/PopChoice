@@ -401,6 +401,7 @@ export const ru: Translations = {
       'Сохраните сигнал и попросите PopChoice собрать ещё одну пачку от этого результата.',
     feedbackMoreLikeThis: 'Ещё похожее',
     feedbackSameVibe: 'Та же вайбовая зона',
+    feedbackTryAnother: 'Попробовать другой',
     feedbackFollowUpQueued: 'Сохранили — собираем ещё одну пачку от этого результата.',
     feedbackFollowUpUnavailable: 'Сохранили. Для этого результата уже запрошены доп. варианты.',
     evidenceKicker: 'Логика совпадения',
@@ -1259,6 +1260,7 @@ export const ru: Translations = {
     feedback: {
       useful: 'Хороший выбор',
       already_watched: 'Уже смотрел(а)',
+      not_for_me: 'Не для меня',
       wrong_mood: 'Не то настроение',
       too_obvious: 'Слишком очевидно',
       too_obscure: 'Слишком нишево',

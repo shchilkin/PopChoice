@@ -188,7 +188,9 @@ function matchesRecommendationFilter(
   if (filter === 'rated') return Boolean(recommendation.feedbackKind);
   if (filter === 'not_interested') {
     return (
-      recommendation.feedbackKind === 'too_obvious' || recommendation.feedbackKind === 'too_obscure'
+      recommendation.feedbackKind === 'not_for_me' ||
+      recommendation.feedbackKind === 'too_obvious' ||
+      recommendation.feedbackKind === 'too_obscure'
     );
   }
   return recommendation.feedbackKind === filter;

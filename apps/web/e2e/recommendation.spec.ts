@@ -96,10 +96,11 @@ test('submits the solo quiz, renders deterministic results, and records feedback
 
   await expectDeterministicSoloResults(page);
   await expect(page.getByText('Was this useful?')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Not for me' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Too obvious' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Too obscure' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
   await expect(page.getByText('Next action')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try another' })).toBeVisible();
 
   await page.getByRole('button', { name: 'More like this' }).click();
 
