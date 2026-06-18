@@ -207,6 +207,14 @@ Buttons are the most-touched element in the quiz flow — they need to feel sati
 
 **The No-Nested-Cards Rule.** Cards do not contain cards. If content needs a container within a card, use a tinted background (`--pc-gold-subtle`, `--pc-surface-hover`) or a border, not a nested card.
 
+### Chips / Badges
+
+- **Neutral chip:** `--pc-chip-bg`, `--pc-chip-bd`, and `--pc-chip-text`. Use for inactive filters, secondary actions, and low-emphasis metadata.
+- **Selected chip:** `--pc-chip-selected-bg`, `--pc-chip-selected-bd`, and `--pc-chip-selected-text`. Use for saved, selected, copied, or committed states where the user needs unmistakable confirmation.
+- **Poster overlay chip:** `--pc-poster-chip-bg`, `--pc-poster-chip-bd`, `--pc-poster-chip-text`, and `--pc-poster-chip-accent`. Use on image previews where gold text on translucent gold can disappear into the artwork.
+
+**The Context Rule.** Do not reuse `--pc-gold-subtle` as a universal pill background. Inline chips, selected states, and image overlays have different contrast needs.
+
 ### Inputs / Fields
 
 - **Style:** Filled, 12px radius (`rounded-xl`), `--pc-surface` background, 1px border `--pc-bd2`

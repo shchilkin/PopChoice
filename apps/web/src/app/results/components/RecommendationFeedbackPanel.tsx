@@ -143,28 +143,30 @@ function getFeedbackButtonStyle({
 }) {
   const baseStyle = isSelected
     ? {
-        background: 'var(--pc-gold-subtle)',
-        color: 'var(--pc-gold-text)',
+        background: 'var(--pc-chip-selected-bg)',
+        color: 'var(--pc-chip-selected-text)',
+        borderColor: 'var(--pc-chip-selected-bd)',
       }
     : {
-        background: 'transparent',
-        color: 'var(--pc-t3)',
+        background: 'var(--pc-chip-bg)',
+        color: 'var(--pc-chip-text)',
+        borderColor: 'var(--pc-chip-bd)',
       };
 
   return {
     ...baseStyle,
-    border: '1px solid var(--pc-bd2)',
+    border: `1px solid ${baseStyle.borderColor}`,
     fontSize: '0.72rem',
     fontWeight: 600,
-    cursor: disabled ? 'wait' : 'pointer',
+    cursor: disabled ? 'not-allowed' : 'pointer',
   };
 }
 
 function getFollowUpButtonStyle({ disabled }: { disabled: boolean }) {
   return {
-    background: disabled ? 'var(--pc-bd1)' : 'var(--pc-gold-subtle)',
-    border: '1px solid var(--pc-bd2)',
-    color: disabled ? 'var(--pc-t4)' : 'var(--pc-gold-text)',
+    background: disabled ? 'var(--pc-chip-bg)' : 'var(--pc-chip-selected-bg)',
+    border: disabled ? '1px solid var(--pc-chip-bd)' : '1px solid var(--pc-chip-selected-bd)',
+    color: disabled ? 'var(--pc-t4)' : 'var(--pc-chip-selected-text)',
     cursor: disabled ? 'not-allowed' : 'pointer',
     fontSize: '0.74rem',
     fontWeight: 700,
@@ -201,7 +203,7 @@ function FeedbackOptionButton({
       type="button"
       onClick={() => void onFeedback(kind)}
       disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+      className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors duration-200 active:scale-95 disabled:active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={getFeedbackButtonStyle({ disabled, isSelected })}
     >
       <FeedbackOptionIcon Icon={Icon} isBusy={isBusy} />
@@ -241,7 +243,7 @@ function FeedbackFollowUpButton({
       type="button"
       onClick={() => void onFollowUp(kind)}
       disabled={disabled}
-      className="inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
+      className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full px-3.5 py-2 transition-colors duration-200 active:scale-95 disabled:active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={getFollowUpButtonStyle({ disabled })}
     >
       {isBusy ? <Loader2 size={13} className="animate-spin" /> : <Icon size={13} />}
