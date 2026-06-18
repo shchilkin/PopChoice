@@ -7,6 +7,7 @@ import {
   excludeFeedbackTMDBMovies,
   getFeedbackCandidateSignals,
   getMentionedMovieTitleKeys,
+  getTasteSignalCandidateSignals,
   isMentionedMovieTitle,
 } from './candidateFilters';
 
@@ -299,5 +300,41 @@ describe('candidateFilters', () => {
         signals,
       ).map((candidate) => candidate.title),
     ).toEqual(['Princess Mononoke']);
+  });
+
+  it('applies movie taste signals while ignoring trait-only signals', () => {
+    const signals = getTasteSignalCandidateSignals([
+      {
+        type: 'desired_trait',
+        source: 'quiz',
+        value: 'warm',
+        weight: 0.5,
+      },
+      {
+        type: 'seen_movie',
+        source: 'movie-memory',
+        title: 'Paddington 2',
+        year: 2017,
+        weight: 1,
+      },
+      {
+        type: 'liked_movie',
+        source: 'movie-memory',
+        title: 'After Yang',
+        year: 2021,
+        weight: 1,
+      },
+    ]);
+
+    expect(
+      applyFeedbackToLocalMovies(
+        [
+          { ...movie('Paddington 2'), similarity: 0.95 },
+          { ...movie('Columbus'), similarity: 0.82 },
+          { ...movie('After Yang'), similarity: 0.79 },
+        ],
+        signals,
+      ).map((candidate) => candidate.name),
+    ).toEqual(['After Yang', 'Columbus']);
   });
 });

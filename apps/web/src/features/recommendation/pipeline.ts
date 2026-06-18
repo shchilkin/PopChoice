@@ -36,6 +36,11 @@ import {
 } from './recommendation';
 import { resolveRecommendationSourceStrategy } from './sourceStrategyPolicy';
 import {
+  getTasteSignalsFromFeedbackPreferences,
+  getTasteSignalsFromQuiz,
+  summarizeTasteSignals,
+} from './tasteSignals';
+import {
   MAX_TOTAL_MOVIES,
   enrichTMDBMatchesWithDetails,
   fetchTMDBDiscoverMovies,
@@ -251,6 +256,19 @@ async function prepareRecommendationInputs(
     getDbMovieCount(),
     getFeedbackPreferences(userId),
   ]);
+  const tasteSignals = [
+    ...getTasteSignalsFromQuiz(allPeopleData),
+    ...getTasteSignalsFromFeedbackPreferences(feedbackPreferences),
+  ];
+  const tasteSignalSummary = summarizeTasteSignals(tasteSignals);
+
+  setActiveTraceAttributes({
+    'recommendation.taste_signal_count': tasteSignals.length,
+  });
+  logger.info(
+    { tasteSignalCount: tasteSignals.length, tasteSignalSummary },
+    'Recommendation taste signals prepared',
+  );
 
   return {
     dbMovieCount,

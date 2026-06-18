@@ -1,20 +1,12 @@
 import { getMovieIdentityKey, getMovieTitleKey, getYearFromReleaseDate } from '@/lib/movieIdentity';
 
+import { getTasteSignalsFromFeedbackPreferences } from './tasteSignals';
+
+import type { FeedbackTastePreference, MovieTasteSignal, TasteSignal } from './tasteSignals';
 import type { TMDBDiscoverMovie } from './tmdb';
 import type { EnhancedMovieMatch, PersonFormData } from './types';
-import type {
-  RecommendationFeedbackKind,
-  UserRecommendationMemoryKind,
-  UserMovieInteractionKind,
-} from '@/lib/db/recommendations';
 
-export type FeedbackMoviePreference = {
-  kind: RecommendationFeedbackKind | UserMovieInteractionKind | UserRecommendationMemoryKind;
-  movieKey?: string | null;
-  tmdbId?: number | null;
-  movieName: string;
-  movieYear: number | null;
-};
+export type FeedbackMoviePreference = FeedbackTastePreference;
 
 export type FeedbackCandidateSignals = {
   excludedMovieKeys: Set<string>;
@@ -27,15 +19,6 @@ export type FeedbackCandidateSignals = {
 
 const FEEDBACK_DOWNRANK_AMOUNT = 0.08;
 const LIKED_MEMORY_BOOST_AMOUNT = 0.04;
-
-const EXCLUDED_FEEDBACK_KINDS = new Set<FeedbackMoviePreference['kind']>([
-  'already_watched',
-  'not_interested',
-  'recently_recommended',
-  'too_obscure',
-  'too_obvious',
-  'watched',
-]);
 
 export function getMentionedMovieTitleKeys(allPeopleData: PersonFormData[]): Set<string> {
   return new Set(
@@ -70,10 +53,16 @@ export function excludeMentionedTMDBMovies(
 export function getFeedbackCandidateSignals(
   preferences: FeedbackMoviePreference[],
 ): FeedbackCandidateSignals {
+  return getTasteSignalCandidateSignals(getTasteSignalsFromFeedbackPreferences(preferences));
+}
+
+export function getTasteSignalCandidateSignals(
+  signalsToApply: TasteSignal[],
+): FeedbackCandidateSignals {
   const signals = createEmptyFeedbackCandidateSignals();
 
-  for (const preference of preferences) {
-    addPreferenceToSignals(signals, preference);
+  for (const tasteSignal of signalsToApply) {
+    addTasteSignalToCandidateSignals(signals, tasteSignal);
   }
 
   return signals;
@@ -90,12 +79,16 @@ function createEmptyFeedbackCandidateSignals(): FeedbackCandidateSignals {
   };
 }
 
-function addPreferenceToSignals(
+function addTasteSignalToCandidateSignals(
   signals: FeedbackCandidateSignals,
-  preference: FeedbackMoviePreference,
+  tasteSignal: TasteSignal,
 ) {
-  const keys = getPreferenceKeys(preference);
-  const targets = getSignalTargets(signals, preference.kind);
+  if (!isMovieTasteSignal(tasteSignal)) {
+    return;
+  }
+
+  const keys = getTasteSignalMovieKeys(tasteSignal);
+  const targets = getSignalTargets(signals, tasteSignal.type);
 
   if (!targets) {
     return;
@@ -104,32 +97,33 @@ function addPreferenceToSignals(
   addFeedbackKeys(targets.movieKeys, targets.titleKeys, keys);
 }
 
-function getPreferenceKeys(preference: FeedbackMoviePreference) {
+function isMovieTasteSignal(signal: TasteSignal): signal is MovieTasteSignal {
+  return 'title' in signal;
+}
+
+function getTasteSignalMovieKeys(signal: MovieTasteSignal) {
   return {
     movieKey:
-      preference.movieKey ??
+      signal.movieKey ??
       getMovieIdentityKey({
-        tmdbId: preference.tmdbId,
-        title: preference.movieName,
-        year: preference.movieYear,
+        tmdbId: signal.tmdbId,
+        title: signal.title,
+        year: signal.year,
       }),
-    titleKey: getMovieTitleKey(preference.movieName),
+    titleKey: getMovieTitleKey(signal.title),
   };
 }
 
-function getSignalTargets(
-  signals: FeedbackCandidateSignals,
-  kind: FeedbackMoviePreference['kind'],
-) {
-  if (EXCLUDED_FEEDBACK_KINDS.has(kind)) {
+function getSignalTargets(signals: FeedbackCandidateSignals, kind: MovieTasteSignal['type']) {
+  if (kind === 'seen_movie' || kind === 'not_interested_movie') {
     return { movieKeys: signals.excludedMovieKeys, titleKeys: signals.excludedTitleKeys };
   }
 
-  if (kind === 'wrong_mood') {
+  if (kind === 'wrong_mood_movie') {
     return { movieKeys: signals.downrankMovieKeys, titleKeys: signals.downrankTitleKeys };
   }
 
-  if (kind === 'liked') {
+  if (kind === 'liked_movie') {
     return { movieKeys: signals.boostMovieKeys, titleKeys: signals.boostTitleKeys };
   }
 
