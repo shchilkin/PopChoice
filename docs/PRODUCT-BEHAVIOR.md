@@ -29,13 +29,15 @@ and falls back to "Person 1" and "Person 2" if the setup is incomplete.
 
 Each participant answers the same seven steps:
 
-1. Reference movie: optional favorite/reference title.
+1. Reference movie: optional favorite/reference title. Leaving it blank keeps
+   the search open; users can also explicitly choose the no-reference path.
 2. Search lane: `new`, `classic`, or `both`.
 3. Tonight's vibe: one or more mood/genre ids from the current fixed list.
 4. Energy level: `light`, `balanced`, `serious`, or `dark`.
 5. Discovery appetite: `safe`, `balanced`, or `surprise`.
-6. Hard avoids: optional explicit constraints such as slow pacing, long runtime,
-   too obvious, or too obscure.
+6. Hard avoids: optional stop signals such as horror, gore, slow pacing,
+   subtitles, long runtime, obvious picks, obscure picks, or likely already-seen
+   movies.
 7. Optional actor: free text.
 
 The browser translates each participant into the recommendation API contract:

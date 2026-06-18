@@ -5,6 +5,24 @@ import { emptyPerson, toApiFormat, toFastPickApiFormat } from './constants';
 import type { PersonAnswers } from './types';
 
 describe('toApiFormat', () => {
+  it('allows normal recommendations without a reference movie selection', () => {
+    const person: PersonAnswers = {
+      ...emptyPerson(),
+      favoriteMovie: '',
+      hasNoReferenceMovie: false,
+      era: 'both' as const,
+      moods: ['comedy'],
+      tone: 'balanced' as const,
+    };
+
+    expect(toApiFormat(person)).toMatchObject({
+      favoriteMovie: '',
+      newVsClassic: 'Both new and classic',
+      moodPreference: ['Comedy'],
+      tonePreference: 'Balanced',
+    });
+  });
+
   it('submits an empty favorite movie when the user has no reference pick', () => {
     const person: PersonAnswers = {
       ...emptyPerson(),

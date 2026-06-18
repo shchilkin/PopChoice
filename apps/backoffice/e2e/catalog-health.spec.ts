@@ -11,8 +11,9 @@ test('renders deterministic catalog health data without desktop overflow', async
   await expect(page.locator('#issue-missing_poster_url')).toContainText(
     'PopChoice E2E Space Opera',
   );
-  await expect(page.locator('.healthy-checks')).toContainText('Missing tmdb_id');
-  await expect(page.locator('.healthy-checks')).toContainText('0 affected');
+  const resolvedChecks = page.getByRole('region', { name: 'No affected rows' });
+  await expect(resolvedChecks).toContainText('Missing tmdb_id');
+  await expect(resolvedChecks.getByLabel('Missing tmdb_id: clear')).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,

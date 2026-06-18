@@ -196,6 +196,20 @@ export const fi: Translations = {
         },
       },
     },
+    normalAvoids: {
+      title: 'Mitä rajataan pois?',
+      hint: 'Valinnainen. Nämä ehdottomat rajat auttavat PopChoicea välttämään elokuvat, jotka sopivat teknisesti mutta eivät tähän iltaan.',
+      options: {
+        horror: 'Ei kauhua',
+        gore: 'Ei raakuutta',
+        slow: 'Ei liian hidasta',
+        subtitles: 'Ei tekstityksiä',
+        long: 'Ei liian pitkää',
+        obvious: 'Ei liian ilmeistä',
+        obscure: 'Ei liian marginaalista',
+        alreadySeen: 'Vältä mahdollisesti nähtyjä',
+      },
+    },
     favoriteMovie: {
       title: 'Vertailuelokuva, jos sellainen on',
       hint: 'Nimeä elokuva vain jos se auttaa. Tyhjäksi jättäminen antaa PopChoicelle tuoreemman haun.',
