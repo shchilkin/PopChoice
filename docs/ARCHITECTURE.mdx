@@ -1,0 +1,36 @@
+---
+title: 'Architecture Map'
+description: Experimental visual map of the PopChoice runtime, docs, data, queue, and deployment boundaries.
+full: true
+---
+
+# Architecture Map
+
+This page is an experimental visual map of the current PopChoice architecture.
+Keep [Architecture Boundaries](/docs/BOUNDARIES), [Services](/docs/SERVICES),
+[CI/CD](/docs/CI-CD), and [Coolify](/docs/COOLIFY) as the canonical written
+sources. The graph is a quick spatial map for orientation and review.
+
+<ArchitectureIsoflow />
+
+## Reading The Map
+
+- **Application surfaces** are the user app, operator apps, and docs site.
+- **Runtime data plane** covers PostgreSQL, Redis/BullMQ, workers, and shared code.
+- **External providers** are TMDB, OpenAI, and Resend.
+- **Image promotion** shows the GHCR to Coolify deployment path.
+
+## Experiment Notes
+
+The source model lives in
+`apps/docs/src/diagrams/popchoice-architecture.ts`, and the wrapper component
+lives in `apps/docs/src/components/ArchitectureIsoflow.tsx`.
+
+The graph uses the Isoflow Community Edition React component via a client-only
+Next.js dynamic import. This keeps the experiment close to the upstream API:
+`initialData` is versioned in git, while Isoflow owns the rendered graph,
+viewport, and exploratory canvas behavior.
+
+Icons come from `@isoflow/isopacks/dist/isoflow`. The package license is marked
+as `Varies`, so this dependency should stay part of the experiment unless we do
+a proper asset/license review.

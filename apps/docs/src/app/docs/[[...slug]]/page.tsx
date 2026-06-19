@@ -3,6 +3,7 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import type { DocData } from 'fumadocs-mdx/runtime/types';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
+import { ArchitectureIsoflow } from '@/components/ArchitectureIsoflow';
 import { source } from '@/lib/source';
 
 function getPlainText(children: ReactNode): string {
@@ -26,6 +27,7 @@ function createMdxComponents(pageTitle: string) {
 
   return {
     ...defaultMdxComponents,
+    ArchitectureIsoflow,
     h1: (props: HTMLAttributes<HTMLHeadingElement>) => {
       if (
         !skippedMatchingTitle &&
