@@ -20,14 +20,12 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
   await expect(page.getByRole('heading', { name: 'Missing poster_url' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-catalog-repair-enhanced', 'true');
   await expect(
-    page
-      .locator('#issue-missing_poster_url')
-      .getByRole('link', { name: 'PopChoice E2E Space Opera' }),
+    page.locator('#issue-missing_poster_url').getByRole('link', { name: 'Arrival' }),
   ).toBeVisible();
 
   const queueButton = page
     .locator('#issue-missing_poster_url')
-    .getByRole('row', { name: /#1 PopChoice E2E Space Opera/ })
+    .getByRole('row', { name: /#7 Arrival/ })
     .getByRole('button', { name: 'Queue backfill' });
   const [actionResponse] = await Promise.all([
     page.waitForResponse(
@@ -47,7 +45,7 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
   const queuedJobRow = page
     .getByRole('row')
     .filter({ hasText: 'backfill-movie' })
-    .filter({ hasText: 'Movie: 1' })
+    .filter({ hasText: 'Movie: 7' })
     .first();
   await expect(queuedJobRow).toBeVisible();
   await expect(queuedJobRow).toContainText('Reason: missing_metadata');
@@ -58,7 +56,7 @@ test('operator queues a catalog repair and sees the queued job and audit row', a
   const auditRow = page
     .locator('#repair-audit')
     .getByRole('row')
-    .filter({ hasText: 'Movie #1' })
+    .filter({ hasText: 'Movie #7' })
     .filter({ hasText: 'Enqueue Backfill' })
     .first();
   await expect(auditRow).toBeVisible();
@@ -73,10 +71,8 @@ test('operator applies a seeded TMDB review candidate from queue to audit histor
   await page.goto('/tmdb-reviews');
 
   await expect(page.getByRole('heading', { name: 'TMDB Match Reviews' })).toBeVisible();
-  await expect(page.getByText('PopChoice E2E Space Opera', { exact: true })).toBeVisible();
-  await expect(
-    page.getByText('PopChoice E2E Space Opera Definitive Match', { exact: false }),
-  ).toBeVisible();
+  await expect(page.getByText('The Matrix', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('The Matrix (1999)', { exact: false })).toBeVisible();
   await expect(page.getByText(/Showing 1-1 of 1 reviews/).first()).toBeVisible();
 
   await page.getByRole('link', { name: '#1' }).click();
@@ -84,12 +80,14 @@ test('operator applies a seeded TMDB review candidate from queue to audit histor
   await expect(page.getByRole('heading', { name: 'TMDB Review #1' })).toBeVisible();
   await expect(page.locator('.page-description').getByText('Ambiguous match')).toBeVisible();
   await expect(
-    page.getByText('E2E fixture for the backoffice TMDB review decision flow.'),
+    page.getByText(
+      'E2E fixture for the backoffice TMDB review decision flow using real movie metadata.',
+    ),
   ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Candidates' })).toBeVisible();
 
   const bestCandidate = page.getByRole('article').filter({
-    has: page.getByRole('heading', { name: 'PopChoice E2E Space Opera Definitive Match' }),
+    has: page.getByRole('heading', { exact: true, name: 'The Matrix' }),
   });
   await bestCandidate
     .getByPlaceholder('Why this candidate is correct')
@@ -98,7 +96,7 @@ test('operator applies a seeded TMDB review candidate from queue to audit histor
 
   await expect(page.getByRole('heading', { name: 'TMDB Review #1' })).toBeVisible();
   await expect(page.locator('.page-description').getByText('Resolved')).toBeVisible();
-  await expect(page.getByText('990001').first()).toBeVisible();
+  await expect(page.getByText('603').first()).toBeVisible();
   await expect(page.getByText('apply candidate')).toBeVisible();
   await expect(page.getByText('Verified by e2e operator flow.')).toBeVisible();
 
@@ -106,6 +104,6 @@ test('operator applies a seeded TMDB review candidate from queue to audit histor
 
   await expect(page.getByRole('heading', { name: 'TMDB Match Reviews' })).toBeVisible();
   await expect(page.getByText(/Showing 1-1 of 1 reviews/).first()).toBeVisible();
-  await expect(page.getByText('PopChoice E2E Space Opera', { exact: true })).toBeVisible();
+  await expect(page.getByText('The Matrix', { exact: true }).first()).toBeVisible();
   await expect(page.locator('.review-table').getByText('Resolved')).toBeVisible();
 });

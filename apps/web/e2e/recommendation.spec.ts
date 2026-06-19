@@ -1,6 +1,6 @@
 import { expect, test } from 'playwright/test';
 
-import { readSession, registerUser, uniqueEmail } from './helpers';
+import { disableE2EMotion, readSession, registerUser, uniqueEmail } from './helpers';
 
 import type { Page } from 'playwright/test';
 
@@ -77,6 +77,10 @@ async function completeFastPickQuestions(
   await page.getByRole('button', { name: /Balanced/ }).click();
   await page.getByRole('button', { name: finalButtonName }).click();
 }
+
+test.beforeEach(async ({ page }) => {
+  await disableE2EMotion(page);
+});
 
 test('submits the solo quiz, renders deterministic results, and records feedback', async ({
   page,
