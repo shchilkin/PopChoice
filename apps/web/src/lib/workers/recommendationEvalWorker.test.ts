@@ -166,6 +166,7 @@ describe('createRecommendationEvalWorker', () => {
     expect(capturedProcessor.current).not.toBeNull();
     await capturedProcessor.current!(makeJob());
 
+    expect(mockInitDatabase).toHaveBeenCalledTimes(2);
     expect(mockInitDatabase).toHaveBeenCalledWith('postgres://localhost/test');
     expect(mockEnsureRecommendationEvalRunSchema).toHaveBeenCalled();
     expect(mockMarkRecommendationEvalRunProcessing).toHaveBeenCalledWith(
@@ -185,6 +186,9 @@ describe('createRecommendationEvalWorker', () => {
       response: { title: 'Paddington 2' },
       score: 100,
     });
+    expect(mockInitDatabase.mock.invocationCallOrder[1]).toBeLessThan(
+      mockCompleteRecommendationEvalRun.mock.invocationCallOrder[0],
+    );
   });
 
   it('allows guarded live eval jobs to run through the same persisted worker path', async () => {
@@ -217,11 +221,15 @@ describe('createRecommendationEvalWorker', () => {
     createRecommendationEvalWorker();
 
     await expect(capturedProcessor.current!(makeJob())).rejects.toThrow('catalog unavailable');
+    expect(mockInitDatabase).toHaveBeenCalledTimes(2);
     expect(mockFailRecommendationEvalRun).toHaveBeenCalledWith({
       errorMessage: 'catalog unavailable',
       runId: '11111111-1111-4111-8111-111111111111',
       status: 'failed',
     });
+    expect(mockInitDatabase.mock.invocationCallOrder[1]).toBeLessThan(
+      mockFailRecommendationEvalRun.mock.invocationCallOrder[0],
+    );
   });
 
   it('records queue metrics for completed and failed events', () => {

@@ -120,19 +120,14 @@ async function getCatalogRetrievalCandidateAvailabilityChecks(
 }
 
 async function getCatalogMetadataQualityMetricsCheck(): Promise<RecommendationEvalCheck> {
-  const { closeDatabase, getCatalogHealthReport, initDatabase } =
-    await import('@pop-choice/shared');
+  const { getCatalogHealthReport, initDatabase } = await import('@pop-choice/shared');
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error('Catalog metadata quality evals require DATABASE_URL.');
   }
 
   initDatabase(databaseUrl);
-  const report = await getCatalogHealthReport({ sampleLimit: 0, staleAfterDays: 180 }).finally(
-    async () => {
-      await closeDatabase();
-    },
-  );
+  const report = await getCatalogHealthReport({ sampleLimit: 0, staleAfterDays: 180 });
   const interestingIssues = report.issues
     .filter((issue) =>
       [
