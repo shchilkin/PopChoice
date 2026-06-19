@@ -52,6 +52,8 @@
     "start:storybook": "npm run start:storybook --workspace=apps/web",
     "storybook": "npm run storybook --workspace=apps/web",
     "test": "npm run test --workspace=apps/web",
+    "test:a11y": "npm run test:e2e:setup && npm run test:a11y:run && npm run test:e2e:down",
+    "test:a11y:run": "playwright test --config apps/web/playwright.a11y.config.ts",
     "test:backoffice": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run quality:backoffice && npm run test --workspace=apps/backoffice",
     "test:e2e": "npm run test:e2e:setup && npm run test:e2e:run && npm run test:e2e:backoffice:run",
     "test:e2e:backoffice": "npm run test:e2e:setup && npm run test:e2e:backoffice:run",

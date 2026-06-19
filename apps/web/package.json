@@ -66,6 +66,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@chromatic-com/storybook": "^5.2.1",
     "@storybook/addon-a11y": "^10.4.5",
     "@storybook/addon-docs": "^10.4.5",

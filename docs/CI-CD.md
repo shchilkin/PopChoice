@@ -8,7 +8,7 @@ title: 'CI/CD Documentation'
 
 This project uses these GitHub Actions workflow files for pull request validation and security scanning:
 
-- `.github/workflows/pr.yml` – main application and workspace checks (lint, Fallow audit, type-check, web tests, recommendation evals, Storybook tests, e2e smoke tests, build, service CI, dependency review)
+- `.github/workflows/pr.yml` – main application and workspace checks (lint, Fallow audit, type-check, web tests, recommendation evals, Storybook tests, accessibility checks, e2e smoke tests, build, service CI, dependency review)
 - `.github/workflows/recommendation-real-data-evals.yml` – scheduled/manual recommendation evals against a seeded database and real catalog retrieval
 - `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
@@ -30,6 +30,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | `pr.yml`                             | `recommendation-evals`           | Deterministic recommendation quality fixtures and scoring                       |
 | `pr.yml`                             | `storybook-tests`                | Playwright browser install + Storybook component tests                          |
 | `pr.yml`                             | `e2e-tests`                      | Playwright smoke tests against isolated PostgreSQL + Redis services             |
+| `pr.yml`                             | `a11y-tests`                     | axe accessibility smoke tests against seeded app flows                          |
 | `pr.yml`                             | `build`                          | Next.js production build verification                                           |
 | `pr.yml`                             | `services-ci`                    | Shared package tests plus Turbo test pass for `services/*`                      |
 | `pr.yml`                             | `dependency-review`              | Blocks PRs introducing vulnerable dependencies                                  |
@@ -54,11 +55,19 @@ The `storybook-tests` job runs `npx playwright install-deps` on every CI run and
 
 The `storybook-tests` job caches Playwright browser binaries in `~/.cache/ms-playwright` using `actions/cache@v5`, keyed on the OS and `package-lock.json` hash. On a cache hit, the browser download step is skipped, but `npx playwright install-deps` still runs because Linux system packages are not part of the Playwright browser cache.
 
+The `a11y-tests` job intentionally avoids this cache path. It runs inside the pinned official `mcr.microsoft.com/playwright:v1.61.0-noble` container, matching the `playwright` package version in `package-lock.json`, so Chromium and system dependencies are already present in the image. The job uses GitHub service containers for PostgreSQL and Redis, then runs the e2e migration/seed script with `E2E_SKIP_DOCKER=1`.
+
 ### E2E Smoke Tests
 
 The `e2e-tests` job runs `npm run test:e2e`. That command starts the isolated `docker-compose.e2e.yml` services, applies the same `db/init` migrations used by production/local setup, seeds deterministic movie fixtures, starts the web app on port `3100`, starts the backoffice app on port `3101`, and runs both Playwright suites. The job always runs `npm run test:e2e:down` afterwards so the disposable database volume is removed.
 
 The e2e coverage proves the real app can read seeded catalog data from PostgreSQL, that `/api/health` can reach both PostgreSQL and Redis, and that auth/session, catalog empty states, quiz submission, deterministic result rendering, feedback, movie-memory persistence, backoffice catalog repair enqueue/audit visibility, and TMDB review decisions work through the browser. AI-eval coverage is tracked separately so model quality gates can use fixture scoring and optional live-provider runs.
+
+### Accessibility Tests
+
+The `a11y-tests` job runs `npm run test:a11y:run` after preparing the same deterministic movie fixtures used by e2e. The Playwright config lives at `apps/web/playwright.a11y.config.ts`, and the tests live under `apps/web/a11y/`.
+
+The suite uses `@axe-core/playwright` and blocks critical or serious WCAG 2 A/AA, WCAG 2.1 A/AA, and axe best-practice violations on the public entrypoints, auth forms, catalog page, and an authenticated deterministic results page. Full Playwright output is uploaded as the `playwright-a11y-report` artifact.
 
 ### Recommendation Evals
 

@@ -44,7 +44,7 @@ const followUpButtonStyle = {
   disabled: {
     background: 'var(--pc-chip-bg)',
     border: '1px solid var(--pc-chip-bd)',
-    color: 'var(--pc-t4)',
+    color: 'var(--pc-chip-text)',
     cursor: 'not-allowed',
   },
 } satisfies Record<'enabled' | 'disabled', CSSProperties>;
@@ -108,7 +108,7 @@ function SharedFeedbackHint({
       style={{
         background: 'var(--pc-ghost)',
         border: '1px solid var(--pc-bd2)',
-        color: 'var(--pc-t4)',
+        color: 'var(--pc-chip-text)',
         fontSize: '0.78rem',
       }}
     >
@@ -318,7 +318,7 @@ export function RecommendationFeedbackPanel({
           >
             {t.results.feedbackPrompt}
           </p>
-          <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.78rem' }}>
+          <p className="mt-1" style={{ color: 'var(--pc-chip-text)', fontSize: '0.78rem' }}>
             <FeedbackStatusText
               feedbackState={feedbackState}
               followUpState={followUpState}
@@ -346,11 +346,11 @@ export function RecommendationFeedbackPanel({
           <div>
             <p
               className="uppercase tracking-widest"
-              style={{ color: 'var(--pc-t3)', fontSize: '0.66rem' }}
+              style={{ color: 'var(--pc-chip-text)', fontSize: '0.66rem' }}
             >
               {t.results.feedbackActionTitle}
             </p>
-            <p className="mt-1" style={{ color: 'var(--pc-t4)', fontSize: '0.76rem' }}>
+            <p className="mt-1" style={{ color: 'var(--pc-chip-text)', fontSize: '0.76rem' }}>
               {t.results.feedbackActionHint}
             </p>
           </div>

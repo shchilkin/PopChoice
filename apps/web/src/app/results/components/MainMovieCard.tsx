@@ -320,8 +320,11 @@ function MainMatchSummary({
   return (
     <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
       <div className="flex items-center gap-2">
-        <Clapperboard size={13} style={{ color: 'var(--pc-t3)' }} />
-        <span title={view.matchExactLabel} style={{ color: 'var(--pc-t3)', fontSize: '0.82rem' }}>
+        <Clapperboard size={13} style={{ color: 'var(--pc-chip-text)' }} />
+        <span
+          title={view.matchExactLabel}
+          style={{ color: 'var(--pc-chip-text)', fontSize: '0.82rem' }}
+        >
           {view.year} · {view.matchLabel}
         </span>
       </div>
@@ -347,7 +350,7 @@ function MainScoreRow({ view }: { view: ResultMovieCardViewModel }) {
   return (
     <div className="flex items-center gap-2 mb-4">
       <StarRating score={view.score} />
-      <span style={{ color: 'var(--pc-t3)', fontSize: '0.78rem' }}>{view.score}/10</span>
+      <span style={{ color: 'var(--pc-chip-text)', fontSize: '0.78rem' }}>{view.score}/10</span>
     </div>
   );
 }
@@ -468,7 +471,7 @@ function MainRationale({ view }: { view: ResultMovieCardViewModel }) {
           {view.rationaleLabel}
         </span>
       </div>
-      <p style={{ color: 'var(--pc-t2)', fontSize: '0.88rem', lineHeight: 1.75 }}>
+      <p style={{ color: 'var(--pc-chip-text)', fontSize: '0.88rem', lineHeight: 1.75 }}>
         <MarkdownText text={view.description} />
       </p>
     </div>

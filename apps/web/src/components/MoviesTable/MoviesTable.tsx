@@ -272,7 +272,7 @@ function MovieMetadataChips({ movie }: { movie: Movie }) {
           style={{
             background: 'var(--pc-surface-hover)',
             border: '1px solid var(--pc-bd1)',
-            color: 'var(--pc-t3)',
+            color: 'var(--pc-chip-text)',
           }}
         >
           <Clock size={13} aria-hidden="true" />

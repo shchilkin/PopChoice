@@ -47,7 +47,7 @@ function SuggestionSectionTitle({ label, gradient }: SuggestionSectionTitleProps
   return (
     <div className="flex items-center gap-2">
       <div className="w-1.5 h-5 rounded-full" style={{ background: gradient }} />
-      <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-t2)' }}>
+      <span className="uppercase tracking-widest text-xs" style={{ color: 'var(--pc-chip-text)' }}>
         {label}
       </span>
     </div>
@@ -430,7 +430,7 @@ const MORE_PICKS_STATUS_ICONS = {
 
 function getMorePicksStatusColor(tone: MorePicksStatusTone) {
   const colors = {
-    muted: 'var(--pc-t4)',
+    muted: 'var(--pc-chip-text)',
     success: 'var(--pc-gold-text)',
     warning: palette.amber,
   } as const;
@@ -578,11 +578,11 @@ function MorePicksControl({
         <div>
           <p
             className="uppercase tracking-widest"
-            style={{ color: 'var(--pc-t2)', fontSize: '0.68rem' }}
+            style={{ color: 'var(--pc-chip-text)', fontSize: '0.68rem' }}
           >
             {results.morePicksTitle}
           </p>
-          <p className="mt-1 text-sm" style={{ color: 'var(--pc-t4)' }}>
+          <p className="mt-1 text-sm" style={{ color: 'var(--pc-chip-text)' }}>
             {results.morePicksHint}
           </p>
         </div>
@@ -596,11 +596,11 @@ function MorePicksControl({
                 onClick={() => setLens(option.value)}
                 aria-pressed={isSelected}
                 disabled={viewState === 'loading'}
-                className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)] disabled:opacity-60"
+                className="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
                 style={{
                   background: isSelected ? 'var(--pc-gold-subtle)' : 'transparent',
                   border: '1px solid var(--pc-bd2)',
-                  color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-t3)',
+                  color: isSelected ? 'var(--pc-gold-text)' : 'var(--pc-chip-text)',
                 }}
               >
                 {option.label}

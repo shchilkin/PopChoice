@@ -44,6 +44,7 @@ export function HowItWorksSection() {
           {t.about.howItWorks.steps.map((step, i) => {
             const Icon = STEP_ICONS[i];
             const color = STEP_COLORS[i];
+            const textColor = color === palette.purple ? '#A78BFA' : color;
             if (!Icon || !color) {
               if (process.env.NODE_ENV === 'development')
                 // eslint-disable-next-line no-console
@@ -77,7 +78,7 @@ export function HowItWorksSection() {
                   <div className="flex items-center gap-3 mb-2">
                     <span
                       style={{
-                        color,
+                        color: textColor,
                         fontFamily: "var(--font-oswald), 'Oswald', sans-serif",
                         fontWeight: '600',
                         textTransform: 'uppercase',
