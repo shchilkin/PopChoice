@@ -10,15 +10,20 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service / Tool               | Type             | Trigger                                                 | Source        |
-| ---------------------------- | ---------------- | ------------------------------------------------------- | ------------- |
-| `movie-discovery`            | Scheduled        | Cron / One-shot                                         | TMDB API      |
-| `movie-backfill`             | One-shot         | Manual                                                  | TMDB API      |
-| `catalog:health`             | Read-only report | Manual / CI                                             | PostgreSQL    |
-| BullMQ `recommendation`      | Per-request      | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
-| BullMQ `more-picks`          | On demand        | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
-| BullMQ `movie-seed`          | Worker queue     | Recommendation JIT seeding, Backoffice curated seed     | TMDB + file   |
-| BullMQ `catalog-maintenance` | Maintenance jobs | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
+| Service / Tool               | Type                   | Trigger                                                 | Source        |
+| ---------------------------- | ---------------------- | ------------------------------------------------------- | ------------- |
+| `movie-discovery`            | Scheduled service      | Cron / manual one-shot                                  | TMDB API      |
+| `movie-backfill`             | Manual maintenance CLI | Operator fallback / dry-run                             | TMDB API      |
+| `catalog:health`             | Read-only report       | Manual / CI                                             | PostgreSQL    |
+| BullMQ `recommendation`      | Per-request            | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
+| BullMQ `more-picks`          | On demand              | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
+| BullMQ `movie-seed`          | Worker queue           | Recommendation JIT seeding, Backoffice curated seed     | TMDB + file   |
+| BullMQ `catalog-maintenance` | Maintenance jobs       | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
+
+Backoffice and the BullMQ `catalog-maintenance` worker are the primary path for
+catalog discovery and backfill work. The `movie-backfill` CLI remains available
+for bounded manual maintenance, dry-runs, and local/operator fallback flows
+where queue visibility, retries, or Backoffice controls are not required.
 
 ---
 
