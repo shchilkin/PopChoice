@@ -8,7 +8,7 @@ import {
   retryCatalogRepairBatchItem,
   wantsBackofficeJsonResponse,
 } from '../../../../lib/backoffice';
-import { isSameOriginRequest } from '../../../../lib/sameOriginRequest';
+import { backofficeRedirectUrl, isSameOriginRequest } from '../../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,12 +22,14 @@ function buildRepairBatchRedirectUrl({
   request,
   returnPath,
   status,
+  trustRequestEvidence = false,
 }: {
   request: NextRequest;
   returnPath: string;
   status: string;
+  trustRequestEvidence?: boolean;
 }) {
-  const url = new URL(returnPath, request.url);
+  const url = backofficeRedirectUrl(request, returnPath, { trustRequestEvidence });
   url.searchParams.set('item_retry', status);
   return url;
 }
@@ -36,12 +38,17 @@ function buildRepairBatchActionRedirect({
   request,
   returnPath,
   status,
+  trustRequestEvidence = false,
 }: {
   request: NextRequest;
   returnPath: string;
   status: string;
+  trustRequestEvidence?: boolean;
 }) {
-  return NextResponse.redirect(buildRepairBatchRedirectUrl({ request, returnPath, status }), 303);
+  return NextResponse.redirect(
+    buildRepairBatchRedirectUrl({ request, returnPath, status, trustRequestEvidence }),
+    303,
+  );
 }
 
 function ensureRepairBatchFormBatchId(formData: FormData, batchId: string): void {
@@ -111,17 +118,21 @@ async function handleRepairBatchRetryRequest({
     request,
     returnPath: parsedReturnPath,
     status: result.status,
+    trustRequestEvidence: true,
   });
 }
 
 export async function POST(request: NextRequest, context: RepairBatchActionContext) {
   const { id } = await context.params;
   let returnPath = `/repair-batches/${encodeURIComponent(id)}`;
+  let trustRequestEvidence = false;
 
   try {
     if (!isSameOriginRequest(request)) {
       return buildRepairBatchForbiddenResponse(request, returnPath);
     }
+
+    trustRequestEvidence = true;
 
     return await handleRepairBatchRetryRequest({ batchId: id, request, returnPath });
   } catch (error) {
@@ -133,6 +144,11 @@ export async function POST(request: NextRequest, context: RepairBatchActionConte
       );
     }
 
-    return buildRepairBatchActionRedirect({ request, returnPath, status: 'failed' });
+    return buildRepairBatchActionRedirect({
+      request,
+      returnPath,
+      status: 'failed',
+      trustRequestEvidence,
+    });
   }
 }
