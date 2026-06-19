@@ -55,11 +55,11 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 - `npm run copy:env` - Copy the root `.env` into `apps/*`, `services/*`, and `packages/shared`
 - `npm run migrate:db` - Apply all idempotent SQL migrations from `db/init`
 - `npm run storybook` - Start Storybook development server
-- `npm run build-storybook` - Build Storybook for production
+- `npm run build:storybook` - Build Storybook for production
 
 Workspace-local scripts used during app development:
 
-- `cd apps/web && npm run start:workers` - Start BullMQ workers for async recommendations
+- `npm run start:workers --workspace=apps/web` - Start BullMQ workers for async recommendations
 - `npm run bull-board` - Open the BullMQ dashboard locally
   (`OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` enable the same login
   used in production)
@@ -70,8 +70,8 @@ Workspace-local scripts used during app development:
 
 - `npm run setup:local-db` - Start local PostgreSQL + Redis via Docker and write credentials to `.env`
 - `npm run cleanup:local-db` - Stop containers and remove the database volume (full reset)
-- `npm run analyze-movies` - Analyze movie data chunks for embedding optimization
-- `npm run calibrate-similarity` - Recalibrate recommendation similarity thresholds against the live DB
+- `npm run analyze-movies --workspace=apps/web` - Analyze movie data chunks for embedding optimization
+- `npm run calibrate-similarity --workspace=apps/web` - Recalibrate recommendation similarity thresholds against the live DB
 
 ## Database Setup Workflow
 
@@ -79,7 +79,7 @@ The project includes scripts to help you set up and manage your movie recommenda
 
 1. **Start the DB** - Run `npm run setup:local-db` to spin up PostgreSQL + Redis and initialize credentials
 2. **Sync env files** - Run `npm run copy:env` so the web app and services use the updated root `.env`
-3. **Run the app and workers** - Start `npm run dev` from the repo root and `cd apps/web && npm run start:workers` in a second terminal
+3. **Run the app and workers** - Start `npm run dev` from the repo root and `npm run start:workers --workspace=apps/web` in a second terminal
 4. **Seed the DB** - Start `npm run dev:backoffice`, open the Catalog seed page, and trigger the curated seed job
 5. **Reset** - Run `npm run cleanup:local-db` to wipe everything, then repeat from step 1
 
@@ -122,8 +122,7 @@ Then run the app in separate terminals:
 npm run dev
 
 # terminal 2
-cd apps/web
-npm run start:workers
+npm run start:workers --workspace=apps/web
 
 # optional terminal 3
 npm run bull-board
@@ -262,6 +261,7 @@ Use three eval levels when changing AI-related code:
 
 ```text
 apps/
+├── docs/                  # Fumadocs documentation site rendering docs/
 ├── web/
 │   └── src/
 │       ├── app/           # Next.js route and page boundaries
@@ -278,10 +278,12 @@ apps/
 ├── bull-board/            # Queue monitoring app
 ├── backoffice/            # Operator app for catalog health and review
 packages/
-└── shared/                # Shared helpers reused by root services
+├── shared/                # Shared database, embedding, logging, and utility code
+└── ui/                    # Shared shadcn-derived UI primitives
 services/
 ├── movie-discovery/       # Scheduled or one-shot TMDB discovery process
-└── movie-backfill/        # Metadata backfill process
+├── movie-backfill/        # Manual TMDB metadata maintenance CLI / fallback
+└── db-migrate/            # Containerized database migration runtime
 db/                        # SQL scripts and DB initialization assets
 ```
 

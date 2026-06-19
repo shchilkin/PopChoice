@@ -43,7 +43,7 @@ npm run setup:local-db      # spin up local PostgreSQL + Redis via Docker
 npm run copy:env            # copy root .env into apps/services workspaces
 npm run dev                 # start the dev server at http://localhost:3000
 # in a second terminal:
-cd apps/web && npm run start:workers
+npm run start:workers --workspace=apps/web
 # in a third terminal:
 npm run dev:backoffice      # open Catalog seed and trigger the curated seed
 ```
@@ -131,9 +131,8 @@ Run the web app and the BullMQ workers in separate terminals:
 # terminal 1, repo root
 npm run dev
 
-# terminal 2, apps/web workspace
-cd apps/web
-npm run start:workers
+# terminal 2, repo root
+npm run start:workers --workspace=apps/web
 
 # terminal 3, repo root
 npm run dev:backoffice
@@ -236,14 +235,14 @@ as a separate Coolify service for design review.
 
 ### Troubleshooting
 
-| Problem                             | Solution                                                  |
-| ----------------------------------- | --------------------------------------------------------- |
-| `DATABASE_URL is not set`           | Run `npm run setup:local-db`, then `npm run copy:env`     |
-| Recommendations stay pending        | Start workers with `cd apps/web && npm run start:workers` |
-| App or workers use stale env values | Re-run `npm run copy:env` after editing the root `.env`   |
-| Docker container not starting       | Ensure Docker Desktop is running                          |
-| OpenAI errors when seeding          | Verify `OPENAI_API_KEY` is correct in `.env`              |
-| Missing movie posters               | Add a valid `TMDB_API_KEY` to `.env`                      |
+| Problem                             | Solution                                                |
+| ----------------------------------- | ------------------------------------------------------- |
+| `DATABASE_URL is not set`           | Run `npm run setup:local-db`, then `npm run copy:env`   |
+| Recommendations stay pending        | Run `npm run start:workers --workspace=apps/web`        |
+| App or workers use stale env values | Re-run `npm run copy:env` after editing the root `.env` |
+| Docker container not starting       | Ensure Docker Desktop is running                        |
+| OpenAI errors when seeding          | Verify `OPENAI_API_KEY` is correct in `.env`            |
+| Missing movie posters               | Add a valid `TMDB_API_KEY` to `.env`                    |
 
 ## 📖 Documentation
 
@@ -290,10 +289,12 @@ apps/
 │       └── utils/         # Reusable utilities and data helpers
 ├── bull-board/            # Queue monitoring app
 packages/
-└── shared/                # Shared package reused by background services
+├── shared/                # Shared database, embedding, logging, and utility code
+└── ui/                    # Shared shadcn-derived UI primitives
 services/
 ├── movie-discovery/       # Continuous TMDB movie discovery service
-└── movie-backfill/        # One-shot service to backfill missing movie metadata
+├── movie-backfill/        # Manual TMDB metadata maintenance CLI / fallback
+└── db-migrate/            # Containerized database migration runtime
 db/                        # Database migrations / schema
 ```
 
@@ -306,7 +307,7 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
   `apps/web/data/movies.txt`, generate OpenAI embeddings, insert missing rows,
   and optionally queue bounded catalog repair work for TMDB ids/posters.
 - **movie-discovery** (`services/movie-discovery/`) — Continuous TMDB-driven service that discovers new movies, applies quality filters (vote count, rating, overview length), generates embeddings, and inserts them into the database. Supports scheduled and one-shot modes. See [`services/movie-discovery/README.md`](./services/movie-discovery/README.md).
-- **movie-backfill** (`services/movie-backfill/`) — One-shot script that backfills missing `duration` and `age_rating` data for movies already in the database, re-generating their embeddings. Supports dry-run mode. See [`services/movie-backfill/README.md`](./services/movie-backfill/README.md).
+- **movie-backfill** (`services/movie-backfill/`) — Manual maintenance CLI for inspecting catalog gaps, backfilling missing TMDB metadata, and exporting fallback SQL patches. The primary day-to-day repair path is Backoffice plus the BullMQ `catalog-maintenance` queue. See [`services/movie-backfill/README.md`](./services/movie-backfill/README.md).
 
 ## 🧪 Development Scripts
 
@@ -325,7 +326,7 @@ npm run build:backoffice            # Build the backoffice app
 npm run build:storybook             # Build static Storybook
 npm run check:backoffice            # Shared build + backoffice structure/type/test checks
 npm run start --workspace=apps/web  # Start production server (apps/web)
-cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
+npm run start:workers --workspace=apps/web # Start BullMQ workers
 npm run bull-board                  # Launch BullMQ dashboard (apps/bull-board)
 
 # Testing
@@ -347,8 +348,8 @@ npm run copy:env             # Sync root .env into apps/services workspaces
 npm run migrate:db           # Apply idempotent SQL migrations
 npm run setup:backoffice:local-data # Run setup:local-db and copy:env
 npm run catalog:health       # Report catalog metadata coverage and likely duplicates
-npm run analyze-movies       # Analyze movie data for embeddings
-npm run calibrate-similarity # Calibrate vector similarity thresholds
+npm run analyze-movies --workspace=apps/web       # Analyze movie data for embeddings
+npm run calibrate-similarity --workspace=apps/web # Calibrate vector similarity thresholds
 npm run test:services        # Run shared package and service test scripts
 ```
 

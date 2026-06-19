@@ -78,8 +78,8 @@ When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequ
 ### Starting workers
 
 ```bash
-# From apps/web
-npm run start:workers
+# From repo root
+npm run start:workers --workspace=apps/web
 ```
 
 Or via Docker Compose (workers.Dockerfile).
@@ -497,7 +497,7 @@ If the DB grows substantially, a new embedding model is adopted, or scores shift
 1. Run the built-in calibration tool (requires `OPENAI_API_KEY` and `DATABASE_URL` in `.env`):
 
    ```bash
-   npm run calibrate-similarity
+   npm run calibrate-similarity --workspace=apps/web
    ```
 
    The script embeds 5 representative queries, queries the live DB, and prints ranked results with cosine scores. It also prints the highest observed score and a suggested threshold (~2/3 of ceiling).
@@ -511,7 +511,7 @@ If the DB grows substantially, a new embedding model is adopted, or scores shift
    npx vitest --project=server run src/app/api/movie-recommendation/route.test.ts
    ```
 
-To add or edit calibration queries, modify the `QUERIES` array in `scripts/calibrate-similarity.ts`.
+To add or edit calibration queries, modify the `QUERIES` array in `apps/web/scripts/calibrate-similarity.ts`.
 
 ### Constants (`apps/web/src/features/recommendation/config.ts`)
 

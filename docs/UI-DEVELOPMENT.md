@@ -37,7 +37,9 @@ and `apps/backoffice`. Keep it dependency-light and extract only reusable interf
 packages/ui
 ├── src
 │   ├── badge.tsx
+│   ├── breadcrumb.tsx
 │   ├── button.tsx
+│   ├── dialog.tsx
 │   ├── table.tsx
 │   ├── tabs.tsx
 │   ├── utils.ts
@@ -52,7 +54,12 @@ Use package exports such as:
   "exports": {
     ".": "./src/index.ts",
     "./button": "./src/button.tsx",
-    "./badge": "./src/badge.tsx"
+    "./badge": "./src/badge.tsx",
+    "./breadcrumb": "./src/breadcrumb.tsx",
+    "./dialog": "./src/dialog.tsx",
+    "./tabs": "./src/tabs.tsx",
+    "./table": "./src/table.tsx",
+    "./utils": "./src/utils.ts"
   }
 }
 ```
@@ -78,6 +85,10 @@ Current shadcn-derived primitives:
 
 - `Button`, `ButtonLink`, `buttonVariants`
 - `Badge`
+- `Breadcrumb`, `BreadcrumbList`, `BreadcrumbItem`, `BreadcrumbLink`,
+  `BreadcrumbPage`, `BreadcrumbSeparator`, `BreadcrumbEllipsis`
+- `Dialog`, `DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`,
+  `DialogDescription`, `DialogTrigger`, `DialogClose`
 - `TabsNav`, `TabsLink`
 - `TableScroll`, `Table`, `DataTable`, `TableEmptyRow`
 
@@ -85,7 +96,7 @@ Next likely primitives:
 
 - `tooltip`
 - `field`, `input`, `textarea`, `select`, `checkbox`, `switch`
-- `dialog` or `alert-dialog` for destructive/batch confirmations
+- `alert-dialog` for destructive/batch confirmations when the base dialog contract is not enough
 - `dropdown-menu`, `popover`, `command`/`combobox` for operator search and filters
 - `pagination`, `skeleton`, `empty`
 
