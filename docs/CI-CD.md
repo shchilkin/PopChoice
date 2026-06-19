@@ -6,13 +6,14 @@ title: 'CI/CD Documentation'
 
 ## GitHub Actions Workflow
 
-This project uses these GitHub Actions workflow files for pull request validation and security scanning:
+This project uses these GitHub Actions workflow files for pull request validation, image publishing, deploy promotion, security scanning, scheduled evals, and dependency automation:
 
 - `.github/workflows/pr.yml` – main application and workspace checks (lint, Fallow audit, type-check, web tests, recommendation evals, Storybook tests, accessibility checks, e2e smoke tests, build, service CI, dependency review)
 - `.github/workflows/recommendation-real-data-evals.yml` – scheduled/manual recommendation evals against a seeded database and real catalog retrieval
 - `.github/workflows/container-images.yml` – production container image builds for app and service runtimes, published to GitHub Container Registry with commit and PR provenance metadata
 - `.github/workflows/movie-discovery-ci.yml` – TypeScript compilation and tests for the `services/movie-discovery` service, triggered when files under `services/movie-discovery/` change or when `.github/workflows/movie-discovery-ci.yml` itself changes
 - `.github/workflows/codeql.yml` – CodeQL analysis for GitHub Actions and JavaScript/TypeScript on pushes, pull requests, and a weekly schedule
+- `.github/workflows/dependabot-auto-merge.yml` – enables auto-squash merge for Dependabot minor and patch update PRs after required checks pass
 
 ## Workflow Overview
 
@@ -20,26 +21,31 @@ The PR validation workflows run automatically on pull requests targeting the `de
 
 ### Jobs
 
-| Workflow                             | Job                              | Purpose                                                                         |
-| ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------- |
-| `pr.yml`                             | `changes`                        | Classifies PR as docs-only vs code-changing                                     |
-| `pr.yml`                             | `lint`                           | ESLint code quality + Prettier formatting                                       |
-| `pr.yml`                             | `fallow-audit`                   | Required new-only Fallow audit for changed TypeScript/JavaScript quality risks  |
-| `pr.yml`                             | `type-check`                     | TypeScript type safety (`tsc --noEmit`)                                         |
-| `pr.yml`                             | `server-tests`                   | Vitest server tests with coverage collection and artifact upload                |
-| `pr.yml`                             | `recommendation-evals`           | Deterministic recommendation quality fixtures and scoring                       |
-| `pr.yml`                             | `storybook-tests`                | Playwright browser install + Storybook component tests                          |
-| `pr.yml`                             | `e2e-tests`                      | Playwright smoke tests against isolated PostgreSQL + Redis services             |
-| `pr.yml`                             | `a11y-tests`                     | axe accessibility smoke tests against seeded app flows                          |
-| `pr.yml`                             | `build`                          | Next.js production build verification                                           |
-| `pr.yml`                             | `services-ci`                    | Shared package tests plus Turbo test pass for `services/*`                      |
-| `pr.yml`                             | `dependency-review`              | Blocks PRs introducing vulnerable dependencies                                  |
-| `pr.yml`                             | `pr-validation`                  | Stable required check that always runs on every PR                              |
-| `container-images.yml`               | `build-images`                   | Builds and publishes GHCR production images with provenance                     |
-| `container-images.yml`               | `deploy-coolify`                 | Optionally triggers the Coolify deploy webhook after development images publish |
-| `movie-discovery-ci.yml`             | `movie-discovery-ci`             | TypeScript compilation and tests for `services/movie-discovery`                 |
-| `codeql.yml`                         | `analyze`                        | CodeQL static analysis for Actions and JavaScript/TypeScript                    |
-| `recommendation-real-data-evals.yml` | `recommendation-real-data-evals` | Manual/scheduled seeded-database catalog retrieval evals                        |
+| Workflow                             | Job                              | Purpose                                                                        |
+| ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------ |
+| `pr.yml`                             | `changes`                        | Classifies PR as docs-only vs code-changing                                    |
+| `pr.yml`                             | `lint`                           | ESLint code quality + Prettier formatting                                      |
+| `pr.yml`                             | `fallow-audit`                   | Required new-only Fallow audit for changed TypeScript/JavaScript quality risks |
+| `pr.yml`                             | `type-check`                     | TypeScript type safety (`tsc --noEmit`)                                        |
+| `pr.yml`                             | `server-tests`                   | Vitest server tests with coverage collection and artifact upload               |
+| `pr.yml`                             | `backoffice-tests`               | Shared/UI builds, backoffice quality checks, and backoffice Vitest suite       |
+| `pr.yml`                             | `recommendation-evals`           | Deterministic recommendation quality fixtures and scoring                      |
+| `pr.yml`                             | `storybook-tests`                | Playwright browser install + Storybook component tests                         |
+| `pr.yml`                             | `e2e-tests`                      | Playwright smoke tests against isolated PostgreSQL + Redis services            |
+| `pr.yml`                             | `a11y-tests`                     | axe accessibility smoke tests against seeded app flows                         |
+| `pr.yml`                             | `build`                          | Next.js production build verification                                          |
+| `pr.yml`                             | `docs-build`                     | Documentation type-check and production docs build                             |
+| `pr.yml`                             | `services-ci`                    | Shared package tests plus Turbo test pass for `services/*`                     |
+| `pr.yml`                             | `dependency-review`              | Blocks PRs introducing vulnerable dependencies                                 |
+| `pr.yml`                             | `pr-validation`                  | Stable required check that always runs on every PR                             |
+| `container-images.yml`               | `validate-deploy-request`        | Resolves manual deploy target and enforces matching release refs               |
+| `container-images.yml`               | `build-images`                   | Builds and publishes GHCR production images with provenance                    |
+| `container-images.yml`               | `deploy-development`             | Triggers the development Coolify deploy after development images publish       |
+| `container-images.yml`               | `deploy-production`              | Promotes production tags and triggers the gated production Coolify deploy      |
+| `movie-discovery-ci.yml`             | `movie-discovery-ci`             | TypeScript compilation and tests for `services/movie-discovery`                |
+| `codeql.yml`                         | `analyze`                        | CodeQL static analysis for Actions and JavaScript/TypeScript                   |
+| `recommendation-real-data-evals.yml` | `recommendation-real-data-evals` | Manual/scheduled seeded-database catalog retrieval evals                       |
+| `dependabot-auto-merge.yml`          | `auto-merge`                     | Enables auto-squash merge for Dependabot minor and patch update PRs            |
 
 ## Workflow Features
 
@@ -86,6 +92,14 @@ Agents and reviewers should explicitly consider these layers when a PR changes r
 ### Code Coverage
 
 Server tests run with `--coverage` via `@vitest/coverage-v8`. Coverage reports (HTML, JSON, LCOV) are uploaded as a GitHub Actions artifact named `coverage-report` and retained for 30 days. Coverage is configured in `vitest.config.ts`.
+
+### Backoffice Tests
+
+The `backoffice-tests` job runs `npm run test:backoffice` for code-changing PRs. That root script builds `packages/shared`, builds `packages/ui`, runs the backoffice quality gate, and then runs the `apps/backoffice` Vitest suite.
+
+### Docs Build
+
+The `docs-build` job always runs from `pr.yml`, including docs-only PRs. It runs `npm run type-check:docs` and `npm run build:docs` so documentation routing, MDX compilation, and production build behavior are verified before merge.
 
 ### Fallow Code Quality Audit
 
@@ -287,7 +301,7 @@ on:
     branches: ['development']
 ```
 
-If the PR is docs-only (`docs/**` and root-level `*.md`), heavy CI jobs are skipped and the lightweight `PR Validation` job still reports success. For non-doc PRs, the full CI suite runs and `PR Validation` verifies all required CI jobs succeeded.
+If the PR is docs-only (`docs/**` and root-level `*.md`), code-focused jobs are skipped, `docs-build` still verifies the documentation app, and the lightweight `PR Validation` job still reports success. For non-doc PRs, the full CI suite runs and `PR Validation` verifies all required CI jobs succeeded.
 
 **`container-images.yml`** triggers on pull requests to `development`, pushes
 to `development`, and manual dispatches. Manual runs expose a
@@ -336,11 +350,14 @@ The PR validation workflows are triggered on:
 `pr.yml` always runs and classifies docs-only PRs inside the workflow so `PR Validation` is always reported.
 `container-images.yml` builds production images on pull requests and on pushes
 to `development`; manual runs can also publish `development` or `production`
-promotion tags before triggering the matching Coolify resource. `movie-discovery-ci.yml`
+promotion tags before triggering the matching Coolify resource. Its
+`validate-deploy-request` job enforces that development deploys run from the
+`development` ref and production deploys run from `main`. `movie-discovery-ci.yml`
 additionally **only runs** when at least one file under `services/movie-discovery/**` changes or when
 `.github/workflows/movie-discovery-ci.yml` itself changes. `codeql.yml` runs on
 pushes and pull requests targeting `development`, plus its weekly scheduled
-scan.
+scan. `dependabot-auto-merge.yml` runs on pull requests to `development`, but
+its `auto-merge` job only executes for PRs opened by `dependabot[bot]`.
 
 ## Dependabot
 
@@ -351,6 +368,10 @@ Dependabot is configured in `.github/dependabot.yml` to monitor:
 - **GitHub Actions** – workflow action versions
 
 All groups cover `minor` and `patch` updates. Major updates still require manual review.
+
+Minor and patch Dependabot PRs are eligible for auto-squash merge through
+`.github/workflows/dependabot-auto-merge.yml`. Branch protection still controls
+when the queued auto-merge can complete because required checks must pass first.
 
 ## Local Testing
 
@@ -366,7 +387,7 @@ npm run type-check
 npx vitest --project=server --run --coverage
 
 # Storybook tests (requires Playwright browsers)
-npm run pretest:storybook
+npm run pretest:storybook --workspace=apps/web
 npm run test:storybook
 
 # Verify build

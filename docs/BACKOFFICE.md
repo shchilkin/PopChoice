@@ -6,8 +6,9 @@ title: 'Backoffice Plan'
 
 PopChoice backoffice work is tracked under
 [#493](https://github.com/shchilkin/PopChoice/issues/493). The backoffice is an
-operational app for catalog health, TMDB match review, and later manual data
-repair. It must not be implemented inside the user-facing `apps/web` app.
+operational app for catalog health, TMDB match review, queued catalog repair,
+catalog seeding, queue visibility, and recommendation eval operations. It must
+not be implemented inside the user-facing `apps/web` app.
 Post-MVP operator hardening is tracked under
 [#660](https://github.com/shchilkin/PopChoice/issues/660).
 
@@ -43,14 +44,15 @@ Coolify service. New interactive operator workflows should use React/Next route
 handlers and shared PopChoice UI conventions instead of adding hand-written
 HTML pages.
 
-## Initial Scope
+## Current Scope
 
-The first backoffice release should be read-only:
+The initial backoffice slice was read-only and established the dedicated
+operator surface:
 
 - [#549](https://github.com/shchilkin/PopChoice/issues/549): catalog-health
   overview for missing metadata, duplicate identities, stale TMDB data, and
   missing cast/director/genre/keyword coverage. This is implemented as the
-  first read-only `apps/backoffice` screen.
+  first `apps/backoffice` screen.
 - [#550](https://github.com/shchilkin/PopChoice/issues/550): TMDB match review
   queue for `tmdb_match_reviews` rows. This is implemented as a protected queue
   and detail view with status/reason filters, risk sorting, local-vs-candidate
@@ -117,8 +119,8 @@ Shared operator auth is the login model for public exposure:
 
 - [#548](https://github.com/shchilkin/PopChoice/issues/548): shared login
   protection for `apps/backoffice` and `apps/bull-board`.
-- `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` protect Bull Board now
-  and should be reused by the future backoffice app.
+- `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` protect Bull Board and
+  Backoffice public operator routes.
 - User-facing app login stays separate; operator credentials must not be added
   to normal `apps/web` routes.
 

@@ -10,15 +10,28 @@ This document describes the background services that populate and maintain the m
 
 ## Services Overview
 
-| Service / Tool               | Type             | Trigger                                                 | Source        |
-| ---------------------------- | ---------------- | ------------------------------------------------------- | ------------- |
-| `movie-discovery`            | Scheduled        | Cron / One-shot                                         | TMDB API      |
-| `movie-backfill`             | One-shot         | Manual                                                  | TMDB API      |
-| `catalog:health`             | Read-only report | Manual / CI                                             | PostgreSQL    |
-| BullMQ `recommendation`      | Per-request      | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
-| BullMQ `more-picks`          | On demand        | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
-| BullMQ `movie-seed`          | Worker queue     | Recommendation JIT seeding, Backoffice curated seed     | TMDB + file   |
-| BullMQ `catalog-maintenance` | Maintenance jobs | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
+### Services And CLI Tools
+
+| Tool              | Role                   | Trigger                     | Source     |
+| ----------------- | ---------------------- | --------------------------- | ---------- |
+| `movie-discovery` | Scheduled service      | Cron / manual one-shot      | TMDB API   |
+| `movie-backfill`  | Manual maintenance CLI | Operator fallback / dry-run | TMDB API   |
+| `catalog:health`  | Read-only report       | Manual / CI                 | PostgreSQL |
+
+### BullMQ Queues
+
+| Queue                  | Role                          | Trigger                                                 | Source        |
+| ---------------------- | ----------------------------- | ------------------------------------------------------- | ------------- |
+| `recommendation`       | Async recommendation creation | HTTP POST to /api/recommendations                       | TMDB + OpenAI |
+| `more-picks`           | On-demand follow-up picks     | HTTP POST to /api/recommendations/[id]/more-picks       | TMDB + OpenAI |
+| `movie-seed`           | Catalog seed jobs             | Recommendation JIT seeding, Backoffice curated seed     | TMDB + file   |
+| `catalog-maintenance`  | Catalog maintenance jobs      | Recommendation JIT, discovery enqueue, backfill enqueue | TMDB + OpenAI |
+| `recommendation-evals` | Recommendation eval runs      | Backoffice / operator-triggered eval runs               | Eval fixtures |
+
+Backoffice and the BullMQ `catalog-maintenance` worker are the primary path for
+catalog discovery and backfill work. The `movie-backfill` CLI remains available
+for bounded manual maintenance, dry-runs, and local/operator fallback flows
+where queue visibility, retries, or Backoffice controls are not required.
 
 ---
 
@@ -65,8 +78,8 @@ When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequ
 ### Starting workers
 
 ```bash
-# From apps/web
-npm run start:workers
+# From repo root
+npm run start:workers --workspace=apps/web
 ```
 
 Or via Docker Compose (workers.Dockerfile).
@@ -484,7 +497,7 @@ If the DB grows substantially, a new embedding model is adopted, or scores shift
 1. Run the built-in calibration tool (requires `OPENAI_API_KEY` and `DATABASE_URL` in `.env`):
 
    ```bash
-   npm run calibrate-similarity
+   npm run calibrate-similarity --workspace=apps/web
    ```
 
    The script embeds 5 representative queries, queries the live DB, and prints ranked results with cosine scores. It also prints the highest observed score and a suggested threshold (~2/3 of ceiling).
@@ -498,7 +511,7 @@ If the DB grows substantially, a new embedding model is adopted, or scores shift
    npx vitest --project=server run src/app/api/movie-recommendation/route.test.ts
    ```
 
-To add or edit calibration queries, modify the `QUERIES` array in `scripts/calibrate-similarity.ts`.
+To add or edit calibration queries, modify the `QUERIES` array in `apps/web/scripts/calibrate-similarity.ts`.
 
 ### Constants (`apps/web/src/features/recommendation/config.ts`)
 

@@ -18,6 +18,7 @@ What is already true:
 - the web app and supporting apps already live under `apps/`
 - background jobs and sync processes already live under root `services/*`
 - a shared package already exists in `packages/shared`
+- a shared UI primitives package already exists in `packages/ui`
 - recommendation orchestration now lives in reusable feature-owned modules outside route ownership
 - account, password reset, recommendation feedback, and movie-memory flows exist for signed-in users
 
@@ -33,6 +34,7 @@ The main remaining risks are:
 
 - [x] Workspace layout exists: `apps/`, `packages/`, and `services/` are already in place.
 - [x] Shared package extraction has started with `packages/shared` reused by root services.
+- [x] Shared UI primitive extraction has started with `packages/ui` reused across app workspaces.
 - [x] Background service responsibilities are partially separated into `services/movie-discovery`, `services/movie-backfill`, and BullMQ worker queues.
 - [x] Recommendation orchestration is extracted into reusable feature-owned modules instead of living only inside route handlers.
 - [x] Some recommendation thresholds/constants are separated into dedicated helper modules instead of being embedded directly in route handlers.
@@ -92,20 +94,23 @@ Reference: use [BOUNDARIES.md](/docs/BOUNDARIES) as the current ownership baseli
 PopChoice should continue evolving within the current workspace layout toward clearer ownership and easier extractability, for example:
 
 - `apps/web`
+- `apps/docs`
 - `apps/bull-board`
+- `apps/backoffice`
 - `services/movie-discovery`
 - `services/movie-backfill`
+- `services/db-migrate`
 - `packages/domain`
 - `packages/config`
 - `packages/clients`
 - `packages/shared`
-- optional: `packages/ui`
+- `packages/ui`
 
 This is an extraction direction, not a mandate for large-scale file moves right now. Current work should optimize for clean boundaries inside the existing workspace first.
 
 UI extraction should follow [UI Development](./UI-DEVELOPMENT.md): one Storybook runner loads
-stories from app workspaces and future `packages/ui`, while shadcn-derived primitives move into the
-shared UI package only after a second real consumer appears.
+stories from app workspaces and `packages/ui`, while shadcn-derived primitives move into the
+shared UI package when reuse is real and the primitive stays domain-free.
 
 ## Guiding Principles
 

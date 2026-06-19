@@ -192,8 +192,7 @@ If you are using the repo's local setup flow, run `npm run copy:env` after chang
 Run background workers in a separate terminal:
 
 ```bash
-cd apps/web
-npm run start:workers
+npm run start:workers --workspace=apps/web
 ```
 
 Optional queue monitoring dashboard:
@@ -251,7 +250,7 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
 
    ```bash
    # terminal 1
-   cd apps/web && npm run start:workers
+   npm run start:workers --workspace=apps/web
 
    # terminal 2, repo root
    npm run dev:backoffice
@@ -267,9 +266,8 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    # terminal 1, repo root
    npm run dev
 
-   # terminal 2, apps/web
-   cd apps/web
-   npm run start:workers
+   # terminal 2, repo root
+   npm run start:workers --workspace=apps/web
    ```
 
    For the async recommendation flow, keep the workers running while you use the app.
