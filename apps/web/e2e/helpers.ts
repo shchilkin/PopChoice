@@ -10,6 +10,35 @@ export function uniqueEmail(testTitle: string): string {
   return `e2e-${slug}-${Date.now()}@example.com`;
 }
 
+export async function disableE2EMotion(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const styleId = '__popchoice-e2e-disable-motion';
+    const css = `
+      *, *::before, *::after {
+        animation-delay: 0s !important;
+        animation-duration: 1ms !important;
+        scroll-behavior: auto !important;
+        transition-delay: 0s !important;
+        transition-duration: 1ms !important;
+      }
+    `;
+
+    const install = () => {
+      if (document.getElementById(styleId)) return;
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = css;
+      (document.head ?? document.documentElement).appendChild(style);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', install, { once: true });
+    } else {
+      install();
+    }
+  });
+}
+
 export async function registerUser(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/register');
   await page.getByLabel('Email address').fill(email);

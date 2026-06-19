@@ -98,7 +98,7 @@ const movieFixtures = [
     scoreRating: 7.6,
     year: 2016,
     tmdbId: 329865,
-    posterUrl: `${tmdbPosterBase}/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg`,
+    posterUrl: null,
     localizedName: 'Arrival',
   },
 ];
