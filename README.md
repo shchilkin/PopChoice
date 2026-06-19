@@ -167,6 +167,16 @@ npm run test:e2e:down
 
 The default e2e database is intentionally curated instead of restored from a dev dump. Use dev or production-like dumps only for manual local investigations after removing users, sessions, recommendation history, feedback, API keys, and other operational data; CI should stay on the deterministic fixture seed.
 
+### Accessibility smoke tests
+
+The accessibility suite reuses the deterministic e2e fixtures and runs axe checks against public pages, catalog browsing, and the authenticated recommendation result flow:
+
+```bash
+npm run test:a11y
+```
+
+In CI, `Accessibility Tests` runs as a separate PR job inside the pinned official Playwright Docker image, so Chromium and browser system dependencies come from the image instead of a mutable Playwright browser cache.
+
 ### Recommendation evals
 
 Recommendation evals are separate from browser e2e smoke tests. The default command uses deterministic fixtures and mocked model outputs, so it does not spend OpenAI/TMDB credits:

@@ -295,6 +295,68 @@ jobs:
             apps/web/test-results/
           retention-days: 30
 
+  a11y-tests:
+    name: Accessibility Tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.0-noble
+      options: --user 1001
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: popchoice_e2e
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_USER: popchoice_e2e
+        options: >-
+          --health-cmd "pg_isready -U popchoice_e2e -d popchoice_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://popchoice_e2e@postgres:5432/popchoice_e2e
+      E2E_REDIS_URL: redis://redis:6379
+      E2E_SKIP_DOCKER: '1'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare a11y database fixtures
+        run: npm run test:e2e:setup
+
+      - name: Run axe accessibility tests
+        run: npm run test:a11y:run
+
+      - name: Upload accessibility report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-a11y-report
+          path: |
+            apps/web/playwright-a11y-report/
+            apps/web/test-results/a11y/
+          retention-days: 30
+
   build:
     name: Build
     needs: changes
@@ -399,6 +461,7 @@ jobs:
       - recommendation-evals
       - storybook-tests
       - e2e-tests
+      - a11y-tests
       - build
       - docs-build
       - services-ci
@@ -416,6 +479,7 @@ jobs:
       RECOMMENDATION_EVALS_RESULT: ${{ needs.recommendation-evals.result }}
       STORYBOOK_TESTS_RESULT: ${{ needs.storybook-tests.result }}
       E2E_TESTS_RESULT: ${{ needs.e2e-tests.result }}
+      A11Y_TESTS_RESULT: ${{ needs.a11y-tests.result }}
       BUILD_RESULT: ${{ needs.build.result }}
       DOCS_BUILD_RESULT: ${{ needs.docs-build.result }}
       SERVICES_CI_RESULT: ${{ needs.services-ci.result }}
@@ -442,6 +506,7 @@ jobs:
           [[ "$RECOMMENDATION_EVALS_RESULT" == "success" ]] || failures+=("Recommendation Evals: $RECOMMENDATION_EVALS_RESULT")
           [[ "$STORYBOOK_TESTS_RESULT" == "success" ]] || failures+=("Storybook Tests: $STORYBOOK_TESTS_RESULT")
           [[ "$E2E_TESTS_RESULT" == "success" ]] || failures+=("E2E Tests: $E2E_TESTS_RESULT")
+          [[ "$A11Y_TESTS_RESULT" == "success" ]] || failures+=("Accessibility Tests: $A11Y_TESTS_RESULT")
           [[ "$BUILD_RESULT" == "success" ]] || failures+=("Build: $BUILD_RESULT")
           [[ "$DOCS_BUILD_RESULT" == "success" ]] || failures+=("Docs Build: $DOCS_BUILD_RESULT")
           [[ "$SERVICES_CI_RESULT" == "success" ]] || failures+=("Services CI: $SERVICES_CI_RESULT")

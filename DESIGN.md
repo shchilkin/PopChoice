@@ -186,6 +186,24 @@ In light mode, shadows are soft and diffuse (`rgba(0,0,0,0.1)`), barely present.
 
 ## 5. Components
 
+### Component Reuse Policy
+
+Prefer existing components before creating new UI. Start with shared
+components from `packages/ui` and `apps/web/src/components`; if the pattern
+already exists there, extend that component conservatively instead of
+recreating its markup, styling, interaction states, or accessibility behavior
+inside a route.
+
+Prefer shared primitives over in-app one-offs. Route- or feature-local
+components should compose shared primitives and own only the workflow-specific
+layout, copy, and state. Create a new local primitive only when no existing
+shared component can express the interaction without making its API misleading,
+overloaded, or inaccessible.
+
+Promote local components when reuse becomes real. If a page-local control
+appears on a second surface, move it toward the shared component layer with
+tokens, stories, and accessibility behavior instead of copying it.
+
 ### Buttons
 
 Buttons are the most-touched element in the quiz flow — they need to feel satisfying, not just functional.

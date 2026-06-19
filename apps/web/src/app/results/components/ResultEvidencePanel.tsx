@@ -28,11 +28,11 @@ function EvidenceRow({ item }: { item: ResultEvidenceItem }) {
       <span className="min-w-0">
         <span
           className="block uppercase tracking-widest"
-          style={{ color: 'var(--pc-t4)', fontSize: '0.58rem' }}
+          style={{ color: 'var(--pc-chip-text)', fontSize: '0.58rem' }}
         >
           {item.label}
         </span>
-        <span className="mt-0.5 block" style={{ color: 'var(--pc-t2)', fontSize: '0.9rem' }}>
+        <span className="mt-0.5 block" style={{ color: 'var(--pc-chip-text)', fontSize: '0.9rem' }}>
           {item.value}
         </span>
       </span>
@@ -120,7 +120,7 @@ export function ResultEvidencePanel({
           >
             {t.results.evidenceKicker}
           </p>
-          <p className="mt-1" style={{ color: 'var(--pc-t3)', fontSize: '0.84rem' }}>
+          <p className="mt-1" style={{ color: 'var(--pc-chip-text)', fontSize: '0.84rem' }}>
             {t.results.evidenceSubtitle}
           </p>
         </div>
