@@ -5,6 +5,8 @@ import { motion } from 'motion/react';
 
 import { useLanguage } from '@/i18n';
 
+import type { CSSProperties } from 'react';
+
 export type FeedbackKind =
   | 'useful'
   | 'already_watched'
@@ -31,6 +33,21 @@ type FeedbackFollowUpOption = {
 };
 
 type ResultsCopy = ReturnType<typeof useLanguage>['t']['results'];
+
+const followUpButtonStyle = {
+  enabled: {
+    background: 'var(--pc-chip-selected-bg)',
+    border: '1px solid var(--pc-chip-selected-bd)',
+    color: 'var(--pc-chip-selected-text)',
+    cursor: 'pointer',
+  },
+  disabled: {
+    background: 'var(--pc-chip-bg)',
+    border: '1px solid var(--pc-chip-bd)',
+    color: 'var(--pc-t4)',
+    cursor: 'not-allowed',
+  },
+} satisfies Record<'enabled' | 'disabled', CSSProperties>;
 
 function getFeedbackOptions(results: ResultsCopy): FeedbackOption[] {
   return [
@@ -163,11 +180,10 @@ function getFeedbackButtonStyle({
 }
 
 function getFollowUpButtonStyle({ disabled }: { disabled: boolean }) {
+  const buttonState = disabled ? 'disabled' : 'enabled';
+
   return {
-    background: disabled ? 'var(--pc-chip-bg)' : 'var(--pc-chip-selected-bg)',
-    border: disabled ? '1px solid var(--pc-chip-bd)' : '1px solid var(--pc-chip-selected-bd)',
-    color: disabled ? 'var(--pc-t4)' : 'var(--pc-chip-selected-text)',
-    cursor: disabled ? 'not-allowed' : 'pointer',
+    ...followUpButtonStyle[buttonState],
     fontSize: '0.74rem',
     fontWeight: 700,
   };
