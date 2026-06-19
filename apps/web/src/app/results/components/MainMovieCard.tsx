@@ -99,7 +99,7 @@ function MainPosterSection({
       <div className="absolute inset-0" style={{ background: 'var(--pc-poster-grad)' }} />
       <div className="absolute top-4 right-4 flex items-center gap-2">
         <PosterOpenButton label={view.openPosterLabel} onClick={onPosterOpen} />
-        <SimilarityBadge similarity={movie.similarity} />
+        <SimilarityBadge similarity={movie.similarity} tone="poster" />
       </div>
       <AiPickBadge label={view.aiPickLabel} />
       <MainPosterTitle view={view} />
@@ -116,10 +116,10 @@ function PosterOpenButton({ label, onClick }: { label: string; onClick: () => vo
       onClick={onClick}
       className="grid h-9 w-9 place-items-center rounded-full transition"
       style={{
-        background: 'var(--pc-overlay-bg)',
-        border: '1px solid var(--pc-bd3)',
-        color: 'var(--pc-overlay-text)',
-        backdropFilter: 'blur(8px)',
+        background: 'var(--pc-poster-chip-bg)',
+        border: '1px solid var(--pc-poster-chip-bd)',
+        color: 'var(--pc-poster-chip-text)',
+        backdropFilter: 'blur(10px)',
       }}
     >
       <ImageIcon size={15} />
@@ -204,7 +204,7 @@ function PosterLightboxContent({
             onClick={onClose}
             className="grid h-9 w-9 flex-none place-items-center rounded-full transition"
             style={{
-              background: 'var(--pc-surface-deep)',
+              background: 'var(--pc-chip-bg)',
               border: '1px solid var(--pc-bd3)',
               color: 'var(--pc-t2)',
             }}
@@ -250,15 +250,15 @@ function AiPickBadge({ label }: { label: string }) {
   return (
     <div className="absolute top-4 left-4">
       <div
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
         style={{
-          background: 'var(--pc-overlay-bg)',
-          border: `1px solid ${palette.gold}40`,
-          color: 'var(--pc-gold-text)',
-          backdropFilter: 'blur(8px)',
+          background: 'var(--pc-poster-chip-bg)',
+          border: '1px solid var(--pc-poster-chip-bd)',
+          color: 'var(--pc-poster-chip-text)',
+          backdropFilter: 'blur(10px)',
         }}
       >
-        <Sparkles size={10} />
+        <Sparkles size={10} style={{ color: 'var(--pc-poster-chip-accent)' }} />
         {label}
       </div>
     </div>
@@ -364,7 +364,10 @@ function MetaItems({
   return (
     <div
       className={`flex items-center gap-3 flex-wrap${className ? ` ${className}` : ''}`}
-      style={{ color: 'var(--pc-t2)', fontSize: '0.82rem' }}
+      style={{
+        color: overlay ? 'var(--pc-poster-chip-muted)' : 'var(--pc-t2)',
+        fontSize: '0.82rem',
+      }}
     >
       {items.map((item, index) => (
         <MetaItem
@@ -411,7 +414,10 @@ function renderOverlayRatingMetaItem(item: ResultMovieMetaItem): ReactNode {
   return (
     <span
       className="px-1.5 py-0.5 rounded"
-      style={{ border: '1px solid var(--pc-bd3)', color: 'var(--pc-t2)' }}
+      style={{
+        border: '1px solid var(--pc-poster-chip-bd)',
+        color: 'var(--pc-poster-chip-muted)',
+      }}
     >
       {item.label}
     </span>

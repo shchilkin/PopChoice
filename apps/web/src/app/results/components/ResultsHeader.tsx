@@ -6,9 +6,41 @@ import Link from 'next/link';
 
 import { useLanguage } from '@/i18n';
 
+import type { CSSProperties } from 'react';
+
 export type ShareState = 'idle' | 'copied';
 
 type ResultsCopy = ReturnType<typeof useLanguage>['t']['results'];
+
+const chipButtonStyle = {
+  idle: {
+    background: 'var(--pc-chip-bg)',
+    border: '1px solid var(--pc-chip-bd)',
+    color: 'var(--pc-chip-text)',
+  },
+  copied: {
+    background: 'var(--pc-chip-selected-bg)',
+    border: '1px solid var(--pc-chip-selected-bd)',
+    color: 'var(--pc-chip-selected-text)',
+  },
+} satisfies Record<ShareState, CSSProperties>;
+
+const shareButtonView = {
+  idle: {
+    Icon: Share2,
+    getLabel: (results: ResultsCopy) => results.shareResult,
+  },
+  copied: {
+    Icon: Check,
+    getLabel: (results: ResultsCopy) => results.shareCopied,
+  },
+} satisfies Record<
+  ShareState,
+  {
+    Icon: typeof Share2;
+    getLabel: (results: ResultsCopy) => string;
+  }
+>;
 
 function formatAudienceSubtitle({
   copy,
@@ -42,7 +74,8 @@ function ShareResultButton({
   shareState: ShareState;
   results: ResultsCopy;
 }) {
-  const didCopy = shareState === 'copied';
+  const view = shareButtonView[shareState];
+  const Icon = view.Icon;
 
   return (
     <button
@@ -50,15 +83,13 @@ function ShareResultButton({
       onClick={() => void onShare()}
       className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={{
-        background: 'var(--pc-ghost)',
-        border: '1px solid var(--pc-bd2)',
-        color: didCopy ? 'var(--pc-gold-text)' : 'var(--pc-t2)',
+        ...chipButtonStyle[shareState],
         fontSize: '0.78rem',
         fontWeight: 600,
       }}
     >
-      {didCopy ? <Check size={13} /> : <Share2 size={13} />}
-      {didCopy ? results.shareCopied : results.shareResult}
+      <Icon size={13} />
+      {view.getLabel(results)}
     </button>
   );
 }
@@ -76,9 +107,9 @@ function SaveCollectionButton({
         href="/account"
         className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
         style={{
-          background: 'var(--pc-gold-subtle)',
-          border: '1px solid var(--pc-gold-bd-subtle)',
-          color: 'var(--pc-gold-text)',
+          background: 'var(--pc-chip-selected-bg)',
+          border: '1px solid var(--pc-chip-selected-bd)',
+          color: 'var(--pc-chip-selected-text)',
           fontSize: '0.78rem',
           fontWeight: 600,
         }}
@@ -94,9 +125,9 @@ function SaveCollectionButton({
       href="/login"
       className="inline-flex items-center gap-2 rounded-full px-4 py-2 transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
       style={{
-        background: 'var(--pc-ghost)',
-        border: '1px solid var(--pc-bd2)',
-        color: 'var(--pc-t2)',
+        background: 'var(--pc-chip-bg)',
+        border: '1px solid var(--pc-chip-bd)',
+        color: 'var(--pc-chip-text)',
         fontSize: '0.78rem',
         fontWeight: 600,
       }}
@@ -163,8 +194,8 @@ export function ResultsDecisionNoteCard({
         <div
           className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
           style={{
-            background: 'var(--pc-gold-subtle)',
-            color: 'var(--pc-gold-text)',
+            background: 'var(--pc-chip-selected-bg)',
+            color: 'var(--pc-chip-selected-text)',
           }}
         >
           <DecisionNoteIcon isGroupResult={isGroupResult} />
@@ -186,8 +217,8 @@ export function ResultsDecisionNoteCard({
             <p
               className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1"
               style={{
-                background: 'var(--pc-gold-subtle)',
-                color: 'var(--pc-gold-text)',
+                background: 'var(--pc-chip-selected-bg)',
+                color: 'var(--pc-chip-selected-text)',
                 fontSize: '0.72rem',
                 lineHeight: 1.4,
               }}
