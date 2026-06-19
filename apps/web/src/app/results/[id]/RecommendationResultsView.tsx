@@ -1,13 +1,12 @@
 'use client';
 
 import { RotateCcw, Users } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { Button } from '@/components/Button';
 import { useLanguage } from '@/i18n';
 import { getCsrfToken } from '@/lib/csrfClient';
 import { navigateToFreshQuiz } from '@/lib/quizNavigation';
-import { palette } from '@/styles/designTokens';
 import { type MovieRecommendation } from '@/utils/client';
 
 import {
@@ -315,48 +314,21 @@ function ResultsActions({
   tryWithFriendsLabel: string;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.5, duration: 0.5 }}
-      className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
-    >
-      <button
+    <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+      <Button
         type="button"
         onClick={navigateToFreshQuiz}
-        className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-colors duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-        style={{
-          background: 'var(--pc-ghost)',
-          border: '1px solid var(--pc-bd2)',
-          color: 'var(--pc-t2)',
-          fontSize: '0.9rem',
-        }}
-        onMouseEnter={(event) => {
-          event.currentTarget.style.color = 'var(--pc-t1)';
-          event.currentTarget.style.borderColor = 'var(--pc-bd4)';
-        }}
-        onMouseLeave={(event) => {
-          event.currentTarget.style.color = 'var(--pc-t2)';
-          event.currentTarget.style.borderColor = 'var(--pc-bd2)';
-        }}
+        variant="ghost"
+        size="lg"
+        className="px-6"
       >
         <RotateCcw size={15} /> {tryAgainLabel}
-      </button>
+      </Button>
 
-      <button
-        type="button"
-        onClick={navigateToFreshQuiz}
-        className="flex items-center gap-2 px-6 py-3 rounded-2xl transition-transform duration-200 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pc-gold)]"
-        style={{
-          background: `linear-gradient(135deg, ${palette.purple}, #6D28D9)`,
-          color: '#F8F8FF',
-          fontSize: '0.9rem',
-          fontWeight: 600,
-        }}
-      >
+      <Button type="button" onClick={navigateToFreshQuiz} variant="cta" size="lg" className="px-6">
         <Users size={15} /> {tryWithFriendsLabel}
-      </button>
-    </motion.div>
+      </Button>
+    </div>
   );
 }
 
