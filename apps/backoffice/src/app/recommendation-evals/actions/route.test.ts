@@ -23,23 +23,29 @@ vi.mock('../../../lib/backoffice', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../lib/sameOriginRequest', () => ({
-  isSameOriginRequest: mocks.isSameOriginRequest,
-}));
+vi.mock('../../../lib/sameOriginRequest', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/sameOriginRequest')>();
+  return {
+    ...actual,
+    isSameOriginRequest: mocks.isSameOriginRequest,
+  };
+});
 
 import { POST } from './route';
 
 function createEvalActionRequest({
   fetch = true,
   fields = { mode: 'mock' },
+  url = 'https://backoffice.test/recommendation-evals/actions',
 }: {
   fetch?: boolean;
   fields?: Record<string, string>;
+  url?: string;
 } = {}) {
   return createBackofficeFormRequest({
     fetch,
     fields,
-    url: 'https://backoffice.test/recommendation-evals/actions',
+    url,
   });
 }
 
@@ -101,6 +107,45 @@ describe('recommendation eval form action route', () => {
     );
   });
 
+  it('does not redirect browser form posts to a bind address', async () => {
+    mocks.performRecommendationEvalAction.mockResolvedValue({
+      errorMessage: 'queue unavailable',
+      mode: 'real-data',
+      runId: 'run-2',
+      status: 'unavailable',
+    });
+
+    const response = await POST(
+      createEvalActionRequest({
+        fetch: false,
+        fields: { mode: 'real-data' },
+        url: 'http://0.0.0.0:3000/recommendation-evals/actions',
+      }) as never,
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/recommendation-evals?eval=unavailable',
+    );
+  });
+
+  it('keeps forbidden browser redirects off bind addresses', async () => {
+    mocks.isSameOriginRequest.mockReturnValue(false);
+
+    const response = await POST(
+      createEvalActionRequest({
+        fetch: false,
+        url: 'http://0.0.0.0:3000/recommendation-evals/actions',
+      }) as never,
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/recommendation-evals?eval=forbidden',
+    );
+    expect(mocks.performRecommendationEvalAction).not.toHaveBeenCalled();
+  });
+
   it('returns the JSON error contract when the action throws', async () => {
     const error = new Error('boom');
     mocks.getBackofficeErrorStatus.mockReturnValue(422);
@@ -119,6 +164,23 @@ describe('recommendation eval form action route', () => {
     expect(mocks.logBackofficeError).toHaveBeenCalledWith(
       'Failed to apply recommendation eval action',
       error,
+    );
+  });
+
+  it('keeps failed browser redirects off bind addresses', async () => {
+    const error = new Error('boom');
+    mocks.performRecommendationEvalAction.mockRejectedValue(error);
+
+    const response = await POST(
+      createEvalActionRequest({
+        fetch: false,
+        url: 'http://0.0.0.0:3000/recommendation-evals/actions',
+      }) as never,
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/recommendation-evals?eval=failed',
     );
   });
 });

@@ -20,6 +20,8 @@ function statusCodeFor(status: string): number {
 }
 
 export async function POST(request: NextRequest) {
+  let trustRequestEvidence = false;
+
   try {
     if (!isSameOriginRequest(request)) {
       if (wantsBackofficeJsonResponse(request)) {
@@ -31,6 +33,8 @@ export async function POST(request: NextRequest) {
         303,
       );
     }
+
+    trustRequestEvidence = true;
 
     const [, formData] = await Promise.all([ensureBackofficeReady(), request.formData()]);
     const result = await performCatalogSeedAction({
@@ -50,7 +54,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      backofficeRedirectUrl(request, `/catalog-seed?seed=${result.status}`),
+      backofficeRedirectUrl(request, `/catalog-seed?seed=${result.status}`, {
+        trustRequestEvidence,
+      }),
       303,
     );
   } catch (error) {
@@ -66,6 +72,7 @@ export async function POST(request: NextRequest) {
       backofficeRedirectUrl(
         request,
         `/catalog-seed?seed=failed&code=${getBackofficeErrorStatus(error)}`,
+        { trustRequestEvidence },
       ),
       303,
     );

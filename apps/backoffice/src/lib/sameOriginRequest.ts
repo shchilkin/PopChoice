@@ -58,6 +58,11 @@ function isBindableHost(host: string): boolean {
   return hostname === '0.0.0.0' || hostname === '::' || hostname === '';
 }
 
+function localhostOriginForBindableUrl(url: URL): string {
+  const port = url.port ? `:${url.port}` : '';
+  return `${url.protocol}//localhost${port}`;
+}
+
 export function backofficeRedirectUrl(
   request: NextRequest,
   path: string,
@@ -84,5 +89,5 @@ export function backofficeRedirectUrl(
     return new URL(path, requestUrl);
   }
 
-  return new URL(path, 'http://localhost');
+  return new URL(path, localhostOriginForBindableUrl(requestUrl));
 }
