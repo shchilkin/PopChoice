@@ -368,9 +368,11 @@ The backoffice also exposes recommendation eval operations. The
 `/recommendation-evals` page can queue deterministic mock and real-data evals,
 stores run metadata in `recommendation_eval_runs`, stores each fixture result in
 `recommendation_eval_results`, and uses the web worker `recommendation-evals`
-queue for processing. Live-provider evals are available only through an
-explicit cost acknowledgement and confirmation phrase because they can spend
-provider credits and depend on live OpenAI/TMDB behavior.
+queue for processing. Live OpenAI evals are available only through an explicit
+cost acknowledgement and confirmation phrase because they can spend provider
+credits and depend on live OpenAI/TMDB behavior. Completed live evals persist
+the provider response alongside each fixture result so operators can inspect the
+actual recommendation output.
 
 Useful options:
 

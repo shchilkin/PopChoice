@@ -118,6 +118,7 @@ export async function performRecommendationEvalAction(
     actor,
     mode: mode as RecommendationEvalRunMode,
     requestedOptions: {
+      providerCalls: mode === 'live' ? 'openai' : 'none',
       liveGuardAcknowledged: mode === 'live',
       trigger: 'backoffice',
     },

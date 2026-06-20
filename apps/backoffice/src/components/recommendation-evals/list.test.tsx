@@ -15,17 +15,20 @@ function runPage(overrides: Partial<RecommendationEvalRunPage> = {}): Recommenda
 }
 
 describe('RecommendationEvalListPage', () => {
-  it('keeps the safe eval action primary and hides live eval behind a guard', () => {
+  it('separates non-provider evals from explicit live OpenAI evals', () => {
     const html = renderToStaticMarkup(
       <RecommendationEvalListPage runPage={runPage()} status={null} />,
     );
 
     expect(html).toContain('class="eval-safe-form"');
     expect(html).toContain('class="eval-run-panel"');
-    expect(html).toContain('Run safe eval');
-    expect(html).toContain('<details class="live-eval-disclosure">');
-    expect(html).toContain('Live provider eval');
-    expect(html).toContain('Run live eval');
+    expect(html).toContain('Seeded catalog retrieval - no OpenAI');
+    expect(html).toContain('Run non-provider eval');
+    expect(html).toContain('class="live-eval-form"');
+    expect(html).toContain('Live OpenAI evals call the provider-backed recommendation pipeline');
+    expect(html).toContain('I understand this will call OpenAI');
+    expect(html).toContain('Run live OpenAI eval');
+    expect(html).not.toContain('<details class="live-eval-disclosure">');
     expect(html).not.toContain('class="panel-body"');
   });
 

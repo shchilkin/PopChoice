@@ -77,6 +77,7 @@ function resultToJson(result: RecommendationEvalResult): Record<string, unknown>
     minPassingScore: result.minPassingScore,
     mode: result.mode,
     passed: result.passed,
+    response: result.response,
     score: result.score,
   };
 }
@@ -108,7 +109,7 @@ function toStoredResults(
       maxScore: result.maxScore,
       minPassingScore: result.minPassingScore,
       passed: result.passed,
-      response: report.mode === 'live' ? {} : (fixture?.mockResponse ?? {}),
+      response: result.response,
       result: resultToJson(result),
       score: result.score,
     };
