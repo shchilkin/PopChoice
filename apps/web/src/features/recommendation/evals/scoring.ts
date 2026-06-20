@@ -120,6 +120,7 @@ export function scoreRecommendationEvalFixture(
     minPassingScore,
     mode,
     passed: score >= minPassingScore && checks.every((check) => check.passed),
+    response,
     score,
     sourceDistribution: context.sourceDistribution,
   };

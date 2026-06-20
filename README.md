@@ -184,9 +184,9 @@ Recommendation evals are separate from browser e2e smoke tests. The default comm
 npm run eval:recommendations
 ```
 
-The command writes a JSON report to `apps/web/test-results/recommendation-evals/report.json` and checks output shape, candidate validity, safety constraints, repeat avoidance, and explanation quality. Optional live-provider runs are explicit:
+The command writes a JSON report to `apps/web/test-results/recommendation-evals/report.json` and checks output shape, candidate validity, safety constraints, repeat avoidance, and explanation quality.
 
-Real-data evals use the isolated e2e database and real catalog retrieval while keeping model output controlled:
+Real-data evals use the isolated e2e database and real catalog retrieval while keeping model output controlled. They do not call OpenAI:
 
 ```bash
 npm run test:e2e:setup
@@ -194,7 +194,7 @@ DATABASE_URL=postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e npm run ev
 npm run test:e2e:down
 ```
 
-Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live evals are guarded by an explicit cost acknowledgement and confirmation phrase.
+Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live OpenAI evals are guarded by an explicit cost acknowledgement and confirmation phrase, and persist the provider response in the run report for inspection.
 
 ```bash
 npm run eval:recommendations -- --live

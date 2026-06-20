@@ -82,6 +82,7 @@ export type RecommendationEvalResult = {
   minPassingScore: number;
   mode: RecommendationEvalRunMode;
   passed: boolean;
+  response: ApiResponse;
   score: number;
   sourceDistribution: CandidateSourceDistribution;
 };

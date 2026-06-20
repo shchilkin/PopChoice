@@ -51,36 +51,33 @@ function RecommendationEvalRunForm() {
         <label>
           <span>Mode</span>
           <select name="mode" defaultValue="real-data">
-            <option value="real-data">Real-data retrieval</option>
-            <option value="mock">Mock fixtures</option>
+            <option value="real-data">Seeded catalog retrieval - no OpenAI</option>
+            <option value="mock">Mock fixtures - no OpenAI</option>
           </select>
         </label>
-        <p>Runs deterministic, non-provider evals that are safe for routine validation.</p>
+        <p>Runs deterministic checks with controlled recommendation output. No OpenAI calls.</p>
         <Button type="submit" variant="success">
-          Run safe eval
+          Run non-provider eval
         </Button>
       </form>
-      <details className="live-eval-disclosure">
-        <summary>Live provider eval</summary>
-        <form className="live-eval-form" action="/recommendation-evals/actions" method="post">
-          <input type="hidden" name="mode" value="live" />
-          <div className="issue-hint">
-            Live evals can call OpenAI and provider-backed recommendation paths. Use only for
-            intentional validation.
-          </div>
-          <label className="checkbox-line">
-            <input type="checkbox" name="acknowledge_live_cost" value="yes" />
-            <span>I understand this can spend provider credits and may be flaky.</span>
-          </label>
-          <label>
-            <span>Type RUN LIVE RECOMMENDATION EVAL</span>
-            <input name="live_confirmation" autoComplete="off" />
-          </label>
-          <Button type="submit" variant="danger">
-            Run live eval
-          </Button>
-        </form>
-      </details>
+      <form className="live-eval-form" action="/recommendation-evals/actions" method="post">
+        <input type="hidden" name="mode" value="live" />
+        <div className="issue-hint">
+          Live OpenAI evals call the provider-backed recommendation pipeline for every fixture. They
+          can spend credits, take longer, and fail because provider output is non-deterministic.
+        </div>
+        <label className="checkbox-line">
+          <input type="checkbox" name="acknowledge_live_cost" value="yes" />
+          <span>I understand this will call OpenAI and can spend provider credits.</span>
+        </label>
+        <label>
+          <span>Type RUN LIVE RECOMMENDATION EVAL</span>
+          <input name="live_confirmation" autoComplete="off" />
+        </label>
+        <Button type="submit" variant="danger">
+          Run live OpenAI eval
+        </Button>
+      </form>
     </div>
   );
 }
@@ -111,7 +108,7 @@ export function RecommendationEvalListPage({
       active="recommendation-evals"
       title="Recommendation Evals"
       eyebrow="Eval operations"
-      description="Run safe recommendation evals, watch queue status, and inspect persisted fixture results."
+      description="Run deterministic catalog checks or guarded live OpenAI evals, watch queue status, and inspect persisted fixture results."
       actions={
         <>
           <ButtonLink href="/recommendation-evals">Refresh</ButtonLink>
@@ -125,7 +122,7 @@ export function RecommendationEvalListPage({
       <section className="eval-run-panel" aria-labelledby="recommendation-eval-run-title">
         <div className="eval-run-panel-heading">
           <h2 id="recommendation-eval-run-title">Run eval</h2>
-          <p>Safe evals are the default. Live provider evals require an explicit guard.</p>
+          <p>Non-provider evals are safe. Live OpenAI evals require an explicit guard.</p>
         </div>
         <RecommendationEvalRunForm />
       </section>

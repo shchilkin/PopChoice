@@ -1645,26 +1645,6 @@ input:disabled {
   font-weight: 750;
   white-space: nowrap;
 }
-.live-eval-disclosure {
-  max-width: 760px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-.live-eval-disclosure summary {
-  width: fit-content;
-  cursor: pointer;
-  padding: 0;
-  color: var(--subtle);
-  font-size: 12px;
-  font-weight: 900;
-}
-.live-eval-disclosure summary::marker {
-  color: var(--bad);
-}
-.live-eval-disclosure[open] summary {
-  color: var(--bad);
-}
 .live-eval-form {
   display: grid;
   gap: 10px;

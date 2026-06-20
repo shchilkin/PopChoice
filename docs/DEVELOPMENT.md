@@ -233,13 +233,13 @@ The default eval path uses fixture prompts, fixture user-memory constraints, and
   avoids, runtime constraints, discovery appetite, optional reference movie
   flows, and feedback-derived memory
 
-Run live-provider evals only when intentionally checking model/provider behavior:
+Run live OpenAI evals only when intentionally checking model/provider behavior:
 
 ```bash
 npm run eval:recommendations -- --live
 ```
 
-Live evals require configured provider and database environment variables such as `OPENAI_API_KEY`, `DATABASE_URL`, and usually `TMDB_API_KEY`. CI blocks on the deterministic eval job; live evals are manual so normal PR checks stay cheap and predictable.
+Live evals require configured provider and database environment variables such as `OPENAI_API_KEY`, `DATABASE_URL`, and usually `TMDB_API_KEY`. They call the provider-backed recommendation pipeline and persist the provider response in the eval report. CI blocks on the deterministic eval job; live evals are manual so normal PR checks stay cheap and predictable.
 
 Run real-data evals when checking catalog retrieval, seed/backfill, schema, or candidate-availability changes:
 
