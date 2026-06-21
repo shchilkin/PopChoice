@@ -379,6 +379,13 @@ Completed runs store the report summary and per-case rows in
 `recommendation_eval_results`, so operators can inspect failures without
 recovering transient worker logs or local JSON artifacts.
 
+When `OPENAI_ADMIN_API_KEY` is configured, the page also shows OpenAI Admin
+Usage/Costs telemetry for 24h, 7d, and 30d periods. Live eval runs attach
+`providerUsage` to the persisted report: worker-observed request/token usage is
+attributed to that eval job, while Admin Costs API data is an interval snapshot
+for the eval runtime and can include concurrent OpenAI traffic from the same
+organization/project.
+
 ## Visual QA Checklist
 
 Backoffice UI changes should include a short visual QA pass before review. Use

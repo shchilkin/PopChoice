@@ -225,3 +225,15 @@ export type {
   RecommendationEvalRunSource,
   RecommendationEvalRunStatus,
 } from './recommendationEvalRuns.js';
+export { fetchOpenAIUsageAndCosts } from './openaiUsage.js';
+export type {
+  FetchOpenAIUsageAndCostsOptions,
+  OpenAICostAmount,
+  OpenAICostGroup,
+  OpenAIUsageAndCostSummary,
+  OpenAIUsageBucketWidth,
+  OpenAIUsageCategory,
+  OpenAIUsageGroup,
+  OpenAIUsagePeriod,
+  OpenAIUsageTotals,
+} from './openaiUsage.js';

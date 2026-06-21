@@ -2,6 +2,7 @@ import {
   completeRecommendationEvalRun,
   ensureRecommendationEvalRunSchema,
   failRecommendationEvalRun,
+  fetchOpenAIUsageAndCosts,
   initDatabase,
   markRecommendationEvalRunProcessing,
 } from '@pop-choice/shared';
@@ -17,6 +18,7 @@ import {
 } from '@/lib/jobQueue';
 import logger from '@/lib/logger';
 import { recordQueueJobEvent } from '@/lib/metrics';
+import { getOpenAIUsageSnapshotFromError, withOpenAIUsageTracking } from '@/lib/openaiUsageContext';
 import { withTraceSpan } from '@/lib/tracing';
 
 import type {
@@ -26,6 +28,7 @@ import type {
   RecommendationEvalResult,
 } from '@/features/recommendation/evals/types';
 import type { RecommendationEvalJobData, RecommendationEvalJobName } from '@/lib/jobQueue';
+import type { ObservedOpenAIUsageSnapshot } from '@/lib/openaiUsageContext';
 import type { CompleteRecommendationEvalRunResultInput } from '@pop-choice/shared';
 import type { Job, WorkerOptions } from 'bullmq';
 
@@ -82,13 +85,27 @@ function resultToJson(result: RecommendationEvalResult): Record<string, unknown>
   };
 }
 
-function reportToJson(report: RecommendationEvalReport): Record<string, unknown> {
+type ProviderUsageReport = {
+  admin?: Record<string, unknown>;
+  observed?: ObservedOpenAIUsageSnapshot;
+  period?: {
+    endTime: string;
+    startTime: string;
+  };
+  provider: 'openai';
+};
+
+function reportToJson(
+  report: RecommendationEvalReport,
+  providerUsage?: ProviderUsageReport,
+): Record<string, unknown> {
   return {
     generatedAt: report.generatedAt,
     maxScore: report.maxScore,
     minPassingScore: report.minPassingScore,
     mode: report.mode,
     passed: report.passed,
+    providerUsage,
     results: report.results.map(resultToJson),
     summary: report.summary,
   };
@@ -116,6 +133,56 @@ function toStoredResults(
   });
 }
 
+async function fetchProviderUsageReport(
+  startTime: Date,
+  endTime: Date,
+  observed: ObservedOpenAIUsageSnapshot | null,
+): Promise<ProviderUsageReport | undefined> {
+  if (!observed && !process.env.OPENAI_ADMIN_API_KEY) return undefined;
+
+  const report: ProviderUsageReport = {
+    observed: observed ?? undefined,
+    period: {
+      endTime: endTime.toISOString(),
+      startTime: startTime.toISOString(),
+    },
+    provider: 'openai',
+  };
+
+  const adminApiKey = process.env.OPENAI_ADMIN_API_KEY;
+  if (!adminApiKey) {
+    report.admin = {
+      status: 'not_configured',
+      message: 'OPENAI_ADMIN_API_KEY is not configured; exact billing cost was not fetched.',
+    };
+    return report;
+  }
+
+  try {
+    const adminSummary = await fetchOpenAIUsageAndCosts({
+      apiKey: adminApiKey,
+      bucketWidth: '1h',
+      endTime,
+      startTime,
+      usageCategories: ['completions', 'embeddings', 'moderations'],
+    });
+    report.admin = {
+      status: 'available',
+      summary: adminSummary,
+      attribution: 'interval',
+      note: 'Admin Costs API is aggregated by interval; concurrent OpenAI traffic in the same project/key may be included.',
+    };
+  } catch (error) {
+    report.admin = {
+      status: 'unavailable',
+      error: error instanceof Error ? error.message : String(error),
+    };
+    logger.warn({ err: error }, 'Failed to fetch OpenAI usage/cost summary for eval run');
+  }
+
+  return report;
+}
+
 async function processRecommendationEvalJob(
   job: Job<RecommendationEvalJobData, void, RecommendationEvalJobName>,
 ): Promise<void> {
@@ -125,12 +192,21 @@ async function processRecommendationEvalJob(
 
   await ensureEvalSchema();
   await markRecommendationEvalRunProcessing(job.data.runId);
+  const runStartedAt = new Date();
 
   try {
-    const report = await runRecommendationEvals({ mode: job.data.mode });
+    const { result: report, usage } =
+      job.data.mode === 'live'
+        ? await withOpenAIUsageTracking(() => runRecommendationEvals({ mode: job.data.mode }))
+        : { result: await runRecommendationEvals({ mode: job.data.mode }), usage: null };
+    const completedAt = new Date();
+    const providerUsage =
+      job.data.mode === 'live'
+        ? await fetchProviderUsageReport(runStartedAt, completedAt, usage)
+        : undefined;
     ensureDatabase();
     await completeRecommendationEvalRun({
-      report: reportToJson(report),
+      report: reportToJson(report, providerUsage),
       results: toStoredResults(report),
       runId: job.data.runId,
       summary: report.summary,
@@ -147,9 +223,16 @@ async function processRecommendationEvalJob(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    const endTime = new Date();
+    const observedUsage = job.data.mode === 'live' ? getOpenAIUsageSnapshotFromError(error) : null;
+    const providerUsage =
+      job.data.mode === 'live'
+        ? await fetchProviderUsageReport(runStartedAt, endTime, observedUsage)
+        : undefined;
     ensureDatabase();
     await failRecommendationEvalRun({
       errorMessage: message,
+      report: providerUsage ? { providerUsage } : undefined,
       runId: job.data.runId,
       status: 'failed',
     }).catch((statusError) => {

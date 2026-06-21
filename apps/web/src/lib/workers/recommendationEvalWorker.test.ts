@@ -6,10 +6,13 @@ const {
   mockCreateBullMQConnection,
   mockEnsureRecommendationEvalRunSchema,
   mockFailRecommendationEvalRun,
+  mockFetchOpenAIUsageAndCosts,
+  mockGetOpenAIUsageSnapshotFromError,
   mockInitDatabase,
   mockMarkRecommendationEvalRunProcessing,
   mockRecordQueueJobEvent,
   mockRunRecommendationEvals,
+  mockWithOpenAIUsageTracking,
   mockWorkerOn,
   MockWorker,
 } = vi.hoisted(() => {
@@ -34,10 +37,13 @@ const {
     mockCreateBullMQConnection: vi.fn(),
     mockEnsureRecommendationEvalRunSchema: vi.fn(),
     mockFailRecommendationEvalRun: vi.fn(),
+    mockFetchOpenAIUsageAndCosts: vi.fn(),
+    mockGetOpenAIUsageSnapshotFromError: vi.fn(),
     mockInitDatabase: vi.fn(),
     mockMarkRecommendationEvalRunProcessing: vi.fn(),
     mockRecordQueueJobEvent: vi.fn(),
     mockRunRecommendationEvals: vi.fn(),
+    mockWithOpenAIUsageTracking: vi.fn(),
     mockWorkerOn,
     MockWorker,
   };
@@ -48,6 +54,7 @@ vi.mock('@pop-choice/shared', () => ({
   completeRecommendationEvalRun: mockCompleteRecommendationEvalRun,
   ensureRecommendationEvalRunSchema: mockEnsureRecommendationEvalRunSchema,
   failRecommendationEvalRun: mockFailRecommendationEvalRun,
+  fetchOpenAIUsageAndCosts: mockFetchOpenAIUsageAndCosts,
   initDatabase: mockInitDatabase,
   markRecommendationEvalRunProcessing: mockMarkRecommendationEvalRunProcessing,
 }));
@@ -86,6 +93,10 @@ vi.mock('@/lib/logger', () => ({
 }));
 vi.mock('@/lib/metrics', () => ({
   recordQueueJobEvent: mockRecordQueueJobEvent,
+}));
+vi.mock('@/lib/openaiUsageContext', () => ({
+  getOpenAIUsageSnapshotFromError: mockGetOpenAIUsageSnapshotFromError,
+  withOpenAIUsageTracking: mockWithOpenAIUsageTracking,
 }));
 vi.mock('@/lib/tracing', () => ({
   withTraceSpan: (_name: string, _options: unknown, callback: () => Promise<void>) => callback(),
@@ -146,7 +157,44 @@ describe('createRecommendationEvalWorker', () => {
     mockMarkRecommendationEvalRunProcessing.mockResolvedValue(undefined);
     mockCompleteRecommendationEvalRun.mockResolvedValue(undefined);
     mockFailRecommendationEvalRun.mockResolvedValue(undefined);
+    mockFetchOpenAIUsageAndCosts.mockResolvedValue({
+      costs: { groups: [], total: { currency: 'usd', value: 0.12 } },
+      period: {
+        bucketWidth: '1h',
+        endTime: '2026-05-29T00:01:00.000Z',
+        startTime: '2026-05-29T00:00:00.000Z',
+      },
+      usage: {
+        byCategory: {
+          completions: { cachedInputTokens: 0, inputTokens: 10, outputTokens: 5, requests: 1 },
+          embeddings: { cachedInputTokens: 0, inputTokens: 20, outputTokens: 0, requests: 1 },
+          images: { cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, requests: 0 },
+          moderations: { cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, requests: 0 },
+          web_search_calls: { cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, requests: 0 },
+        },
+        groups: [],
+        total: { cachedInputTokens: 0, inputTokens: 30, outputTokens: 5, requests: 2 },
+      },
+    });
+    mockGetOpenAIUsageSnapshotFromError.mockReturnValue(null);
     mockRunRecommendationEvals.mockResolvedValue(evalReport());
+    mockWithOpenAIUsageTracking.mockImplementation(async (callback: () => Promise<unknown>) => ({
+      result: await callback(),
+      usage: {
+        byModel: [],
+        byOperation: {
+          'chat.completions': {
+            cachedInputTokens: 0,
+            inputTokens: 10,
+            outputTokens: 5,
+            requests: 1,
+          },
+          embeddings: { cachedInputTokens: 0, inputTokens: 20, outputTokens: 0, requests: 1 },
+          moderations: { cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, requests: 0 },
+        },
+        total: { cachedInputTokens: 0, inputTokens: 30, outputTokens: 5, requests: 2 },
+      },
+    }));
     mockRecordQueueJobEvent.mockReset();
     mockWorkerOn.mockReset();
     capturedProcessor.current = null;
@@ -242,9 +290,19 @@ describe('createRecommendationEvalWorker', () => {
     );
 
     expect(mockRunRecommendationEvals).toHaveBeenCalledWith({ mode: 'live' });
+    expect(mockWithOpenAIUsageTracking).toHaveBeenCalled();
     expect(mockCompleteRecommendationEvalRun).toHaveBeenCalledWith(
       expect.objectContaining({
-        report: expect.objectContaining({ mode: 'live' }),
+        report: expect.objectContaining({
+          mode: 'live',
+          providerUsage: expect.objectContaining({
+            admin: expect.objectContaining({ status: 'not_configured' }),
+            observed: expect.objectContaining({
+              total: { cachedInputTokens: 0, inputTokens: 30, outputTokens: 5, requests: 2 },
+            }),
+            provider: 'openai',
+          }),
+        }),
         runId: '11111111-1111-4111-8111-111111111111',
       }),
     );
