@@ -6,19 +6,24 @@
   "scripts": {
     "prebuild": "fumadocs-mdx",
     "build": "next build --webpack",
-    "dev": "next dev --port 3003",
+    "dev": "next dev --webpack --port 3003",
     "start": "next start",
     "pretype-check": "fumadocs-mdx",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@isoflow/isopacks": "^0.0.10",
     "@types/mdx": "^2.0.14",
     "fumadocs-core": "^16.10.0",
     "fumadocs-mdx": "^15.0.12",
     "fumadocs-ui": "^16.10.0",
+    "isoflow": "^1.1.1",
     "next": "^16.2.9",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-dom18": "npm:react-dom@^18.3.1",
+    "react-router": "^7.18.0",
+    "react18": "npm:react@^18.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
