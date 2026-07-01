@@ -235,7 +235,7 @@ APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 POSTGRES_USER=popchoice
 POSTGRES_DB=popchoice
 LOG_LEVEL=info
-EMAIL_REPLY_TO=support@your-domain.example
+EMAIL_REPLY_TO=support@mail.shchilkin.dev
 OPERATOR_AUTH_REALM=PopChoice Operators
 OPERATOR_AUTH_RATE_LIMIT_MAX=30
 OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS=900
@@ -254,10 +254,14 @@ API_KEY_HMAC_SECRET=...
 VALID_API_KEYS=...
 METRICS_BEARER_TOKEN=...
 NEXT_PUBLIC_BASE_URL=https://dev.pop-choice.shchilkin.dev
-EMAIL_FROM=PopChoice Dev <noreply@mail.pop-choice.shchilkin.dev>
+EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>
 OPERATOR_AUTH_USERNAME=...
 OPERATOR_AUTH_PASSWORD=...
 ```
+
+Use the same verified Resend sender domain in both development and production:
+`EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>`. The `RESEND_API_KEY`
+value does not change when moving the sender domain.
 
 Use URL-safe database passwords such as `openssl rand -hex 32`; PostgreSQL
 passwords that contain URL-reserved characters can break generated
@@ -471,13 +475,13 @@ VALID_API_KEYS={{ project.VALID_API_KEYS }}
 ### Password reset email
 
 Password reset requests use Resend in production. Create a Resend API key and
-verify a sending domain such as `mail.your-domain.example`, then set these
+use the verified sending domain `mail.shchilkin.dev`, then set these
 variables on the Coolify Compose resource:
 
 ```ini
 RESEND_API_KEY={{ project.RESEND_API_KEY }}
-EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
-EMAIL_REPLY_TO=support@your-domain.example
+EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>
+EMAIL_REPLY_TO=support@mail.shchilkin.dev
 ```
 
 `EMAIL_REPLY_TO` is optional. In local development and previews, the app exposes
