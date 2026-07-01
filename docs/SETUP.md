@@ -46,7 +46,8 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.example
 
 # Password reset email delivery (required in production for forgot-password flow)
 RESEND_API_KEY=your-resend-api-key
-EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
+EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>
+EMAIL_REPLY_TO=support@mail.shchilkin.dev
 ```
 
 The root `.env` is the source of truth for local development. After you update it, run `npm run copy:env` from the repo root to sync the workspace-level `.env` files used by `apps/web` and the local services.
