@@ -15,11 +15,11 @@
     "bullmq": "^5.79.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
-    "ioredis": "5.11.1"
+    "ioredis": "5.10.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.1.0",
     "tsx": "^4.23.0",
     "typescript": "^5.0.0"
   }
