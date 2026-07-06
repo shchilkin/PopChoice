@@ -89,6 +89,11 @@ The current long-lived VPS layout is:
 image matrix succeeds. `production` is promoted manually from `main` after
 staging has been accepted.
 
+The GitHub Actions deploy jobs use the same `development` and `production`
+environment names with these public app URLs. Keep those names stable so the
+GitHub repository Deployments/Environments surfaces show the current staging and
+production deployments.
+
 ## Service Links
 
 Keep the long-lived operator and review surfaces on stable, memorable domains.
