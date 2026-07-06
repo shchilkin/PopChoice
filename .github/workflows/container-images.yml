@@ -95,7 +95,7 @@ jobs:
       DEPLOY_ENVIRONMENT: ${{ needs.validate-deploy-request.outputs.deploy_environment }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Prepare image metadata
         id: meta
@@ -239,7 +239,7 @@ jobs:
     steps:
       - name: Checkout deploy scripts
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate Coolify deploy secrets
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN == ''
@@ -325,7 +325,7 @@ jobs:
 
       - name: Checkout deploy scripts
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN != ''
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate Coolify deploy secrets
         if: env.COOLIFY_DEPLOY_WEBHOOK != '' && env.COOLIFY_TOKEN == ''
