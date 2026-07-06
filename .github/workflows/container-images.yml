@@ -219,9 +219,12 @@ jobs:
     if: github.ref_name == 'development' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy_environment == 'development'))
     needs: build-images
     runs-on: ubuntu-latest
-    environment: development
+    environment:
+      name: development
+      url: https://dev.pop-choice.shchilkin.dev
     permissions:
       contents: read
+      deployments: write
     env:
       COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
       COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
@@ -272,9 +275,12 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.ref_name == 'main' && inputs.deploy_environment == 'production'
     needs: build-images
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      url: https://pop-choice.shchilkin.dev
     permissions:
       contents: read
+      deployments: write
       packages: write
     env:
       COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
