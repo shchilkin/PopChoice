@@ -30,6 +30,7 @@ export const STEP_KEYS = [
   'era',
   'mood',
   'tone',
+  'discovery',
   'avoids',
   'favoriteActor',
 ] as const;
@@ -116,6 +117,8 @@ export const FAST_AVOIDS: {
   { id: 'slow', icon: TimerOff, color: palette.amber },
   { id: 'subtitles', icon: Globe, color: palette.blue },
   { id: 'long', icon: Clock, color: palette.teal },
+  { id: 'obvious', icon: Star, color: palette.gold },
+  { id: 'obscure', icon: Compass, color: palette.green },
   { id: 'alreadySeen', icon: Film, color: palette.purple },
 ];
 
@@ -145,6 +148,8 @@ const FAST_AVOID_API_LABELS: Record<FastAvoid, string> = {
   slow: 'slow pacing',
   subtitles: 'subtitles',
   long: 'long runtime',
+  obvious: 'too obvious',
+  obscure: 'too obscure',
   alreadySeen: 'already-seen movies',
 };
 
@@ -189,8 +194,12 @@ export function toApiFormat(person: PersonAnswers) {
   const trimmedName = person.name.trim().slice(0, PARTICIPANT_NAME_MAX_LENGTH);
   const favoriteMovie = person.hasNoReferenceMovie ? '' : person.favoriteMovie.trim();
   const avoidLabels = getAvoidLabels(person);
+  const discoveryLabel = person.fastDiscovery
+    ? FAST_DISCOVERY_API_LABELS[person.fastDiscovery]
+    : '';
   const favoriteMovieWhy = [
     person.favoriteMovieWhy.trim(),
+    discoveryLabel ? `Discovery appetite: ${discoveryLabel}.` : '',
     avoidLabels.length > 0 ? `Avoid: ${avoidLabels.join(', ')}.` : '',
   ]
     .filter(Boolean)

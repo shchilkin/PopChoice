@@ -13,7 +13,7 @@ const meta: Meta<typeof FavoriteMovieStep> = {
     docs: {
       description: {
         component:
-          'Step 1 of the quiz — asks the user for their favorite movie with quick-pick chips and an optional "why" textarea.',
+          'Optional reference-movie step with quick-pick chips and an optional "why" textarea.',
       },
     },
   },
@@ -29,7 +29,7 @@ type Story = StoryObj<typeof FavoriteMovieStep>;
 export const Empty: Story = {
   args: {
     person: emptyPerson('You'),
-    canProceed: false,
+    canProceed: true,
   },
 };
 

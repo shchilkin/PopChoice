@@ -27,6 +27,7 @@ type ScoringContext = {
   fixture: RecommendationEvalFixture;
   mainTitle: string;
   response: ApiResponse;
+  responseCandidateText: string;
   responseMovieTitles: string[];
   responseText: string;
   sourceDistribution: CandidateSourceDistribution;
@@ -60,12 +61,18 @@ function normalizeTitle(value: string, year?: number): string {
 }
 
 function collectResponseText(response: ApiResponse): string {
+  return normalizeText(
+    [response.title, response.description, collectResponseCandidateText(response)].join(' '),
+  );
+}
+
+function collectResponseCandidateText(response: ApiResponse): string {
   const movieText =
     response.similarMovies
       ?.flatMap((movie) => [movie.name, movie.localizedName, movie.aiDescription])
       .filter((text): text is string => typeof text === 'string' && text.trim().length > 0)
       .join(' ') ?? '';
-  return normalizeText([response.title, response.description, movieText].join(' '));
+  return normalizeText([response.title, movieText].join(' '));
 }
 
 function textIncludesAnyTerm(text: string, terms: string[]): boolean {
@@ -113,6 +120,7 @@ export function scoreRecommendationEvalFixture(
     minPassingScore,
     mode,
     passed: score >= minPassingScore && checks.every((check) => check.passed),
+    response,
     score,
     sourceDistribution: context.sourceDistribution,
   };
@@ -126,6 +134,7 @@ function buildScoringContext(
     fixture,
     mainTitle: normalizeTitle(getMainRecommendationTitle(response)),
     response,
+    responseCandidateText: collectResponseCandidateText(response),
     responseMovieTitles: response.similarMovies?.map((movie) => normalizeTitle(movie.name)) ?? [],
     responseText: collectResponseText(response),
     sourceDistribution: getResponseSourceDistribution(response),
@@ -147,6 +156,10 @@ function buildRecommendationEvalChecks(context: ScoringContext): RecommendationE
     buildScenarioDepthCheck(context),
     buildScenarioSourceStrategyCheck(context),
     buildQualityThresholdCheck(context),
+    buildTasteControlHardAvoidsCheck(context),
+    buildTasteControlDiscoveryCheck(context),
+    buildTasteControlOptionalReferenceCheck(context),
+    buildTasteControlFeedbackMemoryCheck(context),
   ];
 }
 
@@ -549,6 +562,160 @@ function getQualityThresholdResult({
           .join('; '),
     passed,
   };
+}
+
+function buildTasteControlHardAvoidsCheck({
+  fixture,
+  response,
+  responseCandidateText,
+}: ScoringContext): RecommendationEvalCheck {
+  const tasteControl = fixture.expectations.tasteControl;
+  const hardAvoidTerms = tasteControl?.hardAvoidTerms ?? [];
+  const maxRuntimeMinutes = tasteControl?.maxRuntimeMinutes;
+  const foundHardAvoidTerms = getFoundHardAvoidTerms(hardAvoidTerms, responseCandidateText);
+  const overRuntimeMovies = getOverRuntimeMovies(response, maxRuntimeMinutes);
+  const passed = foundHardAvoidTerms.length === 0 && overRuntimeMovies.length === 0;
+
+  return buildCheck(
+    'taste-control-hard-avoids',
+    'Taste control: hard avoids',
+    0,
+    passed,
+    getHardAvoidDetails({
+      foundHardAvoidTerms,
+      hardAvoidTerms,
+      maxRuntimeMinutes,
+      overRuntimeMovies,
+      passed,
+    }),
+  );
+}
+
+function getFoundHardAvoidTerms(hardAvoidTerms: string[], responseCandidateText: string): string[] {
+  return hardAvoidTerms.filter((term) => responseCandidateText.includes(normalizeText(term)));
+}
+
+function getOverRuntimeMovies(
+  response: ApiResponse,
+  maxRuntimeMinutes: number | undefined,
+): string[] {
+  if (typeof maxRuntimeMinutes !== 'number') return [];
+
+  return (
+    response.similarMovies
+      ?.filter((movie) => movie.duration > maxRuntimeMinutes)
+      .map((movie) => `${movie.name} (${movie.duration}m)`) ?? []
+  );
+}
+
+function getHardAvoidDetails({
+  foundHardAvoidTerms,
+  hardAvoidTerms,
+  maxRuntimeMinutes,
+  overRuntimeMovies,
+  passed,
+}: {
+  foundHardAvoidTerms: string[];
+  hardAvoidTerms: string[];
+  maxRuntimeMinutes: number | undefined;
+  overRuntimeMovies: string[];
+  passed: boolean;
+}): string {
+  if (!passed) {
+    return joinFailureDetails([
+      foundHardAvoidTerms.length === 0
+        ? null
+        : `candidate text includes hard avoids: ${foundHardAvoidTerms.join(', ')}`,
+      overRuntimeMovies.length === 0
+        ? null
+        : `runtime over ${maxRuntimeMinutes}m: ${overRuntimeMovies.join(', ')}`,
+    ]);
+  }
+
+  return hardAvoidTerms.length > 0 || typeof maxRuntimeMinutes === 'number'
+    ? 'Recommended candidates respect explicit hard avoids and runtime constraints.'
+    : 'No explicit taste-control hard avoids configured for this fixture.';
+}
+
+function buildTasteControlDiscoveryCheck({
+  fixture,
+  responseText,
+}: ScoringContext): RecommendationEvalCheck {
+  const appetite = fixture.expectations.tasteControl?.discoveryAppetite;
+  const passed = !appetite || responseText.includes(normalizeText(appetite));
+
+  return buildCheck(
+    'taste-control-discovery-appetite',
+    'Taste control: discovery appetite',
+    0,
+    passed,
+    passed
+      ? appetite
+        ? `Response represents the ${appetite} discovery appetite.`
+        : 'No discovery appetite expectation configured for this fixture.'
+      : `Expected response text to represent discovery appetite: ${appetite}.`,
+  );
+}
+
+function buildTasteControlOptionalReferenceCheck({
+  fixture,
+  responseText,
+}: ScoringContext): RecommendationEvalCheck {
+  const expectsOptionalReference =
+    fixture.expectations.tasteControl?.optionalReferenceMovie === true;
+  const allReferenceMoviesBlank = fixture.people.every(
+    (person) => person.favoriteMovie.trim().length === 0,
+  );
+  const mentionsMissingReference =
+    responseText.includes('favorite movie') || responseText.includes('reference movie');
+  const passed =
+    !expectsOptionalReference || (allReferenceMoviesBlank && !mentionsMissingReference);
+
+  return buildCheck(
+    'taste-control-optional-reference',
+    'Taste control: optional reference movie',
+    0,
+    passed,
+    passed
+      ? expectsOptionalReference
+        ? 'Fixture runs with no reference movie and the response does not ask for one.'
+        : 'No optional-reference expectation configured for this fixture.'
+      : joinFailureDetails([
+          allReferenceMoviesBlank ? null : 'expected all favoriteMovie fields to be blank',
+          mentionsMissingReference ? 'response still leans on a missing reference movie' : null,
+        ]),
+  );
+}
+
+function buildTasteControlFeedbackMemoryCheck({
+  fixture,
+  responseText,
+}: ScoringContext): RecommendationEvalCheck {
+  const expectedKinds = fixture.expectations.tasteControl?.feedbackMemoryKinds ?? [];
+  const actualKinds = new Set(fixture.userMemories.map((memory) => memory.kind));
+  const missingKinds = expectedKinds.filter((kind) => !actualKinds.has(kind));
+  const responseMentionsAvoidance = responseText.includes('avoid');
+  const passed =
+    missingKinds.length === 0 && (expectedKinds.length === 0 || responseMentionsAvoidance);
+
+  return buildCheck(
+    'taste-control-feedback-memory',
+    'Taste control: feedback memory',
+    0,
+    passed,
+    passed
+      ? expectedKinds.length > 0
+        ? `Fixture covers feedback memory kinds: ${expectedKinds.join(', ')}.`
+        : 'No feedback-memory expectation configured for this fixture.'
+      : joinFailureDetails([
+          missingKinds.length === 0
+            ? null
+            : `missing feedback memory kinds: ${missingKinds.join(', ')}`,
+          responseMentionsAvoidance
+            ? null
+            : 'expected response text to mention avoiding feedback-memory repeats',
+        ]),
+  );
 }
 
 export function buildRecommendationEvalReport(

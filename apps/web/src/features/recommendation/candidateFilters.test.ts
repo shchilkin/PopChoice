@@ -7,6 +7,7 @@ import {
   excludeFeedbackTMDBMovies,
   getFeedbackCandidateSignals,
   getMentionedMovieTitleKeys,
+  getTasteSignalCandidateSignals,
   isMentionedMovieTitle,
 } from './candidateFilters';
 
@@ -138,16 +139,21 @@ describe('candidateFilters', () => {
   it('filters exact repeat candidates with negative feedback', () => {
     const signals = getFeedbackCandidateSignals([
       { kind: 'wrong_mood', movieName: 'Arrival', movieYear: 2016 },
+      { kind: 'not_for_me', movieName: 'Moon', movieYear: 2009 },
       { kind: 'too_obvious', movieName: 'Interstellar', movieYear: 2014 },
       { kind: 'too_obscure', movieName: 'Primer', movieYear: 2004 },
       { kind: 'useful', movieName: 'Past Lives', movieYear: 2023 },
     ]);
     const arrival = { ...movie('Arrival'), similarity: 0.91 };
     const interstellar = { ...movie('Interstellar'), similarity: 0.9 };
+    const moon = { ...movie('Moon'), similarity: 0.88 };
     const primer = { ...movie('Primer'), similarity: 0.89 };
     const pastLives = { ...movie('Past Lives'), similarity: 0.85 };
 
-    const result = applyFeedbackToLocalMovies([arrival, interstellar, primer, pastLives], signals);
+    const result = applyFeedbackToLocalMovies(
+      [arrival, interstellar, moon, primer, pastLives],
+      signals,
+    );
 
     expect(result.map((candidate) => candidate.name)).toEqual(['Past Lives', 'Arrival']);
     expect(result.find((candidate) => candidate.name === 'Arrival')?.similarity).toBeCloseTo(0.83);
@@ -299,5 +305,41 @@ describe('candidateFilters', () => {
         signals,
       ).map((candidate) => candidate.title),
     ).toEqual(['Princess Mononoke']);
+  });
+
+  it('applies movie taste signals while ignoring trait-only signals', () => {
+    const signals = getTasteSignalCandidateSignals([
+      {
+        type: 'desired_trait',
+        source: 'quiz',
+        value: 'warm',
+        weight: 0.5,
+      },
+      {
+        type: 'seen_movie',
+        source: 'movie-memory',
+        title: 'Paddington 2',
+        year: 2017,
+        weight: 1,
+      },
+      {
+        type: 'liked_movie',
+        source: 'movie-memory',
+        title: 'After Yang',
+        year: 2021,
+        weight: 1,
+      },
+    ]);
+
+    expect(
+      applyFeedbackToLocalMovies(
+        [
+          { ...movie('Paddington 2'), similarity: 0.95 },
+          { ...movie('Columbus'), similarity: 0.82 },
+          { ...movie('After Yang'), similarity: 0.79 },
+        ],
+        signals,
+      ).map((candidate) => candidate.name),
+    ).toEqual(['After Yang', 'Columbus']);
   });
 });

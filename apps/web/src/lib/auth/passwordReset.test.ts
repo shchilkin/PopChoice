@@ -79,8 +79,8 @@ describe('sendPasswordResetEmail', () => {
   it('sends password reset email through Resend in production', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('RESEND_API_KEY', 'test-resend-key');
-    vi.stubEnv('EMAIL_FROM', 'PopChoice <noreply@mail.pop-choice.test>');
-    vi.stubEnv('EMAIL_REPLY_TO', 'support@pop-choice.test');
+    vi.stubEnv('EMAIL_FROM', 'PopChoice <noreply@mail.shchilkin.dev>');
+    vi.stubEnv('EMAIL_REPLY_TO', 'support@mail.shchilkin.dev');
 
     vi.mocked(fetch).mockResolvedValueOnce(new Response('{}', { status: 200 }));
 
@@ -100,10 +100,10 @@ describe('sendPasswordResetEmail', () => {
 
     const body = JSON.parse(String(options?.body));
     expect(body).toMatchObject({
-      from: 'PopChoice <noreply@mail.pop-choice.test>',
+      from: 'PopChoice <noreply@mail.shchilkin.dev>',
       to: 'alice@example.com',
       subject: 'Reset your PopChoice password',
-      reply_to: 'support@pop-choice.test',
+      reply_to: 'support@mail.shchilkin.dev',
     });
     expect(body.text).toContain('https://pop-choice.test/reset-password?token=abc');
     expect(body.html).toContain('https://pop-choice.test/reset-password?token=abc');
@@ -116,7 +116,7 @@ describe('sendPasswordResetEmail', () => {
   it('logs Resend failures without throwing', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('RESEND_API_KEY', 'test-resend-key');
-    vi.stubEnv('EMAIL_FROM', 'PopChoice <noreply@mail.pop-choice.test>');
+    vi.stubEnv('EMAIL_FROM', 'PopChoice <noreply@mail.shchilkin.dev>');
 
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ message: 'invalid sender' }), { status: 422 }),

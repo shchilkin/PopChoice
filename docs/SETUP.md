@@ -46,7 +46,8 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.example
 
 # Password reset email delivery (required in production for forgot-password flow)
 RESEND_API_KEY=your-resend-api-key
-EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
+EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>
+EMAIL_REPLY_TO=support@mail.shchilkin.dev
 ```
 
 The root `.env` is the source of truth for local development. After you update it, run `npm run copy:env` from the repo root to sync the workspace-level `.env` files used by `apps/web` and the local services.
@@ -97,9 +98,9 @@ This application uses a generic database client abstraction (`apps/web/src/clien
    DATABASE_URL=postgresql://user:password@host:5432/dbname
    ```
 
-6. **Apply migrations and populate the database**
+6. **Apply migrations and seed the database**
    - Run `npm run migrate:db` if you are using an existing database
-   - Run `npm run populate-db`
+   - Start workers and Backoffice, then use the Backoffice Catalog seed action
 
 ## TMDB API Setup (Optional)
 
@@ -192,8 +193,7 @@ If you are using the repo's local setup flow, run `npm run copy:env` after chang
 Run background workers in a separate terminal:
 
 ```bash
-cd apps/web
-npm run start:workers
+npm run start:workers --workspace=apps/web
 ```
 
 Optional queue monitoring dashboard:
@@ -245,13 +245,21 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    npm run copy:env
    ```
 
-   This copies the root `.env` into `apps/web/.env` and the local services so the web app, workers, and seed service all use the same credentials.
+   This copies the root `.env` into `apps/web/.env` and the local services so the web app and workers use the same credentials.
 
 3. **Populate the database**
 
    ```bash
-   npm run populate-db
+   # terminal 1
+   npm run start:workers --workspace=apps/web
+
+   # terminal 2, repo root
+   npm run dev:backoffice
    ```
+
+   Open the Backoffice Catalog seed page and trigger the curated seed job. The
+   worker reads `apps/web/data/movies.txt`, creates embeddings, and inserts
+   missing movies.
 
 4. **Run the app locally**
 
@@ -259,9 +267,8 @@ You can run a fully-configured local PostgreSQL instance with pgvector using Doc
    # terminal 1, repo root
    npm run dev
 
-   # terminal 2, apps/web
-   cd apps/web
-   npm run start:workers
+   # terminal 2, repo root
+   npm run start:workers --workspace=apps/web
    ```
 
    For the async recommendation flow, keep the workers running while you use the app.

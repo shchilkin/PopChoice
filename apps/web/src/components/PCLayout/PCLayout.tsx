@@ -549,7 +549,12 @@ export function PCLayout({ children }: { children: ReactNode }) {
           href="https://github.com/shchilkin"
           target="_blank"
           rel="noopener noreferrer"
-          style={{ color: 'var(--pc-gold-text)' }}
+          style={{
+            color: 'var(--pc-gold-text)',
+            textDecorationColor: 'color-mix(in srgb, var(--pc-gold-text) 65%, transparent)',
+            textDecorationLine: 'underline',
+            textUnderlineOffset: '0.18em',
+          }}
         >
           {t.footer.authorName}
         </a>{' '}

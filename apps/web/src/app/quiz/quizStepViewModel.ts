@@ -26,13 +26,15 @@ export function canProceedForStep({
 
   switch (questionsStep) {
     case 'favoriteMovie':
-      return person.hasNoReferenceMovie || person.favoriteMovie.trim().length >= 1;
+      return true;
     case 'era':
       return person.era !== '';
     case 'mood':
       return person.moods.length >= 1;
     case 'tone':
       return person.tone !== '';
+    case 'discovery':
+      return person.fastDiscovery !== '';
     case 'avoids':
     case 'favoriteActor':
       return true;

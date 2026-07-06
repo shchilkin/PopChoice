@@ -52,6 +52,38 @@ This creates a usable first recommendation, but the data is coarse. It asks user
 - Normal Match is producing promising qualitative results for specific intent prompts. A Russian dystopian/post-apocalyptic survival prompt returned a strong `Blade Runner`-style selection and explanation.
 - Duo and Group need more manual product QA after the entry-flow ordering is fixed, especially to verify whether compromise results feel meaningfully different from solo recommendations.
 
+## 0.2.0 Better Taste Control
+
+The Better Taste Control release is tracked by
+[#826](https://github.com/shchilkin/PopChoice/issues/826). It makes PopChoice
+more controllable without turning the quiz into a technical filter form. Users
+can say what they want, what they want to avoid, and how safe or surprising the
+pick should feel.
+
+Completed scope:
+
+- [x] [#827](https://github.com/shchilkin/PopChoice/issues/827): add explicit
+      avoids and constraints to Fast Pick and Normal Match.
+- [x] [#828](https://github.com/shchilkin/PopChoice/issues/828): make reference
+      movie input optional and lower-friction.
+- [x] [#829](https://github.com/shchilkin/PopChoice/issues/829): add discovery
+      appetite control for safe, balanced, and surprising recommendations.
+- [x] [#830](https://github.com/shchilkin/PopChoice/issues/830): improve the
+      result feedback loop so feedback can guide follow-up recommendations.
+- [x] [#831](https://github.com/shchilkin/PopChoice/issues/831): expand
+      deterministic recommendation eval coverage for the new taste-control
+      signals.
+- [x] [#832](https://github.com/shchilkin/PopChoice/issues/832): keep product
+      docs and release notes aligned as behavior lands.
+
+Release notes: [/docs/releases/v0.2.0](/docs/releases/v0.2.0).
+
+Out of scope for `v0.2.0`:
+
+- Taste Swipe MVP.
+- Multi-device group rooms.
+- A full canonical `TasteSignal[]` backend rewrite.
+
 ## Target Model: Taste Signals
 
 Both quiz answers and swipe interactions should eventually map into a shared signal model.
@@ -208,6 +240,7 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 
 - Add a canonical recommendation request shape based on `TasteSignal[]`.
 - Convert quiz answers, swipe reactions, and account memory into signals.
+- First slice: `TasteSignal` v1 now maps quiz answers plus feedback/movie-memory rows into shared signal types, and existing candidate filtering consumes feedback-derived movie signals through that adapter.
 - Update ranking to use positive signals, negative signals, constraints, and TMDB candidate expansion together.
 - Keep generated explanations aware of which signals actually existed, so copy does not mention actors, genres, or constraints the user never provided.
 
@@ -277,7 +310,7 @@ Good next PRs, in order:
 7. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
 8. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
 9. Add TMDB-backed candidate-card sourcing for swipe mode.
-10. Add a `TasteSignal` domain model and adapters from quiz answers and swipe reactions.
+10. Continue the `TasteSignal` domain model by adding swipe reaction adapters after the v1 quiz plus feedback/movie-memory slice.
 11. [x] [#620](https://github.com/shchilkin/PopChoice/issues/620): add guarded live-provider evals after safe backoffice evals exist.
 12. [x] Start [#612](https://github.com/shchilkin/PopChoice/issues/612) with first-class candidate source provenance, source-strategy policy, route/job/pipeline metadata, and eval assertions for curated showcase, hybrid fast, and TMDB-first behavior.
 13. [x] Connect [#612](https://github.com/shchilkin/PopChoice/issues/612) source strategy to initial retrieval behavior: `hybrid-fast` and `compromise-hybrid` use bounded TMDB fallback, while curated/local-only strategies block external lookup.

@@ -52,26 +52,27 @@ export function FastAvoidsStep({ person, onUpdate }: FastPickStepProps) {
   const { t } = useLanguage();
 
   return (
-    <div className="flex flex-col gap-5 pt-2">
-      <StepHeader
-        accentBackground="rgba(239,68,68,0.15)"
-        accentColor={palette.red}
-        icon={<ShieldOff size={20} />}
-        title={t.quiz.fast.avoids.title}
-        subtitle={t.quiz.fast.avoids.hint}
-      />
-      <FastOptionGrid>
-        {FAST_AVOIDS.map((option) => (
-          <FastAvoidOptionButton
-            key={option.id}
-            option={option}
-            person={person}
-            label={t.quiz.fast.avoids.options[option.id]}
-            onUpdate={onUpdate}
-          />
-        ))}
-      </FastOptionGrid>
-    </div>
+    <AvoidsStepShell
+      title={t.quiz.fast.avoids.title}
+      subtitle={t.quiz.fast.avoids.hint}
+      labels={t.quiz.fast.avoids.options}
+      person={person}
+      onUpdate={onUpdate}
+    />
+  );
+}
+
+export function NormalAvoidsStep({ person, onUpdate }: FastPickStepProps) {
+  const { t } = useLanguage();
+
+  return (
+    <AvoidsStepShell
+      title={t.quiz.normalAvoids.title}
+      subtitle={t.quiz.normalAvoids.hint}
+      labels={t.quiz.normalAvoids.options}
+      person={person}
+      onUpdate={onUpdate}
+    />
   );
 }
 
@@ -103,6 +104,43 @@ export function FastDiscoveryStep({ person, onUpdate }: FastPickStepProps) {
 
 function FastOptionGrid({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>;
+}
+
+function AvoidsStepShell({
+  labels,
+  onUpdate,
+  person,
+  subtitle,
+  title,
+}: {
+  labels: Record<FastAvoid, string>;
+  onUpdate: (updates: Partial<PersonAnswers>) => void;
+  person: PersonAnswers;
+  subtitle: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-col gap-5 pt-2">
+      <StepHeader
+        accentBackground="rgba(239,68,68,0.15)"
+        accentColor={palette.red}
+        icon={<ShieldOff size={20} />}
+        title={title}
+        subtitle={subtitle}
+      />
+      <FastOptionGrid>
+        {FAST_AVOIDS.map((option) => (
+          <FastAvoidOptionButton
+            key={option.id}
+            option={option}
+            person={person}
+            label={labels[option.id]}
+            onUpdate={onUpdate}
+          />
+        ))}
+      </FastOptionGrid>
+    </div>
+  );
 }
 
 function FastIntentOptionButton({

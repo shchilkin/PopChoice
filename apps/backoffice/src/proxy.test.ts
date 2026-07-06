@@ -25,6 +25,7 @@ function restoreEnv(): void {
 function request(path: string): ProxyRequest {
   return {
     headers: new Headers({ 'x-real-ip': `198.51.100.${path.length}` }),
+    nextUrl: new URL(`https://backoffice.test${path}`),
     url: `https://backoffice.test${path}`,
   } as ProxyRequest;
 }
@@ -51,5 +52,12 @@ describe('backoffice proxy auth coverage', () => {
 
     expect(response.status).toBe(401);
     expect(response.headers.get('www-authenticate')).toContain('PopChoice Operators');
+  });
+
+  it('lets the automation catalog seed API handle its own bearer token auth', () => {
+    const response = proxy(request('/api/operator/catalog-seed'));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('www-authenticate')).toBeNull();
   });
 });

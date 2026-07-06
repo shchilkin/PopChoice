@@ -61,6 +61,19 @@
   --pc-ai-bg: rgba(196, 149, 10, 0.05);
   --pc-ai-bd: rgba(196, 149, 10, 0.15);
 
+  /* Chips / badges */
+  --pc-chip-bg: rgba(0, 0, 0, 0.04);
+  --pc-chip-text: #424260;
+  --pc-chip-bd: rgba(0, 0, 0, 0.1);
+  --pc-chip-selected-bg: linear-gradient(135deg, #f5c518, #ff9f1c);
+  --pc-chip-selected-text: #09090f;
+  --pc-chip-selected-bd: rgba(245, 197, 24, 0.5);
+  --pc-poster-chip-bg: rgba(9, 9, 15, 0.74);
+  --pc-poster-chip-text: #f8f8ff;
+  --pc-poster-chip-muted: rgba(248, 248, 255, 0.78);
+  --pc-poster-chip-bd: rgba(248, 248, 255, 0.18);
+  --pc-poster-chip-accent: #f5c518;
+
   /* Image/poster overlays */
   --pc-poster-grad: linear-gradient(
     to bottom,
@@ -172,6 +185,19 @@
   /* AI content blocks */
   --pc-ai-bg: rgba(245, 197, 24, 0.05);
   --pc-ai-bd: rgba(245, 197, 24, 0.1);
+
+  /* Chips / badges */
+  --pc-chip-bg: rgba(255, 255, 255, 0.06);
+  --pc-chip-text: #b8b8d2;
+  --pc-chip-bd: rgba(255, 255, 255, 0.1);
+  --pc-chip-selected-bg: linear-gradient(135deg, #f5c518, #ff9f1c);
+  --pc-chip-selected-text: #09090f;
+  --pc-chip-selected-bd: rgba(245, 197, 24, 0.55);
+  --pc-poster-chip-bg: rgba(9, 9, 15, 0.78);
+  --pc-poster-chip-text: #f8f8ff;
+  --pc-poster-chip-muted: rgba(248, 248, 255, 0.78);
+  --pc-poster-chip-bd: rgba(248, 248, 255, 0.16);
+  --pc-poster-chip-accent: #f5c518;
 
   /* Image/poster overlays */
   --pc-poster-grad: linear-gradient(

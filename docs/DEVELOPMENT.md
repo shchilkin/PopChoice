@@ -55,11 +55,11 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 - `npm run copy:env` - Copy the root `.env` into `apps/*`, `services/*`, and `packages/shared`
 - `npm run migrate:db` - Apply all idempotent SQL migrations from `db/init`
 - `npm run storybook` - Start Storybook development server
-- `npm run build-storybook` - Build Storybook for production
+- `npm run build:storybook` - Build Storybook for production
 
 Workspace-local scripts used during app development:
 
-- `cd apps/web && npm run start:workers` - Start BullMQ workers for async recommendations
+- `npm run start:workers --workspace=apps/web` - Start BullMQ workers for async recommendations
 - `npm run bull-board` - Open the BullMQ dashboard locally
   (`OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` enable the same login
   used in production)
@@ -69,10 +69,9 @@ Workspace-local scripts used during app development:
 ### Database & Data Management
 
 - `npm run setup:local-db` - Start local PostgreSQL + Redis via Docker and write credentials to `.env`
-- `npm run populate-db` - Seed the database with movie embeddings via the `movie-seed` service
 - `npm run cleanup:local-db` - Stop containers and remove the database volume (full reset)
-- `npm run analyze-movies` - Analyze movie data chunks for embedding optimization
-- `npm run calibrate-similarity` - Recalibrate recommendation similarity thresholds against the live DB
+- `npm run analyze-movies --workspace=apps/web` - Analyze movie data chunks for embedding optimization
+- `npm run calibrate-similarity --workspace=apps/web` - Recalibrate recommendation similarity thresholds against the live DB
 
 ## Database Setup Workflow
 
@@ -80,11 +79,11 @@ The project includes scripts to help you set up and manage your movie recommenda
 
 1. **Start the DB** - Run `npm run setup:local-db` to spin up PostgreSQL + Redis and initialize credentials
 2. **Sync env files** - Run `npm run copy:env` so the web app and services use the updated root `.env`
-3. **Seed the DB** - Run `npm run populate-db` to import movies (via `services/movie-seed`) into PostgreSQL
-4. **Run the app** - Start `npm run dev` from the repo root and `cd apps/web && npm run start:workers` in a second terminal
+3. **Run the app and workers** - Start `npm run dev` from the repo root and `npm run start:workers --workspace=apps/web` in a second terminal
+4. **Seed the DB** - Start `npm run dev:backoffice`, open the Catalog seed page, and trigger the curated seed job
 5. **Reset** - Run `npm run cleanup:local-db` to wipe everything, then repeat from step 1
 
-The `movie-seed` service reads its movie list from `services/movie-seed/movies.txt`.
+The curated seed worker reads its movie list from `apps/web/data/movies.txt`.
 
 ## Schema and Metadata Notes
 
@@ -113,8 +112,8 @@ npm run setup:backoffice:local-data
 ```
 
 `setup:backoffice:local-data` runs `setup:local-db`, `copy:env`, and
-`populate-db` in order. Use those individual scripts only when you need to
-inspect or rerun one step.
+leaves catalog seeding to the Backoffice `Catalog seed` action. Use those
+individual scripts only when you need to inspect or rerun one step.
 
 Then run the app in separate terminals:
 
@@ -123,11 +122,13 @@ Then run the app in separate terminals:
 npm run dev
 
 # terminal 2
-cd apps/web
-npm run start:workers
+npm run start:workers --workspace=apps/web
 
 # optional terminal 3
 npm run bull-board
+
+# terminal 4, when you need curated catalog rows
+npm run dev:backoffice
 ```
 
 If you change the root `.env`, re-run `npm run copy:env` before restarting the app or workers.
@@ -185,10 +186,12 @@ npm run test:e2e
 The command prepares an isolated environment:
 
 - `docker-compose.e2e.yml` starts PostgreSQL with pgvector on `127.0.0.1:55432` and Redis on `127.0.0.1:56379`.
-- `scripts/e2e/setup-db.mjs` resets the e2e compose project, applies every `db/init/*.sql` migration through `apps/web/scripts/migrate-db.js`, and seeds deterministic movie fixtures.
+- `scripts/e2e/setup-db.mjs` resets the e2e compose project, applies every `db/init/*.sql` migration through `apps/web/scripts/migrate-db.js`, and seeds deterministic real-movie fixtures.
 - `apps/web/playwright.e2e.config.ts` starts the app on `http://127.0.0.1:3100` with `DATABASE_URL` and `REDIS_URL` pointed at the isolated services.
 - `apps/backoffice/playwright.e2e.config.ts` starts the operator app on `http://127.0.0.1:3101` against the same isolated services after the web e2e suite completes.
 - `E2E_DETERMINISTIC_RECOMMENDATIONS=1` makes quiz submissions complete from seeded fixtures instead of calling live OpenAI/TMDB services or requiring a worker process.
+
+Keep the default e2e seed curated and deterministic. A sanitized dev dump can be useful for one-off local catalog investigations, but it should not become the CI/default e2e source unless users, sessions, recommendation history, feedback, secrets, and operational records are stripped first.
 
 To run only the backoffice browser smoke suite while still preparing the
 isolated database and Redis services:
@@ -226,14 +229,17 @@ The default eval path uses fixture prompts, fixture user-memory constraints, and
 - forbidden safety terms are absent
 - watched, rejected, and explicitly forbidden titles are not repeated
 - explanation text is specific enough for the fixture expectations
+- 0.2.0 taste-control signals remain visible and enforceable: explicit hard
+  avoids, runtime constraints, discovery appetite, optional reference movie
+  flows, and feedback-derived memory
 
-Run live-provider evals only when intentionally checking model/provider behavior:
+Run live OpenAI evals only when intentionally checking model/provider behavior:
 
 ```bash
 npm run eval:recommendations -- --live
 ```
 
-Live evals require configured provider and database environment variables such as `OPENAI_API_KEY`, `DATABASE_URL`, and usually `TMDB_API_KEY`. CI blocks on the deterministic eval job; live evals are manual so normal PR checks stay cheap and predictable.
+Live evals require configured provider and database environment variables such as `OPENAI_API_KEY`, `DATABASE_URL`, and usually `TMDB_API_KEY`. They call the provider-backed recommendation pipeline and persist the provider response in the eval report. CI blocks on the deterministic eval job; live evals are manual so normal PR checks stay cheap and predictable.
 
 Run real-data evals when checking catalog retrieval, seed/backfill, schema, or candidate-availability changes:
 
@@ -255,6 +261,7 @@ Use three eval levels when changing AI-related code:
 
 ```text
 apps/
+├── docs/                  # Fumadocs documentation site rendering docs/
 ├── web/
 │   └── src/
 │       ├── app/           # Next.js route and page boundaries
@@ -271,11 +278,12 @@ apps/
 ├── bull-board/            # Queue monitoring app
 ├── backoffice/            # Operator app for catalog health and review
 packages/
-└── shared/                # Shared helpers reused by root services
+├── shared/                # Shared database, embedding, logging, and utility code
+└── ui/                    # Shared shadcn-derived UI primitives
 services/
 ├── movie-discovery/       # Scheduled or one-shot TMDB discovery process
-├── movie-seed/            # Database seeding process
-└── movie-backfill/        # Metadata backfill process
+├── movie-backfill/        # Manual TMDB metadata maintenance CLI / fallback
+└── db-migrate/            # Containerized database migration runtime
 db/                        # SQL scripts and DB initialization assets
 ```
 

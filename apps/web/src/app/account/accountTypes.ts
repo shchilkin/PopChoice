@@ -1,6 +1,7 @@
 export type RecommendationFeedbackKind =
   | 'useful'
   | 'already_watched'
+  | 'not_for_me'
   | 'wrong_mood'
   | 'too_obvious'
   | 'too_obscure'

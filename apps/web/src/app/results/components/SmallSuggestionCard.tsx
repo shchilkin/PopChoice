@@ -177,7 +177,7 @@ function TmdbBadge() {
       style={{
         background: 'rgba(9,9,15,0.85)',
         border: '1px solid rgba(255,255,255,0.15)',
-        color: 'var(--pc-t3)',
+        color: 'var(--pc-chip-text)',
         backdropFilter: 'blur(6px)',
       }}
     >
@@ -190,7 +190,7 @@ function SmallMetaItems({ items }: { items: ResultMovieMetaItem[] }) {
   return (
     <div
       className="flex items-center gap-2 mb-2 flex-wrap"
-      style={{ color: 'var(--pc-t3)', fontSize: '0.75rem' }}
+      style={{ color: 'var(--pc-chip-text)', fontSize: '0.75rem' }}
     >
       {items.map((item, index) => (
         <SmallMetaItem key={`${item.kind}-${item.label}`} item={item} showSeparator={index > 0} />

@@ -138,9 +138,17 @@ CREATE TABLE IF NOT EXISTS recommendation_feedback (
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT recommendation_feedback_kind_check CHECK (
-    kind IN ('useful', 'already_watched', 'wrong_mood', 'too_obvious', 'too_obscure', 'close')
+    kind IN ('useful', 'already_watched', 'not_for_me', 'wrong_mood', 'too_obvious', 'too_obscure', 'close')
   )
 );
+
+ALTER TABLE recommendation_feedback
+  DROP CONSTRAINT IF EXISTS recommendation_feedback_kind_check;
+
+ALTER TABLE recommendation_feedback
+  ADD CONSTRAINT recommendation_feedback_kind_check CHECK (
+    kind IN ('useful', 'already_watched', 'not_for_me', 'wrong_mood', 'too_obvious', 'too_obscure', 'close')
+  );
 
 CREATE INDEX IF NOT EXISTS idx_recommendation_feedback_rec_id
   ON recommendation_feedback (recommendation_id);

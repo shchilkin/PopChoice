@@ -7,7 +7,7 @@ import {
   logBackofficeError,
   performRecommendationEvalAction,
 } from '../../../lib/backoffice';
-import { isSameOriginRequest } from '../../../lib/sameOriginRequest';
+import { backofficeRedirectUrl, isSameOriginRequest } from '../../../lib/sameOriginRequest';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,19 @@ function wantsJsonResponse(request: NextRequest): boolean {
   return accept.includes('application/json') || requestedWith.toLowerCase() === 'fetch';
 }
 
+function recommendationEvalRedirectUrl(
+  request: NextRequest,
+  status: string,
+  { trustRequestEvidence = false }: { trustRequestEvidence?: boolean } = {},
+) {
+  const url = backofficeRedirectUrl(request, '/recommendation-evals', { trustRequestEvidence });
+  url.searchParams.set('eval', status);
+  return url;
+}
+
 export async function POST(request: NextRequest) {
+  let trustRequestEvidence = false;
+
   try {
     if (!isSameOriginRequest(request)) {
       if (wantsJsonResponse(request)) {
@@ -27,11 +39,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return NextResponse.redirect(
-        new URL('/recommendation-evals?eval=forbidden', request.url),
-        303,
-      );
+      return NextResponse.redirect(recommendationEvalRedirectUrl(request, 'forbidden'), 303);
     }
+
+    trustRequestEvidence = true;
 
     const formData = await request.formData();
     const result = await performRecommendationEvalAction(formData, request.headers);
@@ -43,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.redirect(
-      new URL(`/recommendation-evals?eval=${result.status}`, request.url),
+      recommendationEvalRedirectUrl(request, result.status, { trustRequestEvidence }),
       303,
     );
   } catch (error) {
@@ -60,6 +71,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.redirect(new URL('/recommendation-evals?eval=failed', request.url), 303);
+    return NextResponse.redirect(
+      recommendationEvalRedirectUrl(request, 'failed', { trustRequestEvidence }),
+      303,
+    );
   }
 }

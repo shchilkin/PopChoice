@@ -255,9 +255,12 @@ All visual values are driven by CSS custom properties prefixed with `--pc-*`, de
 
 - **Brand Badge:** Uppercase tracking-widest, gold tint bg + gold border, Sparkles icon
 - **Match Badge:** `{color}18` bg + `{color}35` border, Sparkles icon + "XX% match"
-- **Genre Pill:** `var(--pc-bd1)` bg + `var(--pc-bd2)` border, `var(--pc-t2)` text, `rounded-full`
+- **Neutral Chip:** `var(--pc-chip-bg)` bg + `var(--pc-chip-bd)` border, `var(--pc-chip-text)` text, `rounded-full`
+- **Selected Chip:** `var(--pc-chip-selected-bg)` bg + `var(--pc-chip-selected-bd)` border, `var(--pc-chip-selected-text)` text. Use for saved, copied, selected, and committed feedback states.
+- **Poster Overlay Chip:** `var(--pc-poster-chip-bg)` bg + `var(--pc-poster-chip-bd)` border, `var(--pc-poster-chip-text)` text, optional `var(--pc-poster-chip-accent)` icon. Use on poster/image previews instead of gold-on-gold translucent pills.
+- **Genre Pill:** Use the neutral chip treatment unless the genre itself carries a semantic color.
 - **NEW Badge:** `rgba(139,92,246,0.15)` bg, `#A78BFA` text, `rounded-full`
-- **AI Pick Label:** Frosted bg with `backdrop-filter: blur(8px)`, gold text
+- **AI Pick Label:** Poster overlay chip with gold icon and light text
 
 ### Cards
 

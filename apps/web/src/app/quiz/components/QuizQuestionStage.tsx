@@ -22,6 +22,7 @@ import {
   FavoriteActorStep,
   FavoriteMovieStep,
   MoodStep,
+  NormalAvoidsStep,
   ToneStep,
 } from './steps';
 
@@ -53,7 +54,8 @@ const QUESTION_STEP_RENDERERS: Record<StepKey, (props: StepRendererProps) => Rea
   era: ({ onUpdate, person }) => <EraStep person={person} onUpdate={onUpdate} />,
   mood: ({ onUpdate, person }) => <MoodStep person={person} onUpdate={onUpdate} />,
   tone: ({ onUpdate, person }) => <ToneStep person={person} onUpdate={onUpdate} />,
-  avoids: ({ onUpdate, person }) => <FastAvoidsStep person={person} onUpdate={onUpdate} />,
+  discovery: ({ onUpdate, person }) => <FastDiscoveryStep person={person} onUpdate={onUpdate} />,
+  avoids: ({ onUpdate, person }) => <NormalAvoidsStep person={person} onUpdate={onUpdate} />,
   favoriteActor: ({ onNext, onUpdate, person }) => (
     <FavoriteActorStep person={person} onUpdate={onUpdate} onSubmit={onNext} />
   ),

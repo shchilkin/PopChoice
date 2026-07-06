@@ -1,5 +1,6 @@
 import { getDbClient } from '@/clients/dbClient';
 import { getOpenAIClient } from '@/clients/openaiClient';
+import { IMAGE_BASE_URL } from '@/integrations/tmdb';
 import logger from '@/lib/logger';
 import { MODELS } from '@/lib/models';
 import { OPENAI_TIMEOUTS_MS, openAIRequestOptions } from '@/lib/openaiTimeout';
@@ -10,6 +11,13 @@ import { MAX_JIT_SEED_MOVIES } from '../config';
 import { formatTMDBMovieEmbeddingText } from './embeddingText';
 
 import type { TMDBDiscoverMovie } from './types';
+
+type ExistingMovieRow = {
+  id: string | number;
+  name: string;
+  poster_url: string | null;
+  year: number;
+};
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -53,32 +61,32 @@ function getJITSeedCandidates(
     .slice(0, MAX_JIT_SEED_MOVIES);
 }
 
-async function getExistingMovieKeys(
+async function getExistingMoviesByKey(
   db: ReturnType<typeof getDbClient>,
   candidateMovies: TMDBDiscoverMovie[],
-): Promise<Set<string>> {
-  const existingMovieKeys = new Set<string>();
+): Promise<Map<string, ExistingMovieRow>> {
+  const existingMoviesByKey = new Map<string, ExistingMovieRow>();
 
   try {
     const movieNames = candidateMovies.map((movie) => movie.title);
     const { data: existingMovies, error } = await db
-      .from<{ name: string; year: number }>('movies')
-      .select('name, year')
+      .from<ExistingMovieRow>('movies')
+      .select('id, name, year, poster_url')
       .in('name', movieNames);
 
     if (error) {
       logger.warn({ err: error }, 'JIT seeding existence pre-check failed');
-      return existingMovieKeys;
+      return existingMoviesByKey;
     }
 
     for (const row of existingMovies ?? []) {
-      existingMovieKeys.add(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`);
+      existingMoviesByKey.set(`${row.name.toLowerCase()}|${Number(row.year ?? 0)}`, row);
     }
   } catch (err) {
     logger.warn({ err }, 'JIT seeding existence pre-check failed with unexpected error');
   }
 
-  return existingMovieKeys;
+  return existingMoviesByKey;
 }
 
 async function getTMDBSeedEmbedding(
@@ -102,6 +110,10 @@ function isZeroMagnitudeEmbedding(embedding: number[]): boolean {
   return embedding.every((value) => value === 0);
 }
 
+function getTMDBPosterUrl(movie: TMDBDiscoverMovie): string | null {
+  return movie.poster_path ? `${IMAGE_BASE_URL}/w500${movie.poster_path}` : null;
+}
+
 async function insertTMDBSeedMovie(input: {
   db: ReturnType<typeof getDbClient>;
   movie: TMDBDiscoverMovie;
@@ -117,20 +129,44 @@ async function insertTMDBSeedMovie(input: {
     description: input.movie.overview || '',
     duration: 0,
     score_rating: input.score,
+    poster_url: getTMDBPosterUrl(input.movie),
     embedding: input.embedding,
   });
+}
+
+async function updateExistingMoviePosterUrl(input: {
+  db: ReturnType<typeof getDbClient>;
+  existingMovie: ExistingMovieRow;
+  movie: TMDBDiscoverMovie;
+}): Promise<void> {
+  const posterUrl = getTMDBPosterUrl(input.movie);
+  if (!posterUrl || input.existingMovie.poster_url || !input.db.query) return;
+
+  try {
+    await input.db.query('UPDATE movies SET poster_url = $1 WHERE id = $2 AND poster_url IS NULL', [
+      posterUrl,
+      input.existingMovie.id,
+    ]);
+  } catch (err) {
+    logger.warn(
+      { err, movieTitle: input.movie.title },
+      'JIT seeding failed to update existing movie poster URL',
+    );
+  }
 }
 
 async function seedOneTMDBMovie(input: {
   db: ReturnType<typeof getDbClient>;
   movie: TMDBDiscoverMovie;
-  existingMovieKeys: Set<string>;
+  existingMoviesByKey: Map<string, ExistingMovieRow>;
   precomputedEmbeddings?: Map<number, number[]>;
 }): Promise<void> {
   const year = parseTMDBReleaseYear(input.movie.release_date);
   const movieKey = getTMDBSeedMovieKey(input.movie);
+  const existingMovie = input.existingMoviesByKey.get(movieKey);
 
-  if (input.existingMovieKeys.has(movieKey)) {
+  if (existingMovie) {
+    await updateExistingMoviePosterUrl({ db: input.db, existingMovie, movie: input.movie });
     logger.debug(
       { movieTitle: input.movie.title, year },
       'JIT seeding skipped — movie already in database',
@@ -173,7 +209,7 @@ async function seedOneTMDBMovie(input: {
 async function seedOneTMDBMovieWithLogging(input: {
   db: ReturnType<typeof getDbClient>;
   movie: TMDBDiscoverMovie;
-  existingMovieKeys: Set<string>;
+  existingMoviesByKey: Map<string, ExistingMovieRow>;
   precomputedEmbeddings?: Map<number, number[]>;
 }): Promise<void> {
   try {
@@ -198,10 +234,10 @@ export async function seedMovies(
   const candidateMovies = getJITSeedCandidates(tmdbMovies, existingLocalKeys);
   if (candidateMovies.length === 0) return;
 
-  const existingMovieKeys = await getExistingMovieKeys(db, candidateMovies);
+  const existingMoviesByKey = await getExistingMoviesByKey(db, candidateMovies);
 
   for (const movie of candidateMovies) {
-    await seedOneTMDBMovieWithLogging({ db, movie, existingMovieKeys, precomputedEmbeddings });
+    await seedOneTMDBMovieWithLogging({ db, movie, existingMoviesByKey, precomputedEmbeddings });
   }
 }
 

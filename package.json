@@ -1,6 +1,6 @@
 {
   "name": "pop-choice",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -38,7 +38,6 @@
     "lint:check": "npm run lint:check --workspace=apps/web",
     "lint:fix": "npm run lint:fix --workspace=apps/web",
     "migrate:db": "bash scripts/migrate-db.sh",
-    "populate-db": "npm run dev --workspace=services/movie-seed",
     "prepare": "husky || true",
     "quality:backoffice": "npm run quality:structure --workspace=apps/backoffice",
     "quality:fallow": "fallow",
@@ -48,11 +47,13 @@
     "quality:fallow:health": "fallow health",
     "quality:fallow:workspaces": "fallow workspaces",
     "setup:backoffice:fixtures": "node scripts/e2e/setup-db.mjs",
-    "setup:backoffice:local-data": "npm run setup:local-db && npm run copy:env && npm run populate-db",
+    "setup:backoffice:local-data": "npm run setup:local-db && npm run copy:env",
     "setup:local-db": "bash scripts/setup-local-db.sh",
     "start:storybook": "npm run start:storybook --workspace=apps/web",
     "storybook": "npm run storybook --workspace=apps/web",
     "test": "npm run test --workspace=apps/web",
+    "test:a11y": "npm run test:e2e:setup && npm run test:a11y:run && npm run test:e2e:down",
+    "test:a11y:run": "playwright test --config apps/web/playwright.a11y.config.ts",
     "test:backoffice": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run quality:backoffice && npm run test --workspace=apps/backoffice",
     "test:e2e": "npm run test:e2e:setup && npm run test:e2e:run && npm run test:e2e:backoffice:run",
     "test:e2e:backoffice": "npm run test:e2e:setup && npm run test:e2e:backoffice:run",
@@ -67,10 +68,10 @@
     "type-check:docs": "npm run type-check --workspace=apps/docs"
   },
   "devDependencies": {
-    "fallow": "2.92.1",
+    "fallow": "2.101.0",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
-    "prettier": "3.8.3",
+    "lint-staged": "^17.0.8",
+    "prettier": "3.8.4",
     "sort-package-json": "^3.6.1",
     "turbo": "^2.9.18"
   },

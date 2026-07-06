@@ -15,7 +15,7 @@ describe('quiz step view model', () => {
     const person = emptyPerson('Taylor');
 
     expect(canProceedForStep({ person, questionsStep: 'favoriteMovie', fastStep: null })).toBe(
-      false,
+      true,
     );
     expect(
       canProceedForStep({
@@ -49,6 +49,14 @@ describe('quiz step view model', () => {
       canProceedForStep({
         person: { ...person, tone: 'dark' },
         questionsStep: 'tone',
+        fastStep: null,
+      }),
+    ).toBe(true);
+    expect(canProceedForStep({ person, questionsStep: 'discovery', fastStep: null })).toBe(false);
+    expect(
+      canProceedForStep({
+        person: { ...person, fastDiscovery: 'balanced' },
+        questionsStep: 'discovery',
         fastStep: null,
       }),
     ).toBe(true);

@@ -34,7 +34,6 @@ type RecommendationEvalWorker = Worker<RecommendationEvalJobData, void, Recommen
 const DEFAULT_CONCURRENCY = 1;
 const MAX_ATTEMPTS = RECOMMENDATION_EVAL_JOB_OPTIONS.attempts;
 
-let databaseInitialized = false;
 let schemaReadyPromise: Promise<void> | null = null;
 
 function parsePositiveIntEnv(name: string, fallback: number): number {
@@ -45,15 +44,12 @@ function parsePositiveIntEnv(name: string, fallback: number): number {
 }
 
 function ensureDatabase(): void {
-  if (databaseInitialized) return;
-
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is required for recommendation eval jobs');
   }
 
   initDatabase(databaseUrl);
-  databaseInitialized = true;
 }
 
 async function ensureEvalSchema(): Promise<void> {
@@ -81,6 +77,7 @@ function resultToJson(result: RecommendationEvalResult): Record<string, unknown>
     minPassingScore: result.minPassingScore,
     mode: result.mode,
     passed: result.passed,
+    response: result.response,
     score: result.score,
   };
 }
@@ -112,7 +109,7 @@ function toStoredResults(
       maxScore: result.maxScore,
       minPassingScore: result.minPassingScore,
       passed: result.passed,
-      response: report.mode === 'live' ? {} : (fixture?.mockResponse ?? {}),
+      response: result.response,
       result: resultToJson(result),
       score: result.score,
     };
@@ -131,6 +128,7 @@ async function processRecommendationEvalJob(
 
   try {
     const report = await runRecommendationEvals({ mode: job.data.mode });
+    ensureDatabase();
     await completeRecommendationEvalRun({
       report: reportToJson(report),
       results: toStoredResults(report),
@@ -149,6 +147,7 @@ async function processRecommendationEvalJob(
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    ensureDatabase();
     await failRecommendationEvalRun({
       errorMessage: message,
       runId: job.data.runId,

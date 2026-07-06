@@ -39,6 +39,15 @@ export type RecommendationEvalExpectations = {
   minPassingScore?: number;
   minSimilarMovies?: number;
   requiredExplanationTerms?: string[];
+  tasteControl?: RecommendationEvalTasteControlExpectations;
+};
+
+export type RecommendationEvalTasteControlExpectations = {
+  discoveryAppetite?: 'balanced' | 'safe' | 'surprising';
+  feedbackMemoryKinds?: RecommendationEvalMemoryKind[];
+  hardAvoidTerms?: string[];
+  maxRuntimeMinutes?: number;
+  optionalReferenceMovie?: boolean;
 };
 
 export type RecommendationEvalFixture = {
@@ -73,6 +82,7 @@ export type RecommendationEvalResult = {
   minPassingScore: number;
   mode: RecommendationEvalRunMode;
   passed: boolean;
+  response: ApiResponse;
   score: number;
   sourceDistribution: CandidateSourceDistribution;
 };

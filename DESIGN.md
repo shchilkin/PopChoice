@@ -186,6 +186,24 @@ In light mode, shadows are soft and diffuse (`rgba(0,0,0,0.1)`), barely present.
 
 ## 5. Components
 
+### Component Reuse Policy
+
+Prefer existing components before creating new UI. Start with shared
+components from `packages/ui` and `apps/web/src/components`; if the pattern
+already exists there, extend that component conservatively instead of
+recreating its markup, styling, interaction states, or accessibility behavior
+inside a route.
+
+Prefer shared primitives over in-app one-offs. Route- or feature-local
+components should compose shared primitives and own only the workflow-specific
+layout, copy, and state. Create a new local primitive only when no existing
+shared component can express the interaction without making its API misleading,
+overloaded, or inaccessible.
+
+Promote local components when reuse becomes real. If a page-local control
+appears on a second surface, move it toward the shared component layer with
+tokens, stories, and accessibility behavior instead of copying it.
+
 ### Buttons
 
 Buttons are the most-touched element in the quiz flow — they need to feel satisfying, not just functional.
@@ -206,6 +224,14 @@ Buttons are the most-touched element in the quiz flow — they need to feel sati
 - **Internal Padding:** 20px horizontal, 12–14px vertical
 
 **The No-Nested-Cards Rule.** Cards do not contain cards. If content needs a container within a card, use a tinted background (`--pc-gold-subtle`, `--pc-surface-hover`) or a border, not a nested card.
+
+### Chips / Badges
+
+- **Neutral chip:** `--pc-chip-bg`, `--pc-chip-bd`, and `--pc-chip-text`. Use for inactive filters, secondary actions, and low-emphasis metadata.
+- **Selected chip:** `--pc-chip-selected-bg`, `--pc-chip-selected-bd`, and `--pc-chip-selected-text`. Use for saved, selected, copied, or committed states where the user needs unmistakable confirmation.
+- **Poster overlay chip:** `--pc-poster-chip-bg`, `--pc-poster-chip-bd`, `--pc-poster-chip-text`, and `--pc-poster-chip-accent`. Use on image previews where gold text on translucent gold can disappear into the artwork.
+
+**The Context Rule.** Do not reuse `--pc-gold-subtle` as a universal pill background. Inline chips, selected states, and image overlays have different contrast needs.
 
 ### Inputs / Fields
 

@@ -10,29 +10,29 @@ import { buildResultEvidenceViewModel, type ResultEvidenceItem } from './resultE
 import type { RecommendationResultSignals } from '@/lib/db/recommendations';
 import type { MovieRecommendation } from '@/utils/client';
 
-function EvidencePill({ item }: { item: ResultEvidenceItem }) {
+function EvidenceRow({ item }: { item: ResultEvidenceItem }) {
   return (
     <li
-      className="flex min-h-12 items-start gap-3 rounded-lg px-3 py-2.5"
-      style={{
-        background: 'var(--pc-ghost)',
-        border: '1px solid var(--pc-bd2)',
-      }}
+      className="grid grid-cols-[1.25rem_1fr] items-start gap-3 py-2.5"
+      style={{ borderTop: '1px solid var(--pc-bd1)' }}
     >
       <span
         className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-        style={{ background: 'var(--pc-gold-subtle)', color: 'var(--pc-gold-text)' }}
+        style={{
+          background: 'var(--pc-chip-selected-bg)',
+          color: 'var(--pc-chip-selected-text)',
+        }}
       >
         <CheckCircle2 size={12} />
       </span>
       <span className="min-w-0">
         <span
           className="block uppercase tracking-widest"
-          style={{ color: 'var(--pc-t4)', fontSize: '0.58rem' }}
+          style={{ color: 'var(--pc-chip-text)', fontSize: '0.58rem' }}
         >
           {item.label}
         </span>
-        <span className="mt-0.5 block" style={{ color: 'var(--pc-t2)', fontSize: '0.82rem' }}>
+        <span className="mt-0.5 block" style={{ color: 'var(--pc-chip-text)', fontSize: '0.9rem' }}>
           {item.value}
         </span>
       </span>
@@ -52,7 +52,7 @@ function EvidenceColumn({
   const Icon = icon === 'sparkles' ? Sparkles : ListChecks;
 
   return (
-    <section>
+    <section className="min-w-0">
       <div className="mb-3 flex items-center gap-2">
         <Icon size={14} style={{ color: 'var(--pc-gold-text)' }} />
         <h3
@@ -62,9 +62,9 @@ function EvidenceColumn({
           {title}
         </h3>
       </div>
-      <ul className="grid gap-2">
+      <ul>
         {items.map((item) => (
-          <EvidencePill key={`${item.label}-${item.value}`} item={item} />
+          <EvidenceRow key={`${item.label}-${item.value}`} item={item} />
         ))}
       </ul>
     </section>
@@ -96,7 +96,7 @@ export function ResultEvidencePanel({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: 0.22 }}
-      className="mb-10 rounded-lg p-4 md:p-5"
+      className="mb-10 rounded-xl p-4 md:p-5"
       style={{
         background: 'var(--pc-surface)',
         border: '1px solid var(--pc-bd2)',
@@ -105,10 +105,10 @@ export function ResultEvidencePanel({
     >
       <div className="mb-5 flex items-start gap-3">
         <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
           style={{
-            background: 'var(--pc-gold-subtle)',
-            color: 'var(--pc-gold-text)',
+            background: 'var(--pc-chip-selected-bg)',
+            color: 'var(--pc-chip-selected-text)',
           }}
         >
           <SlidersHorizontal size={17} />
@@ -120,7 +120,7 @@ export function ResultEvidencePanel({
           >
             {t.results.evidenceKicker}
           </p>
-          <p className="mt-1" style={{ color: 'var(--pc-t3)', fontSize: '0.84rem' }}>
+          <p className="mt-1" style={{ color: 'var(--pc-chip-text)', fontSize: '0.84rem' }}>
             {t.results.evidenceSubtitle}
           </p>
         </div>

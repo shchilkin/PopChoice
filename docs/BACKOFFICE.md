@@ -6,8 +6,9 @@ title: 'Backoffice Plan'
 
 PopChoice backoffice work is tracked under
 [#493](https://github.com/shchilkin/PopChoice/issues/493). The backoffice is an
-operational app for catalog health, TMDB match review, and later manual data
-repair. It must not be implemented inside the user-facing `apps/web` app.
+operational app for catalog health, TMDB match review, queued catalog repair,
+catalog seeding, queue visibility, and recommendation eval operations. It must
+not be implemented inside the user-facing `apps/web` app.
 Post-MVP operator hardening is tracked under
 [#660](https://github.com/shchilkin/PopChoice/issues/660).
 
@@ -43,14 +44,15 @@ Coolify service. New interactive operator workflows should use React/Next route
 handlers and shared PopChoice UI conventions instead of adding hand-written
 HTML pages.
 
-## Initial Scope
+## Current Scope
 
-The first backoffice release should be read-only:
+The initial backoffice slice was read-only and established the dedicated
+operator surface:
 
 - [#549](https://github.com/shchilkin/PopChoice/issues/549): catalog-health
   overview for missing metadata, duplicate identities, stale TMDB data, and
   missing cast/director/genre/keyword coverage. This is implemented as the
-  first read-only `apps/backoffice` screen.
+  first `apps/backoffice` screen.
 - [#550](https://github.com/shchilkin/PopChoice/issues/550): TMDB match review
   queue for `tmdb_match_reviews` rows. This is implemented as a protected queue
   and detail view with status/reason filters, risk sorting, local-vs-candidate
@@ -117,8 +119,8 @@ Shared operator auth is the login model for public exposure:
 
 - [#548](https://github.com/shchilkin/PopChoice/issues/548): shared login
   protection for `apps/backoffice` and `apps/bull-board`.
-- `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` protect Bull Board now
-  and should be reused by the future backoffice app.
+- `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` protect Bull Board and
+  Backoffice public operator routes.
 - User-facing app login stays separate; operator credentials must not be added
   to normal `apps/web` routes.
 
@@ -164,9 +166,9 @@ catalog. Stop any existing `npm run dev:backoffice` process before switching to
 the fixture command because Next.js permits only one dev server per app
 directory.
 When you need the real seeded local catalog instead of fixtures, run
-`npm run setup:backoffice:local-data` once. It runs `setup:local-db`,
-`copy:env`, and `populate-db` in order; then start the app with
-`npm run dev:backoffice`.
+`npm run setup:backoffice:local-data` once. It runs `setup:local-db` and
+`copy:env`; then start workers and Backoffice and use the Catalog seed action
+to enqueue the curated seed.
 Use `npm run check:backoffice` before publishing most backoffice changes; it
 builds `packages/shared`, runs the module-size guard, type-checks
 `apps/backoffice`, and runs the backoffice Vitest suite. Use
@@ -179,13 +181,47 @@ starting the backoffice Playwright suite.
 The app needs:
 
 - `DATABASE_URL` for catalog-health and TMDB review data;
-- `REDIS_URL` for catalog-health repair actions because they enqueue
-  `catalog-maintenance` jobs rather than mutating catalog rows inline, and for
-  recommendation eval actions because they enqueue `recommendation-evals` jobs;
+- `REDIS_URL` for catalog-health repair actions, recommendation eval actions,
+  and curated catalog seed actions because they enqueue worker jobs rather than
+  mutating catalog rows inline;
 - `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
   operator routes locally;
 - `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
   report shape.
+
+## Catalog Seed Workflow
+
+The `Catalog seed` page lets an operator prepare the base catalog without
+opening an SSH shell or running commands inside the backoffice container.
+Backoffice adds a `seed-movies` job to the `movie-seed` BullMQ queue; the
+`workers` service reads `apps/web/data/movies.txt`, creates embeddings for
+new rows, and inserts only movies missing from the environment database. After a
+successful non-dry seed, the same worker also creates a durable catalog repair
+batch and queues an `enqueue-catalog-repair-batch` job on
+`catalog-maintenance`. It repairs `missing_tmdb_id` first, then falls back to
+`missing_poster_url` when identities are already complete, so metadata and
+poster work stays paced by the existing TMDB worker controls.
+
+Use it after creating a fresh development or production environment, or when the
+catalog is unexpectedly empty. The seed job is idempotent and deduplicates by
+movie name and year, so reruns are safe. Repeated clicks while a seed is queued
+or active reuse the same BullMQ job id; completed runs keep distinct job ids in
+Bull Board. Watch the `movie-seed` job logs and return value for seed status,
+then use the linked repair batch or `catalog-maintenance` queue to follow
+metadata and poster repair progress.
+
+The automatic repair phase queues every current candidate for the selected
+issue by default and is chunked by `CATALOG_SEED_REPAIR_PAGE_SIZE`. Set
+`CATALOG_SEED_REPAIR_LIMIT` to a positive number only when an environment needs
+an explicit safety cap; unset it or set it to `all` for full-catalog repair, and
+set it to `0` to keep the seed button as a seed-only action.
+
+CI can queue the same seed after a successful deploy through
+`POST /api/operator/catalog-seed`. Set `BACKOFFICE_AUTOMATION_TOKEN` in the
+backoffice Coolify environment, then store the same value as the matching GitHub
+Environment secret. The GitHub deploy job calls this endpoint only when
+`POSTDEPLOY_SEED_ENABLED=true`, and only after the Coolify deploy webhook and
+public health/build verification have succeeded.
 
 ## Catalog Repair Workflow
 

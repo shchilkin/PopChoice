@@ -41,10 +41,11 @@ npm install
 cp .env.example .env        # add OPENAI_API_KEY (and optionally TMDB_API_KEY)
 npm run setup:local-db      # spin up local PostgreSQL + Redis via Docker
 npm run copy:env            # copy root .env into apps/services workspaces
-npm run populate-db         # seed the database with movie embeddings
 npm run dev                 # start the dev server at http://localhost:3000
 # in a second terminal:
-cd apps/web && npm run start:workers
+npm run start:workers --workspace=apps/web
+# in a third terminal:
+npm run dev:backoffice      # open Catalog seed and trigger the curated seed
 ```
 
 For a step-by-step walkthrough, see **[💻 Local Development Setup](#-local-development-setup)** below.
@@ -108,17 +109,17 @@ npm run copy:env
 This copies the root `.env` into the workspaces that run locally, including:
 
 - `apps/web/.env`
-- `services/movie-seed/.env`
 - `services/movie-discovery/.env`
 - `services/movie-backfill/.env`
 
 ### Step 5 — Seed the database
 
-```bash
-npm run populate-db
-```
+Run the web app, workers, and Backoffice in separate terminals, then open the
+Backoffice `Catalog seed` page and click `Trigger movie seed`.
 
-This reads the curated movie list, calls the OpenAI Embeddings API to generate vectors for each movie, and inserts the results into your local PostgreSQL database.
+Backoffice enqueues a BullMQ job, and the `apps/web` workers read the curated
+movie list from `apps/web/data/movies.txt`, generate OpenAI embeddings, and
+insert missing rows into PostgreSQL.
 
 > **Note:** Each run deduplicates by title + year, so it is safe to re-run.
 
@@ -130,9 +131,11 @@ Run the web app and the BullMQ workers in separate terminals:
 # terminal 1, repo root
 npm run dev
 
-# terminal 2, apps/web workspace
-cd apps/web
-npm run start:workers
+# terminal 2, repo root
+npm run start:workers --workspace=apps/web
+
+# terminal 3, repo root
+npm run dev:backoffice
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to use the app.
@@ -155,11 +158,23 @@ The e2e suite uses its own Docker compose file, ports, and disposable database s
 npm run test:e2e
 ```
 
-This command resets `docker-compose.e2e.yml`, applies `db/init` migrations, seeds deterministic movie fixtures, starts the Next.js app on `http://127.0.0.1:3100`, and runs Playwright. The smoke suite covers health checks, catalog filtering and empty states, registration/login/logout/session behavior, quiz submission, deterministic result rendering, feedback, and movie-memory persistence. Stop and remove the e2e services with:
+This command resets `docker-compose.e2e.yml`, applies `db/init` migrations, seeds deterministic real-movie fixtures, starts the Next.js app on `http://127.0.0.1:3100`, and runs Playwright. The smoke suite covers health checks, catalog filtering and empty states, registration/login/logout/session behavior, quiz submission, deterministic result rendering, feedback, and movie-memory persistence. Stop and remove the e2e services with:
 
 ```bash
 npm run test:e2e:down
 ```
+
+The default e2e database is intentionally curated instead of restored from a dev dump. Use dev or production-like dumps only for manual local investigations after removing users, sessions, recommendation history, feedback, API keys, and other operational data; CI should stay on the deterministic fixture seed.
+
+### Accessibility smoke tests
+
+The accessibility suite reuses the deterministic e2e fixtures and runs axe checks against public pages, catalog browsing, and the authenticated recommendation result flow:
+
+```bash
+npm run test:a11y
+```
+
+In CI, `Accessibility Tests` runs as a separate PR job inside the pinned official Playwright Docker image, so Chromium and browser system dependencies come from the image instead of a mutable Playwright browser cache.
 
 ### Recommendation evals
 
@@ -169,9 +184,9 @@ Recommendation evals are separate from browser e2e smoke tests. The default comm
 npm run eval:recommendations
 ```
 
-The command writes a JSON report to `apps/web/test-results/recommendation-evals/report.json` and checks output shape, candidate validity, safety constraints, repeat avoidance, and explanation quality. Optional live-provider runs are explicit:
+The command writes a JSON report to `apps/web/test-results/recommendation-evals/report.json` and checks output shape, candidate validity, safety constraints, repeat avoidance, and explanation quality.
 
-Real-data evals use the isolated e2e database and real catalog retrieval while keeping model output controlled:
+Real-data evals use the isolated e2e database and real catalog retrieval while keeping model output controlled. They do not call OpenAI:
 
 ```bash
 npm run test:e2e:setup
@@ -179,7 +194,7 @@ DATABASE_URL=postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e npm run ev
 npm run test:e2e:down
 ```
 
-Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live evals are guarded by an explicit cost acknowledgement and confirmation phrase.
+Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live OpenAI evals are guarded by an explicit cost acknowledgement and confirmation phrase, and persist the provider response in the run report for inspection.
 
 ```bash
 npm run eval:recommendations -- --live
@@ -220,14 +235,14 @@ as a separate Coolify service for design review.
 
 ### Troubleshooting
 
-| Problem                             | Solution                                                  |
-| ----------------------------------- | --------------------------------------------------------- |
-| `DATABASE_URL is not set`           | Run `npm run setup:local-db`, then `npm run copy:env`     |
-| Recommendations stay pending        | Start workers with `cd apps/web && npm run start:workers` |
-| App or workers use stale env values | Re-run `npm run copy:env` after editing the root `.env`   |
-| Docker container not starting       | Ensure Docker Desktop is running                          |
-| OpenAI errors when seeding          | Verify `OPENAI_API_KEY` is correct in `.env`              |
-| Missing movie posters               | Add a valid `TMDB_API_KEY` to `.env`                      |
+| Problem                             | Solution                                                |
+| ----------------------------------- | ------------------------------------------------------- |
+| `DATABASE_URL is not set`           | Run `npm run setup:local-db`, then `npm run copy:env`   |
+| Recommendations stay pending        | Run `npm run start:workers --workspace=apps/web`        |
+| App or workers use stale env values | Re-run `npm run copy:env` after editing the root `.env` |
+| Docker container not starting       | Ensure Docker Desktop is running                        |
+| OpenAI errors when seeding          | Verify `OPENAI_API_KEY` is correct in `.env`            |
+| Missing movie posters               | Add a valid `TMDB_API_KEY` to `.env`                    |
 
 ## 📖 Documentation
 
@@ -274,11 +289,12 @@ apps/
 │       └── utils/         # Reusable utilities and data helpers
 ├── bull-board/            # Queue monitoring app
 packages/
-└── shared/                # Shared package reused by background services
+├── shared/                # Shared database, embedding, logging, and utility code
+└── ui/                    # Shared shadcn-derived UI primitives
 services/
 ├── movie-discovery/       # Continuous TMDB movie discovery service
-├── movie-seed/            # One-shot database seeding service
-└── movie-backfill/        # One-shot service to backfill missing movie metadata
+├── movie-backfill/        # Manual TMDB metadata maintenance CLI / fallback
+└── db-migrate/            # Containerized database migration runtime
 db/                        # Database migrations / schema
 ```
 
@@ -286,9 +302,12 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 
 ## 🗃 Background Services
 
-- **movie-seed** (`services/movie-seed/`) — One-shot service that reads movies from the curated `services/movie-seed/movies.txt` file, generates OpenAI embeddings, and seeds the PostgreSQL database. Safe to re-run (deduplicates by name + year). See [`services/movie-seed/README.md`](./services/movie-seed/README.md).
+- **curated catalog seed** — Backoffice queues a `seed-movies` job on the
+  BullMQ `movie-seed` queue. The `apps/web` workers read
+  `apps/web/data/movies.txt`, generate OpenAI embeddings, insert missing rows,
+  and optionally queue bounded catalog repair work for TMDB ids/posters.
 - **movie-discovery** (`services/movie-discovery/`) — Continuous TMDB-driven service that discovers new movies, applies quality filters (vote count, rating, overview length), generates embeddings, and inserts them into the database. Supports scheduled and one-shot modes. See [`services/movie-discovery/README.md`](./services/movie-discovery/README.md).
-- **movie-backfill** (`services/movie-backfill/`) — One-shot script that backfills missing `duration` and `age_rating` data for movies already in the database, re-generating their embeddings. Supports dry-run mode. See [`services/movie-backfill/README.md`](./services/movie-backfill/README.md).
+- **movie-backfill** (`services/movie-backfill/`) — Manual maintenance CLI for inspecting catalog gaps, backfilling missing TMDB metadata, and exporting fallback SQL patches. The primary day-to-day repair path is Backoffice plus the BullMQ `catalog-maintenance` queue. See [`services/movie-backfill/README.md`](./services/movie-backfill/README.md).
 
 ## 🧪 Development Scripts
 
@@ -307,7 +326,7 @@ npm run build:backoffice            # Build the backoffice app
 npm run build:storybook             # Build static Storybook
 npm run check:backoffice            # Shared build + backoffice structure/type/test checks
 npm run start --workspace=apps/web  # Start production server (apps/web)
-cd apps/web && npm run start:workers # Start BullMQ workers (apps/web)
+npm run start:workers --workspace=apps/web # Start BullMQ workers
 npm run bull-board                  # Launch BullMQ dashboard (apps/bull-board)
 
 # Testing
@@ -327,11 +346,10 @@ npm run fix             # Fix all issues automatically
 npm run setup:local-db       # Generate credentials, start Docker PostgreSQL
 npm run copy:env             # Sync root .env into apps/services workspaces
 npm run migrate:db           # Apply idempotent SQL migrations
-npm run populate-db          # Populate database with movie data
-npm run setup:backoffice:local-data # Run setup:local-db, copy:env, and populate-db
+npm run setup:backoffice:local-data # Run setup:local-db and copy:env
 npm run catalog:health       # Report catalog metadata coverage and likely duplicates
-npm run analyze-movies       # Analyze movie data for embeddings
-npm run calibrate-similarity # Calibrate vector similarity thresholds
+npm run analyze-movies --workspace=apps/web       # Analyze movie data for embeddings
+npm run calibrate-similarity --workspace=apps/web # Calibrate vector similarity thresholds
 npm run test:services        # Run shared package and service test scripts
 ```
 

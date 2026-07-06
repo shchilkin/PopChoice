@@ -124,12 +124,12 @@ queued worker jobs no longer need them.
 
 Metadata-dependent features need both schema and data.
 
-| Producer                   | What it writes                                                                                     | Schema/data expectation                                               |
-| -------------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `movie-seed`               | Curated movie rows and embeddings                                                                  | Calls shared `ensureSchema()` and dedupes by `name + year`.           |
-| `movie-discovery`          | New TMDB movies, embeddings, cast/director/genre/keyword metadata                                  | Requires catalog metadata tables and rate-limited TMDB/OpenAI access. |
-| `movie-backfill`           | Missing TMDB ids, runtime, age ratings, posters, localized names, catalog metadata, review records | Existing rows may stay incomplete until backfill runs.                |
-| BullMQ catalog maintenance | Discovery/backfill jobs paced through workers                                                      | Queue payloads must remain compatible across releases.                |
+| Producer                   | What it writes                                                                                     | Schema/data expectation                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| BullMQ `movie-seed`        | Curated movie rows and embeddings                                                                  | Runs in `apps/web` workers, calls shared `ensureSchema()`, and dedupes by `name + year`. |
+| `movie-discovery`          | New TMDB movies, embeddings, cast/director/genre/keyword metadata                                  | Requires catalog metadata tables and rate-limited TMDB/OpenAI access.                    |
+| `movie-backfill`           | Missing TMDB ids, runtime, age ratings, posters, localized names, catalog metadata, review records | Existing rows may stay incomplete until backfill runs.                                   |
+| BullMQ catalog maintenance | Discovery/backfill jobs paced through workers                                                      | Queue payloads must remain compatible across releases.                                   |
 
 When adding a new field used by product UI or recommendations:
 

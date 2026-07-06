@@ -108,6 +108,10 @@ describe('quiz machine – forward paths (model-based)', () => {
             expect(actor.getSnapshot().matches({ questions: 'tone' })).toBe(true);
           },
 
+          '#quiz.questions.discovery': () => {
+            expect(actor.getSnapshot().matches({ questions: 'discovery' })).toBe(true);
+          },
+
           '#quiz.questions.avoids': () => {
             expect(actor.getSnapshot().matches({ questions: 'avoids' })).toBe(true);
           },
@@ -189,7 +193,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
-    for (let i = 0; i < 5; i++) actor.send({ type: 'NEXT' });
+    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
     actor.send({ type: 'BACK' });
 
     expect(actor.getSnapshot().matches({ questions: 'avoids' })).toBe(true);
@@ -334,7 +338,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob', 'Charlie'] });
 
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' }); // complete person 0
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' }); // complete person 0
     actor.send({ type: 'CONTINUE' }); // → person 1, favoriteMovie
 
     actor.send({ type: 'BACK' }); // → betweenPersons
@@ -350,7 +354,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_GROUP' });
     actor.send({ type: 'START_GROUP_QUESTIONS', names: ['Alice', 'Bob', 'Charlie'] });
 
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' }); // → betweenPersons
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' }); // → betweenPersons
 
     actor.send({ type: 'BACK' }); // → questions.favoriteActor, person 0
 
@@ -379,7 +383,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' });
     expect(actor.getSnapshot().value).toBe('submitting');
 
     actor.send({ type: 'RESET' });
@@ -409,7 +413,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' });
     actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' });
 
     const snapshot = actor.getSnapshot();
@@ -423,7 +427,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' });
     actor.send({ type: 'SUBMIT_SUCCESS', id: 'rec_123' });
     actor.send({ type: 'BACK' });
     actor.send({ type: 'RESET' });
@@ -440,7 +444,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
     actor.send({ type: 'UPDATE_PERSON', updates: { favoriteMovie: 'Heat' } });
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' });
     actor.send({ type: 'SUBMIT_FAILURE', message: 'network' });
 
     let snapshot = actor.getSnapshot();
@@ -461,7 +465,7 @@ describe('quiz machine – BACK navigation', () => {
     actor.send({ type: 'START_NORMAL_MATCH', youLabel: 'You' });
     actor.send({ type: 'START_SOLO', youLabel: 'You' });
 
-    for (let i = 0; i < 6; i++) actor.send({ type: 'NEXT' });
+    for (let i = 0; i < 7; i++) actor.send({ type: 'NEXT' });
     actor.send({ type: 'SUBMIT_FAILURE' });
     actor.send({ type: 'BACK' });
 

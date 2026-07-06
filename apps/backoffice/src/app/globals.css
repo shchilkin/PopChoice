@@ -341,6 +341,10 @@ dd {
   min-width: 74px;
   min-height: 36px;
 }
+.json-copy-button {
+  justify-content: center;
+  min-width: 74px;
+}
 .button:disabled,
 input:disabled {
   opacity: 0.5;
@@ -646,6 +650,104 @@ input:disabled {
   gap: 8px;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+.catalog-seed-flash-slot {
+  min-height: 54px;
+  margin-bottom: 14px;
+}
+.catalog-seed-flash-slot .queue-status {
+  min-height: 54px;
+  margin-bottom: 0;
+}
+.catalog-seed-console {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.82fr) minmax(320px, 1.18fr);
+  gap: 0;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.catalog-seed-console.healthy {
+  border-color: color-mix(in srgb, var(--good), var(--border) 70%);
+}
+.catalog-seed-console.warning {
+  border-color: color-mix(in srgb, var(--warn), var(--border) 55%);
+}
+.catalog-seed-state,
+.catalog-seed-action {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+.catalog-seed-state {
+  align-content: start;
+  border-right: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent), #12151a;
+}
+.catalog-seed-action {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  background: var(--surface-2);
+}
+.catalog-seed-action p {
+  max-width: 720px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.catalog-seed-kicker {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.catalog-seed-status-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.catalog-seed-status-row h2 {
+  font-size: 30px;
+  line-height: 1.05;
+}
+.catalog-seed-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.catalog-seed-facts div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+.catalog-seed-facts dt,
+.catalog-seed-facts dd {
+  font-size: 12px;
+}
+.catalog-seed-facts dd {
+  color: var(--text);
+  font-weight: 850;
+}
+.catalog-seed-form {
+  display: flex;
+  justify-content: flex-end;
+}
+.catalog-seed-trigger {
+  min-width: 178px;
+  min-height: 40px;
+  white-space: nowrap;
+}
+.catalog-seed-trigger:active {
+  transform: none;
 }
 .queue-diagnostic,
 .queue-diagnostic-action {
@@ -1543,26 +1645,6 @@ input:disabled {
   font-weight: 750;
   white-space: nowrap;
 }
-.live-eval-disclosure {
-  max-width: 760px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-.live-eval-disclosure summary {
-  width: fit-content;
-  cursor: pointer;
-  padding: 0;
-  color: var(--subtle);
-  font-size: 12px;
-  font-weight: 900;
-}
-.live-eval-disclosure summary::marker {
-  color: var(--bad);
-}
-.live-eval-disclosure[open] summary {
-  color: var(--bad);
-}
 .live-eval-form {
   display: grid;
   gap: 10px;
@@ -1698,6 +1780,38 @@ input:disabled {
   border-top: 1px solid var(--border);
   font-size: 12px;
   line-height: 1.55;
+}
+.json-panel-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.012);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 850;
+}
+.json-panel-toolbar + .json-block {
+  border-top: 1px solid var(--border);
+}
+.eval-result-issue {
+  display: grid;
+  gap: 3px;
+  min-width: 280px;
+  max-width: 680px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.eval-result-issue strong {
+  color: var(--text);
+}
+.eval-result-issue em {
+  color: var(--bad);
+  font-style: normal;
+  font-weight: 800;
 }
 .review-table .movie-title {
   display: grid;
@@ -1895,6 +2009,18 @@ input:disabled {
   }
   .summary {
     grid-template-columns: 1fr 1fr;
+  }
+  .catalog-seed-console,
+  .catalog-seed-action {
+    grid-template-columns: 1fr;
+  }
+  .catalog-seed-state {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .catalog-seed-form,
+  .catalog-seed-trigger {
+    width: 100%;
   }
   .next-action {
     align-items: stretch;

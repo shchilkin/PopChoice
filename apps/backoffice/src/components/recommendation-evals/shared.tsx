@@ -1,5 +1,7 @@
 import type { RecommendationEvalRunStatus } from '@pop-choice/shared';
 
+import { CopyJsonButton } from './copyJsonButton';
+
 export function recommendationEvalStatusLabel(status: RecommendationEvalRunStatus): string {
   const labels: Record<RecommendationEvalRunStatus, string> = {
     canceled: 'Canceled',
@@ -35,6 +37,24 @@ export function buildRecommendationEvalPageHref({
   return `/recommendation-evals?${params.toString()}`;
 }
 
+function stringifyJsonBlock(value: unknown): string {
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
 export function JsonBlock({ value }: { value: unknown }) {
-  return <pre className="json-block">{JSON.stringify(value, null, 2)}</pre>;
+  const serializedValue = stringifyJsonBlock(value);
+
+  return (
+    <div className="json-panel">
+      <div className="json-panel-toolbar">
+        <span>JSON</span>
+        <CopyJsonButton label="JSON" text={serializedValue} />
+      </div>
+      <pre className="json-block">{serializedValue}</pre>
+    </div>
+  );
 }

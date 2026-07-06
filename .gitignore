@@ -61,4 +61,5 @@ storybook-static
 
 # Playwright
 playwright-report
+playwright-*-report
 test-results

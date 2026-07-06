@@ -157,7 +157,7 @@ that tag only after the image matrix passes and the GitHub `production`
 Environment is approved. Use `IMAGE_TAG=sha-<12-char-github-sha>` when you want
 to promote or roll back an exact immutable release manually. Keep the same
 `IMAGE_TAG` for `web`, `workers`, `bull-board`, `storybook`, `docs`,
-`backoffice`, `movie-seed`, `movie-discovery`, and `movie-backfill`; running
+`backoffice`, `movie-discovery`, and `movie-backfill`; running
 mixed commits is intentionally not supported.
 
 If the GHCR packages are private, add registry credentials in Coolify so the VPS
@@ -235,7 +235,7 @@ APP_IMAGE_PREFIX=ghcr.io/shchilkin/popchoice
 POSTGRES_USER=popchoice
 POSTGRES_DB=popchoice
 LOG_LEVEL=info
-EMAIL_REPLY_TO=support@your-domain.example
+EMAIL_REPLY_TO=support@mail.shchilkin.dev
 OPERATOR_AUTH_REALM=PopChoice Operators
 OPERATOR_AUTH_RATE_LIMIT_MAX=30
 OPERATOR_AUTH_RATE_LIMIT_WINDOW_SECONDS=900
@@ -254,10 +254,14 @@ API_KEY_HMAC_SECRET=...
 VALID_API_KEYS=...
 METRICS_BEARER_TOKEN=...
 NEXT_PUBLIC_BASE_URL=https://dev.pop-choice.shchilkin.dev
-EMAIL_FROM=PopChoice Dev <noreply@mail.pop-choice.shchilkin.dev>
+EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>
 OPERATOR_AUTH_USERNAME=...
 OPERATOR_AUTH_PASSWORD=...
 ```
+
+Use the same verified Resend sender domain in both development and production:
+`EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>`. The `RESEND_API_KEY`
+value does not change when moving the sender domain.
 
 Use URL-safe database passwords such as `openssl rand -hex 32`; PostgreSQL
 passwords that contain URL-reserved characters can break generated
@@ -471,13 +475,13 @@ VALID_API_KEYS={{ project.VALID_API_KEYS }}
 ### Password reset email
 
 Password reset requests use Resend in production. Create a Resend API key and
-verify a sending domain such as `mail.your-domain.example`, then set these
+use the verified sending domain `mail.shchilkin.dev`, then set these
 variables on the Coolify Compose resource:
 
 ```ini
 RESEND_API_KEY={{ project.RESEND_API_KEY }}
-EMAIL_FROM=PopChoice <noreply@mail.your-domain.example>
-EMAIL_REPLY_TO=support@your-domain.example
+EMAIL_FROM=PopChoice <noreply@mail.shchilkin.dev>
+EMAIL_REPLY_TO=support@mail.shchilkin.dev
 ```
 
 `EMAIL_REPLY_TO` is optional. In local development and previews, the app exposes
@@ -711,6 +715,23 @@ For production release promotion:
 5. Approve the GitHub Environment deployment. The workflow publishes the
    `production` image tag for every service, triggers the production Coolify
    webhook, and verifies `/api/health` plus `/api/build`.
+6. After the deploy, verify the public build metadata:
+
+   ```bash
+   curl -fsS https://pop-choice.example/api/build | jq .
+   curl -fsS https://pop-choice.example/api/health | jq .
+   ```
+
+   `/api/build` should report the release package version, `channel:
+production`, `branch: main`, and the expected commit/image tag. Do not set
+   `APP_VERSION` in the Coolify project, environment, resource, or preview
+   variables; stale Coolify values override the package version baked into the
+   image.
+
+7. If `/api/build` reports an old version after a successful deploy, search the
+   resource environment variables for `APP_VERSION`, including preview
+   variables, remove every match, reload the Compose file if Coolify still
+   treats the variable as Compose-managed, then redeploy.
 
 For a pinned rollback, set production `IMAGE_TAG` to the previous known-good
 `sha-<12-char-github-sha>` tag and redeploy the production resource manually.
@@ -784,9 +805,9 @@ created from pull requests and reported back to GitHub.
    for port `3000`.
 7. Leave `bull-board` without a preview domain unless temporarily debugging a
    PR.
-8. Do not set `COMPOSE_PROFILES=tools` globally. It enables the profiled
-   `movie-seed` service during every production and preview deploy. Run seeding
-   manually or as a Coolify scheduled task instead.
+8. Do not set `COMPOSE_PROFILES=tools` globally. It enables profiled operator
+   tools during every production and preview deploy. Keep one-shot tools manual
+   or scheduled intentionally instead.
 
 Before relying on previews, verify that opening a PR creates a preview
 deployment and GitHub comment, the preview URL loads over HTTPS, quiz submission
@@ -805,7 +826,6 @@ ghcr.io/shchilkin/popchoice/bull-board
 ghcr.io/shchilkin/popchoice/storybook
 ghcr.io/shchilkin/popchoice/docs
 ghcr.io/shchilkin/popchoice/db-migrate
-ghcr.io/shchilkin/popchoice/movie-seed
 ghcr.io/shchilkin/popchoice/movie-discovery
 ghcr.io/shchilkin/popchoice/movie-backfill
 ```
@@ -916,25 +936,30 @@ as a frontend-only bug.
 ## Seeding movie data
 
 The database schema is created automatically by the web service, but movie rows
-still need to be seeded. After the first successful web deploy, run this from a
-Coolify terminal or an SSH shell on the VPS:
+still need to be seeded. After the first successful web deploy, use Backoffice
+-> Catalog seed -> Trigger movie seed. Backoffice enqueues a `seed-movies` job on
+the `movie-seed` BullMQ queue, and the `workers` service performs the curated
+seed from `apps/web/data/movies.txt`. The action requires `REDIS_URL` on
+backoffice and workers, and `DATABASE_URL` plus `OPENAI_API_KEY` on workers.
+Watch the `workers` logs for provider or database errors.
 
-```bash
-docker compose --profile tools -f coolify.compose.yml run --rm movie-seed
-```
+For CI-driven post-deploy seeding, set `BACKOFFICE_AUTOMATION_TOKEN` in the
+backoffice Coolify environment and the same GitHub Environment secret, then set
+`BACKOFFICE_BASE_URL` to the environment's backoffice origin. Enable
+`POSTDEPLOY_SEED_ENABLED=true` as a GitHub Environment variable only for
+environments that should automatically queue the curated seed after a successful
+deploy verification.
 
-The same tools profile also exposes `movie-backfill` from the matching
+If backoffice is unavailable, fix the backoffice/worker deployment before
+seeding. The curated seed path intentionally goes through BullMQ so operators
+can see the job in Bull Board and reuse the same retry/dedupe behavior as
+production automation.
+
+The tools profile exposes `movie-backfill` from the matching
 prebuilt image:
 
 ```bash
 docker compose --profile tools -f coolify.compose.yml run --rm movie-backfill
-```
-
-If you prefer doing this from your laptop against the production database, use
-the public PostgreSQL connection string and run:
-
-```bash
-DATABASE_URL=<production-database-url> npm run populate-db
 ```
 
 ## Optional movie discovery service

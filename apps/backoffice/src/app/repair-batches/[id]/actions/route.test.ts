@@ -21,22 +21,34 @@ vi.mock('../../../../lib/backoffice', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../lib/sameOriginRequest', () => ({
-  isSameOriginRequest: mocks.isSameOriginRequest,
-}));
+vi.mock('../../../../lib/sameOriginRequest', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../lib/sameOriginRequest')>();
+  return {
+    ...actual,
+    isSameOriginRequest: mocks.isSameOriginRequest,
+  };
+});
 
 import { POST } from './route';
 
-function createRetryRequest(fields: Record<string, string> = {}) {
+function createRetryRequest({
+  fetch = true,
+  fields = {},
+  url = 'https://backoffice.test/repair-batches/batch-1/actions',
+}: {
+  fetch?: boolean;
+  fields?: Record<string, string>;
+  url?: string;
+} = {}) {
   return createBackofficeFormRequest({
-    fetch: true,
+    fetch,
     fields: {
       action: 'retry_item',
       item_id: 'item-1',
       return_to: '/repair-batches/batch-1?status=needs_review',
       ...fields,
     },
-    url: 'https://backoffice.test/repair-batches/batch-1/actions',
+    url,
   });
 }
 
@@ -80,7 +92,7 @@ describe('repair batch action route', () => {
       status: 'queued',
     });
 
-    const response = await POST(createRetryRequest({ batch_id: '' }) as never, {
+    const response = await POST(createRetryRequest({ fields: { batch_id: '' } }) as never, {
       params: Promise.resolve({ id: 'batch-1' }),
     });
 
@@ -127,5 +139,50 @@ describe('repair batch action route', () => {
       }),
       status: 503,
     });
+  });
+
+  it('does not redirect browser form posts to a bind address', async () => {
+    mocks.retryCatalogRepairBatchItem.mockResolvedValue({
+      batchId: 'batch-1',
+      issueKey: 'missing_poster_url',
+      item: { batchId: 'batch-1', id: 'item-1', status: 'queued' },
+      job: null,
+      status: 'queued',
+    });
+
+    const response = await POST(
+      createRetryRequest({
+        fetch: false,
+        url: 'http://0.0.0.0:3000/repair-batches/batch-1/actions',
+      }) as never,
+      {
+        params: Promise.resolve({ id: 'batch-1' }),
+      },
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/repair-batches/batch-1?status=needs_review&item_retry=queued',
+    );
+  });
+
+  it('keeps forbidden browser redirects off bind addresses', async () => {
+    mocks.isSameOriginRequest.mockReturnValue(false);
+
+    const response = await POST(
+      createRetryRequest({
+        fetch: false,
+        url: 'http://0.0.0.0:3000/repair-batches/batch-1/actions',
+      }) as never,
+      {
+        params: Promise.resolve({ id: 'batch-1' }),
+      },
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(
+      'http://localhost:3000/repair-batches/batch-1?item_retry=forbidden',
+    );
+    expect(mocks.retryCatalogRepairBatchItem).not.toHaveBeenCalled();
   });
 });

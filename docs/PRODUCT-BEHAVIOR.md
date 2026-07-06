@@ -27,13 +27,18 @@ Solo mode creates one participant named with the localized "you" label. Group
 mode first collects participant names, requires at least two non-empty names,
 and falls back to "Person 1" and "Person 2" if the setup is incomplete.
 
-Each participant answers the same five steps:
+Each participant answers the same seven steps:
 
-1. Reference movie: either one favorite/reference title or "no reference movie".
+1. Reference movie: optional favorite/reference title. Leaving it blank keeps
+   the search open; users can also explicitly choose the no-reference path.
 2. Search lane: `new`, `classic`, or `both`.
 3. Tonight's vibe: one or more mood/genre ids from the current fixed list.
 4. Energy level: `light`, `balanced`, `serious`, or `dark`.
-5. Optional actor: free text.
+5. Discovery appetite: `safe`, `balanced`, or `surprise`.
+6. Hard avoids: optional stop signals such as horror, gore, slow pacing,
+   subtitles, long runtime, obvious picks, obscure picks, or likely already-seen
+   movies.
+7. Optional actor: free text.
 
 The browser translates each participant into the recommendation API contract:
 
@@ -51,9 +56,11 @@ The browser translates each participant into the recommendation API contract:
 
 For one participant the payload is one object. For group mode the payload is an
 array of participant objects. Required product inputs are era, at least one
-mood, and tone. The favorite movie can be intentionally blank only when the user
-chooses the no-reference path. Favorite actor and favorite-movie reason are
-optional.
+mood, tone, and discovery appetite. The favorite movie can be intentionally
+blank. Favorite actor, favorite-movie reason, and hard avoids are optional.
+Discovery appetite and hard avoids are carried as structured text in
+`favoriteMovieWhy` until a broader taste-signal backend contract replaces the
+legacy recommendation request shape.
 
 ## Current Recommendation Lifecycle
 
@@ -106,11 +113,24 @@ Recommendation feedback on completed results accepts:
 
 - `useful`: records the main pick as `liked`.
 - `already_watched`: records the main pick as `watched`.
+- `not_for_me`: records the main pick as `not_interested`.
 - `wrong_mood`: records the main pick as `wrong_mood`.
 - `too_obvious`: records the main pick as `not_interested`.
 - `too_obscure`: records the main pick as `not_interested`.
 - `close`: records feedback on the recommendation but does not create a movie
   memory item.
+
+Completed result pages also expose follow-up actions that combine feedback with
+the existing one-shot more-picks queue:
+
+- "More like this" records `useful` feedback, then requests one additional
+  TMDB-backed batch from the same result.
+- "Try another" records `not_for_me` feedback, then requests the same follow-up
+  batch.
+
+Only one more-picks batch can be claimed per recommendation, so repeated
+follow-up actions reuse the same duplicate protection as the direct more-picks
+control.
 
 Current recommendation behavior uses memory conservatively:
 
@@ -159,6 +179,28 @@ group-oriented copy and insights when the persisted result includes them. The
 current model does not create room records, invite links, readiness state, QR
 codes, projector mode, or independent participant sessions.
 
+## Current 0.2.0 Taste-Control Scope
+
+The `v0.2.0` Better Taste Control milestone is tracked by
+[#826](https://github.com/shchilkin/PopChoice/issues/826). The completed scope
+is:
+
+- [x] [#827](https://github.com/shchilkin/PopChoice/issues/827): explicit avoids
+      and constraints in Fast Pick and Normal Match.
+- [x] [#828](https://github.com/shchilkin/PopChoice/issues/828): optional,
+      lower-friction reference movie UX.
+- [x] [#829](https://github.com/shchilkin/PopChoice/issues/829): discovery
+      appetite for safe, balanced, and surprising picks.
+- [x] [#830](https://github.com/shchilkin/PopChoice/issues/830): result
+      feedback loop v1.
+- [x] [#831](https://github.com/shchilkin/PopChoice/issues/831):
+      deterministic eval coverage for taste-control signals.
+- [x] [#832](https://github.com/shchilkin/PopChoice/issues/832): product docs
+      and release notes.
+
+Release notes live in
+[/docs/releases/v0.2.0](/docs/releases/v0.2.0).
+
 ## Planned Product Direction
 
 Planned behavior should remain issue-backed and should not be described as
@@ -167,9 +209,10 @@ current product behavior until implemented.
 Recommendation experience direction is tracked in
 [/docs/RECOMMENDATION-ROADMAP](/docs/RECOMMENDATION-ROADMAP). The likely next
 shape is a shared taste-signal model that can combine quiz answers, swipe
-reactions, account memory, and result feedback. Future quiz work should make
-favorite/reference movies less mandatory, capture more explicit avoid signals,
-and use more concrete "tonight" language.
+reactions, account memory, and result feedback. Future quiz and recommendation
+work should move the current structured-text bridge into a first-class backend
+contract so avoids, constraints, discovery appetite, and feedback no longer
+need to travel through legacy request fields.
 
 Group rooms are a larger milestone under
 [#359](https://github.com/shchilkin/PopChoice/issues/359), split into:

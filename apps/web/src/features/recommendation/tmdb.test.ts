@@ -4,9 +4,23 @@ import {
   buildTMDBDiscoverQueryShape,
   enrichTMDBMatchesWithDetails,
   fetchTMDBDiscoverMovies,
+  seedMovies,
 } from './tmdb';
 
 import type { EnhancedMovieMatch, PersonFormData } from './types';
+
+const mockInsertMovie = vi.hoisted(() => vi.fn());
+const mockCheckExistingMovies = vi.hoisted(() => vi.fn());
+const mockFromMovies = vi.hoisted(() => vi.fn());
+const mockQuery = vi.hoisted(() => vi.fn());
+
+vi.mock('@/clients/dbClient', () => ({
+  getDbClient: () => ({
+    from: mockFromMovies,
+    isConfigured: () => true,
+    query: mockQuery,
+  }),
+}));
 
 const basePerson: PersonFormData = {
   favoriteMovie: 'The Matrix',
@@ -183,5 +197,87 @@ describe('enrichTMDBMatchesWithDetails', () => {
       year: 2021,
     });
     expect(enriched?.similarity).toBeGreaterThan(0.5);
+  });
+});
+
+describe('seedMovies', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('persists TMDB poster URLs when JIT seeding discovered movies', async () => {
+    mockCheckExistingMovies.mockResolvedValue({ data: [], error: null });
+    mockInsertMovie.mockResolvedValue({ error: null });
+    mockFromMovies.mockImplementation(() => ({
+      insert: mockInsertMovie,
+      select: () => ({
+        in: mockCheckExistingMovies,
+      }),
+    }));
+
+    await seedMovies(
+      [
+        {
+          genre_ids: [878],
+          id: 100,
+          original_language: 'en',
+          overview: 'A space adventure.',
+          popularity: 12,
+          poster_path: '/poster.jpg',
+          release_date: '2020-01-01',
+          title: 'Space Adventure',
+          vote_average: 7.4,
+          vote_count: 1200,
+        },
+      ],
+      new Set(),
+      new Map([[100, [0.1, 0.2, 0.3]]]),
+    );
+
+    expect(mockInsertMovie).toHaveBeenCalledWith(
+      expect.objectContaining({
+        poster_url: 'https://image.tmdb.org/t/p/w500/poster.jpg',
+        tmdb_id: 100,
+      }),
+    );
+  });
+
+  it('backfills missing poster URLs when a discovered movie already exists', async () => {
+    mockCheckExistingMovies.mockResolvedValue({
+      data: [{ id: 'movie-100', name: 'Space Adventure', poster_url: null, year: 2020 }],
+      error: null,
+    });
+    mockFromMovies.mockImplementation(() => ({
+      insert: mockInsertMovie,
+      select: () => ({
+        in: mockCheckExistingMovies,
+      }),
+    }));
+    mockQuery.mockResolvedValue({ rowCount: 1, rows: [] });
+
+    await seedMovies(
+      [
+        {
+          genre_ids: [878],
+          id: 100,
+          original_language: 'en',
+          overview: 'A space adventure.',
+          popularity: 12,
+          poster_path: '/poster.jpg',
+          release_date: '2020-01-01',
+          title: 'Space Adventure',
+          vote_average: 7.4,
+          vote_count: 1200,
+        },
+      ],
+      new Set(),
+      new Map([[100, [0.1, 0.2, 0.3]]]),
+    );
+
+    expect(mockInsertMovie).not.toHaveBeenCalled();
+    expect(mockQuery).toHaveBeenCalledWith(
+      'UPDATE movies SET poster_url = $1 WHERE id = $2 AND poster_url IS NULL',
+      ['https://image.tmdb.org/t/p/w500/poster.jpg', 'movie-100'],
+    );
   });
 });

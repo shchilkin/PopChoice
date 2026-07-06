@@ -1,6 +1,6 @@
 {
   "name": "movie-discovery",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,12 +14,12 @@
     "node-cron": "^4.2.1"
   },
   "devDependencies": {
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "@types/node-cron": "^3.0.11",
     "@types/pg": "^8.20.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.9"
   },
   "engines": {
     "node": ">=24",

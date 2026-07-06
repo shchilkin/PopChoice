@@ -12,7 +12,6 @@ COPY apps/bull-board/package.json ./apps/bull-board/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
-COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --no-audit --fund=false
 
 COPY packages/shared/src/ ./packages/shared/src/
@@ -62,7 +61,6 @@ COPY apps/bull-board/package.json ./apps/bull-board/
 COPY services/db-migrate/package.json ./services/db-migrate/
 COPY services/movie-backfill/package.json ./services/movie-backfill/
 COPY services/movie-discovery/package.json ./services/movie-discovery/
-COPY services/movie-seed/package.json ./services/movie-seed/
 RUN --mount=type=cache,target=/root/.npm,sharing=locked npm ci --omit=dev --no-audit --fund=false
 
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist

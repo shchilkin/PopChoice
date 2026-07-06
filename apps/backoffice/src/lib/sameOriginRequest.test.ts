@@ -119,6 +119,6 @@ describe('backofficeRedirectUrl', () => {
         '/?repair=queued',
         { trustRequestEvidence: true },
       ).toString(),
-    ).toBe('http://localhost/?repair=queued');
+    ).toBe('http://localhost:3000/?repair=queued');
   });
 });

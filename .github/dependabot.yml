@@ -142,49 +142,6 @@ updates:
       prefix-development: 'deps-dev'
       include: 'scope'
 
-  # Monitor npm dependencies in services/movie-seed
-  - package-ecosystem: 'npm'
-    directory: '/services/movie-seed'
-    schedule:
-      interval: 'weekly'
-      day: 'monday'
-      time: '09:00'
-      timezone: 'UTC'
-    open-pull-requests-limit: 5
-    assignees:
-      - 'shchilkin'
-    labels:
-      - 'dependencies'
-      - 'automated'
-      - 'npm'
-    allow:
-      - dependency-type: 'all'
-    groups:
-      movie-seed-production:
-        applies-to: version-updates
-        dependency-type: 'production'
-        patterns:
-          - '*'
-        update-types:
-          - 'minor'
-          - 'patch'
-      movie-seed-development:
-        applies-to: version-updates
-        dependency-type: 'development'
-        patterns:
-          - '*'
-        update-types:
-          - 'minor'
-          - 'patch'
-      movie-seed-security:
-        applies-to: security-updates
-        patterns:
-          - '*'
-    commit-message:
-      prefix: 'deps'
-      prefix-development: 'deps-dev'
-      include: 'scope'
-
   # Monitor npm dependencies in services/movie-discovery
   - package-ecosystem: 'npm'
     directory: '/services/movie-discovery'

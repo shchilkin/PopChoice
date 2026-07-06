@@ -22,7 +22,7 @@ const movie: MovieRecommendation = {
 
 const resultSignals: RecommendationResultSignals = {
   actorSignals: ['Amy Adams'],
-  avoidSignals: ['horror', 'long runtime', 'already-seen movies'],
+  avoidSignals: ['horror', 'long runtime', 'too obvious', 'already-seen movies'],
   eraSignals: ['Both new and classic'],
   hasReferenceMovie: true,
   moodSignals: ['Drama', 'Science Fiction'],
@@ -50,7 +50,7 @@ describe('buildResultEvidenceViewModel', () => {
       expect.arrayContaining([
         {
           label: en.results.evidenceAvoidLabel,
-          value: 'horror, long runtime, already-seen picks',
+          value: 'horror, long runtime, too obvious, already-seen picks',
         },
         {
           label: en.results.evidenceRuntimeLabel,

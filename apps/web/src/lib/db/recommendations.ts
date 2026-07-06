@@ -21,6 +21,7 @@ import {
   hasFavoriteActorSignal,
 } from '@/features/recommendation/groupResultInsights';
 import { getMovieIdentityKey } from '@/lib/movieIdentity';
+import { getAvoidSignalsFromReason } from '@/utils/tasteSignals';
 
 import type { RecommendationStage } from '@/features/recommendation/stages';
 import type {
@@ -54,6 +55,7 @@ export type RecommendationStatus = 'pending' | 'processing' | 'completed' | 'fai
 export type RecommendationFeedbackKind =
   | 'useful'
   | 'already_watched'
+  | 'not_for_me'
   | 'wrong_mood'
   | 'too_obvious'
   | 'too_obscure'
@@ -262,6 +264,7 @@ function getInteractionKindForFeedback(
       return 'liked';
     case 'wrong_mood':
       return 'wrong_mood';
+    case 'not_for_me':
     case 'too_obvious':
     case 'too_obscure':
       return 'not_interested';
@@ -272,18 +275,6 @@ function getInteractionKindForFeedback(
 
 function isQuizPersonRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function getAvoidSignalsFromReason(reason: unknown): string[] {
-  const value = cleanString(reason);
-  if (!value) return [];
-
-  return Array.from(value.matchAll(/Avoid:\s*([^.]*)\./gi)).flatMap((match) =>
-    (match[1] ?? '')
-      .split(',')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0 && item.toLocaleLowerCase() !== 'no hard avoids'),
-  );
 }
 
 function getRecommendationResultSignals(quizData: unknown): RecommendationResultSignals {

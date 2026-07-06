@@ -9,6 +9,45 @@ import { BackofficeLayout } from '../backoffice-layout';
 import { CatalogStat, DataTable } from '../shared';
 import { JsonBlock, recommendationEvalStatusLabel, RecommendationEvalStatusBadge } from './shared';
 
+type EvalCheck = {
+  id: string;
+  label: string;
+  passed: boolean;
+  details: string;
+  maxScore: number;
+};
+
+function toEvalCheck(value: unknown): EvalCheck | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const id = typeof record.id === 'string' ? record.id : 'unknown-check';
+  const label = typeof record.label === 'string' ? record.label : id;
+  const details = typeof record.details === 'string' ? record.details : '';
+  const maxScore = typeof record.maxScore === 'number' ? record.maxScore : 0;
+
+  return {
+    id,
+    label,
+    passed: record.passed === true,
+    details,
+    maxScore,
+  };
+}
+
+function failedChecksFor(result: RecommendationEvalResult): EvalCheck[] {
+  return result.checks
+    .map((check) => toEvalCheck(check))
+    .filter((check): check is EvalCheck => check !== null && !check.passed);
+}
+
+function hardGateFailureCount(results: RecommendationEvalResult[]): number {
+  return results.reduce(
+    (count, result) =>
+      count + failedChecksFor(result).filter((check) => check.maxScore === 0).length,
+    0,
+  );
+}
+
 function EvalRunSummary({ run }: { run: RecommendationEvalRun }) {
   return (
     <section className="summary batch-summary" aria-label="Recommendation eval run summary">
@@ -57,26 +96,46 @@ function EvalResultRows({ results }: { results: RecommendationEvalResult[] }) {
 
   return (
     <>
-      {results.map((result) => (
-        <tr key={result.id}>
-          <td>{result.fixtureId}</td>
-          <td>{result.fixtureName}</td>
-          <td>
-            <span className={`status eval-result-${result.status}`}>{result.status}</span>
-          </td>
-          <td>
-            {result.score}/{result.maxScore}
-          </td>
-          <td>{result.checks.length}</td>
-          <td>{result.errorMessage ?? '-'}</td>
-        </tr>
-      ))}
+      {results.map((result) => {
+        const failedChecks = failedChecksFor(result);
+        const firstFailedCheck = failedChecks[0];
+        const issue = result.errorMessage ?? firstFailedCheck?.details ?? null;
+        const issueTitle = result.errorMessage ? 'Error' : firstFailedCheck?.label;
+
+        return (
+          <tr key={result.id}>
+            <td>{result.fixtureId}</td>
+            <td>{result.fixtureName}</td>
+            <td>
+              <span className={`status eval-result-${result.status}`}>{result.status}</span>
+            </td>
+            <td>
+              {result.score}/{result.maxScore}
+            </td>
+            <td>{result.checks.length}</td>
+            <td>
+              {issue ? (
+                <span className="eval-result-issue">
+                  {issueTitle ? <strong>{issueTitle}</strong> : null}
+                  <span>{issue}</span>
+                  {failedChecks.length > 1 ? (
+                    <em>+{failedChecks.length - 1} more failed checks</em>
+                  ) : null}
+                </span>
+              ) : (
+                '-'
+              )}
+            </td>
+          </tr>
+        );
+      })}
     </>
   );
 }
 
 export function RecommendationEvalDetailPage({ detail }: { detail: RecommendationEvalRunDetail }) {
   const { run, results } = detail;
+  const hardFailures = hardGateFailureCount(results);
 
   return (
     <BackofficeLayout
@@ -151,12 +210,20 @@ export function RecommendationEvalDetailPage({ detail }: { detail: Recommendatio
       </section>
       <section className="panel">
         <div className="panel-header">
-          <h2>Fixture results</h2>
+          <div>
+            <h2>Fixture results</h2>
+            {hardFailures > 0 ? (
+              <p className="issue-hint">
+                {hardFailures} required zero-score check{hardFailures === 1 ? '' : 's'} failed.
+                These checks do not change the numeric score, but they still fail the fixture.
+              </p>
+            ) : null}
+          </div>
           <span className="count">{results.length}</span>
         </div>
         <DataTable
           className="recommendation-eval-table"
-          columns={['Fixture', 'Name', 'Status', 'Score', 'Checks', 'Error']}
+          columns={['Fixture', 'Name', 'Status', 'Score', 'Checks', 'Issue']}
         >
           <EvalResultRows results={results} />
         </DataTable>
