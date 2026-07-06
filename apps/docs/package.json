@@ -13,16 +13,16 @@
   },
   "dependencies": {
     "@types/mdx": "^2.0.14",
-    "fumadocs-core": "^16.10.0",
-    "fumadocs-mdx": "^15.0.12",
-    "fumadocs-ui": "^16.10.0",
+    "fumadocs-core": "^16.10.7",
+    "fumadocs-mdx": "^15.0.13",
+    "fumadocs-ui": "^16.10.7",
     "next": "^16.2.10",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.2",
-    "@types/node": "25.9.3",
+    "@types/node": "26.1.0",
     "@types/react": "19.2.17",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
