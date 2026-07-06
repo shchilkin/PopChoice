@@ -201,6 +201,11 @@ environment so the same workflow can deploy either resource without sharing
 webhook URLs. `COOLIFY_TOKEN` must be a Coolify API token with deploy permission
 because the deploy webhook is authenticated with `Authorization: Bearer
 <token>`. The production GitHub Environment should require manual reviewers.
+The deploy jobs set explicit environment URLs and request `deployments: write`
+so GitHub shows the latest `development` and `production` deployments on the
+repository Deployments/Environments surfaces. `development` points at
+`https://dev.pop-choice.shchilkin.dev`; `production` points at
+`https://pop-choice.shchilkin.dev`.
 When the webhook secret is absent, images are still published, but deployment
 is skipped for the `development` Environment. Production promotions fail when
 either production deploy secret is missing, because updating the `production`
