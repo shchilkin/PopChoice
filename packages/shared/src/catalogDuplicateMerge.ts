@@ -14,7 +14,9 @@ type CatalogDuplicateMergeQueryable = {
 };
 
 export type CatalogDuplicateMergeIdentityKind =
-  'confirmed_tmdb_duplicate' | 'candidate_normalized_title_year' | 'manual_review_required';
+  | 'confirmed_tmdb_duplicate'
+  | 'candidate_normalized_title_year'
+  | 'manual_review_required';
 
 export interface CatalogDuplicateMergeMovieSnapshot {
   id: string;

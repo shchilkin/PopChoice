@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "singleQuote": true,
+  "printWidth": 100,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "endOfLine": "lf",
+  "jsxSingleQuote": false,
+  "proseWrap": "preserve",
+  "sortPackageJson": true,
+  "ignorePatterns": [
+    "public/",
+    "node_modules/",
+    "build/",
+    "dist/",
+    "coverage/",
+    ".next/",
+    "out/",
+    "*.log",
+    "*.snap",
+    ".env",
+    ".env.*",
+    ".vscode/",
+    ".storybook-static/"
+  ]
+}

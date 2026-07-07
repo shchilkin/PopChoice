@@ -27,8 +27,8 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 
 - `npm run lint` or `npm run lint:check` - Run ESLint for code linting
 - `npm run lint:fix` - Fix ESLint issues automatically
-- `npm run format:check` - Check code formatting with Prettier
-- `npm run format:write` - Fix code formatting with Prettier
+- `npm run format:check` - Check code formatting with Oxfmt
+- `npm run format:write` - Fix code formatting with Oxfmt
 - `npm run format:package` - Sort and format package.json
 - `npm run type-check` - Run TypeScript type checking
 - `npm run fix` - Run all fixes (lint, format, package.json)

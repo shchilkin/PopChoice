@@ -3,7 +3,13 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 import { cn, type ClassValue } from './utils';
 
 export type ButtonVariant =
-  'default' | 'primary' | 'secondary' | 'success' | 'danger' | 'quiet' | 'ghost';
+  | 'default'
+  | 'primary'
+  | 'secondary'
+  | 'success'
+  | 'danger'
+  | 'quiet'
+  | 'ghost';
 
 export type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
 

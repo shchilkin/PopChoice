@@ -2,12 +2,12 @@
   "name": "pop-choice",
   "version": "0.2.0",
   "private": true,
-  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*",
     "services/*"
   ],
+  "type": "module",
   "scripts": {
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run build --workspace=apps/web",
     "build:backoffice": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run build --workspace=apps/backoffice",
@@ -30,10 +30,10 @@
     "dev:shared": "npm run dev --workspace=packages/shared",
     "eval:recommendations": "npm run eval:recommendations --workspace=apps/web",
     "eval:recommendations:real-data": "npm run eval:recommendations --workspace=apps/web -- --real-data",
-    "fix": "npm run lint:fix && npm run format:write && npm run format:package",
-    "format:check": "prettier --check .",
-    "format:package": "sort-package-json",
-    "format:write": "npx prettier --write .",
+    "fix": "npm run lint:fix && npm run format:write",
+    "format:check": "oxfmt --check",
+    "format:package": "oxfmt package.json \"apps/*/package.json\" \"packages/*/package.json\" \"services/*/package.json\"",
+    "format:write": "oxfmt",
     "lint": "npm run lint --workspace=apps/web",
     "lint:check": "npm run lint:check --workspace=apps/web",
     "lint:fix": "npm run lint:fix --workspace=apps/web",
@@ -67,26 +67,25 @@
     "type-check": "npm run build --workspace=packages/shared && npm run build --workspace=packages/ui && npm run type-check --workspace=apps/web && npm run type-check --workspace=apps/backoffice",
     "type-check:docs": "npm run type-check --workspace=apps/docs"
   },
-  "overrides": {
-    "next": {
-      ".": "16.2.10",
-      "postcss": "8.5.16"
-    }
-  },
   "devDependencies": {
     "@vitest/browser": "^4.1.10",
     "@vitest/browser-playwright": "^4.1.10",
     "fallow": "2.101.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "prettier": "3.9.4",
-    "sort-package-json": "^4.0.0",
+    "oxfmt": "0.58.0",
     "turbo": "^2.10.3",
     "vitest": "^4.1.10"
   },
-  "packageManager": "npm@11.6.2",
+  "overrides": {
+    "next": {
+      ".": "16.2.10",
+      "postcss": "8.5.16"
+    }
+  },
   "engines": {
     "node": ">=24",
     "npm": ">=11"
-  }
+  },
+  "packageManager": "npm@11.6.2"
 }

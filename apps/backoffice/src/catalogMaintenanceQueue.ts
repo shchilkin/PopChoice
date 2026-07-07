@@ -66,7 +66,8 @@ function enqueueResult({
 
 let redisConnection: Redis | null = null;
 type CatalogMaintenanceJobName =
-  typeof CATALOG_BACKFILL_MOVIE_JOB_NAME | typeof CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME;
+  | typeof CATALOG_BACKFILL_MOVIE_JOB_NAME
+  | typeof CATALOG_ENQUEUE_REPAIR_BATCH_JOB_NAME;
 type CatalogMaintenanceBullJob = Job<CatalogMaintenanceJobData, void, CatalogMaintenanceJobName>;
 
 let catalogMaintenanceQueue: Queue<CatalogMaintenanceBullJob> | null = null;

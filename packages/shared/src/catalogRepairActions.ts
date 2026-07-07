@@ -196,7 +196,11 @@ export interface CatalogRepairBatchItemPage {
 }
 
 export type CatalogRepairBatchItemStatusFilter =
-  CatalogRepairItemStatus | 'all' | 'failed' | 'in_progress' | 'needs_review';
+  | CatalogRepairItemStatus
+  | 'all'
+  | 'failed'
+  | 'in_progress'
+  | 'needs_review';
 export type CatalogRepairBatchItemSort = 'oldest' | 'newest' | 'needs_review';
 
 export interface CatalogRepairBatchDetail {

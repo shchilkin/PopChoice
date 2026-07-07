@@ -3,7 +3,13 @@ import type { HTMLAttributes } from 'react';
 import { cn, type ClassValue } from './utils';
 
 export type BadgeVariant =
-  'default' | 'muted' | 'accent' | 'warning' | 'success' | 'danger' | 'neutral';
+  | 'default'
+  | 'muted'
+  | 'accent'
+  | 'warning'
+  | 'success'
+  | 'danger'
+  | 'neutral';
 
 const badgeVariants: Record<BadgeVariant, string> = {
   default: 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text)]',
