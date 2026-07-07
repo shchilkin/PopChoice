@@ -1,6 +1,6 @@
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
-
 import { cn, type ClassValue } from './utils';
+
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 
 export type ButtonVariant =
   | 'default'

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { CatalogMovieDetailHealthFlag } from '@pop-choice/shared';
 
 import {
   duplicatePeerCount,
@@ -9,6 +8,8 @@ import {
   repairFlashTone,
   splitHealthFlags,
 } from './helpers';
+
+import type { CatalogMovieDetailHealthFlag } from '@pop-choice/shared';
 
 const flags: CatalogMovieDetailHealthFlag[] = [
   { isActive: true, key: 'missing_poster_url', label: 'Missing poster' },

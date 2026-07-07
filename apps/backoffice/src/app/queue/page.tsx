@@ -1,5 +1,5 @@
-import { BackofficeErrorPage, CatalogMaintenanceQueuePage } from '../../components/backoffice';
 import { listCatalogMaintenanceQueueJobs } from '../../catalogMaintenanceQueue';
+import { BackofficeErrorPage, CatalogMaintenanceQueuePage } from '../../components/backoffice';
 import {
   ensureBackofficeReady,
   logBackofficeError,

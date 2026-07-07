@@ -1,6 +1,8 @@
-import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 import { BackofficeLayout } from '../backoffice-layout';
+
 import { CatalogMaintenanceQueueRealtime } from './realtime';
+
+import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 
 export function CatalogMaintenanceQueuePage({
   bullBoardUrl,

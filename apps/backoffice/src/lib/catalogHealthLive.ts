@@ -1,10 +1,9 @@
+import type { CatalogMaintenanceQueueSnapshot } from '../catalogMaintenanceQueue';
 import type {
   CatalogHealthIssueMoviePage,
   CatalogHealthReport,
   CatalogRepairActionAuditPage,
 } from '@pop-choice/shared';
-
-import type { CatalogMaintenanceQueueSnapshot } from '../catalogMaintenanceQueue';
 
 export interface CatalogHealthLiveData {
   auditPage: Pick<CatalogRepairActionAuditPage, 'limit' | 'offset' | 'totalCount'>;

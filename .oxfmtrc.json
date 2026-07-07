@@ -10,6 +10,20 @@
   "endOfLine": "lf",
   "jsxSingleQuote": false,
   "proseWrap": "preserve",
+  "sortImports": {
+    "ignoreCase": true,
+    "groups": [
+      "builtin",
+      "external",
+      ["internal", "subpath"],
+      "parent",
+      "sibling",
+      "index",
+      "type",
+      "style",
+      "unknown"
+    ]
+  },
   "sortPackageJson": true,
   "ignorePatterns": [
     "public/",

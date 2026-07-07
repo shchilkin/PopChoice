@@ -1,8 +1,8 @@
 import pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { closeDatabase, initDatabase } from './db.js';
 import { applyCatalogMovieManualFields } from './catalogMovieManualFields.js';
+import { closeDatabase, initDatabase } from './db.js';
 
 vi.mock('pg', () => {
   const mPool = {

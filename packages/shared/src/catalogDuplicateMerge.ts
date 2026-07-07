@@ -1,5 +1,5 @@
-import { getPool } from './db.js';
 import { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
+import { getPool } from './db.js';
 
 export { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 

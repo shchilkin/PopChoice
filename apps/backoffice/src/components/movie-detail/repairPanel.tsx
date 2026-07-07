@@ -1,4 +1,3 @@
-import type { CatalogMovieDetail } from '@pop-choice/shared';
 import { Badge, Button, ButtonLink } from '@pop-choice/ui';
 
 import {
@@ -7,6 +6,8 @@ import {
   repairFlashMessage,
   repairFlashTone,
 } from './helpers';
+
+import type { CatalogMovieDetail } from '@pop-choice/shared';
 
 function isQueuedRepairStatus(status: string | null): boolean {
   const normalized = normalizeRepairFlashStatus(status);

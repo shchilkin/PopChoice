@@ -1,7 +1,7 @@
-import type { CatalogRepairActionAudit } from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { DataTable, JsonDetails } from '../shared';
+
+import type { CatalogRepairActionAudit } from '@pop-choice/shared';
 
 export function humanizeBackofficeIdentifier(value: string): string {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());

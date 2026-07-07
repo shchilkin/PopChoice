@@ -1,9 +1,11 @@
-import type { CatalogHealthIssue } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { catalogHealthIssue, catalogMovieSample } from '../../test/backofficeFixtures';
+
 import { CatalogIssuePanel, buildCatalogIssuePageHref, catalogIssueHint } from './issuePanel';
+
+import type { CatalogHealthIssue } from '@pop-choice/shared';
 
 const sampleMovie = catalogMovieSample({
   age_rating: 'NR',

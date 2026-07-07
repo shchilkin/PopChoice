@@ -1,7 +1,8 @@
-import { logger } from './logger.js';
-import type { TMDBSource } from './config.js';
 import { extractTMDBCatalogMetadataCore, extractTMDBUSCertification } from '@pop-choice/shared';
 
+import { logger } from './logger.js';
+
+import type { TMDBSource } from './config.js';
 import type { TMDBCatalogMetadataCore, TMDBCatalogMovieDetails } from '@pop-choice/shared';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';

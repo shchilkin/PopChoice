@@ -1,9 +1,11 @@
-import { notFound } from 'next/navigation';
-import type { HTMLAttributes, ReactNode } from 'react';
-import type { DocData } from 'fumadocs-mdx/runtime/types';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/page';
+import { notFound } from 'next/navigation';
+
 import { source } from '@/lib/source';
+
+import type { DocData } from 'fumadocs-mdx/runtime/types';
+import type { HTMLAttributes, ReactNode } from 'react';
 
 function getPlainText(children: ReactNode): string {
   if (typeof children === 'string' || typeof children === 'number') {

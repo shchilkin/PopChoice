@@ -1,14 +1,9 @@
-import type {
-  CatalogRepairBatchDetail,
-  CatalogRepairBatchItemSort,
-  CatalogRepairBatchItemStatusFilter,
-} from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
 import { CatalogMaintenanceRealtimeRefresh } from '../catalogMaintenanceRealtimeRefresh';
 import { DataTable, PanelHeader, SimplePaginationControls } from '../shared';
+
 import {
   RepairBatchContextPanel,
   RepairBatchItemRows,
@@ -23,6 +18,12 @@ import {
   issueHref,
   repairBatchRecoveryHint,
 } from './helpers';
+
+import type {
+  CatalogRepairBatchDetail,
+  CatalogRepairBatchItemSort,
+  CatalogRepairBatchItemStatusFilter,
+} from '@pop-choice/shared';
 
 export function RepairBatchDetailPage({
   detail,

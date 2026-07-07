@@ -1,6 +1,6 @@
-import type { PoolClient } from 'pg';
-
 import { getPool } from './pool.js';
+import { metadataJson, valueOrNull } from './utils.js';
+
 import type {
   CatalogGenreInput,
   CatalogKeywordInput,
@@ -10,7 +10,7 @@ import type {
   MoviePersonCreditInput,
   MovieWatchProviderInput,
 } from './types.js';
-import { metadataJson, valueOrNull } from './utils.js';
+import type { PoolClient } from 'pg';
 
 function createCatalogMetadataRefreshPlan(
   input: MovieCatalogMetadataInput,

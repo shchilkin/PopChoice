@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalogRepairBatchItem } from '../../test/backofficeFixtures';
+
 import { canRetryRepairBatchItem, getRepairBatchItemRowView } from './viewModels';
 
 describe('repair batch view models', () => {

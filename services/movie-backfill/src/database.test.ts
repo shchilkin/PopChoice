@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import pg from 'pg';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import {
   checkTableExists,
   closeDatabase,

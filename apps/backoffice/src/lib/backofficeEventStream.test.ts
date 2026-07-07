@@ -1,7 +1,5 @@
-import type { QueueEvents } from 'bullmq';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { readBackofficeCounterSnapshot, resetBackofficeMetricsForTest } from './backofficeMetrics';
 import {
   bindCatalogMaintenanceQueueEvents,
   createBackofficeQueueEventStream,
@@ -11,6 +9,9 @@ import {
   normalizeQueueEventPayload,
   withBackofficeStreamMetadata,
 } from './backofficeEventStream';
+import { readBackofficeCounterSnapshot, resetBackofficeMetricsForTest } from './backofficeMetrics';
+
+import type { QueueEvents } from 'bullmq';
 
 describe('backoffice event stream helpers', () => {
   afterEach(() => {

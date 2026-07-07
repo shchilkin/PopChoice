@@ -1,9 +1,7 @@
+import { logger } from '@pop-choice/shared';
 import { Queue, type Job } from 'bullmq';
 import { Redis } from 'ioredis';
 
-import { logger } from '@pop-choice/shared';
-
-import { redisOptionsFromUrl } from './lib/redisConnection';
 import {
   ACTIVE_DEDUPE_STATES,
   CATALOG_BACKFILL_MOVIE_JOB_NAME,
@@ -29,6 +27,7 @@ import {
   type EnqueueCatalogRepairBatchInput,
   type EnqueueCatalogRepairBatchResult,
 } from './catalogMaintenanceQueueHelpers';
+import { redisOptionsFromUrl } from './lib/redisConnection';
 
 export const CATALOG_MAINTENANCE_QUEUE_NAME = 'catalog-maintenance';
 

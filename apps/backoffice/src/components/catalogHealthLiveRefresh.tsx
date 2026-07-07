@@ -8,13 +8,14 @@ import {
   parseCatalogHealthSnapshotMessage,
   type CatalogHealthLiveData,
 } from '../lib/catalogHealthLive';
-import { CATALOG_HEALTH_REFRESH_EVENT } from './catalogHealthRefreshEvent';
+
 import {
   buildLiveRefreshStatusViewModel,
   refreshCatalogHealthSnapshot,
   type LiveConnectionState,
   type LiveSnapshotTrigger,
 } from './catalogHealthLiveRefreshViewModel';
+import { CATALOG_HEALTH_REFRESH_EVENT } from './catalogHealthRefreshEvent';
 
 type StreamConnectionMessage = {
   mode?: unknown;

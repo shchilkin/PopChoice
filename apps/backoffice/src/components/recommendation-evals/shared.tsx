@@ -1,6 +1,6 @@
-import type { RecommendationEvalRunStatus } from '@pop-choice/shared';
-
 import { CopyJsonButton } from './copyJsonButton';
+
+import type { RecommendationEvalRunStatus } from '@pop-choice/shared';
 
 export function recommendationEvalStatusLabel(status: RecommendationEvalRunStatus): string {
   const labels: Record<RecommendationEvalRunStatus, string> = {

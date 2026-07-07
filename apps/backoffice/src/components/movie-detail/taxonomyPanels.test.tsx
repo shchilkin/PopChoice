@@ -5,6 +5,7 @@ import {
   catalogMovieDetailPersonCredit,
   catalogMovieDetailTaxonomyItem,
 } from '../../test/backofficeFixtures';
+
 import { PeopleTable, TaxonomyList } from './taxonomyPanels';
 
 describe('movie detail taxonomy panels', () => {

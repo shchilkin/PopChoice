@@ -1,12 +1,12 @@
 import pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { closeDatabase, initDatabase } from './db.js';
 import {
   applyCatalogDuplicateMovieMerge,
   ensureCatalogDuplicateMergeAuditSchema,
   getCatalogDuplicateMergeDryRun,
 } from './catalogDuplicateMerge.js';
+import { closeDatabase, initDatabase } from './db.js';
 
 vi.mock('pg', () => {
   const mClient = {

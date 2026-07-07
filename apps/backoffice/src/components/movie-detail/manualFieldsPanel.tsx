@@ -1,6 +1,5 @@
 'use client';
 
-import type { CatalogMovieDetail } from '@pop-choice/shared';
 import {
   Button,
   ButtonLink,
@@ -13,6 +12,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@pop-choice/ui';
+
+import type { CatalogMovieDetail } from '@pop-choice/shared';
 
 function manualStatusMessage(status: string | null): string | null {
   if (status === 'updated') return 'Manual metadata fields were applied.';

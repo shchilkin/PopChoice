@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
 import { Breadcrumbs, type BreadcrumbItem } from '@pop-choice/ui';
 
 import type { BackofficeSection } from './types';
+import type { ReactNode } from 'react';
 
 type ShellProps = {
   active: BackofficeSection;

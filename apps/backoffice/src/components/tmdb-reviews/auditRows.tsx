@@ -1,8 +1,9 @@
-import type { TMDBMatchReviewActionAudit } from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { DataTable } from '../shared';
+
 import { StatusBadge } from './reviewPresentation';
+
+import type { TMDBMatchReviewActionAudit } from '@pop-choice/shared';
 
 export function AuditRows({ audit }: { audit: TMDBMatchReviewActionAudit[] }) {
   if (audit.length === 0) return <p className="empty">No decisions have been recorded yet.</p>;

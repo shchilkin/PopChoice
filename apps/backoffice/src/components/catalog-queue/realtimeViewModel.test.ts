@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalogMaintenanceQueueJobPage } from '../../test/backofficeFixtures';
+
 import {
   buildQueueCommandStripViewModel,
   buildQueueFingerprint,

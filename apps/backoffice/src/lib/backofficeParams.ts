@@ -3,6 +3,12 @@ import {
   isTMDBMatchReviewSort,
   isTMDBMatchReviewStatus,
 } from '@pop-choice/shared';
+
+import {
+  isCatalogMaintenanceQueueJobState,
+  type CatalogMaintenanceQueueJobState,
+} from '../catalogMaintenanceQueue';
+
 import type {
   CatalogRepairBatchItemSort,
   CatalogRepairBatchItemStatusFilter,
@@ -12,11 +18,6 @@ import type {
   TMDBMatchReviewSort,
   TMDBMatchReviewStatus,
 } from '@pop-choice/shared';
-
-import {
-  isCatalogMaintenanceQueueJobState,
-  type CatalogMaintenanceQueueJobState,
-} from '../catalogMaintenanceQueue';
 
 export const DEFAULT_CATALOG_ISSUE_PAGE_SIZE = 25;
 export const MAX_CATALOG_ISSUE_PAGE_NUMBER = 4_001;

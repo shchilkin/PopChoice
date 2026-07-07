@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { tmdbMatchReview } from '../../test/backofficeFixtures';
+
 import { ReviewDetailPage } from './detail';
 
 describe('TMDB review detail page', () => {

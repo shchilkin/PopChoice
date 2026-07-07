@@ -1,11 +1,12 @@
-import type { CatalogHealthReport } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { catalogHealthIssue, catalogMovieSample } from '../../test/backofficeFixtures';
+
 import { CatalogHealthPage } from './index';
 
 import type { CatalogHealthLiveData } from '../../lib/catalogHealthLive';
+import type { CatalogHealthReport } from '@pop-choice/shared';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),

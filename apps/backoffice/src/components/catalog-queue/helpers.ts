@@ -1,9 +1,10 @@
+import { formatLiveSyncTime } from '../liveRefreshTime';
+
 import type {
   CatalogMaintenanceQueueJobPage,
   CatalogMaintenanceQueueJobState,
   CatalogMaintenanceQueueJobSummary,
 } from '../../catalogMaintenanceQueue';
-import { formatLiveSyncTime } from '../liveRefreshTime';
 
 export const QUEUE_REALTIME_FALLBACK_INTERVAL_SECONDS = 30;
 const QUEUE_REALTIME_STALE_AFTER_MS = 120_000;

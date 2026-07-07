@@ -1,10 +1,11 @@
-import type { CatalogRepairBatch, CatalogRepairBatchItem } from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { RepairStatusBadge, repairStatusLabel } from '../catalog-repair-status';
 import { CatalogStat, PanelHeader, TableEmptyRow } from '../shared';
+
 import { getRepairBatchProgress, issueHref } from './helpers';
 import { getRepairBatchItemRowView, type RepairBatchItemRowView } from './viewModels';
+
+import type { CatalogRepairBatch, CatalogRepairBatchItem } from '@pop-choice/shared';
 
 function RepairBatchItemAction({ action }: { action: RepairBatchItemRowView['action'] }) {
   if (action.type === 'inspect') return <span className="muted">Inspect</span>;

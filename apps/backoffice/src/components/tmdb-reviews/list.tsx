@@ -1,8 +1,12 @@
-import type { TMDBMatchReview, TMDBReviewCandidate } from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { PanelHeader, TableEmptyRow, TableScroll } from '../shared';
+
+import {
+  buildCandidateSummaryViewModel,
+  buildReviewPaginationViewModel,
+  type ReviewFilters,
+} from './helpers';
 import {
   ConfidenceMeter,
   CurrentTMDBValue,
@@ -11,11 +15,8 @@ import {
   renderStatus,
   StatusBadge,
 } from './reviewPresentation';
-import {
-  buildCandidateSummaryViewModel,
-  buildReviewPaginationViewModel,
-  type ReviewFilters,
-} from './helpers';
+
+import type { TMDBMatchReview, TMDBReviewCandidate } from '@pop-choice/shared';
 
 const REVIEW_TABLE_COLUMNS = [
   'ID',

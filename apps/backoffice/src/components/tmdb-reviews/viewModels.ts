@@ -1,10 +1,5 @@
-import type {
-  TMDBMatchReview,
-  TMDBMatchReviewAction,
-  TMDBReviewCandidate,
-} from '@pop-choice/shared';
-
 import { formatPercent } from '../shared';
+
 import {
   canApplyCandidate,
   candidateConfidenceGap,
@@ -12,6 +7,12 @@ import {
   isCurrentCandidate,
 } from './candidateReview';
 import { buildReviewPageHref, type ReviewFilters } from './navigation';
+
+import type {
+  TMDBMatchReview,
+  TMDBMatchReviewAction,
+  TMDBReviewCandidate,
+} from '@pop-choice/shared';
 
 export interface ReviewPaginationViewModel {
   currentPage: number;

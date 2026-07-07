@@ -1,6 +1,6 @@
-import type { AnchorHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
-
 import { cn } from './utils';
+
+import type { AnchorHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 
 export type BreadcrumbItem = {
   href?: string;

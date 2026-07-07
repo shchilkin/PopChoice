@@ -1,6 +1,6 @@
-import type { HTMLAttributes } from 'react';
-
 import { cn, type ClassValue } from './utils';
+
+import type { HTMLAttributes } from 'react';
 
 export type BadgeVariant =
   | 'default'

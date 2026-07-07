@@ -1,7 +1,7 @@
+import { confidenceWidth, formatPercent } from '../shared';
+
 import type { TMDBMatchReviewReason, TMDBMatchReviewStatus } from '@pop-choice/shared';
 import type { CSSProperties } from 'react';
-
-import { confidenceWidth, formatPercent } from '../shared';
 
 export function renderReason(reason: TMDBMatchReviewReason): string {
   return reason === 'ambiguous_match' ? 'Ambiguous match' : 'Runtime mismatch';

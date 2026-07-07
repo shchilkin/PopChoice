@@ -1,4 +1,9 @@
 import type {
+  CatalogMaintenanceQueueJobPage,
+  CatalogMaintenanceQueueJobSummary,
+  EnqueueCatalogBackfillMovieResult,
+} from '../catalogMaintenanceQueue';
+import type {
   CatalogHealthIssue,
   CatalogMovieDetail,
   CatalogMovieDetailHealthFlag,
@@ -9,12 +14,6 @@ import type {
   CatalogRepairBatchItem,
   TMDBMatchReview,
 } from '@pop-choice/shared';
-
-import type {
-  CatalogMaintenanceQueueJobPage,
-  CatalogMaintenanceQueueJobSummary,
-  EnqueueCatalogBackfillMovieResult,
-} from '../catalogMaintenanceQueue';
 
 export function catalogMovieSample(
   overrides: Partial<CatalogMovieSample> = {},

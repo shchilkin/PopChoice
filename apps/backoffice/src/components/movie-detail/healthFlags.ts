@@ -1,6 +1,6 @@
-import type { CatalogMovieDetailHealthFlag } from '@pop-choice/shared';
-
 import { REPAIRABLE_CATALOG_ISSUE_KEYS } from '../../lib/backoffice';
+
+import type { CatalogMovieDetailHealthFlag } from '@pop-choice/shared';
 
 export function repairableHealthFlags(flags: CatalogMovieDetailHealthFlag[]) {
   return flags.filter((flag) => flag.isActive && REPAIRABLE_CATALOG_ISSUE_KEYS.has(flag.key));

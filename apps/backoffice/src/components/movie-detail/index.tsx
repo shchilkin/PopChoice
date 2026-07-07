@@ -1,10 +1,10 @@
-import type { CatalogMovieDetail } from '@pop-choice/shared';
 import { ButtonLink } from '@pop-choice/ui';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairAuditRows } from '../catalog-repair-audit';
 import { EmptyState, PanelHeader, renderMetadataSnapshot } from '../shared';
+
 import {
   DuplicatePeersPanel,
   HealthFlagsPanel,
@@ -16,6 +16,8 @@ import {
   RelatedReviewsPanel,
   TaxonomyList,
 } from './panels';
+
+import type { CatalogMovieDetail } from '@pop-choice/shared';
 
 export function CatalogMovieDetailPage({
   detail,

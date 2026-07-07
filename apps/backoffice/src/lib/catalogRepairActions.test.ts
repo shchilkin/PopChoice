@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { catalogRepairMessage, REPAIRABLE_CATALOG_ISSUE_KEYS } from './catalogRepairActions';
 import { getBackfillReasonForIssue, getBulkRepairStatus } from './catalogRepairActionHelpers';
 import {
   buildCatalogRepairActionBody,
   getCatalogRepairActionStatusCode,
   getCatalogRepairRedirectStatus,
 } from './catalogRepairActionResponse';
+import { catalogRepairMessage, REPAIRABLE_CATALOG_ISSUE_KEYS } from './catalogRepairActions';
 
 describe('catalog repair actions', () => {
   it('keeps every known automatic repair issue registered as repairable', () => {

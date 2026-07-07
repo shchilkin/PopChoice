@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalogHealthIssue, catalogMovieSample } from '../../test/backofficeFixtures';
+
 import {
   buildCatalogActionSectionsViewModel,
   buildCatalogIssuePanelViewModel,

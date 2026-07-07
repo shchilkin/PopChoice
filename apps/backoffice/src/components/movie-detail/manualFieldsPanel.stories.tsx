@@ -1,7 +1,8 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-
 import { catalogMovieDetail, catalogMovieDetailHealthFlag } from '../../test/backofficeFixtures';
+
 import { ManualMovieMetadataPanel } from './manualFieldsPanel';
+
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import '../../app/globals.css';
 
