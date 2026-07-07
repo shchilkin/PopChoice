@@ -1,8 +1,8 @@
-import { type Job, type JobType, Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 import { randomUUID } from 'node:crypto';
 
 import { logger } from '@pop-choice/shared';
+import { type Job, type JobType, Queue } from 'bullmq';
+import { Redis } from 'ioredis';
 
 import { redisOptionsFromUrl } from './lib/redisConnection';
 

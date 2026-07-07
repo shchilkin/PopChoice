@@ -1,6 +1,6 @@
-import type { AnchorHTMLAttributes, HTMLAttributes } from 'react';
-
 import { cn, type ClassValue } from './utils';
+
+import type { AnchorHTMLAttributes, HTMLAttributes } from 'react';
 
 export function TabsNav({ className, ...props }: HTMLAttributes<HTMLElement>) {
   return (

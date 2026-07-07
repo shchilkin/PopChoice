@@ -1,7 +1,6 @@
+import { logger } from '@pop-choice/shared';
 import { type Job, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
-
-import { logger } from '@pop-choice/shared';
 
 import { redisOptionsFromUrl } from './lib/redisConnection';
 

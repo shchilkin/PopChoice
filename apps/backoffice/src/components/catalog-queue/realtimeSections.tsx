@@ -1,9 +1,5 @@
-import type {
-  CatalogMaintenanceQueueJobPage,
-  CatalogMaintenanceQueueJobState,
-  CatalogMaintenanceQueueJobSummary,
-} from '../../catalogMaintenanceQueue';
 import { PanelHeader, SimplePaginationControls, TableEmptyRow, TableScroll } from '../shared';
+
 import {
   buildQueueHref,
   getLastQueueEvent,
@@ -18,6 +14,12 @@ import {
   buildQueueCommandStripViewModel,
   buildQueueRealtimeStatusViewModel,
 } from './realtimeViewModel';
+
+import type {
+  CatalogMaintenanceQueueJobPage,
+  CatalogMaintenanceQueueJobState,
+  CatalogMaintenanceQueueJobSummary,
+} from '../../catalogMaintenanceQueue';
 
 const QUEUE_JOB_COLUMNS = ['Job', 'State', 'Details', 'Attempts', 'Last update', 'Links'] as const;
 

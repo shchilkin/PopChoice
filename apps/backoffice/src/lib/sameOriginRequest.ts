@@ -1,6 +1,6 @@
-import type { NextRequest } from 'next/server';
-
 import { expectedSameOrigins, hasMatchingOriginEvidence } from './sameOriginRequestOrigins';
+
+import type { NextRequest } from 'next/server';
 
 function normalizedOrigin(value: string): string | null {
   try {

@@ -4,6 +4,7 @@ import {
   normalizeTMDBMatchReviewAudit,
   normalizeTMDBReviewCandidates,
 } from './tmdbMatchReviews.js';
+
 import type {
   CatalogRepairAction,
   CatalogRepairActionAudit,
@@ -109,7 +110,8 @@ export interface CatalogMovieDetail {
 }
 
 export type CatalogMovieDetailResult =
-  { status: 'found'; detail: CatalogMovieDetail } | { status: 'not_found'; movieId: string };
+  | { status: 'found'; detail: CatalogMovieDetail }
+  | { status: 'not_found'; movieId: string };
 
 type MovieRow = {
   id: string | number;

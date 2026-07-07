@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { catalogRepairBatch } from '../../test/backofficeFixtures';
+
 import {
   buildRepairBatchItemPageHref,
   buildRepairBatchListHref,

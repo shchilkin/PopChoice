@@ -1,13 +1,7 @@
-import type {
-  TMDBMatchReview,
-  TMDBMatchReviewAction,
-  TMDBMatchReviewActionAudit,
-  TMDBReviewCandidate,
-} from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { formatPercent } from '../shared';
+
 import { ReviewActionSubmitButton } from './actionSubmitButton';
 import { AuditRows } from './auditRows';
 import {
@@ -23,6 +17,13 @@ import {
   renderReason,
   StatusBadge,
 } from './reviewPresentation';
+
+import type {
+  TMDBMatchReview,
+  TMDBMatchReviewAction,
+  TMDBMatchReviewActionAudit,
+  TMDBReviewCandidate,
+} from '@pop-choice/shared';
 
 function CandidateCard({
   review,

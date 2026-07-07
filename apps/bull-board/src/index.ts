@@ -6,12 +6,12 @@ import {
   readBullBoardRuntimeConfig,
   verifyOperatorBasicAuthHeader,
 } from '@pop-choice/shared';
-import type { OperatorAuthConfig } from '@pop-choice/shared';
 import { Queue } from 'bullmq';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { Redis } from 'ioredis';
 
+import type { OperatorAuthConfig } from '@pop-choice/shared';
 import type { RequestHandler } from 'express';
 
 const config = readBullBoardRuntimeConfig();

@@ -1,6 +1,7 @@
-import type { CatalogRepairActionResult } from './catalogRepairActions';
 import { logBackofficeAction } from './backofficeActionLog';
 import { recordBackofficeRepairEnqueue } from './backofficeMetrics';
+
+import type { CatalogRepairActionResult } from './catalogRepairActions';
 
 function recordBulkRepairEnqueueMetrics(
   result: Extract<CatalogRepairActionResult, { mode: 'bulk' }>,

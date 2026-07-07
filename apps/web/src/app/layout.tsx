@@ -9,6 +9,7 @@ import { LanguageProvider } from '../i18n';
 import { Providers } from './providers';
 
 import type { Metadata } from 'next';
+
 import './globals.css';
 
 const manrope = Manrope({

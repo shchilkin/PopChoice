@@ -1,12 +1,5 @@
-import type {
-  CatalogHealthReport,
-  CatalogHealthIssueMoviePage,
-  CatalogRepairActionAuditPage,
-  DuplicateIdentityGroup,
-} from '@pop-choice/shared';
 import { Badge, ButtonLink } from '@pop-choice/ui';
 
-import type { CatalogHealthLiveData } from '../../lib/catalogHealthLive';
 import { REPAIRABLE_CATALOG_ISSUE_KEYS } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairAuditRows } from '../catalog-repair-audit';
@@ -14,6 +7,7 @@ import { CatalogHealthRealtimeOverview } from '../catalogHealthRealtimeOverview'
 import { CatalogRepairEnhancement } from '../catalogRepairEnhancement';
 import { CountPill, SimplePaginationControls } from '../shared';
 import { buildRepairAuditPageHref } from '../shared/hrefs';
+
 import { CatalogIssuePanel } from './issuePanel';
 import {
   buildCatalogActionSectionsViewModel,
@@ -21,6 +15,14 @@ import {
   buildDuplicateReportViewModel,
   buildRepairFlashViewModel,
 } from './viewModels';
+
+import type { CatalogHealthLiveData } from '../../lib/catalogHealthLive';
+import type {
+  CatalogHealthReport,
+  CatalogHealthIssueMoviePage,
+  CatalogRepairActionAuditPage,
+  DuplicateIdentityGroup,
+} from '@pop-choice/shared';
 
 function RepairFlash({ repairStatus }: { repairStatus: string | null }) {
   const view = buildRepairFlashViewModel(repairStatus);

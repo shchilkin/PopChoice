@@ -3,7 +3,8 @@ import { getCsrfToken } from '@/lib/csrfClient';
 import type { MovieDurationFilter, MoviesResponse } from '@/features/movies/catalog';
 
 export type MoviesFetchOutcome =
-  { ok: true; data: MoviesResponse } | { ok: false; errorMessage: string };
+  | { ok: true; data: MoviesResponse }
+  | { ok: false; errorMessage: string };
 
 export type QuickMovieFilterId = 'topRated' | 'short' | 'classic' | 'recent' | 'family';
 

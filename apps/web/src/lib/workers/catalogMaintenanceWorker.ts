@@ -380,7 +380,11 @@ type SeedMovieCandidate = {
 };
 
 type SeedMovieSkipReason =
-  'existing_movie' | 'insert_noop' | 'invalid_embedding' | 'local_duplicate' | 'missing_year';
+  | 'existing_movie'
+  | 'insert_noop'
+  | 'invalid_embedding'
+  | 'local_duplicate'
+  | 'missing_year';
 
 type PreparedSeedMovie =
   | {

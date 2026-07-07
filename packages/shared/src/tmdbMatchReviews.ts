@@ -1,6 +1,6 @@
-import type { PoolClient } from 'pg';
-
 import { getPool } from './db.js';
+
+import type { PoolClient } from 'pg';
 
 export type TMDBMatchReviewReason = 'ambiguous_match' | 'runtime_mismatch';
 export type TMDBMatchReviewStatus = 'open' | 'resolved' | 'ignored' | 'deferred';

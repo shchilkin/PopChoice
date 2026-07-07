@@ -4,6 +4,7 @@ import {
   catalogMaintenanceQueueJobPage,
   catalogMaintenanceQueueJobSummary,
 } from '../test/backofficeFixtures';
+
 import {
   parseCatalogMaintenanceQueueConnectedMode,
   parseCatalogMaintenanceQueueSnapshotMessage,

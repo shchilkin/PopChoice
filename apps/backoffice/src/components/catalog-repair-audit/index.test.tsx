@@ -1,4 +1,3 @@
-import type { CatalogRepairActionAudit } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
@@ -9,6 +8,8 @@ import {
   repairResultStatusLabel,
   repairResultStatusTone,
 } from '.';
+
+import type { CatalogRepairActionAudit } from '@pop-choice/shared';
 
 function auditEntry(overrides: Partial<CatalogRepairActionAudit> = {}): CatalogRepairActionAudit {
   return {

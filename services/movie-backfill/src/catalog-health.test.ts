@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import pg from 'pg';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   formatCatalogHealthReport,

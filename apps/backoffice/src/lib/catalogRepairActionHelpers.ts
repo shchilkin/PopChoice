@@ -1,4 +1,3 @@
-import type { CatalogBackfillReason } from '../catalogMaintenanceQueue';
 import {
   DEFAULT_ASYNC_BULK_REPAIR_CHUNK_SIZE,
   DEFAULT_BULK_REPAIR_LIMIT,
@@ -7,6 +6,8 @@ import {
   parsePositiveIntParam,
 } from './backofficeParams';
 import { backofficeActionError } from './backofficeRuntime';
+
+import type { CatalogBackfillReason } from '../catalogMaintenanceQueue';
 
 export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
   'missing_poster_url',
@@ -23,7 +24,13 @@ export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
 ]);
 
 export type CatalogRepairActionStatus =
-  'queued' | 'deduped' | 'orchestration_queued' | 'partial' | 'failed' | 'unavailable' | 'empty';
+  | 'queued'
+  | 'deduped'
+  | 'orchestration_queued'
+  | 'partial'
+  | 'failed'
+  | 'unavailable'
+  | 'empty';
 
 export type CatalogBulkRepairSummaryCounters = {
   attempted: number;

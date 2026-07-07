@@ -1,5 +1,5 @@
-import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 import { formatLiveSyncTime } from '../liveRefreshTime';
+
 import {
   buildQueueHref,
   getQueueHealth,
@@ -8,6 +8,8 @@ import {
   type QueueRealtimeConnectionState,
   type QueueRealtimeStatus,
 } from './helpers';
+
+import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 
 export interface QueueCommandMetricViewModel {
   className?: string;

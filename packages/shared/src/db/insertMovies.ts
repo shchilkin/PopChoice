@@ -1,8 +1,9 @@
 import { logger } from '../logger.js';
 
 import { getPool } from './pool.js';
-import type { InsertedMovieRecord, MovieRecord } from './types.js';
 import { serializeMetadataQualityFlags, valueOrNull } from './utils.js';
+
+import type { InsertedMovieRecord, MovieRecord } from './types.js';
 
 function normalizeInsertedMovieRows(rows: InsertedMovieRecord[]): InsertedMovieRecord[] {
   return rows.map((row) => ({

@@ -1,6 +1,6 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-
 import { Badge, Button, ButtonLink, DataTable, TabsLink, TabsNav } from '..';
+
+import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 function UiPackagePlan() {
   return (

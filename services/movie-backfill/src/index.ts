@@ -75,7 +75,9 @@ export interface PendingUpdate {
 }
 
 type PreparationResult =
-  { status: 'pending'; update: PendingUpdate } | { status: 'skipped' } | { status: 'would_update' };
+  | { status: 'pending'; update: PendingUpdate }
+  | { status: 'skipped' }
+  | { status: 'would_update' };
 
 type MatchValidationResult = { status: 'matched'; match: MatchedTMDBMovie } | { status: 'skipped' };
 

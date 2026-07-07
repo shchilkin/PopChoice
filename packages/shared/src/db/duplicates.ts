@@ -1,8 +1,9 @@
 import { logger } from '../logger.js';
 
 import { getPool } from './pool.js';
-import type { MovieRecord } from './types.js';
 import { getMovieKey } from './utils.js';
+
+import type { MovieRecord } from './types.js';
 
 async function getExistingMovieKeys(movies: MovieRecord[]): Promise<Set<string>> {
   const existingKeys = new Set<string>();

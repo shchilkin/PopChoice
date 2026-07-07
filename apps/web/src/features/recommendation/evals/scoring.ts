@@ -1,6 +1,7 @@
 import { summarizeCandidateSources } from '../candidateSources';
 import { apiResponseSchema } from '../types';
 
+import type { ApiResponse, CandidateSourceDistribution } from '../types';
 import type {
   RecommendationEvalAudience,
   RecommendationEvalCheck,
@@ -11,7 +12,6 @@ import type {
   RecommendationEvalRunMode,
   RecommendationEvalSourceStrategy,
 } from './types';
-import type { ApiResponse, CandidateSourceDistribution } from '../types';
 
 const DEFAULT_MIN_PASSING_SCORE = 85;
 const TOTAL_SCORE = 100;

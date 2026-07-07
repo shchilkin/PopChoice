@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { ButtonLink } from '@pop-choice/ui';
 
 import { CopyCommandButton } from './copyCommandButton';
@@ -9,7 +8,9 @@ import {
   type RecoveryCommand,
 } from './recoveryGuide';
 import { BackofficeLayout } from './shell';
+
 import type { BackofficeSection } from './types';
+import type { ReactNode } from 'react';
 
 function renderRecoveryStep(step: string): ReactNode {
   return step.split(/(`[^`]+`)/).map((part, index) => {

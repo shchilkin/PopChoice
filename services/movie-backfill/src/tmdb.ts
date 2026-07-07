@@ -1,4 +1,3 @@
-import { logger } from './logger.js';
 import {
   extractTMDBCatalogMetadataCore,
   extractTMDBUSCertification,
@@ -6,6 +5,8 @@ import {
   scoreTMDBTitleMatch,
 } from '@pop-choice/shared';
 import z from 'zod';
+
+import { logger } from './logger.js';
 
 import type { TMDBCatalogMetadataCore, TMDBCatalogMovieDetails } from '@pop-choice/shared';
 

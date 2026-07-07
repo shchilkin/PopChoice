@@ -10,7 +10,6 @@ import {
   upsertMovieCatalogMetadata,
 } from './database.js';
 import { createEmbeddings } from './embeddings.js';
-import { preparePendingUpdate, processMovieBatch, runBackfill } from './index.js';
 import {
   extractUSCertification,
   extractCatalogMetadata,
@@ -19,6 +18,8 @@ import {
   movieToEmbeddingText,
   searchMovieMatch,
 } from './tmdb.js';
+
+import { preparePendingUpdate, processMovieBatch, runBackfill } from './index.js';
 
 import type { IncompleteMovie } from './database.js';
 import type { PendingUpdate } from './index.js';

@@ -1,8 +1,8 @@
-import { getPool } from './db.js';
 import {
   getCatalogRepairMovieSnapshot,
   recordCatalogRepairAction,
 } from './catalogRepairActions.js';
+import { getPool } from './db.js';
 
 import type {
   CatalogRepairActionAudit,

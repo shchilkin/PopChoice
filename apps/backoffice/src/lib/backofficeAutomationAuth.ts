@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'crypto';
 
 export type BackofficeAutomationAuthResult =
-  { ok: true } | { message: string; ok: false; statusCode: 401 | 503 };
+  | { ok: true }
+  | { message: string; ok: false; statusCode: 401 | 503 };
 
 function timingSafeTokenEquals(candidate: string, expected: string): boolean {
   const candidateBuffer = Buffer.from(candidate);

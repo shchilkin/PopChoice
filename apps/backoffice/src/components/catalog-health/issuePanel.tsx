@@ -1,20 +1,21 @@
-import type {
-  CatalogHealthIssue,
-  CatalogHealthIssueMoviePage,
-  CatalogMovieSample,
-} from '@pop-choice/shared';
-
 import {
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { BooleanDataPill, OptionalCatalogValue, SimplePaginationControls } from '../shared';
 import { buildCatalogIssuePageHref } from '../shared/hrefs';
+
 import {
   buildCatalogIssuePanelViewModel,
   catalogIssueHint,
   type BulkRepairActionViewModel,
 } from './viewModels';
+
+import type {
+  CatalogHealthIssue,
+  CatalogHealthIssueMoviePage,
+  CatalogMovieSample,
+} from '@pop-choice/shared';
 
 export { buildCatalogIssuePageHref };
 export { catalogIssueHint };

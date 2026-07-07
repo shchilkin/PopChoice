@@ -1,6 +1,6 @@
-import type { HTMLAttributes, ReactNode, TableHTMLAttributes, TdHTMLAttributes } from 'react';
-
 import { cn } from './utils';
+
+import type { HTMLAttributes, ReactNode, TableHTMLAttributes, TdHTMLAttributes } from 'react';
 
 export function TableScroll({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return <div className={className ?? 'overflow-x-auto'} {...props} />;

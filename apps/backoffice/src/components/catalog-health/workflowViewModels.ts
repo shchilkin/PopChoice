@@ -1,11 +1,12 @@
-import type { CatalogHealthIssue, CatalogHealthReport } from '@pop-choice/shared';
-
 import {
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { buildCatalogIssuePageHref } from '../shared/hrefs';
+
 import { catalogIssueHint } from './issueHints';
+
+import type { CatalogHealthIssue, CatalogHealthReport } from '@pop-choice/shared';
 
 export interface CatalogWorkQueueItemViewModel {
   actionHref: string;

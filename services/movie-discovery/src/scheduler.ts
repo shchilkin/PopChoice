@@ -1,8 +1,9 @@
 import cron from 'node-cron';
 
-import type { Config } from './config.js';
 import { logger } from './logger.js';
 import { runSync } from './sync.js';
+
+import type { Config } from './config.js';
 
 let isSyncing = false;
 

@@ -1,6 +1,6 @@
-import type { TMDBMatchReview } from '@pop-choice/shared';
-
 import { candidateConfidenceGap, getCandidateWarning } from './candidateReview';
+
+import type { TMDBMatchReview } from '@pop-choice/shared';
 
 type ReviewRiskSummary = {
   level: 'low' | 'medium' | 'high';

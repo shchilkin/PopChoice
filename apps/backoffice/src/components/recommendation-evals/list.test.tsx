@@ -1,8 +1,9 @@
-import type { RecommendationEvalRunPage } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { RecommendationEvalListPage } from './list';
+
+import type { RecommendationEvalRunPage } from '@pop-choice/shared';
 
 function runPage(overrides: Partial<RecommendationEvalRunPage> = {}): RecommendationEvalRunPage {
   return {

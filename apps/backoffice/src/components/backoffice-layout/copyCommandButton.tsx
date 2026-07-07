@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@pop-choice/ui';
+import { useState } from 'react';
 
 type Props = {
   command: string;

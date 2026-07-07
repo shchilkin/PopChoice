@@ -1,9 +1,11 @@
-import type { CatalogMovieDetail } from '@pop-choice/shared';
 import { Badge } from '@pop-choice/ui';
 
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { formatDuration, formatPercent, moviePosterSrc } from '../shared';
+
 import { ManualMovieMetadataPanel } from './manualFieldsPanel';
+
+import type { CatalogMovieDetail } from '@pop-choice/shared';
 
 function MoviePoster({ posterUrl, title }: { posterUrl: string | null; title: string }) {
   const src = moviePosterSrc(posterUrl);

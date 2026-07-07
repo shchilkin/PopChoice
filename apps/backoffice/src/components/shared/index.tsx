@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import {
   Badge,
   ButtonLink,
@@ -7,6 +6,8 @@ import {
   TableScroll as UiTableScroll,
   buttonVariants,
 } from '@pop-choice/ui';
+
+import type { ReactNode } from 'react';
 
 function joinClassNames(...values: Array<string | false | null | undefined>): string {
   return values.filter(Boolean).join(' ');

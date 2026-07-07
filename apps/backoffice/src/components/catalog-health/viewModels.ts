@@ -1,10 +1,3 @@
-import type {
-  CatalogHealthIssue,
-  CatalogHealthIssueMoviePage,
-  CatalogHealthReport,
-  CatalogMovieSample,
-} from '@pop-choice/shared';
-
 import {
   DEFAULT_BULK_REPAIR_LIMIT,
   DEFAULT_CATALOG_ISSUE_PAGE_SIZE,
@@ -12,7 +5,15 @@ import {
   REPAIRABLE_CATALOG_ISSUE_KEYS,
 } from '../../lib/backoffice';
 import { buildCatalogIssuePageHref } from '../shared/hrefs';
+
 import { catalogIssueHint } from './issueHints';
+
+import type {
+  CatalogHealthIssue,
+  CatalogHealthIssueMoviePage,
+  CatalogHealthReport,
+  CatalogMovieSample,
+} from '@pop-choice/shared';
 
 export interface RepairFlashViewModel {
   copy: string;

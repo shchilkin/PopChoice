@@ -1,8 +1,10 @@
-import type { CatalogMovieDetail } from '@pop-choice/shared';
 import { Badge, cn } from '@pop-choice/ui';
 
 import { CountPill } from '../shared';
+
 import { duplicatePeerCount, splitHealthFlags } from './helpers';
+
+import type { CatalogMovieDetail } from '@pop-choice/shared';
 
 export function HealthFlagsPanel({ detail }: { detail: CatalogMovieDetail }) {
   const { activeFlags, resolvedFlags } = splitHealthFlags(detail.healthFlags);

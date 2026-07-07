@@ -1,5 +1,3 @@
-import type { CatalogMovieDetail, CatalogMovieDetailTMDBReview } from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import {
   DataTable,
@@ -9,6 +7,8 @@ import {
   formatTMDBMetadataValue,
 } from '../shared';
 import { ReasonBadge, StatusBadge } from '../tmdb-reviews/reviewPresentation';
+
+import type { CatalogMovieDetail, CatalogMovieDetailTMDBReview } from '@pop-choice/shared';
 
 export function RelatedReviewsPanel({ reviews }: { reviews: CatalogMovieDetailTMDBReview[] }) {
   return (

@@ -1,8 +1,9 @@
-import type { CatalogRepairBatchPage } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RepairBatchListPage } from './list';
+
+import type { CatalogRepairBatchPage } from '@pop-choice/shared';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn() }),

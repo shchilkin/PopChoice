@@ -1,7 +1,6 @@
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import nextConfig from 'eslint-config-next/core-web-vitals';
 import prettierConfig from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
 import storybook from 'eslint-plugin-storybook';
 import unusedImports from 'eslint-plugin-unused-imports';
 
@@ -17,31 +16,9 @@ const eslintConfig = [
   // Import organization and cleanup
   {
     plugins: {
-      import: importPlugin,
       'unused-imports': unusedImports,
     },
     rules: {
-      // Organize imports
-      'import/order': [
-        'error',
-        {
-          groups: [
-            'builtin', // Node.js built-ins
-            'external', // npm packages
-            'internal', // Internal modules
-            'parent', // ../
-            'sibling', // ./
-            'index', // ./index
-            'type', // TypeScript types
-          ],
-          'newlines-between': 'always',
-          alphabetize: {
-            order: 'asc',
-            caseInsensitive: true,
-          },
-        },
-      ],
-
       // Remove unused imports
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
@@ -55,7 +32,7 @@ const eslintConfig = [
       ],
 
       // Prevent duplicate imports
-      'import/no-duplicates': 'error',
+      'no-duplicate-imports': ['error', { allowSeparateTypeImports: true }],
       'no-console': process.env.CI ? 'error' : 'warn',
     },
   },

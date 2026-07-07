@@ -1,6 +1,5 @@
-import type { CatalogRepairBatchItem } from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
+
 import {
   issueHref,
   movieHref,
@@ -9,6 +8,8 @@ import {
   snapshotValue,
   truncateText,
 } from './helpers';
+
+import type { CatalogRepairBatchItem } from '@pop-choice/shared';
 
 const RETRIABLE_ITEM_STATUSES = new Set<CatalogRepairBatchItem['status']>([
   'failed',

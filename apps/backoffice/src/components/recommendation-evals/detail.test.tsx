@@ -1,8 +1,9 @@
-import type { RecommendationEvalRunDetail } from '@pop-choice/shared';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { RecommendationEvalDetailPage } from './detail';
+
+import type { RecommendationEvalRunDetail } from '@pop-choice/shared';
 
 function detail(overrides: Partial<RecommendationEvalRunDetail> = {}): RecommendationEvalRunDetail {
   return {

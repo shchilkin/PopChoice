@@ -1,6 +1,6 @@
-import type { Metadata } from 'next';
-
 import { BackofficeQueryProvider } from '../components/queryProvider';
+
+import type { Metadata } from 'next';
 
 import './globals.css';
 

@@ -21,7 +21,11 @@ export type RecommendationSummary = {
 };
 
 export type UserMovieInteractionKind =
-  'watched' | 'liked' | 'not_interested' | 'wrong_mood' | 'not_seen';
+  | 'watched'
+  | 'liked'
+  | 'not_interested'
+  | 'wrong_mood'
+  | 'not_seen';
 
 export type MovieMemorySummary = {
   movieKey: string;
@@ -55,14 +59,23 @@ export type MovieMemoryPageResponse = {
 };
 
 export type LoadState =
-  { status: 'idle' } | { status: 'loaded'; data: AccountResponse } | { status: 'error' };
+  | { status: 'idle' }
+  | { status: 'loaded'; data: AccountResponse }
+  | { status: 'error' };
 
 export type MemoryActionState =
-  { status: 'forgetting'; movieKey: string } | { status: 'error'; movieKey: string } | null;
+  | { status: 'forgetting'; movieKey: string }
+  | { status: 'error'; movieKey: string }
+  | null;
 
 export type MemoryPageState = { status: 'idle' } | { status: 'loading' } | { status: 'error' };
 
 export type RecommendationFilter =
-  'all' | 'rated' | 'useful' | 'already_watched' | 'wrong_mood' | 'not_interested';
+  | 'all'
+  | 'rated'
+  | 'useful'
+  | 'already_watched'
+  | 'wrong_mood'
+  | 'not_interested';
 
 export type MovieMemoryFilter = 'all' | UserMovieInteractionKind;

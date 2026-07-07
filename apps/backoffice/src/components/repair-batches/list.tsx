@@ -1,10 +1,3 @@
-import type {
-  CatalogRepairBatch,
-  CatalogRepairBatchPage,
-  CatalogRepairBatchSort,
-  CatalogRepairBatchStatusFilter,
-} from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { RepairStatusBadge } from '../catalog-repair-status';
@@ -16,8 +9,16 @@ import {
   SimplePaginationControls,
   TableEmptyRow,
 } from '../shared';
+
 import { FilterLink } from './filterLink';
 import { buildRepairBatchListHref } from './helpers';
+
+import type {
+  CatalogRepairBatch,
+  CatalogRepairBatchPage,
+  CatalogRepairBatchSort,
+  CatalogRepairBatchStatusFilter,
+} from '@pop-choice/shared';
 
 function RepairBatchRows({ batches }: { batches: CatalogRepairBatch[] }) {
   if (batches.length === 0) {

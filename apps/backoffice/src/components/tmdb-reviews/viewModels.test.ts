@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { tmdbMatchReview } from '../../test/backofficeFixtures';
+
 import {
   buildCandidateCardViewModel,
   buildCandidateSummaryViewModel,

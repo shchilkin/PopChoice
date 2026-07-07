@@ -1,5 +1,5 @@
-import { getPool } from './db.js';
 import { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
+import { getPool } from './db.js';
 
 export { CATALOG_DUPLICATE_MERGE_AUDIT_SCHEMA_SQL } from './catalogDuplicateMergeSchema.js';
 
@@ -14,7 +14,9 @@ type CatalogDuplicateMergeQueryable = {
 };
 
 export type CatalogDuplicateMergeIdentityKind =
-  'confirmed_tmdb_duplicate' | 'candidate_normalized_title_year' | 'manual_review_required';
+  | 'confirmed_tmdb_duplicate'
+  | 'candidate_normalized_title_year'
+  | 'manual_review_required';
 
 export interface CatalogDuplicateMergeMovieSnapshot {
   id: string;

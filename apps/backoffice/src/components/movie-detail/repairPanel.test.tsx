@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { catalogMovieDetail, catalogMovieDetailHealthFlag } from '../../test/backofficeFixtures';
+
 import { MovieRepairPanel } from './repairPanel';
 
 describe('MovieRepairPanel', () => {

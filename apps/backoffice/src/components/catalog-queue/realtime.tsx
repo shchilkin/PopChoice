@@ -3,12 +3,12 @@
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 import {
   isCatalogMaintenanceQueueJobPage,
   parseCatalogMaintenanceQueueConnectedMode,
   parseCatalogMaintenanceQueueSnapshotMessage,
 } from '../../lib/catalogMaintenanceQueueLive';
+
 import {
   getQueueRealtimeStatus,
   isQueueRealtimeFallbackStatus,
@@ -21,6 +21,8 @@ import {
   getConnectionStateAfterSnapshotRefresh,
   loadQueueSnapshotRefresh,
 } from './realtimeViewModel';
+
+import type { CatalogMaintenanceQueueJobPage } from '../../catalogMaintenanceQueue';
 
 async function fetchCatalogMaintenanceQueue(
   search: string,

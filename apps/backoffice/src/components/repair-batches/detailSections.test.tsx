@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { catalogRepairBatchItem } from '../../test/backofficeFixtures';
+
 import { RepairBatchItemRows } from './detailSections';
 
 describe('repair batch detail sections', () => {
