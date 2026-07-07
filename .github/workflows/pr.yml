@@ -59,7 +59,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint code
+      - name: Run Oxlint
+        run: npm run lint:fast
+
+      - name: Run ESLint leftovers
         run: npm run lint:check
 
       - name: Check Prettier formatting

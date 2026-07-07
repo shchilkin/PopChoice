@@ -95,7 +95,6 @@ export function PosterBackground({ posters: initialPosters }: PosterBackgroundPr
         >
           {cells.map((src, i) => (
             <div key={i} className="overflow-hidden aspect-2/3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 // key change on src remounts the element, resetting opacity-0
                 // so the SVG→real-poster swap fades in rather than snapping.

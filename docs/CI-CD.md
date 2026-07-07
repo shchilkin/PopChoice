@@ -24,7 +24,7 @@ The PR validation workflows run automatically on pull requests targeting the `de
 | Workflow                             | Job                              | Purpose                                                                        |
 | ------------------------------------ | -------------------------------- | ------------------------------------------------------------------------------ |
 | `pr.yml`                             | `changes`                        | Classifies PR as docs-only vs code-changing                                    |
-| `pr.yml`                             | `lint`                           | ESLint code quality + Prettier formatting                                      |
+| `pr.yml`                             | `lint`                           | Oxlint fast pass, ESLint leftovers, and formatting                             |
 | `pr.yml`                             | `fallow-audit`                   | Required new-only Fallow audit for changed TypeScript/JavaScript quality risks |
 | `pr.yml`                             | `type-check`                     | TypeScript type safety (`tsc --noEmit`)                                        |
 | `pr.yml`                             | `server-tests`                   | Vitest server tests with coverage collection and artifact upload               |
@@ -384,6 +384,7 @@ To run the same checks locally before pushing:
 
 ```bash
 # Code quality
+npm run lint:fast
 npm run lint:check
 npm run format:check
 npm run type-check
