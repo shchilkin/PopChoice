@@ -61,19 +61,10 @@ export type RecommendationFeedbackKind =
   | 'too_obscure'
   | 'close';
 export type UserMovieInteractionKind =
-  | 'watched'
-  | 'liked'
-  | 'not_interested'
-  | 'wrong_mood'
-  | 'not_seen';
+  'watched' | 'liked' | 'not_interested' | 'wrong_mood' | 'not_seen';
 export type UserRecommendationMemoryKind = UserMovieInteractionKind | 'recently_recommended';
 type RecommendationCandidateSource =
-  | 'curated'
-  | 'local-cache'
-  | 'tmdb-discover'
-  | 'tmdb-search'
-  | 'memory'
-  | 'jit-enriched';
+  'curated' | 'local-cache' | 'tmdb-discover' | 'tmdb-search' | 'memory' | 'jit-enriched';
 
 interface RecommendationMovieFields {
   name: string;

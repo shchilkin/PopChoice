@@ -9,8 +9,7 @@ import { applyRateLimit } from '@/lib/rateLimit';
 const AUTH_RATE_LIMIT = { limit: 5, windowSeconds: 15 * 60 };
 
 type AuthJsonRequestResult<T> =
-  | { data: T; response?: never }
-  | { data?: never; response: Response };
+  { data: T; response?: never } | { data?: never; response: Response };
 type AuthJsonRequestOptions = {
   csrfFailureLogMessage?: string;
   requireCsrf?: boolean;

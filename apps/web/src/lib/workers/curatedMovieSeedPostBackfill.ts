@@ -27,12 +27,7 @@ const DEFAULT_TMDB_LANGUAGE = 'en-US';
 type CatalogSeedRepairIssueKey = (typeof REPAIR_ISSUE_KEYS)[number];
 
 export type CuratedMovieSeedCatalogRepairStatus =
-  | 'disabled'
-  | 'empty'
-  | 'failed'
-  | 'queued'
-  | 'skipped'
-  | 'unavailable';
+  'disabled' | 'empty' | 'failed' | 'queued' | 'skipped' | 'unavailable';
 
 export type CuratedMovieSeedCatalogRepairSummary = {
   batchId?: string;

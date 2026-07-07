@@ -3,13 +3,7 @@ import { RECOMMENDATION_EVAL_RUN_SCHEMA_SQL } from './recommendationEvalSchema.j
 
 export type RecommendationEvalRunMode = 'mock' | 'real-data' | 'live';
 export type RecommendationEvalRunStatus =
-  | 'pending'
-  | 'queued'
-  | 'processing'
-  | 'completed'
-  | 'failed'
-  | 'enqueue_failed'
-  | 'canceled';
+  'pending' | 'queued' | 'processing' | 'completed' | 'failed' | 'enqueue_failed' | 'canceled';
 export type RecommendationEvalRunSource = 'cli' | 'backoffice' | 'schedule' | 'worker' | 'ci';
 export type RecommendationEvalResultStatus = 'passed' | 'failed' | 'error';
 

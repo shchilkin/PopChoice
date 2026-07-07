@@ -109,8 +109,7 @@ export interface CatalogMovieDetail {
 }
 
 export type CatalogMovieDetailResult =
-  | { status: 'found'; detail: CatalogMovieDetail }
-  | { status: 'not_found'; movieId: string };
+  { status: 'found'; detail: CatalogMovieDetail } | { status: 'not_found'; movieId: string };
 
 type MovieRow = {
   id: string | number;
