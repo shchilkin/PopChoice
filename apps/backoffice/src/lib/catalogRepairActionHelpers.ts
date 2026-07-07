@@ -23,13 +23,7 @@ export const REPAIRABLE_CATALOG_ISSUE_KEYS = new Set([
 ]);
 
 export type CatalogRepairActionStatus =
-  | 'queued'
-  | 'deduped'
-  | 'orchestration_queued'
-  | 'partial'
-  | 'failed'
-  | 'unavailable'
-  | 'empty';
+  'queued' | 'deduped' | 'orchestration_queued' | 'partial' | 'failed' | 'unavailable' | 'empty';
 
 export type CatalogBulkRepairSummaryCounters = {
   attempted: number;

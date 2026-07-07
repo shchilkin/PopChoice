@@ -204,8 +204,7 @@ function recordRecommendationJobCompleted(job: {
 
 function recordRecommendationJobFailed(
   job:
-    | { attemptsMade: number; data?: RecommendationJobData; id?: string; name: string }
-    | undefined,
+    { attemptsMade: number; data?: RecommendationJobData; id?: string; name: string } | undefined,
   err: Error,
 ) {
   const attemptsMade = getRecommendationAttemptsMade(job);

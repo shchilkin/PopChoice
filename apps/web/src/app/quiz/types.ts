@@ -2,14 +2,7 @@ export type Era = 'new' | 'classic' | 'both';
 export type Tone = 'light' | 'balanced' | 'serious' | 'dark';
 export type FastIntent = 'easy' | 'funny' | 'gripping' | 'emotional' | 'weird' | 'cozy' | 'dark';
 export type FastAvoid =
-  | 'horror'
-  | 'gore'
-  | 'slow'
-  | 'subtitles'
-  | 'long'
-  | 'obvious'
-  | 'obscure'
-  | 'alreadySeen';
+  'horror' | 'gore' | 'slow' | 'subtitles' | 'long' | 'obvious' | 'obscure' | 'alreadySeen';
 export type FastDiscovery = 'safe' | 'balanced' | 'surprise';
 
 export interface PersonAnswers {

@@ -16,9 +16,7 @@ import type {
 
 const DEFAULT_TMDB_LANGUAGE = 'en-US';
 type CatalogMaintenanceJobData =
-  | CatalogSeedTMDBMovieJobData
-  | CatalogDiscoverTMDBSourcePageJobData
-  | CatalogBackfillMovieJobData;
+  CatalogSeedTMDBMovieJobData | CatalogDiscoverTMDBSourcePageJobData | CatalogBackfillMovieJobData;
 type TraceAttributeValue = string | number | boolean;
 
 function normalizeLanguage(language?: string): string {

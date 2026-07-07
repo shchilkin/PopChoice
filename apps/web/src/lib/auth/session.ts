@@ -66,8 +66,7 @@ function isValidSignature(encodedPayload: string, signature: string, secret: str
 
 function parseValidSessionPayload(encodedPayload: string): SessionPayload | null {
   const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as
-    | SessionPayload
-    | undefined;
+    SessionPayload | undefined;
 
   return isValidSessionPayload(parsed) ? parsed : null;
 }
