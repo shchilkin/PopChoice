@@ -26,6 +26,7 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 ### Code Quality
 
 - `npm run lint` or `npm run lint:check` - Run ESLint for code linting
+- `npm run lint:fast` - Run Oxlint as a fast supplemental lint pass
 - `npm run lint:fix` - Fix ESLint issues automatically
 - `npm run format:check` - Check code formatting with Oxfmt
 - `npm run format:write` - Fix code formatting with Oxfmt
