@@ -277,6 +277,12 @@ work implementation-sized:
 - [#668](https://github.com/shchilkin/PopChoice/issues/668): improve backoffice
   developer experience with reusable fixtures, deterministic realtime/action
   test helpers, and clearer local validation docs.
+- [#903](https://github.com/shchilkin/PopChoice/issues/903): add
+  provider-agnostic usage attribution for paid APIs, starting with an
+  idempotent `provider_usage_events` schema, OpenAI event instrumentation for
+  live evals/generation/embeddings, and Backoffice filtering by provider,
+  environment, actor, operation, and period. Keep provider aggregate billing
+  APIs as reconciliation data, not the only source of per-action attribution.
 
 ### Account Platform Track
 
