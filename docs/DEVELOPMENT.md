@@ -25,7 +25,9 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 
 ### Code Quality
 
-- `npm run lint` or `npm run lint:check` - Run ESLint for code linting
+- `npm run lint:fast` - Run Oxlint for the fast lint pass configured in `.oxlintrc.json`
+- `npm run lint` or `npm run lint:check` - Run ESLint for Storybook, unused-imports,
+  and React Compiler rules that Oxlint does not cover yet
 - `npm run lint:fix` - Fix ESLint issues automatically
 - `npm run format:check` - Check code formatting with Oxfmt
 - `npm run format:write` - Fix code formatting with Oxfmt
@@ -165,9 +167,11 @@ To switch to real data, add `DATABASE_URL` to your `.env` file and seed the data
 ## Code Style and Conventions
 
 - **TypeScript** - All new code should be TypeScript
-- **ESLint** - Follows Next.js and Prettier configurations
-- **Prettier** - Code formatting is enforced
-- **Import organization** - Auto-sorted with eslint-plugin-import
+- **Oxlint** - Runs the fast lint pass for supported ESLint, TypeScript, React,
+  Next.js, accessibility, import, and Vitest rules
+- **ESLint** - Covers Storybook, unused-imports, and React Compiler rules that
+  Oxlint does not support yet
+- **Oxfmt** - Code formatting is enforced
 
 ## Testing Strategy
 

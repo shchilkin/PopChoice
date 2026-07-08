@@ -1,0 +1,43 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "react",
+    "jsx-a11y",
+    "nextjs",
+    "vitest"
+  ],
+  "ignorePatterns": ["storybook-static/**", "public/**", ".next/**", "node_modules/**"],
+  "rules": {
+    "import/no-anonymous-default-export": "warn",
+    "no-console": "error",
+    "no-duplicate-imports": [
+      "error",
+      {
+        "allowSeparateTypeImports": true
+      }
+    ],
+    "react/exhaustive-deps": "warn",
+    "react/rules-of-hooks": "error"
+  },
+  "overrides": [
+    {
+      "files": [
+        "apps/web/src/utils/**/*.{ts,js}",
+        "apps/web/src/app/api/**/*.{ts,js}",
+        "apps/web/src/lib/**/*.{ts,js}",
+        "apps/web/scripts/**/*.{ts,js}",
+        "apps/bull-board/**/*.{ts,js}",
+        "scripts/**/*.{ts,js,mjs,cjs}",
+        "services/**/*.{ts,js,mjs,cjs}"
+      ],
+      "rules": {
+        "no-console": "off"
+      }
+    }
+  ]
+}

@@ -15,7 +15,7 @@ export default function Error({
   useEffect(() => {
     // The error has already been reported server-side via the Pino logger.
     // Log it client-side as well so it surfaces in browser dev-tools.
-    // eslint-disable-next-line no-console
+    // oxlint-disable-next-line no-console
     console.error(error);
   }, [error]);
 

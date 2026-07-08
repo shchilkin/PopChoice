@@ -40,7 +40,7 @@ async function fetchBuildInfo(): Promise<BuildInfo> {
 }
 
 function logBuildSummary(build: BuildInfo) {
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.info(
     '%c%s%c\n%cPopChoice%c %s (%s) - run %cPopChoice.info()%c for build data',
     BANNER_STYLE,
@@ -56,7 +56,7 @@ function logBuildSummary(build: BuildInfo) {
 }
 
 function logBuildDetails(build: BuildInfo) {
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.groupCollapsed(
     '%cPopChoice build data%c %s (%s)',
     BADGE_STYLE,
@@ -64,7 +64,7 @@ function logBuildDetails(build: BuildInfo) {
     build.version,
     build.commitShortSha ?? 'unknown',
   );
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.table({
     version: build.version,
     channel: build.channel,
@@ -77,7 +77,7 @@ function logBuildDetails(build: BuildInfo) {
     baseUrl: build.baseUrl,
     timestamp: build.timestamp,
   });
-  // eslint-disable-next-line no-console
+  // oxlint-disable-next-line no-console
   console.groupEnd();
 }
 

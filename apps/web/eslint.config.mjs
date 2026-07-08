@@ -1,8 +1,13 @@
+import { fileURLToPath } from 'node:url';
+
 // For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import nextConfig from 'eslint-config-next/core-web-vitals';
 import prettierConfig from 'eslint-config-prettier';
+import oxlint from 'eslint-plugin-oxlint';
 import storybook from 'eslint-plugin-storybook';
 import unusedImports from 'eslint-plugin-unused-imports';
+
+const oxlintConfigFile = fileURLToPath(new URL('../../.oxlintrc.json', import.meta.url));
 
 const eslintConfig = [
   // Ignore build output, public assets, and service sub-packages
@@ -49,6 +54,8 @@ const eslintConfig = [
       'no-console': 'off',
     },
   },
+
+  ...oxlint.buildFromOxlintConfigFile(oxlintConfigFile),
 ];
 
 export default eslintConfig;

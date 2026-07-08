@@ -724,7 +724,6 @@ function RecommendationPoster({ posterURL }: { posterURL: string | null }) {
       style={{ background: 'var(--pc-ghost)' }}
     >
       {posterURL ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img src={posterURL} alt="" className="h-full w-full object-cover" loading="lazy" />
       ) : (
         <Film size={22} style={{ color: 'var(--pc-t3)' }} />
@@ -1277,7 +1276,6 @@ function MovieMemoryCard({
         style={{ background: 'var(--pc-ghost)' }}
       >
         {item.posterURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={item.posterURL} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
           <Film size={18} style={{ color: 'var(--pc-t3)' }} />
