@@ -2,6 +2,11 @@ import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { CatalogStat, DataTable } from '../shared';
 
+import {
+  formatProviderUsageCost,
+  formatProviderUsageNumber,
+  providerUsageViewFromReport,
+} from './providerUsageViewModel';
 import { JsonBlock, recommendationEvalStatusLabel, RecommendationEvalStatusBadge } from './shared';
 
 import type {
@@ -46,6 +51,36 @@ function hardGateFailureCount(results: RecommendationEvalResult[]): number {
     (count, result) =>
       count + failedChecksFor(result).filter((check) => check.maxScore === 0).length,
     0,
+  );
+}
+
+function EvalProviderUsage({ run }: { run: RecommendationEvalRun }) {
+  const usage = providerUsageViewFromReport(run.report);
+  if (!usage) return null;
+
+  return (
+    <section className="summary batch-summary" aria-label="OpenAI usage for eval run">
+      <CatalogStat
+        label="OpenAI cost"
+        value={formatProviderUsageCost(usage.cost)}
+        meta={`Billing ${usage.attribution}`}
+      />
+      <CatalogStat
+        label="OpenAI requests"
+        value={formatProviderUsageNumber(usage.requests)}
+        meta="Observed by worker"
+      />
+      <CatalogStat
+        label="Input tokens"
+        value={formatProviderUsageNumber(usage.inputTokens)}
+        meta="Observed by worker"
+      />
+      <CatalogStat
+        label="Output tokens"
+        value={formatProviderUsageNumber(usage.outputTokens)}
+        meta="Observed by worker"
+      />
+    </section>
   );
 }
 
@@ -170,6 +205,7 @@ export function RecommendationEvalDetailPage({ detail }: { detail: Recommendatio
       }
     >
       <EvalRunSummary run={run} />
+      <EvalProviderUsage run={run} />
       <section className="detail-grid">
         <article className="panel">
           <div className="panel-header">

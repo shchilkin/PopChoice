@@ -372,7 +372,10 @@ queue for processing. Live OpenAI evals are available only through an explicit
 cost acknowledgement and confirmation phrase because they can spend provider
 credits and depend on live OpenAI/TMDB behavior. Completed live evals persist
 the provider response alongside each fixture result so operators can inspect the
-actual recommendation output.
+actual recommendation output. When `OPENAI_ADMIN_API_KEY` is configured,
+backoffice also shows aggregate OpenAI usage/costs by period, and live eval
+reports include worker-observed OpenAI request/token usage plus an Admin Costs
+API interval snapshot for the run.
 
 Useful options:
 

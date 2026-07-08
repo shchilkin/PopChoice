@@ -43,6 +43,48 @@ describe('RecommendationEvalDetailPage', () => {
     expect(html).toContain('&quot;passed&quot;: false');
   });
 
+  it('renders per-run OpenAI usage when the eval report includes provider telemetry', () => {
+    const html = renderToStaticMarkup(
+      <RecommendationEvalDetailPage
+        detail={detail({
+          run: {
+            ...detail().run,
+            mode: 'live',
+            report: {
+              mode: 'live',
+              providerUsage: {
+                admin: {
+                  attribution: 'interval',
+                  status: 'available',
+                  summary: {
+                    costs: {
+                      total: { currency: 'usd', value: 0.42 },
+                    },
+                  },
+                },
+                observed: {
+                  total: {
+                    cachedInputTokens: 5,
+                    inputTokens: 1234,
+                    outputTokens: 567,
+                    requests: 8,
+                  },
+                },
+                provider: 'openai',
+              },
+            },
+          },
+        })}
+      />,
+    );
+
+    expect(html).toContain('OpenAI cost');
+    expect(html).toContain('$0.42');
+    expect(html).toContain('OpenAI requests');
+    expect(html).toContain('1,234');
+    expect(html).toContain('567');
+  });
+
   it('surfaces failed required zero-score checks next to 100 point fixture scores', () => {
     const html = renderToStaticMarkup(
       <RecommendationEvalDetailPage
