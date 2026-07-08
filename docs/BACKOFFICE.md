@@ -382,12 +382,18 @@ Completed runs store the report summary and per-case rows in
 `recommendation_eval_results`, so operators can inspect failures without
 recovering transient worker logs or local JSON artifacts.
 
-When `OPENAI_ADMIN_API_KEY` is configured, the page also shows OpenAI Admin
-Usage/Costs telemetry for 24h, 7d, and 30d periods. Live eval runs attach
-`providerUsage` to the persisted report: worker-observed request/token usage is
-attributed to that eval job, while Admin Costs API data is an interval snapshot
-for the eval runtime and can include concurrent OpenAI traffic from the same
-organization/project.
+When `OPENAI_ADMIN_API_KEY` is configured, the separate `OpenAI usage` page
+shows OpenAI Admin Usage/Costs telemetry for 24h, 7d, and 30d periods. Live eval
+runs attach `providerUsage` to the persisted report: worker-observed
+request/token usage is attributed to that eval job, while Admin Costs API data
+is an interval snapshot for the eval runtime and can include concurrent OpenAI
+traffic from the same organization/project.
+
+Provider-agnostic, per-action usage attribution is tracked as follow-up
+[#903](https://github.com/shchilkin/PopChoice/issues/903). That work should add
+an internal `provider_usage_events` layer so future Backoffice usage views can
+filter spend and quota usage by provider, environment, actor, operation, and
+period instead of relying only on aggregate billing APIs.
 
 ## Visual QA Checklist
 
