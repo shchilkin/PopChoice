@@ -3,8 +3,54 @@ import { describe, expect, it } from 'vitest';
 
 import { RecommendationEvalListPage } from './list';
 
-import type { BackofficeOpenAIUsageState } from '../../lib/openAIUsage';
-import type { RecommendationEvalRunPage } from '@pop-choice/shared';
+import type { RecommendationEvalRun, RecommendationEvalRunPage } from '@pop-choice/shared';
+
+function evalRun(overrides: Partial<RecommendationEvalRun> = {}): RecommendationEvalRun {
+  return {
+    actor: 'lexi',
+    appVersion: '0.2.0',
+    completedAt: '2026-06-19T20:00:00.000Z',
+    createdAt: '2026-06-19T19:59:00.000Z',
+    errorMessage: null,
+    gitSha: 'abc1234',
+    id: '1dc6873b-d650-490a-a2da-65969eef3224',
+    jobId: 'recommendation-eval-1dc6873b',
+    jobName: 'run-recommendation-eval',
+    mode: 'live',
+    queueName: 'recommendation-evals',
+    queuedAt: '2026-06-19T19:59:02.000Z',
+    report: {
+      mode: 'live',
+      providerUsage: {
+        admin: {
+          attribution: 'interval',
+          status: 'available',
+          summary: {
+            costs: {
+              total: { currency: 'usd', value: 0.42 },
+            },
+          },
+        },
+        observed: {
+          total: {
+            cachedInputTokens: 5,
+            inputTokens: 1234,
+            outputTokens: 567,
+            requests: 8,
+          },
+        },
+        provider: 'openai',
+      },
+    },
+    requestedOptions: { trigger: 'backoffice' },
+    source: 'backoffice',
+    startedAt: '2026-06-19T19:59:03.000Z',
+    status: 'completed',
+    summary: { failed: 0, fixtureCount: 1, passed: 1 },
+    updatedAt: '2026-06-19T20:00:00.000Z',
+    ...overrides,
+  };
+}
 
 function runPage(overrides: Partial<RecommendationEvalRunPage> = {}): RecommendationEvalRunPage {
   return {
@@ -16,25 +62,15 @@ function runPage(overrides: Partial<RecommendationEvalRunPage> = {}): Recommenda
   };
 }
 
-function openAIUsage(
-  overrides: Partial<BackofficeOpenAIUsageState> = {},
-): BackofficeOpenAIUsageState {
-  return {
-    message: 'OPENAI_ADMIN_API_KEY is not configured for this backoffice environment.',
-    period: '7d',
-    status: 'not_configured',
-    ...overrides,
-  } as BackofficeOpenAIUsageState;
-}
-
 describe('RecommendationEvalListPage', () => {
   it('separates non-provider evals from explicit live OpenAI evals', () => {
     const html = renderToStaticMarkup(
-      <RecommendationEvalListPage openAIUsage={openAIUsage()} runPage={runPage()} status={null} />,
+      <RecommendationEvalListPage runPage={runPage()} status={null} />,
     );
 
-    expect(html).toContain('OpenAI usage');
-    expect(html).toContain('OPENAI_ADMIN_API_KEY is not configured');
+    expect(html).toContain('href="/openai-usage"');
+    expect(html).not.toContain('OPENAI_ADMIN_API_KEY is not configured');
+    expect(html).not.toContain('Admin usage and cost telemetry');
     expect(html).toContain('class="eval-safe-form"');
     expect(html).toContain('class="eval-run-panel"');
     expect(html).toContain('Seeded catalog retrieval - no OpenAI');
@@ -49,7 +85,7 @@ describe('RecommendationEvalListPage', () => {
 
   it('renders a single empty recent-runs state without duplicate pagination or table chrome', () => {
     const html = renderToStaticMarkup(
-      <RecommendationEvalListPage openAIUsage={openAIUsage()} runPage={runPage()} status={null} />,
+      <RecommendationEvalListPage runPage={runPage()} status={null} />,
     );
 
     expect(html).toContain('No recommendation eval runs have been recorded yet.');
@@ -58,68 +94,22 @@ describe('RecommendationEvalListPage', () => {
     expect(html).not.toContain('Page 1 / 1');
   });
 
-  it('renders aggregate OpenAI usage when admin telemetry is configured', () => {
+  it('keeps aggregate OpenAI usage out of eval history', () => {
     const html = renderToStaticMarkup(
       <RecommendationEvalListPage
-        openAIUsage={openAIUsage({
-          status: 'available',
-          summary: {
-            costs: {
-              groups: [],
-              total: { currency: 'usd', value: 1.2345 },
-            },
-            period: {
-              bucketWidth: '1d',
-              endTime: '2026-06-20T10:00:00.000Z',
-              startTime: '2026-06-13T10:00:00.000Z',
-            },
-            usage: {
-              byCategory: {
-                completions: {
-                  cachedInputTokens: 3,
-                  inputTokens: 100,
-                  outputTokens: 20,
-                  requests: 4,
-                },
-                embeddings: {
-                  cachedInputTokens: 0,
-                  inputTokens: 200,
-                  outputTokens: 0,
-                  requests: 2,
-                },
-                images: { cachedInputTokens: 0, inputTokens: 0, outputTokens: 0, requests: 0 },
-                moderations: {
-                  cachedInputTokens: 0,
-                  inputTokens: 50,
-                  outputTokens: 0,
-                  requests: 1,
-                },
-                web_search_calls: {
-                  cachedInputTokens: 0,
-                  inputTokens: 0,
-                  outputTokens: 0,
-                  requests: 0,
-                },
-              },
-              groups: [],
-              total: {
-                cachedInputTokens: 3,
-                inputTokens: 350,
-                outputTokens: 20,
-                requests: 7,
-              },
-            },
-          },
+        runPage={runPage({
+          runs: [evalRun()],
+          totalCount: 1,
         })}
-        runPage={runPage()}
         status={null}
       />,
     );
 
-    expect(html).toContain('$1.23');
-    expect(html).toContain('completions');
-    expect(html).toContain('embeddings');
-    expect(html).toContain('moderations');
-    expect(html).toContain('350');
+    expect(html).toContain('OpenAI cost');
+    expect(html).toContain('OpenAI usage');
+    expect(html).toContain('$0.42');
+    expect(html).toContain('8 req, 1,234 in / 567 out');
+    expect(html).not.toContain('Total cost');
+    expect(html).not.toContain('Cached input');
   });
 });

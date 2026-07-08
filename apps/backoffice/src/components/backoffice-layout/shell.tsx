@@ -19,6 +19,7 @@ const SECTION_BREADCRUMB_LABELS: Record<BackofficeSection, string> = {
   'catalog-seed': 'Catalog seed',
   health: 'Catalog health',
   home: 'Backoffice',
+  'openai-usage': 'OpenAI usage',
   queue: 'Queue',
   'recommendation-evals': 'Recommendation evals',
   'repair-batches': 'Repair batches',

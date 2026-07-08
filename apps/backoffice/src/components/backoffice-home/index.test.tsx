@@ -14,10 +14,12 @@ describe('BackofficeHomePage', () => {
     expect(html).toContain('href="/queue"');
     expect(html).toContain('href="/repair-batches"');
     expect(html).toContain('href="/recommendation-evals"');
+    expect(html).toContain('href="/openai-usage"');
     expect(html).toContain('Catalog operations');
     expect(html).toContain('Quality');
     expect(html).toContain('Catalog health');
     expect(html).toContain('Data quality and repair work');
+    expect(html).toContain('Provider spend and token totals');
     expect(html).not.toContain('Recommended start');
     expect(html).not.toContain('Workspace');
     expect(html).not.toContain('Action');

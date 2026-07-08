@@ -7,8 +7,9 @@ title: 'Backoffice Plan'
 PopChoice backoffice work is tracked under
 [#493](https://github.com/shchilkin/PopChoice/issues/493). The backoffice is an
 operational app for catalog health, TMDB match review, queued catalog repair,
-catalog seeding, queue visibility, and recommendation eval operations. It must
-not be implemented inside the user-facing `apps/web` app.
+catalog seeding, queue visibility, OpenAI usage telemetry, and recommendation
+eval operations. It must not be implemented inside the user-facing `apps/web`
+app.
 Post-MVP operator hardening is tracked under
 [#660](https://github.com/shchilkin/PopChoice/issues/660).
 
@@ -186,6 +187,8 @@ The app needs:
   mutating catalog rows inline;
 - `OPERATOR_AUTH_USERNAME` and `OPERATOR_AUTH_PASSWORD` when testing protected
   operator routes locally;
+- `OPENAI_ADMIN_API_KEY` for the aggregate OpenAI usage page and live eval cost
+  snapshots;
 - `CATALOG_HEALTH_SAMPLE_LIMIT` and `CATALOG_HEALTH_STALE_DAYS` when tuning the
   report shape.
 

@@ -2183,6 +2183,18 @@ input:disabled {
     margin: 0;
     white-space: normal;
   }
+  .openai-usage-panel .panel-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .openai-usage-panel .segmented-links {
+    display: flex;
+    width: 100%;
+  }
+  .openai-usage-panel .segmented-links a {
+    flex: 1;
+    min-width: 0;
+  }
   .toolbar-summary {
     padding-bottom: 0;
   }

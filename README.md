@@ -194,7 +194,7 @@ DATABASE_URL=postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e npm run ev
 npm run test:e2e:down
 ```
 
-Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live OpenAI evals are guarded by an explicit cost acknowledgement and confirmation phrase, and persist the provider response in the run report for inspection. Configure `OPENAI_ADMIN_API_KEY` to show aggregate OpenAI usage/costs by period and attach request/token usage plus an Admin Costs API interval snapshot to live eval reports.
+Operators can also start deterministic mock and real-data eval runs from the backoffice `Recommendation evals` page when `DATABASE_URL`, `REDIS_URL`, and the web workers are configured. Backoffice live OpenAI evals are guarded by an explicit cost acknowledgement and confirmation phrase, and persist the provider response in the run report for inspection. Configure `OPENAI_ADMIN_API_KEY` to show aggregate OpenAI usage/costs on the separate backoffice `OpenAI usage` page and attach request/token usage plus an Admin Costs API interval snapshot to individual live eval reports.
 
 ```bash
 npm run eval:recommendations -- --live

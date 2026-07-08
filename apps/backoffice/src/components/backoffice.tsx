@@ -4,6 +4,7 @@ export { CatalogHealthPage } from './catalog-health';
 export { CatalogMaintenanceQueuePage } from './catalog-queue';
 export { CatalogSeedPage } from './catalog-seed';
 export { CatalogMovieDetailPage, CatalogMovieNotFoundPage } from './movie-detail';
+export { OpenAIUsagePage } from './openai-usage';
 export {
   RepairBatchDetailPage,
   RepairBatchListPage,
