@@ -27,18 +27,13 @@ export function RecommendationEvalStatusBadge({ status }: { status: Recommendati
 export function buildRecommendationEvalPageHref({
   page,
   pageSize,
-  usagePeriod,
 }: {
   page: number;
   pageSize: number;
-  usagePeriod?: string;
 }) {
   const params = new URLSearchParams();
   params.set('page', String(page));
   params.set('pageSize', String(pageSize));
-  if (usagePeriod) {
-    params.set('usagePeriod', usagePeriod);
-  }
   return `/recommendation-evals?${params.toString()}`;
 }
 

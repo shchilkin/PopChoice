@@ -6,7 +6,6 @@ import {
   logBackofficeError,
   parseRecommendationEvalListParams,
 } from '../../lib/backoffice';
-import { getBackofficeOpenAIUsageState, parseOpenAIUsagePeriod } from '../../lib/openAIUsage';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -22,16 +21,13 @@ export default async function RecommendationEvalsPage({
     await ensureBackofficeReady();
     const params = (await searchParams) ?? {};
     const pagination = parseRecommendationEvalListParams(params);
-    const usagePeriod = parseOpenAIUsagePeriod(params.usagePeriod);
     const runPage = await listRecommendationEvalRunPage({
       limit: pagination.limit,
       offset: pagination.offset,
     });
-    const openAIUsage = await getBackofficeOpenAIUsageState(usagePeriod);
 
     return (
       <RecommendationEvalListPage
-        openAIUsage={openAIUsage}
         runPage={runPage}
         status={typeof params.eval === 'string' ? params.eval : null}
       />

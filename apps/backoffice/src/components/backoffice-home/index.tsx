@@ -50,6 +50,11 @@ const GROUPS: BackofficeHomeGroup[] = [
         href: '/recommendation-evals',
         title: 'Recommendation evals',
       },
+      {
+        description: 'Provider spend and token totals',
+        href: '/openai-usage',
+        title: 'OpenAI usage',
+      },
     ],
   },
 ];
