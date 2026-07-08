@@ -1,18 +1,19 @@
-import type {
-  RecommendationEvalResult,
-  RecommendationEvalRun,
-  RecommendationEvalRunDetail,
-} from '@pop-choice/shared';
-
 import { formatBackofficeDateTime } from '../../lib/backoffice';
 import { BackofficeLayout } from '../backoffice-layout';
 import { CatalogStat, DataTable } from '../shared';
+
 import {
   formatProviderUsageCost,
   formatProviderUsageNumber,
   providerUsageViewFromReport,
 } from './providerUsageViewModel';
 import { JsonBlock, recommendationEvalStatusLabel, RecommendationEvalStatusBadge } from './shared';
+
+import type {
+  RecommendationEvalResult,
+  RecommendationEvalRun,
+  RecommendationEvalRunDetail,
+} from '@pop-choice/shared';
 
 type EvalCheck = {
   id: string;

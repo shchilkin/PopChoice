@@ -1,9 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import type { BackofficeOpenAIUsageState } from '../../lib/openAIUsage';
 import { RecommendationEvalListPage } from './list';
 
+import type { BackofficeOpenAIUsageState } from '../../lib/openAIUsage';
 import type { RecommendationEvalRunPage } from '@pop-choice/shared';
 
 function runPage(overrides: Partial<RecommendationEvalRunPage> = {}): RecommendationEvalRunPage {
