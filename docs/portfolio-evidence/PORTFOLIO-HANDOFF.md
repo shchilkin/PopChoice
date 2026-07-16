@@ -30,6 +30,7 @@ This does not verify every development feature on the live product.
 | Feedback affects durable signed-in movie memory                       | **Shipped in development** | [feedback API](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/app/api/recommendations/%5Bid%5D/feedback/route.ts), [recommendation e2e](https://github.com/shchilkin/PopChoice/blob/development/apps/web/e2e/recommendation.spec.ts)              |
 | PopChoice has deterministic recommendation regression gates           | **Shipped in development** | [fixtures](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/features/recommendation/evals/fixtures.ts), [CI](https://github.com/shchilkin/PopChoice/blob/development/.github/workflows/pr.yml)                                                      |
 | A fixed-candidate Duo quality-review protocol is executable           | **Shipped in development** | [protocol](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY), [implementation](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/features/recommendation/evals/controlledDuoQuality.ts)                                                               |
+| One controlled live Duo run exposed a weak bridge selection           | **Development verified**   | [recorded result](https://github.com/shchilkin/PopChoice/blob/development/docs/portfolio-evidence/results/controlled-duo-live-2026-07-16.json), [review](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY#recorded-live-result)                                          |
 | Protected operator surfaces are live and routinely used               | **Anecdotal / unverified** | Code map in [Operations](/docs/portfolio-evidence/OPERATIONS); no authenticated live inspection performed                                                                                                                                                               |
 | The recommendation engine improved conversion, accuracy, or retention | **Anecdotal / unverified** | No product analytics dataset or approved metric was found                                                                                                                                                                                                               |
 
@@ -45,10 +46,10 @@ production when deterministic local evidence was used.
 
 Use [feedback-memory repeat avoidance](/docs/portfolio-evidence/RECOMMENDATION-SCENARIO)
 for the reproducible deterministic regression example. Use the
-[Controlled Duo protocol](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY) only
-to describe how the next quality review is structured. The protocol is ready,
-but a real-provider result and owner verdict remain blocked on explicit budget
-approval.
+[Controlled Duo protocol](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY) to
+describe the fixed compromise test and its first recorded failure. The single
+live run selected the deliberately weaker comparison candidate and was rejected
+by the owner; it does not demonstrate general recommendation quality.
 
 ## 5. Screenshot and asset manifest
 
@@ -82,6 +83,8 @@ evidence that BullMQ retried successfully.
   without spending provider credits.”
 - “PopChoice v0.2.0 is deployed in production; the public build endpoint exposes
   version and commit provenance.”
+- “One controlled live run passed six of seven formal checks and was still
+  rejected because its fluent explanation overstated a weak taste overlap.”
 
 ## 7. What not to claim without more data
 
@@ -108,11 +111,9 @@ roadmap item.
    screenshotted in a public case study?
 2. Was the mascot redrawn in Figma, Affinity Designer, or another tool?
 3. Which protected operator surfaces may be captured, with what redaction?
-4. Is there an approved staging budget for one live-provider recommendation
-   scenario?
-5. Are there attributable friend/family quotes that may be used as qualitative
+4. Are there attributable friend/family quotes that may be used as qualitative
    observations, with consent and without presenting them as research?
-6. Is the design-system route intentionally private, or should its broken
+5. Is the design-system route intentionally private, or should its broken
    `/style-guide` internal links and public navigation status be completed first?
 
 ## 10. Recommended next step in `portfolio-2025`

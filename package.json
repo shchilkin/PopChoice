@@ -29,7 +29,7 @@
     "dev:docs": "npm run dev --workspace=apps/docs",
     "dev:shared": "npm run dev --workspace=packages/shared",
     "eval:recommendations": "npm run eval:recommendations --workspace=apps/web",
-    "eval:recommendations:duo": "npm run eval:recommendations:duo --workspace=apps/web",
+    "eval:recommendations:duo": "npm run eval:recommendations:duo --workspace=apps/web --",
     "eval:recommendations:real-data": "npm run eval:recommendations --workspace=apps/web -- --real-data",
     "fix": "npm run lint:fix && npm run format:write",
     "format:check": "oxfmt --check",

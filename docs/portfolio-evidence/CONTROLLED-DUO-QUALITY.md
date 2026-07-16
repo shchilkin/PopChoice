@@ -7,10 +7,10 @@ description: 'A fixed-candidate protocol for reviewing how PopChoice balances tw
 
 ## Current status
 
-**Shipped in development — protocol ready, provider run not performed.** The
-protocol is validated without calling OpenAI. A live run is intentionally
-separate because it spends provider credits and still requires owner review
-before it can support a recommendation-quality claim.
+**Development verified — first provider run rejected.** The protocol was first
+validated without calling OpenAI, then run once with explicit budget approval.
+The live response passed six of seven automated checks but selected the
+deliberately weaker comparison candidate. The owner rejected the compromise.
 
 The question is narrow: can the production ranking prompt choose one plausible
 bridge between two contrasting profiles and explain the compromise without
@@ -63,6 +63,30 @@ still answer:
    prompt keywords?
 3. Is the recommendation credible for the stated night?
 
+## Recorded live result
+
+The first controlled live run was recorded on 2026-07-16 and made exactly one
+provider call. The complete sanitized report is stored in
+[`results/controlled-duo-live-2026-07-16.json`](https://github.com/shchilkin/PopChoice/blob/development/docs/portfolio-evidence/results/controlled-duo-live-2026-07-16.json).
+
+| Field            | Result                                                                |
+| ---------------- | --------------------------------------------------------------------- |
+| Selected film    | `The Grand Budapest Hotel`                                            |
+| Automated checks | 6 of 7 passed                                                         |
+| Failed check     | `bridge-selection`                                                    |
+| Review status    | `blocked-by-automated-checks`                                         |
+| Owner verdict    | Rejected: too little kinetic overlap for Sam despite fluent reasoning |
+
+The result stayed inside the fixed set, respected the shared constraints,
+named Alex and Sam, represented terms from both profiles, and provided a
+detailed explanation. It still failed the central compromise test. The
+explanation made the weaker overlap sound resolved instead of demonstrating
+that the selected film was a strong bridge.
+
+This is useful negative evidence, not a recommendation-quality success. The
+next live run should wait until bridge fit is represented explicitly in the
+ranking policy.
+
 ## Reproduce without provider spend
 
 ```bash
@@ -91,8 +115,9 @@ not emit a final recommendation-quality pass.
 
 **Proven now:** the protocol is executable, bounded, credit-free by default,
 uses valid production-shaped inputs, and can separate machine-checkable
-constraints from subjective review.
+constraints from subjective review. One controlled provider response also
+showed that fluent reasoning can overstate a weak taste overlap.
 
-**Not yet proven:** that the configured provider selects a convincing bridge,
-that the owner accepts the explanation, or that production users receive better
-recommendations.
+**Not yet proven:** that the configured provider selects convincing bridges
+consistently, that the ranking policy prevents weak compromises, or that
+production users receive better recommendations.
