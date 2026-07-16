@@ -1,3 +1,8 @@
+---
+title: 'Persisted Recommendation Lifecycle'
+description: 'Source-backed persistence, queue, polling, failure, and recovery behavior.'
+---
+
 # Persisted recommendation lifecycle
 
 Evidence snapshot from `development` at `3ef0417`. This note distinguishes code- and

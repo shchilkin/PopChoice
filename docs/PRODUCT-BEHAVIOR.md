@@ -22,12 +22,20 @@ technical references, see [/docs/RECOMMENDATION-ROADMAP](/docs/RECOMMENDATION-RO
 
 ## Current Quiz Flow
 
-The quiz starts from a choice between solo mode and same-device group mode.
-Solo mode creates one participant named with the localized "you" label. Group
-mode first collects participant names, requires at least two non-empty names,
-and falls back to "Person 1" and "Person 2" if the setup is incomplete.
+The quiz starts with match depth, then audience:
 
-Each participant answers the same seven steps:
+1. `Fast Pick` or `Normal Match`.
+2. `Solo`, `Duo`, or `Group`.
+
+Solo creates one participant named with the localized "you" label. Duo collects
+exactly two participant names. Group accepts three to six participant names and
+requires at least three non-empty names in the UI. Both Duo and Group are
+same-device, sequential flows: each person answers, then hands the device to the
+next participant. If group setup reaches the state machine without enough valid
+names, it uses generic `Person 1`, `Person 2`, and, for Group,
+`Person 3` fallbacks.
+
+Normal Match asks each participant the same seven steps:
 
 1. Reference movie: optional favorite/reference title. Leaving it blank keeps
    the search open; users can also explicitly choose the no-reference path.
@@ -61,6 +69,15 @@ blank. Favorite actor, favorite-movie reason, and hard avoids are optional.
 Discovery appetite and hard avoids are carried as structured text in
 `favoriteMovieWhy` until a broader taste-signal backend contract replaces the
 legacy recommendation request shape.
+
+Fast Pick asks three shorter steps per participant:
+
+1. Tonight's intent/mood.
+2. Hard avoids and constraints.
+3. Discovery appetite.
+
+The request sets `experienceMode` to `fast-pick` or `normal-match`. The audience
+still determines whether the quiz sends one participant object or an array.
 
 ## Current Recommendation Lifecycle
 
@@ -170,9 +187,10 @@ sorting, or a broader TMDB-backed discovery surface.
 
 ## Current Group Mode
 
-Group mode is currently same-device and sequential. The person holding the
-device enters participant names, each participant answers the same quiz, and
-the final payload is one array of participant answer objects.
+Duo and Group are currently same-device and sequential. Duo is exactly two
+participants; Group is three to six. The person holding the device enters
+participant names, each participant answers the selected Fast Pick or Normal
+Match flow, and the final payload is one array of participant answer objects.
 
 The result page recognizes group results by participant count and shows
 group-oriented copy and insights when the persisted result includes them. The
@@ -226,8 +244,10 @@ Group rooms are a larger milestone under
 - [#470](https://github.com/shchilkin/PopChoice/issues/470): QR invite and
   projector mode.
 
-The current same-device group mode should remain available until room-backed
-group mode is reliable enough to replace it intentionally.
+The current same-device Duo/Group modes should remain available until
+room-backed group mode is reliable enough to replace them intentionally. QR
+invites, Kahoot-like rooms, readiness state, projector mode, and independent
+participant devices are planned behavior, not shipped behavior.
 
 ## Testing And Eval Expectations
 

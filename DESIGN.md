@@ -278,7 +278,8 @@ The quiz step indicator. Dots morph between states — the shape change is the s
 - **Do** apply the gold glow shadow (`--pc-cta-shadow`) exclusively to the CTA button variant.
 - **Do** animate state changes with 200ms ease-out. Progress dots use 300ms for deliberate weight.
 - **Do** cap body copy at 65–75ch line length.
-- **Do** treat solo and group mode entry points with equal visual weight on the landing page.
+- **Do** present match depth first (Fast Pick / Normal Match), then give Solo,
+  Duo, and Group audience choices equal clarity within the selected flow.
 
 ### Don't:
 

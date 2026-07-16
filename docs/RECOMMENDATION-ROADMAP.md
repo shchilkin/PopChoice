@@ -24,21 +24,30 @@ This should be done in stages. A full rewrite is not the goal.
 
 ## Current Quiz Flow
 
-The current quiz captures:
+The current quiz first asks for match depth (`Fast Pick` or `Normal Match`), then
+audience (`Solo`, `Duo`, or `Group`). Duo and Group are same-device sequential
+flows; multi-device rooms remain planned.
 
-- solo or group mode
-- group participant names for group mode
+Normal Match captures:
+
+- participant names for Duo/Group
 - favorite or reference movie
 - preferred era: newer, classic, or both
 - broad mood/genre labels
 - tone: light, balanced, serious, or dark
+- discovery appetite
+- hard avoids and constraints
 - optional favorite actor
 
-This creates a usable first recommendation, but the data is coarse. It asks users to describe taste abstractly, while users often know their taste better through concrete reactions to movies.
+Fast Pick captures a shorter intent, hard-avoid, and discovery-appetite set for
+each participant. Both flows create a usable first recommendation, but most
+signals still bridge through the legacy request shape rather than a canonical
+`TasteSignal[]` contract.
 
 ## Current Limitations
 
-- The favorite movie prompt is high friction and can over-anchor the result toward movies the user already watched.
+- The favorite movie prompt is optional and lower-friction, but supplied titles
+  can still over-anchor a result if they outweigh tonight-specific signals.
 - Mood options are partly genre labels, which makes them too broad for accurate ranking.
 - The quiz does not capture enough negative intent, such as "not slow", "not horror", "not long", "not subtitles", or "not something obvious".
 - The app has started using signed-in movie memory for exclusions, down-ranking, and exact liked-candidate boosts, but watched/liked/not-interested signals are still not unified behind a first-class recommendation signal model.

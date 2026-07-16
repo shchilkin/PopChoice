@@ -266,6 +266,7 @@ npm run dev:backoffice:fixtures # backoffice against deterministic local fixture
 - **[Coolify Deployment](./docs/COOLIFY.md#service-links)** — Runtime service links for the app, docs, Bull Board, Storybook, Backoffice, and Grafana
 - **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** — Practical phased direction for cleaner boundaries and future monorepo evolution
 - **[Recommendation Roadmap](./docs/RECOMMENDATION-ROADMAP.md)** — Staged plan for improving quiz accuracy, adding taste swipe mode, and moving toward TMDB-first discovery
+- **[Portfolio Evidence Pack](./docs/portfolio-evidence/README.md)** — Source-linked product, lifecycle, operations, design, and screenshot evidence for future case-study work
 - **[Design Guidelines](./docs/design-guidelines.md)** — UI/UX design guidelines
 
 ## 🗂 Project Structure
