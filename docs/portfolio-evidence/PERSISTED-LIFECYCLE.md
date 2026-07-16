@@ -86,30 +86,32 @@ test-backed behavior from production evidence; no live environment was inspected
 
 - **Shipped in development** — recommendation jobs use two BullMQ attempts with
   exponential backoff starting at three seconds. Each failed attempt writes the
-  recommendation as `failed` and rethrows so BullMQ can retry; the next attempt writes
-  `processing` again and can later complete the same persisted record. Final versus
-  retryable failures are distinguished in queue metrics/logging.
+  recommendation as `failed` and rethrows so BullMQ can retry. Final versus retryable
+  failures are distinguished in queue metrics/logging.
   ([job options](../../apps/web/src/lib/jobQueue.ts#L162-L167),
   [failure path](../../apps/web/src/lib/workers/recommendationWorker.ts#L116-L174),
   [attempt logging](../../apps/web/src/lib/workers/recommendationWorker.ts#L205-L248))
 
-- **Shipped in development** — there is a recovery visibility gap: the browser stops
-  polling as soon as it observes `status=failed`, even though BullMQ may still have its
-  second attempt pending. A later successful retry updates the persisted record, but the
-  already-stopped client needs a reload or another explicit refetch to observe it. The
-  failed-result button starts a fresh quiz; it does not retry the same record or job.
+- **Shipped in development** — the current recovery contract has a visibility gap. The
+  browser stops polling as soon as it observes `status=failed`, even though BullMQ may
+  still run its next attempt. That worker retry marks the same persisted record as
+  `processing` and can later complete it successfully. Because the browser has already
+  stopped polling, it sees the recovered result only after a reload or explicit refetch.
+  The failed-state action starts a fresh quiz; it does not retry the existing record or
+  BullMQ job.
   ([poll stop condition](../../apps/web/src/hooks/useRecommendation.ts#L67-L85),
   [worker retry transition](../../apps/web/src/lib/workers/recommendationWorker.ts#L116-L150),
   [failed-result action](../../apps/web/src/app/results/%5Bid%5D/ResultsIdClient.tsx#L31-L44))
 
-- **Shipped in development** — if Redis is absent or `queue.add()` fails, creation falls
-  back to a detached inline pipeline against the already-created record. Inline work
-  persists the same processing/stage/completed/failed states, but has no automatic retry.
-  This code behavior conflicts with the current service doc's statement that queue-backed
-  recommendation creation requires Redis.
+- **Shipped in development** — if Redis is absent or `queue.add()` fails, recommendation
+  creation falls back to detached inline processing against the already-created persisted
+  record. The inline path writes the same processing, stage, completion, and failure state
+  used by the polling contract, so the UI keeps polling the same result URL and API. It
+  does not receive BullMQ retry behavior. The
+  [service documentation](/docs/SERVICES#graceful-degradation) is aligned with this
+  fallback.
   ([fallback dispatch](../../apps/web/src/features/recommendation/jobs.ts#L118-L139),
-  [inline processor](../../apps/web/src/features/recommendation/jobs.ts#L242-L306),
-  [stale service note](../SERVICES.md#graceful-degradation))
+  [inline processor](../../apps/web/src/features/recommendation/jobs.ts#L242-L306))
 
 - **Shipped in development** — provider calls have scoped timeouts, including OpenAI
   request budgets and TMDB fetch aborts, but the main recommendation BullMQ job has no
