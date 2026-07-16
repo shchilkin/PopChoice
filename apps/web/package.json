@@ -11,6 +11,7 @@
     "dev": "next dev",
     "enqueue:catalog-maintenance": "NODE_OPTIONS=\"--require ./scripts/coolify-runtime-env.cjs\" tsx --env-file=.env scripts/enqueue-catalog-maintenance.ts",
     "eval:recommendations": "tsx scripts/evaluate-recommendations.ts",
+    "eval:recommendations:duo": "tsx scripts/evaluate-controlled-duo.ts",
     "fix": "npm run lint:fix && npm run format:write",
     "lint": "eslint .",
     "lint:check": "eslint .",

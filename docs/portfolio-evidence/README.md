@@ -23,6 +23,9 @@ This directory is a compact handoff for a future PopChoice case-study update in
   audience variants, taste controls, result actions, and account boundaries.
 - [Recommendation scenario](/docs/portfolio-evidence/RECOMMENDATION-SCENARIO): one
   reproducible deterministic, memory-aware scenario.
+- [Controlled Duo quality](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY): a
+  fixed-candidate compromise protocol with a credit-free validation mode and an
+  explicitly manual quality-review boundary.
 - [Persisted lifecycle](/docs/portfolio-evidence/PERSISTED-LIFECYCLE): API,
   persistence, queue, polling, terminal states, and recovery evidence.
 - [Operations](/docs/portfolio-evidence/OPERATIONS): operator surfaces and their

@@ -29,6 +29,7 @@ This does not verify every development feature on the live product.
 | Result URLs survive reload and can be shared                          | **Shipped in development** | [result GET](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/app/api/recommendations/%5Bid%5D/route.ts), [results view](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/app/results/%5Bid%5D/RecommendationResultsView.tsx)   |
 | Feedback affects durable signed-in movie memory                       | **Shipped in development** | [feedback API](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/app/api/recommendations/%5Bid%5D/feedback/route.ts), [recommendation e2e](https://github.com/shchilkin/PopChoice/blob/development/apps/web/e2e/recommendation.spec.ts)              |
 | PopChoice has deterministic recommendation regression gates           | **Shipped in development** | [fixtures](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/features/recommendation/evals/fixtures.ts), [CI](https://github.com/shchilkin/PopChoice/blob/development/.github/workflows/pr.yml)                                                      |
+| A fixed-candidate Duo quality-review protocol is executable           | **Shipped in development** | [protocol](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY), [implementation](https://github.com/shchilkin/PopChoice/blob/development/apps/web/src/features/recommendation/evals/controlledDuoQuality.ts)                                                               |
 | Protected operator surfaces are live and routinely used               | **Anecdotal / unverified** | Code map in [Operations](/docs/portfolio-evidence/OPERATIONS); no authenticated live inspection performed                                                                                                                                                               |
 | The recommendation engine improved conversion, accuracy, or retention | **Anecdotal / unverified** | No product analytics dataset or approved metric was found                                                                                                                                                                                                               |
 
@@ -42,11 +43,12 @@ production when deterministic local evidence was used.
 
 ## 4. Recommendation scenario
 
-Use [feedback-memory repeat avoidance](/docs/portfolio-evidence/RECOMMENDATION-SCENARIO).
-It is reproducible, bounded, and credit-free. Present it as a deterministic
-development regression scenario, not a production recommendation or accuracy
-result. A real-provider capture remains blocked on explicit staging budget and
-capture approval.
+Use [feedback-memory repeat avoidance](/docs/portfolio-evidence/RECOMMENDATION-SCENARIO)
+for the reproducible deterministic regression example. Use the
+[Controlled Duo protocol](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY) only
+to describe how the next quality review is structured. The protocol is ready,
+but a real-provider result and owner verdict remain blocked on explicit budget
+approval.
 
 ## 5. Screenshot and asset manifest
 
