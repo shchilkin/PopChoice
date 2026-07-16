@@ -1,0 +1,87 @@
+{
+  "automatedChecksPassed": false,
+  "generatedAt": "2026-07-16T13:43:29.367Z",
+  "manualReviewQuestions": [
+    "Does the selected film feel like a fair bridge rather than a win for only Alex or Sam?",
+    "Does the explanation connect concrete qualities of the film to both profiles instead of listing prompt keywords?",
+    "Would the owner accept this as a credible recommendation for the stated night?"
+  ],
+  "mode": "live",
+  "protocolChecks": [
+    {
+      "details": "Both participant records match the production quiz input schema.",
+      "id": "valid-people",
+      "label": "Valid participant inputs",
+      "passed": true
+    },
+    {
+      "details": "4 candidate titles are unique.",
+      "id": "unique-candidates",
+      "label": "Unique bounded candidates",
+      "passed": true
+    },
+    {
+      "details": "Every candidate avoids horror and is at most 125 minutes.",
+      "id": "candidate-hard-constraints",
+      "label": "Candidate hard constraints",
+      "passed": true
+    },
+    {
+      "details": "3 candidates are pre-declared as plausible bridges with signals for both profiles.",
+      "id": "bridge-candidate-coverage",
+      "label": "Bridge candidate coverage",
+      "passed": true
+    }
+  ],
+  "providerCallCount": 1,
+  "response": {
+    "description": "Movie night mission accepted! The best pick for Alex and Sam is The Grand Budapest Hotel. It’s a great bridge between Alex’s love of whimsical, romantic, humane charm and Sam’s taste for stylish, energetic momentum. The compromise works through tone and visual style: it’s warm, playful, and carefully crafted, but it also moves with real comic caper energy. With its whimsical comedy, elegant pacing, and charming friendship at the center, it fits the group’s shared wish for something stylish, engaging, and under 125 minutes.",
+    "title": "The Grand Budapest Hotel"
+  },
+  "responseChecks": [
+    {
+      "details": "The provider response matches the production ranking response schema.",
+      "id": "response-shape",
+      "label": "Response shape",
+      "passed": true
+    },
+    {
+      "details": "Selected title \"The Grand Budapest Hotel\" belongs to the fixed candidate set.",
+      "id": "bounded-selection",
+      "label": "Bounded selection",
+      "passed": true
+    },
+    {
+      "details": "The selected title is not one of the pre-declared bridge candidates.",
+      "id": "bridge-selection",
+      "label": "Bridge selection",
+      "passed": false
+    },
+    {
+      "details": "The explanation names both participants.",
+      "id": "participant-names",
+      "label": "Participant names",
+      "passed": true
+    },
+    {
+      "details": "The explanation represents at least one Alex taste signal.",
+      "id": "alex-representation",
+      "label": "Alex taste representation",
+      "passed": true
+    },
+    {
+      "details": "The explanation represents at least one Sam taste signal.",
+      "id": "sam-representation",
+      "label": "Sam taste representation",
+      "passed": true
+    },
+    {
+      "details": "Explanation is at least 120 characters.",
+      "id": "specific-explanation",
+      "label": "Specific explanation",
+      "passed": true
+    }
+  ],
+  "reviewStatus": "blocked-by-automated-checks",
+  "status": "automated-checks-failed"
+}

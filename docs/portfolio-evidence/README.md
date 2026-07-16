@@ -13,6 +13,7 @@ This directory is a compact handoff for a future PopChoice case-study update in
 | Label                      | Meaning                                                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Production verified**    | Observed on the public production surface on the stated date.                                                 |
+| **Development verified**   | Observed in a controlled run against development code; not production behavior.                               |
 | **Shipped in development** | Implemented and backed by code/tests on `development`; not automatically claimed as live production behavior. |
 | **Planned**                | Documented future work or issue-backed direction, not current behavior.                                       |
 | **Anecdotal / unverified** | Owner recollection or a plausible historical statement without enough primary evidence.                       |
@@ -24,8 +25,8 @@ This directory is a compact handoff for a future PopChoice case-study update in
 - [Recommendation scenario](/docs/portfolio-evidence/RECOMMENDATION-SCENARIO): one
   reproducible deterministic, memory-aware scenario.
 - [Controlled Duo quality](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY): a
-  fixed-candidate compromise protocol with a credit-free validation mode and an
-  explicitly manual quality-review boundary.
+  fixed-candidate compromise protocol with a credit-free validation mode, one
+  recorded rejected live result, and an explicitly manual quality-review boundary.
 - [Persisted lifecycle](/docs/portfolio-evidence/PERSISTED-LIFECYCLE): API,
   persistence, queue, polling, terminal states, and recovery evidence.
 - [Operations](/docs/portfolio-evidence/OPERATIONS): operator surfaces and their
