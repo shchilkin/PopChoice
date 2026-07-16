@@ -54,8 +54,14 @@ real-user satisfaction, live model behavior, production latency, catalog
 coverage, or whether the same inputs would select the same real film from the
 current production catalog.
 
-**Planned capture.** If a portfolio case study needs a real-provider scenario,
-run the same scenario manually in a safe staging environment with an explicitly
-approved API budget, record the candidate-set provenance and exact build SHA,
-and redact provider/request identifiers. Do not reuse production accounts or
-create production recommendations for the capture.
+## Controlled two-taste follow-up
+
+**Shipped in development — protocol ready, provider run not performed.** The
+[Controlled Duo quality protocol](/docs/portfolio-evidence/CONTROLLED-DUO-QUALITY)
+uses `Amélie` and `Mad Max: Fury Road` as contrasting references, four fixed
+real-film candidates, shared hard constraints, one optional ranking call, and a
+separate owner-review step. Its default command makes zero provider calls.
+
+This follow-up is intentionally separate from the deterministic `32/32` report.
+Adding a prepared protocol must not inflate the CI count or imply that
+subjective quality has passed.
