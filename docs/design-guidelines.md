@@ -371,15 +371,18 @@ PopChoice uses **Framer Motion** (`motion/react`) for all page transitions and m
 
 ### Quiz Flow
 
-1. **Intro:** Solo vs. Group mode selection (two large option cards)
-2. **Group Setup:** Name input list with add/remove, purple accent color
-3. **Questions (4 steps):** Animated slide transitions, progress dots, step counter
-   - Q1: Favorite movie (text input)
-   - Q2: Old or new? (era selection cards)
-   - Q3: Mood / genres (multi-select genre chips with icons)
-   - Q4: Tone preference (4 tone cards: Light, Balanced, Serious, Dark)
-4. **Between Persons:** Hand-off screen for group mode
-5. Navigation: Back/Next buttons, Next disabled until valid answer
+1. **Match depth:** Fast Pick vs. Normal Match (two large option cards)
+2. **Audience:** Solo, Duo, or Group
+3. **Duo/Group setup:** two names for Duo; three to six for Group
+4. **Questions:** animated slide transitions, progress dots, and step counter
+   - Fast Pick: intent, hard avoids, discovery appetite
+   - Normal Match: optional reference movie, era, mood, tone, discovery appetite,
+     hard avoids, optional actor
+5. **Between persons:** same-device hand-off screen for Duo/Group
+6. **Navigation:** Back/Next buttons; Next is disabled until required input is valid
+
+Multi-device rooms, invite links, QR codes, readiness state, and projector mode
+are future product direction and are not part of this shipped pattern.
 
 ### Loading Page
 

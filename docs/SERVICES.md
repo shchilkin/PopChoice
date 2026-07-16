@@ -73,7 +73,13 @@ Browser → POST /api/recommendations/[id]/more-picks
 
 ### Graceful degradation
 
-When `REDIS_URL` is not set (e.g., local dev without Redis), `startMorePicksRequest()` falls back to **inline** processing and the route still returns `202 Accepted` so the UI polls the same way. Queue-backed recommendation creation and backoffice recommendation eval runs require Redis; the worker process and BullMQ queues are disabled without it.
+When `REDIS_URL` is not set (for example, local development without Redis),
+recommendation creation and `startMorePicksRequest()` both fall back to detached
+**inline** processing against their already-created persisted records. The
+routes return the same accepted response shape so the UI can poll normally.
+Inline recommendation work has no BullMQ retry. Backoffice recommendation eval
+runs still require Redis; the worker process and BullMQ queues are disabled
+without it.
 
 ### Starting workers
 
