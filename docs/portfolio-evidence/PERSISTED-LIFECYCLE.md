@@ -103,6 +103,17 @@ test-backed behavior from production evidence; no live environment was inspected
   [worker retry transition](../../apps/web/src/lib/workers/recommendationWorker.ts#L116-L150),
   [failed-result action](../../apps/web/src/app/results/%5Bid%5D/ResultsIdClient.tsx#L31-L44))
 
+- **Shipped in development, controlled capture** — the portfolio evidence path runs a
+  real deterministic Duo quiz to completion, then moves the disposable persisted record
+  through `processing/ai-ranking`, `failed/failed`, and back to
+  `completed/complete`. Reloading the same slug after restoration renders the same Duo
+  result. This verifies the read model and browser states, not BullMQ retry execution or
+  production recovery timing.
+  ([capture path](../../apps/web/e2e/recommendation.spec.ts),
+  [progress](./assets/05-deterministic-progress.png),
+  [failure](./assets/07-deterministic-failure.png),
+  [result after reload](./assets/08-deterministic-duo-reload.png))
+
 - **Shipped in development** — if Redis is absent or `queue.add()` fails, recommendation
   creation falls back to detached inline processing against the already-created persisted
   record. The inline path writes the same processing, stage, completion, and failure state

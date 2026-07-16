@@ -1,8 +1,14 @@
+import pg from 'pg';
 import { expect, test } from 'playwright/test';
 
 import { disableE2EMotion, readSession, registerUser, uniqueEmail } from './helpers';
 
 import type { Page } from 'playwright/test';
+
+const { Client } = pg;
+const capturePortfolioEvidence = process.env.CAPTURE_PORTFOLIO_EVIDENCE === '1';
+const e2eDatabaseUrl =
+  process.env.E2E_DATABASE_URL ?? 'postgresql://popchoice_e2e@127.0.0.1:55432/popchoice_e2e';
 
 async function readMovieMemory(page: Page) {
   return page.evaluate(async () => {
@@ -37,6 +43,74 @@ async function expectDeterministicDuoResults(page: Page) {
   await expect(page.getByRole('heading', { name: 'We found your duo film' })).toBeVisible();
   await expect(page.locator('span').filter({ hasText: /^Top Pick$/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'The Matrix' })).toBeVisible();
+}
+
+async function captureDeterministicDuoEvidence(page: Page) {
+  if (!capturePortfolioEvidence) return;
+
+  const slug = new URL(page.url()).pathname.split('/').at(-1);
+  if (!slug) throw new Error('Expected a persisted recommendation slug before evidence capture.');
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => {
+    window.localStorage.setItem('popchoice_locale', 'en');
+    window.localStorage.setItem('theme', 'dark');
+  });
+  await page.reload();
+  await expectDeterministicDuoResults(page);
+  await captureEvidenceScreenshot(page, '06-deterministic-duo-result.png');
+
+  try {
+    await setPersistedEvidenceState(slug, 'processing', 'ai-ranking');
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Finding your perfect pick' })).toBeVisible();
+    await expect(page.getByText('Choosing the strongest matches')).toBeVisible();
+    await captureEvidenceScreenshot(page, '05-deterministic-progress.png');
+
+    await setPersistedEvidenceState(slug, 'failed', 'failed', 'Controlled E2E failure state');
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'The projector jammed' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start a fresh quiz' })).toBeVisible();
+    await captureEvidenceScreenshot(page, '07-deterministic-failure.png');
+  } finally {
+    await setPersistedEvidenceState(slug, 'completed', 'complete');
+  }
+
+  await page.reload();
+  await expectDeterministicDuoResults(page);
+  await captureEvidenceScreenshot(page, '08-deterministic-duo-reload.png');
+}
+
+async function setPersistedEvidenceState(
+  slug: string,
+  status: 'processing' | 'completed' | 'failed',
+  stage: 'ai-ranking' | 'complete' | 'failed',
+  error: string | null = null,
+) {
+  const client = new Client({ connectionString: e2eDatabaseUrl });
+  await client.connect();
+
+  try {
+    const result = await client.query(
+      `UPDATE recommendations
+          SET status = $1,
+              stage = $2,
+              error = $3,
+              completed_at = CASE WHEN $1 = 'completed' THEN now() ELSE NULL END
+        WHERE slug = $4`,
+      [status, stage, error, slug],
+    );
+    expect(result.rowCount).toBe(1);
+  } finally {
+    await client.end();
+  }
+}
+
+async function captureEvidenceScreenshot(page: Page, fileName: string) {
+  await page.waitForTimeout(500);
+  await page.screenshot({
+    path: new URL(`../../../docs/portfolio-evidence/assets/${fileName}`, import.meta.url).pathname,
+  });
 }
 
 async function completeNormalSoloQuestions(page: Page, options: { referenceMovie?: string } = {}) {
@@ -139,6 +213,7 @@ test('submits the normal duo quiz and renders deterministic duo results', async 
   await page.getByRole('button', { name: /Find My Movie/ }).click();
 
   await expectDeterministicDuoResults(page);
+  await captureDeterministicDuoEvidence(page);
 });
 
 test('submits the normal group quiz and renders deterministic group results', async ({ page }) => {

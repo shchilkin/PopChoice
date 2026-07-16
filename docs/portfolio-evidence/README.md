@@ -48,6 +48,24 @@ any protected operator surface.
 ## Screenshot policy
 
 Screenshots in `assets/` use the English locale, a 1440 × 900 desktop viewport,
-reduced/disabled motion, no credentials, and no personal data. The current four
-captures are read-only public production states. Images are evidence of UI
-state, not proof of AI quality, recommendation quality, or product usage.
+reduced/disabled motion, no credentials, and no personal data. Assets `01`–`04`
+are read-only public production states. Assets `05`–`08` come from the isolated
+deterministic development harness: the Duo quiz completes through the real
+browser/API/database path, while progress and failure are controlled persisted
+states of that same result record. Images are evidence of UI and persistence
+contracts, not proof of AI quality, recommendation quality, product usage, or a
+real production incident.
+
+## Reproduce the deterministic captures
+
+Run the capture only against the disposable E2E database:
+
+```bash
+npm run test:e2e:setup
+CAPTURE_PORTFOLIO_EVIDENCE=1 npm run test:e2e:run -- --grep "normal duo"
+npm run test:e2e:down
+```
+
+The capture branch inside `apps/web/e2e/recommendation.spec.ts` writes the four
+development screenshots, then restores the record to `completed`. The ordinary
+E2E run does not write evidence assets.
