@@ -86,6 +86,8 @@ Use this checklist for lightweight, periodic maintainability reviews of PopChoic
 
 - [x] Refactor the quiz submit/results handoff so navigation state is explicit.
 - [ ] Keep API route handlers thin and move growing account/movie-memory logic into `src/features` when needed.
-- [ ] Use positive `liked` memory as a ranking signal, not only stored history.
-- [ ] Add catalog-health reporting for missing posters, localized metadata, duplicate identities, and stale TMDB data.
+- [x] Use positive `liked` memory as a ranking signal, not only stored history.
+- [x] Add catalog-health reporting for missing posters, localized metadata, duplicate identities, and stale TMDB data.
 - [ ] Standardize conventions shared by `apps/web`, `packages/shared`, and root `services/*` packages.
+- [ ] Complete the Recommendation V2 quality gate in [#606](https://github.com/shchilkin/PopChoice/issues/606) before landing the remaining Normal Match compromise work in [#608](https://github.com/shchilkin/PopChoice/issues/608).
+- [ ] Keep new implementation work inside the focused [active roadmap milestones](./ROADMAP-ARCHITECTURE.md#active-roadmap-milestones) instead of adding untracked bullets to broad legacy milestones.
