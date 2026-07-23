@@ -35,7 +35,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "openai": "^6.45.0",
+    "openai": "^6.48.0",
     "pg": "^8.22.0",
     "pino": "^10.3.1",
     "zod": "^4.4.3"

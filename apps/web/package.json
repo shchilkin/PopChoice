@@ -30,7 +30,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@langchain/core": "^1.2.1",
+    "@langchain/core": "^1.2.3",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.220.0",
     "@opentelemetry/instrumentation": "^0.220.0",
@@ -53,7 +53,7 @@
     "nanoid": "^5.1.16",
     "next": "^16.2.10",
     "next-themes": "^0.4.6",
-    "openai": "^6.45.0",
+    "openai": "^6.48.0",
     "pg": "^8.22.0",
     "pino": "^10.3.1",
     "prom-client": "^15.1.3",
