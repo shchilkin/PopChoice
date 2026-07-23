@@ -38,7 +38,11 @@ GitHub Actions builds
 `apps/figma-make/Dockerfile`. Coolify must consume that prebuilt image as a
 standalone Docker Image application.
 
+- Development review:
+  <https://figma-make.dev.pop-choice.shchilkin.dev>
 - Do not add this prototype to `coolify.compose.yml`.
 - Do not configure a Nixpacks or Dockerfile source build in Coolify.
 - Do not build the repository on the production VPS.
 - The container serves the static app on port `80` and exposes `/healthz`.
+- Keep the Coolify resource pinned to a reviewed SHA tag. The shared Compose
+  deploy webhook does not update this standalone application.

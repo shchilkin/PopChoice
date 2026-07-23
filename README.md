@@ -243,7 +243,8 @@ The historical prototype lives in [`apps/figma-make`](./apps/figma-make) with
 its source commit and Figma provenance recorded in the app README. CI publishes
 it as `ghcr.io/shchilkin/popchoice/figma-make:<tag>`. It runs as a standalone
 Coolify Docker Image application and is intentionally not part of
-`coolify.compose.yml`.
+`coolify.compose.yml`. The development review deployment is available at
+[figma-make.dev.pop-choice.shchilkin.dev](https://figma-make.dev.pop-choice.shchilkin.dev).
 
 ### Troubleshooting
 
@@ -275,7 +276,7 @@ npm run dev:backoffice:fixtures # backoffice against deterministic local fixture
 - **[Services Guide](./docs/SERVICES.md)** — Background services documentation
 - **[Maintainability Checklist](./docs/MAINTAINABILITY-CHECKLIST.md)** — Periodic checklist for keeping the codebase maintainable
 - **[CI/CD Documentation](./docs/CI-CD.md)** — GitHub Actions workflow and deployment
-- **[Coolify Deployment](./docs/COOLIFY.md#service-links)** — Runtime service links for the app, docs, Bull Board, Storybook, Backoffice, and Grafana
+- **[Coolify Deployment](./docs/COOLIFY.md#service-links)** — Runtime service links for the app, docs, Bull Board, Storybook, Figma Make, Backoffice, and Grafana
 - **[Architecture Roadmap](./docs/ROADMAP-ARCHITECTURE.md)** — Practical phased direction for cleaner boundaries and future monorepo evolution
 - **[Recommendation Roadmap](./docs/RECOMMENDATION-ROADMAP.md)** — Staged plan for improving quiz accuracy, adding taste swipe mode, and moving toward TMDB-first discovery
 - **[Portfolio Evidence Pack](./docs/portfolio-evidence/README.md)** — Source-linked product, lifecycle, operations, design, and screenshot evidence for future case-study work
