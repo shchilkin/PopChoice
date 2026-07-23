@@ -81,6 +81,8 @@ jobs:
             dockerfile: apps/backoffice/Dockerfile
           - name: docs
             dockerfile: apps/docs/Dockerfile
+          - name: figma-make
+            dockerfile: apps/figma-make/Dockerfile
           - name: db-migrate
             dockerfile: services/db-migrate/Dockerfile
           - name: movie-discovery

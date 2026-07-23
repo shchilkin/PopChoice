@@ -10,8 +10,17 @@
     "**/playwright-report/**",
     "**/test-results/**",
     ".turbo/**",
+    // Preserve unused components from the original Figma Make export without
+    // treating them as maintained application code.
+    "apps/figma-make/src/app/components/figma/**",
+    "apps/figma-make/src/app/components/ui/**",
+    "apps/figma-make/src/guidelines/**",
   ],
-  "entry": ["apps/web/scripts/coolify-runtime-env.cjs", "docs/index.mdx"],
+  "entry": [
+    "apps/figma-make/src/main.tsx",
+    "apps/web/scripts/coolify-runtime-env.cjs",
+    "docs/index.mdx",
+  ],
   "ignoreDependencies": [
     "@storybook/nextjs-vite",
     "@opentelemetry/instrumentation",
@@ -19,13 +28,19 @@
     "@pop-choice/shared",
     "pino-pretty",
   ],
-  "ignoreUnresolvedImports": ["collections/server"],
+  "ignoreUnresolvedImports": ["/src/main.tsx", "collections/server"],
   "duplicates": {
     "mode": "mild",
     "minTokens": 50,
     "minLines": 5,
     "ignoreImports": true,
-    "ignore": ["**/*.stories.*", "**/*.test.*", "**/*.spec.*", "**/e2e/**"],
+    "ignore": [
+      "**/*.stories.*",
+      "**/*.test.*",
+      "**/*.spec.*",
+      "**/e2e/**",
+      "apps/figma-make/src/**",
+    ],
   },
   "health": {
     "maxCyclomatic": 20,
@@ -36,6 +51,7 @@
       "**/*.test.*",
       "**/*.spec.*",
       "**/e2e/**",
+      "apps/figma-make/src/**",
       "apps/web/public/mockServiceWorker.js",
     ],
   },

@@ -233,6 +233,18 @@ Open [http://localhost:6006](http://localhost:6006) to browse and develop UI com
 The static Storybook build is also published as a GHCR image and can be deployed
 as a separate Coolify service for design review.
 
+### Optional — original Figma Make prototype
+
+```bash
+npm run dev:figma-make
+```
+
+The historical prototype lives in [`apps/figma-make`](./apps/figma-make) with
+its source commit and Figma provenance recorded in the app README. CI publishes
+it as `ghcr.io/shchilkin/popchoice/figma-make:<tag>`. It runs as a standalone
+Coolify Docker Image application and is intentionally not part of
+`coolify.compose.yml`.
+
 ### Troubleshooting
 
 | Problem                             | Solution                                                |
@@ -273,8 +285,9 @@ npm run dev:backoffice:fixtures # backoffice against deterministic local fixture
 
 ```text
 apps/
-├── docs/               # Fumadocs documentation site rendering docs/
 ├── backoffice/         # Operator catalog-health, TMDB review, and repair UI
+├── docs/               # Fumadocs documentation site rendering docs/
+├── figma-make/         # Preserved original Figma Make UI prototype
 ├── web/
 │   └── src/
 │       ├── app/           # Next.js app routes, pages, and HTTP boundaries
@@ -316,6 +329,7 @@ For ownership rules inside `apps/web/src`, see [docs/BOUNDARIES.md](./docs/BOUND
 # Development
 npm run dev                         # Start development server (repo root)
 npm run dev:docs                    # Start documentation site at http://localhost:3003
+npm run dev:figma-make              # Start the original Figma Make prototype
 npm run dev:backoffice              # Start catalog-health and TMDB-review operator UI
 npm run setup:backoffice:fixtures   # Prepare deterministic PostgreSQL/Redis fixtures
 npm run dev:backoffice:fixtures     # Start backoffice against local fixtures
@@ -323,6 +337,7 @@ npm run setup:backoffice:local-data # Prepare seeded local DB/env/catalog for ba
 npm run build                       # Build for production (repo root)
 npm run build:bull-board            # Build Bull Board runtime entrypoint
 npm run build:docs                  # Build the documentation site
+npm run build:figma-make            # Build the static Figma Make prototype
 npm run build:backoffice            # Build the backoffice app
 npm run build:storybook             # Build static Storybook
 npm run check:backoffice            # Shared build + backoffice structure/type/test checks
@@ -366,7 +381,7 @@ For detailed development workflows and project structure, see the **[Development
 
 ## 🚀 Deploy on Coolify
 
-Production is designed to run on a VPS with [Coolify](https://coolify.io) using [`coolify.compose.yml`](./coolify.compose.yml). GitHub Actions builds PopChoice runtime images in GHCR, and Coolify pulls those prebuilt images with one shared `IMAGE_TAG` instead of compiling the monorepo on the VPS. Use separate Coolify resources for `development` staging and `production`: staging follows the moving `development` image tag, while production is promoted through the GitHub `production` Environment and the moving `production` tag or an explicit `sha-<commit>` rollback tag. See the [Coolify deployment guide](./docs/COOLIFY.md) for the stack layout, required secrets, image tags, auto-deploy webhook, and first-deploy checklist.
+Production is designed to run on a VPS with [Coolify](https://coolify.io) using [`coolify.compose.yml`](./coolify.compose.yml). GitHub Actions builds PopChoice runtime images in GHCR, and Coolify pulls those prebuilt images with one shared `IMAGE_TAG` instead of compiling the monorepo on the VPS. The Figma Make prototype follows the same no-build rule but runs as a separate Docker Image application outside Compose. Use separate Coolify resources for `development` staging and `production`: staging follows the moving `development` image tag, while production is promoted through the GitHub `production` Environment and the moving `production` tag or an explicit `sha-<commit>` rollback tag. See the [Coolify deployment guide](./docs/COOLIFY.md) for the stack layout, standalone prototype resource, required secrets, image tags, auto-deploy webhook, and first-deploy checklist.
 
 ---
 
