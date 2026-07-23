@@ -48,9 +48,11 @@ For docs ownership, navigation, and issue hygiene, use **[Documentation Governan
 
 - `npm run dev` - Start development server
 - `npm run dev:docs` - Start the Fumadocs documentation site on `http://localhost:3003`
+- `npm run dev:figma-make` - Start the preserved Figma Make prototype
 - `npm run dev:backoffice` - Start the operator backoffice UI on `http://localhost:3004` by default; override with `PORT=4030 npm run dev:backoffice`
 - `npm run build` - Build production application
 - `npm run build:docs` - Build the Fumadocs documentation site
+- `npm run build:figma-make` - Build the static Figma Make prototype
 - `npm run build:backoffice` - Build the operator backoffice app
 - `npm run start --workspace=apps/web` - Start production server
 - `npm run start --workspace=apps/docs` - Start the production documentation server after `npm run build:docs`

@@ -6,6 +6,7 @@ PopChoice is a Next.js 16 / React 19 movie recommendation app built around OpenA
 
 - `apps/web` - user-facing Next.js app, API routes, feature modules, workers, and app-local scripts.
 - `apps/bull-board` - local/production BullMQ queue dashboard.
+- `apps/figma-make` - preserved historical Figma Make prototype. Keep its UI unchanged; deploy only as a standalone Coolify Docker Image application from a GitHub Actions-built GHCR image, never through `coolify.compose.yml` or a VPS source build.
 - `packages/shared` - shared database, embedding, logging, and utility code used by root services.
 - `services/movie-discovery` - scheduled or one-shot TMDB catalog expansion.
 - `services/movie-backfill` - one-shot TMDB identity/runtime/age-rating backfill with manual-review records.

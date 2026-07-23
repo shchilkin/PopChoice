@@ -138,6 +138,7 @@ The `dependency-review` job uses `actions/dependency-review-action` to block any
 - `ghcr.io/<owner>/<repo>/bull-board`
 - `ghcr.io/<owner>/<repo>/storybook`
 - `ghcr.io/<owner>/<repo>/docs`
+- `ghcr.io/<owner>/<repo>/figma-make`
 - `ghcr.io/<owner>/<repo>/db-migrate`
 - `ghcr.io/<owner>/<repo>/movie-discovery`
 - `ghcr.io/<owner>/<repo>/movie-backfill`
@@ -162,14 +163,22 @@ rather than rebuilding from the monorepo.
 Forked pull requests still build the images for validation, but publishing is
 disabled because the GitHub token does not have package write permission.
 
-Coolify consumes the published images through `coolify.compose.yml`. The compose
-file does not build application images on the server; it pulls every PopChoice
-runtime from:
+Coolify consumes the main runtime images through `coolify.compose.yml`. The
+compose file does not build application images on the server; it pulls every
+Compose-managed PopChoice runtime from:
 
 ```ini
 APP_IMAGE_PREFIX=ghcr.io/<owner>/<repo>
 IMAGE_TAG=development
 ```
+
+The `figma-make` image is the deliberate exception to Compose ownership. It is
+deployed as its own Coolify Docker Image application from
+`ghcr.io/<owner>/<repo>/figma-make:<tag>`, serves port `80`, and has no runtime
+secrets. Coolify must pull the CI-built image; source, Nixpacks, and Dockerfile
+builds on the VPS are not supported. The shared production promotion job does
+not advance a moving `figma-make:production` tag; pin this independent
+application to a reviewed SHA tag or digest instead.
 
 For simple continuous deployment to the shared `development` Coolify resource,
 keep `IMAGE_TAG=development`, set `DEPLOYMENT_ENVIRONMENT=development`, and let
@@ -191,9 +200,11 @@ its deploy verification base URL.
 The immutable `sha-<12-char-github-sha>` tags are still published for audit and
 rollback. If you need a fully pinned rollback, set the production Coolify
 resource `IMAGE_TAG` to the previous known-good sha tag and redeploy manually.
-Every PopChoice service must use the same `IMAGE_TAG`; mixing `web`, `workers`,
-`bull-board`, `storybook`, `docs`, and service images from different commits is
-not a supported deployment shape.
+Every Compose-managed PopChoice service must use the same `IMAGE_TAG`; mixing
+`web`, `workers`, `bull-board`, `storybook`, `docs`, and service images from
+different commits is not a supported deployment shape. The standalone
+`figma-make` reference may be pinned independently because it has no runtime
+dependency on the application stack.
 
 Use GitHub Environments named `development` and `production` for deploy
 secrets. Store `COOLIFY_DEPLOY_WEBHOOK` and `COOLIFY_TOKEN` separately in each

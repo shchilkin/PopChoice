@@ -10,6 +10,11 @@ workers, Bull Board, and optional catalog/data tools. PopChoice application
 containers are pulled from GitHub Container Registry instead of being built on
 the VPS.
 
+The preserved Figma Make prototype is deployed separately from this stack. It
+uses a standalone Coolify Docker Image application and the prebuilt
+`ghcr.io/shchilkin/popchoice/figma-make:<tag>` image; it is intentionally absent
+from `coolify.compose.yml`.
+
 ## Recommended VPS shape
 
 Start with at least:
@@ -99,14 +104,15 @@ production deployments.
 Keep the long-lived operator and review surfaces on stable, memorable domains.
 The current PopChoice convention is:
 
-| Surface    | Production URL                                                                     | Local URL                               | Coolify service         | Auth notes                                                                 |
-| ---------- | ---------------------------------------------------------------------------------- | --------------------------------------- | ----------------------- | -------------------------------------------------------------------------- |
-| App        | [pop-choice.shchilkin.dev](https://pop-choice.shchilkin.dev)                       | [localhost:3000](http://localhost:3000) | `web`                   | Public user-facing app.                                                    |
-| Docs       | [docs.pop-choice.shchilkin.dev](https://docs.pop-choice.shchilkin.dev)             | [localhost:3003](http://localhost:3003) | `docs`                  | Public project documentation unless intentionally kept private.            |
-| Bull Board | [bullboard.pop-choice.shchilkin.dev](https://bullboard.pop-choice.shchilkin.dev)   | [localhost:4000](http://localhost:4000) | `bull-board`            | Operator-only. Protect with `OPERATOR_AUTH_USERNAME` and password.         |
-| Storybook  | [storybook.pop-choice.shchilkin.dev](https://storybook.pop-choice.shchilkin.dev)   | [localhost:6006](http://localhost:6006) | `storybook`             | Design-review surface. Keep private/admin-only if unreleased UI is shown.  |
-| Backoffice | [backoffice.pop-choice.shchilkin.dev](https://backoffice.pop-choice.shchilkin.dev) | [localhost:3004](http://localhost:3004) | `backoffice`            | Operator-only. Uses the same shared operator auth variables as Bull Board. |
-| Grafana    | [grafana.pop-choice.shchilkin.dev](https://grafana.pop-choice.shchilkin.dev)       | Observability stack-specific            | `observability-grafana` | Admin-only. Use Grafana auth and avoid exposing unauthenticated metrics.   |
+| Surface    | Deployed URL                                                                               | Local URL                               | Coolify service         | Auth notes                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------ | --------------------------------------- | ----------------------- | ------------------------------------------------------------------------------ |
+| App        | [pop-choice.shchilkin.dev](https://pop-choice.shchilkin.dev)                               | [localhost:3000](http://localhost:3000) | `web`                   | Public user-facing app.                                                        |
+| Docs       | [docs.pop-choice.shchilkin.dev](https://docs.pop-choice.shchilkin.dev)                     | [localhost:3003](http://localhost:3003) | `docs`                  | Public project documentation unless intentionally kept private.                |
+| Bull Board | [bullboard.pop-choice.shchilkin.dev](https://bullboard.pop-choice.shchilkin.dev)           | [localhost:4000](http://localhost:4000) | `bull-board`            | Operator-only. Protect with `OPERATOR_AUTH_USERNAME` and password.             |
+| Storybook  | [storybook.pop-choice.shchilkin.dev](https://storybook.pop-choice.shchilkin.dev)           | [localhost:6006](http://localhost:6006) | `storybook`             | Design-review surface. Keep private/admin-only if unreleased UI is shown.      |
+| Figma Make | [figma-make.dev.pop-choice.shchilkin.dev](https://figma-make.dev.pop-choice.shchilkin.dev) | Vite dev server                         | standalone application  | Public development design reference; static image with no application secrets. |
+| Backoffice | [backoffice.pop-choice.shchilkin.dev](https://backoffice.pop-choice.shchilkin.dev)         | [localhost:3004](http://localhost:3004) | `backoffice`            | Operator-only. Uses the same shared operator auth variables as Bull Board.     |
+| Grafana    | [grafana.pop-choice.shchilkin.dev](https://grafana.pop-choice.shchilkin.dev)               | Observability stack-specific            | `observability-grafana` | Admin-only. Use Grafana auth and avoid exposing unauthenticated metrics.       |
 
 For a different domain, keep the same service names and replace
 `pop-choice.shchilkin.dev` with the environment-specific base domain. In
@@ -120,6 +126,7 @@ in the domain field when required by Coolify routing:
 | `backoffice` | `3000`         |
 | `bull-board` | `3000`         |
 | `storybook`  | `80`           |
+| `figma-make` | `80`           |
 
 Local commands for the same surfaces:
 
@@ -129,6 +136,7 @@ npm run dev:docs                  # docs at http://localhost:3003
 npm run dev:backoffice            # backoffice at http://localhost:3004
 npm run dev --workspace=apps/bull-board # Bull Board at http://localhost:4000
 npm run storybook                 # Storybook at http://localhost:6006
+npm run dev:figma-make            # original Figma Make prototype
 ```
 
 For DNS, a wildcard such as `*.pop-choice.example` can reduce manual record
@@ -164,6 +172,12 @@ to promote or roll back an exact immutable release manually. Keep the same
 `IMAGE_TAG` for `web`, `workers`, `bull-board`, `storybook`, `docs`,
 `backoffice`, `movie-discovery`, and `movie-backfill`; running
 mixed commits is intentionally not supported.
+
+The standalone `figma-make` application is not governed by the Compose
+`IMAGE_TAG`. Pin it to a reviewed `sha-<12-char-github-sha>` or image digest,
+or use the moving `development` tag for a non-production review environment.
+The shared production promotion does not publish a moving
+`figma-make:production` tag.
 
 If the GHCR packages are private, add registry credentials in Coolify so the VPS
 can pull `ghcr.io/shchilkin/popchoice/*`. Public packages do not need registry
@@ -779,6 +793,37 @@ The service is static nginx output. It does not need application secrets,
 Postgres, Redis, OpenAI, or TMDB credentials. Keep it on the same `IMAGE_TAG` as
 the app services so component docs match the deployed code.
 
+## Standalone Figma Make prototype
+
+Create this prototype as a separate Coolify **Docker Image** application, not
+as a service in the PopChoice Compose resource:
+
+The development review resource is currently:
+
+- URL:
+  <https://figma-make.dev.pop-choice.shchilkin.dev>
+- Coolify application UUID: `f27ye33g857wwebdxxbjzjy0`
+- Image repository: `ghcr.io/shchilkin/popchoice/figma-make`
+- Container port: `80`
+- Health check: `GET /healthz`
+- Deployment mode: reviewed SHA tag, with Git auto-deploy disabled
+
+1. Wait for `.github/workflows/container-images.yml` to publish the reviewed
+   image from GitHub Actions.
+2. Set the image to
+   `ghcr.io/shchilkin/popchoice/figma-make:sha-<12-char-github-sha>` or, for a
+   shared development review surface,
+   `ghcr.io/shchilkin/popchoice/figma-make:development`.
+3. Expose container port `80` and configure `/healthz` as the health check.
+4. Assign a dedicated design-review domain.
+5. Do not add runtime secrets, PostgreSQL, Redis, OpenAI, or TMDB variables.
+6. If the package is private, configure GHCR pull credentials on this Coolify
+   resource.
+
+Do not connect the Git repository as a build source. In particular, do not use
+Nixpacks or ask Coolify to build `apps/figma-make/Dockerfile`; the production
+VPS only pulls the artifact built by GitHub Actions.
+
 ## Pull request previews
 
 Use Coolify's GitHub App integration for PR previews so deployments can be
@@ -832,6 +877,7 @@ ghcr.io/shchilkin/popchoice/workers
 ghcr.io/shchilkin/popchoice/bull-board
 ghcr.io/shchilkin/popchoice/storybook
 ghcr.io/shchilkin/popchoice/docs
+ghcr.io/shchilkin/popchoice/figma-make
 ghcr.io/shchilkin/popchoice/db-migrate
 ghcr.io/shchilkin/popchoice/movie-discovery
 ghcr.io/shchilkin/popchoice/movie-backfill
