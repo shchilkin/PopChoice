@@ -99,7 +99,7 @@
     "tailwindcss": "^4",
     "typescript": "6.0.3",
     "vitest": "^4.1.10",
-    "webpack": "^5.108.4"
+    "webpack": "^5.109.0"
   },
   "engines": {
     "node": ">=24",
