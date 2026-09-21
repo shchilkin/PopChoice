@@ -43,7 +43,7 @@
     "@opentelemetry/sdk-trace-base": "^2.8.0",
     "@opentelemetry/semantic-conventions": "^1.43.0",
     "@pop-choice/shared": "*",
-    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-query": "^5.103.1",
     "@xstate/react": "^6.1.0",
     "bullmq": "^5.79.2",
     "canvas-confetti": "^1.9.4",
@@ -63,7 +63,7 @@
     "redis": "^5.12.1",
     "serve": "^14.2.6",
     "tsx": "^4.23.13",
-    "xstate": "^5.32.6",
+    "xstate": "^5.33.2",
     "zod": "^4.6.2"
   },
   "devDependencies": {
