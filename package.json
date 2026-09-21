@@ -77,9 +77,9 @@
     "fallow": "2.101.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "oxfmt": "0.67.0",
-    "oxlint": "1.82.0",
-    "turbo": "^2.10.12",
+    "oxfmt": "0.68.0",
+    "oxlint": "1.83.0",
+    "turbo": "^2.10.13",
     "vitest": "^4.1.11"
   },
   "overrides": {
