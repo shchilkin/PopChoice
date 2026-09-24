@@ -76,7 +76,11 @@ The main remaining risks are:
 
 ### Issues Still Present
 
-- The current quiz is still a first-generation guided flow. It should evolve toward a signal-based recommendation model with explicit Solo/Duo/Group audience modes, Fast/Normal effort modes, a shorter "tonight" quiz, a swipe-based mode for movie-heavy users, and a TMDB-first catalog strategy. See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP).
+- The guided flow now has explicit Solo/Duo/Group audiences, Fast/Normal depth,
+  TMDB-first source policy, and an internal taste-signal adapter. It still needs
+  participant-specific compromise behavior, the full Recommendation V2 quality
+  matrix, and a visitor-facing swipe mode. See
+  [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP).
 - Route-local compatibility re-export files still exist under `src/app/api/movie-recommendation`; future recommendation changes should continue moving real logic into `src/features/recommendation`.
 - Account settings/profile/provider identity remain intentionally thin.
 
@@ -88,6 +92,23 @@ Reference: use [BOUNDARIES.md](/docs/BOUNDARIES) as the current ownership baseli
 - If a roadmap item is too large for one PR, keep the original issue as an epic/umbrella and create focused child issues for implementation-sized work.
 - Link roadmap items to concrete issues whenever possible so completed work can be checked off and future agents do not have to rediscover context.
 - Keep unlinked bullets for direction-setting only; convert them into issues once they become actionable.
+
+### Active Roadmap Milestones
+
+The roadmap was refreshed on 2026-07-17. Focused GitHub milestones now separate
+product releases from longer-running operator and platform tracks:
+
+- [v0.3.0 Recommendation V2 Foundation](https://github.com/shchilkin/PopChoice/milestone/6)
+- [v0.4.0 Taste Swipe MVP](https://github.com/shchilkin/PopChoice/milestone/7)
+- [Group Rooms](https://github.com/shchilkin/PopChoice/milestone/8)
+- [Catalog & Recommendation Intelligence](https://github.com/shchilkin/PopChoice/milestone/9)
+- [Backoffice Hardening](https://github.com/shchilkin/PopChoice/milestone/10)
+- [Platform Operations](https://github.com/shchilkin/PopChoice/milestone/11)
+
+The old `Security` milestone is closed because all tracked issues are complete.
+The old `App improvements` milestone is retained as `Legacy App Improvements`
+for historical umbrella issues; new implementation work belongs in focused
+milestones and dependency-declared child issues.
 
 ## Target Direction
 
@@ -306,7 +327,7 @@ work implementation-sized:
 - [x] Cover the current recommendation entry matrix in browser smoke tests: Normal Solo, Normal Duo, Normal Group, Fast Pick Solo, Fast Pick Duo, and Fast Pick Group.
 - [x] [#476](https://github.com/shchilkin/PopChoice/issues/476): add an AI recommendation eval harness with deterministic fixtures by default and optional live model/provider runs.
 - [x] [#490](https://github.com/shchilkin/PopChoice/issues/490): add a scheduled or manually triggered real-data recommendation eval workflow with seeded database data and real catalog retrieval.
-- Add [#606](https://github.com/shchilkin/PopChoice/issues/606) deterministic recommendation scenarios that validate audience behavior, match-depth behavior, source-strategy behavior, and meaningful-pick quality, not only response shape.
+- Add [#606](https://github.com/shchilkin/PopChoice/issues/606) deterministic recommendation scenarios that validate audience behavior, match-depth behavior, source-strategy behavior, and meaningful-pick quality, not only response shape. This is the unblocked quality gate for the remaining Normal Match compromise work in #608.
 - [x] [#618](https://github.com/shchilkin/PopChoice/issues/618): classify and refactor the current seeded `--real-data` checks so they are clearly catalog retrieval/candidate-availability evals and can be reused by worker jobs.
 - [x] [#616](https://github.com/shchilkin/PopChoice/issues/616): persist recommendation eval run/result history for backoffice and worker reports.
 - [x] [#617](https://github.com/shchilkin/PopChoice/issues/617): add bounded non-live BullMQ jobs for environment retrieval and source-strategy evals against the configured database.
@@ -351,47 +372,41 @@ work implementation-sized:
 ### Recommendation Experience Track
 
 - Define Recommendation V2 in [#610](https://github.com/shchilkin/PopChoice/issues/610) around three independent axes: audience context, match depth, and candidate source strategy.
-- Treat quiz answers, swipe reactions, account memory, and result feedback as inputs into a shared taste-signal model.
-- Rework the guided quiz around "what do you want tonight?" instead of relying on a favorite movie, broad genre labels, and optional actor input.
-- Build [#609](https://github.com/shchilkin/PopChoice/issues/609) as the Fast Pick guided flow with minimal intent, hard avoids, and discovery appetite. The current flow separates audience selection from match depth, supports Solo/Duo/Group, and sends `experienceMode: fast-pick`.
-- Build [#608](https://github.com/shchilkin/PopChoice/issues/608) as the Normal mode flow with richer positive/negative signals, optional reference movies, and first-class Duo compromise handling. The first slices add Normal-mode hard avoids, carry those negative signals through the existing recommendation payload, and expose Duo as a separate two-person entry/results path.
-- Add an alternate taste-swipe mode for users who have watched many films and prefer to react to concrete movie cards instead of answering abstract questions.
-- Start [#612](https://github.com/shchilkin/PopChoice/issues/612) by carrying candidate source provenance through recommendation results, persistence, logs, eval reports, a source-strategy policy, and route/job/pipeline metadata before changing retrieval defaults.
-- Connect [#612](https://github.com/shchilkin/PopChoice/issues/612) to retrieval behavior in stages: bounded `hybrid-fast`/`compromise-hybrid` fallback first, then `tmdb-first` generation with hard-avoid/discovery-aware TMDB query shaping and source/metadata eval thresholds before making it the Normal quality default.
-- Add `experienceMode` as the product-facing selector for this policy layer, defaulting existing traffic to `normal-match` while letting Fast Pick requests choose `fast-pick`.
-- Move toward TMDB-first candidate generation: use TMDB for broad discovery and keep the local database as a cache/enrichment/reranking layer rather than the whole movie universe.
+- [x] Build [#609](https://github.com/shchilkin/PopChoice/issues/609) as the Fast Pick guided flow with minimal intent, hard avoids, discovery appetite, and explicit Solo/Duo/Group audience selection.
+- [x] Complete [#612](https://github.com/shchilkin/PopChoice/issues/612) with source provenance, persisted source policy, and initial curated, hybrid, compromise, and TMDB-first retrieval behavior.
+- Complete the cross-mode scenario quality gate in [#606](https://github.com/shchilkin/PopChoice/issues/606), then finish participant-specific overlap, tradeoff, and dealbreaker behavior in [#608](https://github.com/shchilkin/PopChoice/issues/608).
+- Expose the already-supported curated-only policy as an intentional visitor-facing Curated Picks mode in [#613](https://github.com/shchilkin/PopChoice/issues/613).
+- Ship the anonymous Taste Swipe path in [#920](https://github.com/shchilkin/PopChoice/issues/920), then persist signed-in reactions through movie memory in [#923](https://github.com/shchilkin/PopChoice/issues/923).
+- Continue treating quiz answers, swipe reactions, account memory, and result feedback as inputs into one shared taste-signal model without requiring a broad rewrite.
 - Keep TMDB ids as the preferred movie identity and log ambiguous title/year matches for later admin/back-office review.
 - See [RECOMMENDATION-ROADMAP.md](/docs/RECOMMENDATION-ROADMAP) for the staged plan.
 
 ### Group Recommendation Rooms Track
 
-- Keep [#359](https://github.com/shchilkin/PopChoice/issues/359) as the umbrella for the group-room milestone instead of treating it as a single implementation PR.
+- Keep [#359](https://github.com/shchilkin/PopChoice/issues/359) as the umbrella for the [Group Rooms milestone](https://github.com/shchilkin/PopChoice/milestone/8) instead of treating it as a single implementation PR.
 - [#467](https://github.com/shchilkin/PopChoice/issues/467): build room persistence, TTL, cleanup, and participant storage first.
 - [#468](https://github.com/shchilkin/PopChoice/issues/468): add share links, participant join flow, and readiness state.
 - [#469](https://github.com/shchilkin/PopChoice/issues/469): run the recommendation pipeline from completed room answers and persist a stable shared result.
 - [#470](https://github.com/shchilkin/PopChoice/issues/470): add QR invite and projector mode only after the core room flow works.
 - Preserve the current same-device group mode until room-backed group mode is complete enough to replace it intentionally.
 
-## Priority Items for the Next 30 Days
+## Current Priority Frontier
 
-1. [x] Complete [#81](https://github.com/shchilkin/PopChoice/issues/81) with available-movies runtime, score, and age-rating filters on the existing catalog fields.
-2. [x] Refactor the quiz submit/results handoff in [#484](https://github.com/shchilkin/PopChoice/issues/484) so navigation state is explicit and the quiz page does not need short-lived reset guards.
-3. [x] Start [#474](https://github.com/shchilkin/PopChoice/issues/474) so full e2e work has a real isolated DB foundation before adding many browser scenarios.
-4. [x] Add [#475](https://github.com/shchilkin/PopChoice/issues/475) auth, catalog, quiz, and recommendation smoke flows on top of the isolated e2e harness.
-5. [x] Add [#476](https://github.com/shchilkin/PopChoice/issues/476) deterministic recommendation eval fixtures and scoring.
-6. [x] Add [#490](https://github.com/shchilkin/PopChoice/issues/490) scheduled/manual real-data recommendation evals for seeded DB and catalog-retrieval changes.
-7. [x] Decide the catalog metadata model in [#471](https://github.com/shchilkin/PopChoice/issues/471) before expanding #82 into actor/director/genre search.
-8. [x] Populate the catalog metadata model in [#472](https://github.com/shchilkin/PopChoice/issues/472) from TMDB backfill/discovery before expanding #82 into actor/director/genre search.
-9. [x] Expand available-movies search in [#473](https://github.com/shchilkin/PopChoice/issues/473) across title, actor/director, and genre metadata populated by #472.
-10. [x] Move TMDB discovery/backfill/metadata refresh into shared rate-limited BullMQ catalog workers in [#492](https://github.com/shchilkin/PopChoice/issues/492) before increasing catalog expansion volume.
-11. [x] Plan and split the [#493](https://github.com/shchilkin/PopChoice/issues/493) backoffice/catalog-health epic, including shared login protection for it and `apps/bull-board`.
-12. [x] Clarify production migration/versioning expectations in [#494](https://github.com/shchilkin/PopChoice/issues/494) for schema changes, rollbacks, and preview volume recreation.
-13. [x] Complete the first self-hosted observability track in [#498](https://github.com/shchilkin/PopChoice/issues/498) with uptime, logs, metrics, traces, alerts, retention, backups, and runbooks.
-14. [x] Deploy the self-hosted observability stack to production in [#508](https://github.com/shchilkin/PopChoice/issues/508) and verify metrics, logs, traces, alerts, access control, and backups on the VPS.
-15. [x] Improve Grafana Telegram alert formatting in [#525](https://github.com/shchilkin/PopChoice/issues/525) after the first production alert examples.
-16. [x] Reclassify deploy-sensitive app metrics target alerts in [#526](https://github.com/shchilkin/PopChoice/issues/526) so P1 remains reserved for user-facing or core dependency outages.
-17. [x] Plan deploy-aware alert silences and post-deploy verification in [#527](https://github.com/shchilkin/PopChoice/issues/527).
-18. [x] Define the `local -> development -> production` deployment model in [#556](https://github.com/shchilkin/PopChoice/issues/556), including domain layout, GHCR image-tag policy, preview cleanup, certificate-rate-limit notes, and production promotion/rollback expectations.
+The previous 30-day list is complete and remains visible in issue/release
+history. The current unblocked frontier is:
+
+1. [#606](https://github.com/shchilkin/PopChoice/issues/606): Recommendation V2 scenario quality gate.
+2. [#613](https://github.com/shchilkin/PopChoice/issues/613): visitor-facing Curated Picks mode.
+3. [#920](https://github.com/shchilkin/PopChoice/issues/920): anonymous Taste Swipe recommendation slice.
+4. [#921](https://github.com/shchilkin/PopChoice/issues/921): Available Movies live title suggestions and reset flow.
+5. [#922](https://github.com/shchilkin/PopChoice/issues/922): Available Movies multi-genre, keyword, and sorting controls.
+6. [#655](https://github.com/shchilkin/PopChoice/issues/655): provider-aware result availability UI.
+7. [#656](https://github.com/shchilkin/PopChoice/issues/656): evidence-based movie embedding text v2 evaluation.
+
+Dependency-gated follow-ups are #608 after #606, #923 after #920, and the
+Group Rooms chain #467 -> #468 -> #469 -> #470. Backoffice and platform work
+continue in their focused milestones rather than competing for product release
+version numbers.
 
 ## Working Checklist
 
@@ -409,7 +424,7 @@ work implementation-sized:
 - [x] Queueing, DB writes, and response mapping are separated cleanly from recommendation decision logic.
 - [x] Similarity thresholds and related calibration docs point to the same source of truth.
 - [x] Positive user memory (`liked`) influences ranking.
-- [ ] Quiz submit handoff no longer depends on route-local reset timing.
+- [x] Quiz submit handoff no longer depends on route-local reset timing.
 
 ### Documentation Alignment
 

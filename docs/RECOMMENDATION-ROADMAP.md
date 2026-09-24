@@ -22,6 +22,21 @@ This should be done in stages. A full rewrite is not the goal.
 - If the work is too large for one PR, keep the original issue as an epic/umbrella and split focused implementation issues underneath it.
 - Prefer linked roadmap entries so completed work can be checked off without losing context.
 
+## Active Milestones
+
+The roadmap was refreshed on 2026-07-17. GitHub issues are the execution source
+of truth; this document explains the product sequence and keeps completed work
+separate from the active frontier.
+
+| Milestone                                                                                   | Purpose                                                                                                                           |
+| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| [v0.3.0 Recommendation V2 Foundation](https://github.com/shchilkin/PopChoice/milestone/6)   | Complete the scenario quality gate, participant-specific Normal Match compromise behavior, and visitor-facing Curated Picks mode. |
+| [v0.4.0 Taste Swipe MVP](https://github.com/shchilkin/PopChoice/milestone/7)                | Ship an anonymous TMDB-backed swipe-to-result path, then persist signed-in reactions into movie memory.                           |
+| [Group Rooms](https://github.com/shchilkin/PopChoice/milestone/8)                           | Add multi-device room persistence, join/readiness, one recommendation run, and finally QR/projector presentation.                 |
+| [Catalog & Recommendation Intelligence](https://github.com/shchilkin/PopChoice/milestone/9) | Improve Available Movies discovery, provider availability UI, and evidence-based embedding evolution.                             |
+| [Backoffice Hardening](https://github.com/shchilkin/PopChoice/milestone/10)                 | Make operator workflows more testable, resilient, consistent, observable, and safe.                                               |
+| [Platform Operations](https://github.com/shchilkin/PopChoice/milestone/11)                  | Extract shared observability, formalize release gates, and attribute paid-provider usage.                                         |
+
 ## Current Quiz Flow
 
 The current quiz first asks for match depth (`Fast Pick` or `Normal Match`), then
@@ -49,8 +64,13 @@ signals still bridge through the legacy request shape rather than a canonical
 - The favorite movie prompt is optional and lower-friction, but supplied titles
   can still over-anchor a result if they outweigh tonight-specific signals.
 - Mood options are partly genre labels, which makes them too broad for accurate ranking.
-- The quiz does not capture enough negative intent, such as "not slow", "not horror", "not long", "not subtitles", or "not something obvious".
-- The app has started using signed-in movie memory for exclusions, down-ranking, and exact liked-candidate boosts, but watched/liked/not-interested signals are still not unified behind a first-class recommendation signal model.
+- The quiz captures explicit negative intent, but the public request contract still
+  bridges several signals through legacy fields instead of accepting canonical
+  taste signals directly.
+- The app uses signed-in movie memory for exclusions, down-ranking, and exact
+  liked-candidate boosts, and has an internal `TasteSignal` adapter. Quiz,
+  account, result-feedback, and future swipe inputs are not yet one complete
+  end-to-end request contract.
 - Group mode currently collects individual preferences, but the recommendation model should eventually optimize for overlap and compromise explicitly.
 - The embedded/local movie catalog is too small to produce consistently satisfying real-world results.
 
@@ -170,7 +190,10 @@ Duo/group Fast Pick reuses the same short question set per participant after aud
 
 ### 2. Taste Swipe
 
-Tinder-style mode for movie-heavy users who do not want questions.
+Tinder-style mode for movie-heavy users who do not want questions. The first
+anonymous vertical slice is tracked by
+[#920](https://github.com/shchilkin/PopChoice/issues/920); durable signed-in
+reactions follow in [#923](https://github.com/shchilkin/PopChoice/issues/923).
 
 Show a stream of movie cards and collect simple reactions:
 
@@ -209,7 +232,10 @@ The model should optimize for overlap and acceptable compromise, not only averag
 
 ### 5. Group Rooms
 
-Room-backed group mode should become the larger milestone behind [#359](https://github.com/shchilkin/PopChoice/issues/359), separate from the current same-device group flow.
+Room-backed group mode is tracked by the
+[Group Rooms milestone](https://github.com/shchilkin/PopChoice/milestone/8)
+behind [#359](https://github.com/shchilkin/PopChoice/issues/359), separate from
+the current same-device group flow.
 
 Implementation should be sequenced as:
 
@@ -236,14 +262,20 @@ This keeps the high-risk data and orchestration work ahead of visual polish. The
 - Make favorite/reference movie optional.
 - Keep the API compatible by translating new answers into current recommendation input.
 - Improve group-mode copy so users understand whether PopChoice is balancing or optimizing for one person.
+- Complete participant-specific compromise scoring and explanation behavior in
+  [#608](https://github.com/shchilkin/PopChoice/issues/608), gated by the
+  scenario matrix in [#606](https://github.com/shchilkin/PopChoice/issues/606).
 
 ### Stage 3: Taste Swipe MVP
 
-- Add an entry choice: "Answer a few questions" or "Swipe movies".
-- Build a swipe screen backed by TMDB and local cached metadata.
-- Store signed-in reactions in movie memory.
-- For anonymous users, keep session-local reactions long enough to produce one recommendation.
-- Translate swipe reactions into current recommendation inputs before introducing a deeper backend rewrite.
+- [#920](https://github.com/shchilkin/PopChoice/issues/920): add an alternate
+  Taste Swipe entry, a bounded TMDB-backed card deck, anonymous session-local
+  reactions, and one persisted recommendation result.
+- [#923](https://github.com/shchilkin/PopChoice/issues/923): persist signed-in
+  reactions idempotently into movie memory and verify their effect on later
+  recommendations.
+- Keep the anonymous slice account-optional and preserve Fast Pick and Normal
+  Match while swipe mode proves its value.
 
 ### Stage 4: Signal-based recommendation backend
 
@@ -306,37 +338,33 @@ Implementation should be split in this order:
 - Use feedback to learn the user's taste profile over time.
 - Consider gamified taste history, achievements, and "taste map" views only after the core memory model is reliable.
 
-## Near-Term PR Candidates
+## Active Work Frontier
 
-Good next PRs, in order:
+The following issues have no unfinished blockers and can start independently:
 
-1. [x] [#484](https://github.com/shchilkin/PopChoice/issues/484): refactor the quiz submit/results handoff so navigation state is explicit and the quiz page does not need short-lived reset guards.
-2. [x] [#492](https://github.com/shchilkin/PopChoice/issues/492): move TMDB discovery/backfill/enrichment into a shared rate-limited BullMQ catalog worker before scaling catalog volume.
-3. [x] [#618](https://github.com/shchilkin/PopChoice/issues/618): classify/refactor current seeded real-data checks before adding backoffice eval execution.
-4. [x] [#616](https://github.com/shchilkin/PopChoice/issues/616): persist eval run/result history for backoffice and worker reports.
-5. [x] [#617](https://github.com/shchilkin/PopChoice/issues/617): add non-live environment retrieval/source-strategy eval jobs.
-6. [x] [#619](https://github.com/shchilkin/PopChoice/issues/619): expose recommendation eval runs in backoffice.
-7. Replace the current quiz copy and options with a more "tonight" oriented flow while preserving existing API shape.
-8. Add a small taste-swipe prototype behind a feature flag or alternate quiz entry path.
-9. Add TMDB-backed candidate-card sourcing for swipe mode.
-10. Continue the `TasteSignal` domain model by adding swipe reaction adapters after the v1 quiz plus feedback/movie-memory slice.
-11. [x] [#620](https://github.com/shchilkin/PopChoice/issues/620): add guarded live-provider evals after safe backoffice evals exist.
-12. [x] Start [#612](https://github.com/shchilkin/PopChoice/issues/612) with first-class candidate source provenance, source-strategy policy, route/job/pipeline metadata, and eval assertions for curated showcase, hybrid fast, and TMDB-first behavior.
-13. [x] Connect [#612](https://github.com/shchilkin/PopChoice/issues/612) source strategy to initial retrieval behavior: `hybrid-fast` and `compromise-hybrid` use bounded TMDB fallback, while curated/local-only strategies block external lookup.
-14. [x] Add `experienceMode` request/job/pipeline metadata so `fast-pick` can select `hybrid-fast` while current requests default to `normal-match`.
-15. [x] Add a first Fast Pick quiz intro entry that sends the `fast-pick` wrapper into the existing recommendation API.
-16. [x] Add the first short solo Fast Pick guided flow for intent, hard avoids, and discovery appetite under [#609](https://github.com/shchilkin/PopChoice/issues/609).
-17. [x] Extend Fast Pick to Duo/Group by adding an audience layer before the short question flow.
-18. [x] Start [#608](https://github.com/shchilkin/PopChoice/issues/608) by adding an optional Normal-mode hard-avoids step and carrying those negative signals into the current recommendation payload.
-19. [x] Make Duo first-class in the guided UI: separate Normal/Fast audience entry, two-person setup copy, Duo result copy, and deterministic e2e coverage.
-20. [x] Connect the first `tmdb-first` retrieval slice: Normal solo now attempts TMDB discover as a primary candidate-discovery path, then score-ranks TMDB and strong local matches together.
-21. [x] Deepen the first `tmdb-first` query-shaping slice: Normal/Fast hard avoids and discovery appetite now shape TMDB discover params, and eval fixtures include source/metadata quality thresholds.
-22. [x] Deepen `tmdb-first` JIT enrichment before making it the Normal quality default: fetch richer TMDB details for strong direct candidates, persist/cache useful runtime/rating/provider metadata, and calibrate backoffice real-data thresholds.
-23. [#655](https://github.com/shchilkin/PopChoice/issues/655): add provider-aware result UI and user-facing availability copy once product behavior decides whether availability is informational, a soft preference, or a hard constraint.
-24. [#656](https://github.com/shchilkin/PopChoice/issues/656): evaluate a movie embedding text v2 contract before adding metadata such as genres, keywords, cast, director, language, popularity, or certification to retrieval embeddings.
-25. [x] [#680](https://github.com/shchilkin/PopChoice/issues/680): calibrate recommendation match percentages and user-facing score copy before treating raw percentages as precise quality claims.
-26. [x] [#681](https://github.com/shchilkin/PopChoice/issues/681): rework the quiz entry flow so users choose match depth first, then Solo/Duo/Group audience, then answer the matching short or normal question set.
-27. Add manual-review logging for ambiguous TMDB/local identity matches.
+1. [#606](https://github.com/shchilkin/PopChoice/issues/606): complete the
+   Recommendation V2 audience/depth/source scenario quality gate.
+2. [#613](https://github.com/shchilkin/PopChoice/issues/613): expose Curated
+   Picks as an intentional visitor-facing product mode.
+3. [#920](https://github.com/shchilkin/PopChoice/issues/920): ship the anonymous
+   TMDB-backed Taste Swipe recommendation slice.
+4. [#921](https://github.com/shchilkin/PopChoice/issues/921): add Available
+   Movies live title suggestions and a complete reset flow.
+5. [#922](https://github.com/shchilkin/PopChoice/issues/922): add multi-genre,
+   keyword, and sorting controls to Available Movies.
+6. [#655](https://github.com/shchilkin/PopChoice/issues/655): add
+   provider-aware availability UI after confirming its informational product
+   role.
+7. [#656](https://github.com/shchilkin/PopChoice/issues/656): evaluate movie
+   embedding text v2 before changing the production embedding format.
+
+Blocked follow-ups:
+
+- [#608](https://github.com/shchilkin/PopChoice/issues/608) follows #606 and
+  completes participant-specific Normal Match compromise behavior.
+- [#923](https://github.com/shchilkin/PopChoice/issues/923) follows #920 and
+  persists signed-in swipe reactions into movie memory.
+- Group Rooms remains the explicit #467 -> #468 -> #469 -> #470 sequence.
 
 ## Non-Goals For Now
 
