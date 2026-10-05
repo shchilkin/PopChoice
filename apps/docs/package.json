@@ -13,9 +13,9 @@
   },
   "dependencies": {
     "@types/mdx": "^2.0.14",
-    "fumadocs-core": "^16.15.14",
-    "fumadocs-mdx": "^15.4.5",
-    "fumadocs-ui": "^16.15.14",
+    "fumadocs-core": "^16.15.18",
+    "fumadocs-mdx": "^15.4.6",
+    "fumadocs-ui": "^16.15.18",
     "next": "^16.3.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
