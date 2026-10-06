@@ -180,10 +180,12 @@ has distinct empty states for an empty catalog versus active filters with no
 matches.
 
 Current #82 scope is partially complete because title, actor/director, genre,
-runtime, score, age-rating, and year filtering are present. Remaining #82 work
-should be treated as planned until split into smaller issues, for example richer
-autocomplete, search history, more explicit multi-genre UX, keyword search,
-sorting, or a broader TMDB-backed discovery surface.
+runtime, score, age-rating, and year filtering are present. Remaining work is
+split into [#921](https://github.com/shchilkin/PopChoice/issues/921) for live
+title suggestions/reset behavior and
+[#922](https://github.com/shchilkin/PopChoice/issues/922) for multi-genre,
+keyword, and sorting controls. Those capabilities remain planned until their
+focused issues are complete.
 
 ## Current Group Mode
 
@@ -232,8 +234,25 @@ work should move the current structured-text bridge into a first-class backend
 contract so avoids, constraints, discovery appetite, and feedback no longer
 need to travel through legacy request fields.
 
+The active recommendation sequence is tracked through:
+
+- [v0.3.0 Recommendation V2 Foundation](https://github.com/shchilkin/PopChoice/milestone/6):
+  complete the cross-mode quality gate in
+  [#606](https://github.com/shchilkin/PopChoice/issues/606), then finish
+  participant-specific Normal Match compromise behavior in
+  [#608](https://github.com/shchilkin/PopChoice/issues/608); Curated Picks
+  [#613](https://github.com/shchilkin/PopChoice/issues/613) can proceed in
+  parallel.
+- [v0.4.0 Taste Swipe MVP](https://github.com/shchilkin/PopChoice/milestone/7):
+  ship the anonymous swipe-to-result slice in
+  [#920](https://github.com/shchilkin/PopChoice/issues/920), then persist
+  signed-in reactions into movie memory in
+  [#923](https://github.com/shchilkin/PopChoice/issues/923).
+
 Group rooms are a larger milestone under
-[#359](https://github.com/shchilkin/PopChoice/issues/359), split into:
+[#359](https://github.com/shchilkin/PopChoice/issues/359) and the
+[Group Rooms milestone](https://github.com/shchilkin/PopChoice/milestone/8),
+split into:
 
 - [#467](https://github.com/shchilkin/PopChoice/issues/467): room persistence,
   TTL, cleanup, and participant storage.
